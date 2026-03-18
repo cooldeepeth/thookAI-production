@@ -1,0 +1,150 @@
+{
+  "identity": {
+    "name": "ThookAI",
+    "description": "The Personal AI Creative Agency. A multi-agent system that clones your voice and scales your creative output.",
+    "tone": "Rebellious, Precision-Engineered, Dark-Mode Native, Creator-Centric.",
+    "archetype": "The Performance Pro (Elite Athleticism) x Electric & Neon (Future)",
+    "theme_mode": "dark"
+  },
+  "typography": {
+    "headings": {
+      "family": "Clash Display, Outfit, sans-serif",
+      "weight": "600-700",
+      "tracking": "-0.02em",
+      "usage": "Use for all H1-H3. If Clash Display is unavailable via CDN, fallback to Outfit (Google Fonts).",
+      "cdn_import": "@import url('https://api.fontshare.com/v2/css?f[]=clash-display@600,700&display=swap');"
+    },
+    "body": {
+      "family": "Plus Jakarta Sans, DM Sans, sans-serif",
+      "weight": "400-500",
+      "usage": "Main UI text, paragraphs, and long-form content.",
+      "google_font_import": "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');"
+    },
+    "mono": {
+      "family": "JetBrains Mono, monospace",
+      "usage": "Code snippets, API keys, data values in dashboards.",
+      "google_font_import": "@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');"
+    }
+  },
+  "colors": {
+    "background": {
+      "default": "#050505",
+      "surface": "#0F0F10",
+      "surface_highlight": "#18181B",
+      "overlay": "rgba(5, 5, 5, 0.8)"
+    },
+    "primary": {
+      "main": "#D4FF00",
+      "hover": "#B8E600",
+      "foreground": "#000000",
+      "description": "Acid Lime. Use sparingly for primary CTAs (Create, Publish, Upgrade)."
+    },
+    "secondary": {
+      "main": "#7000FF",
+      "foreground": "#FFFFFF",
+      "description": "Electric Violet. Use for 'AI Magic' moments, Persona Engine indicators, and gradients."
+    },
+    "accent": {
+      "cyan": "#00F0FF",
+      "pink": "#FF0099",
+      "description": "Cyberpunk accents for graphs, tags, and status indicators."
+    },
+    "border": {
+      "default": "#27272A",
+      "subtle": "#3F3F46"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#A1A1AA",
+      "muted": "#52525B"
+    }
+  },
+  "spacing_layout": {
+    "container_padding": "p-6 md:p-8 lg:p-12",
+    "section_gap": "gap-8 md:gap-16",
+    "border_radius": {
+      "default": "0.5rem",
+      "card": "0.75rem",
+      "pill": "9999px"
+    },
+    "grid_system": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+      "bento": "grid grid-cols-1 md:grid-cols-4 auto-rows-[minmax(180px,auto)] gap-4"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#D4FF00] text-black hover:bg-[#B8E600] font-bold rounded-full px-8 py-3 transition-transform hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(212,255,0,0.3)]",
+      "secondary": "bg-white/10 text-white hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full px-6 py-2"
+    },
+    "cards": {
+      "base": "bg-[#0F0F10] border border-white/5 rounded-xl p-6 hover:border-white/10 transition-colors group relative overflow-hidden",
+      "glass": "bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl"
+    },
+    "inputs": {
+      "style": "bg-[#18181B] border-white/10 focus:border-[#D4FF00] focus:ring-1 focus:ring-[#D4FF00] text-white rounded-lg h-12 px-4 placeholder:text-neutral-600"
+    },
+    "navigation": {
+      "sidebar": "w-64 bg-[#050505] border-r border-white/5 flex flex-col h-screen fixed left-0 top-0 z-50",
+      "topbar": "h-16 bg-[#050505]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-black/50 border border-white/5",
+    "gradients": {
+      "hero_glow": "radial-gradient(circle at 50% 50%, rgba(112, 0, 255, 0.15) 0%, rgba(5, 5, 5, 0) 70%)",
+      "card_hover": "radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%)"
+    },
+    "noise": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")"
+  },
+  "assets": {
+    "logos": {
+      "placeholder": "https://placehold.co/200x80/000000/FFFFFF?text=Client+Logo",
+      "tech_partners": [
+        "https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/450px-X_logo_2023.svg.png",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Instagram_logo_2016.svg/2048px-Instagram_logo_2016.svg.png"
+      ]
+    },
+    "images": [
+      {
+        "category": "abstract_hero",
+        "url": "https://images.unsplash.com/photo-1764268602042-88b05a211378?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGRpZ2l0YWwlMjBhcnQlMjBkYXJrJTIwbmVvbiUyMGZsb3d8ZW58MHx8fHwxNzczODAxNDIzfDA&ixlib=rb-4.1.0&q=85",
+        "alt": "Abstract purple neon flow - use for Hero Section background or 'AI Brain' visualization"
+      },
+      {
+        "category": "persona_avatar",
+        "url": "https://images.unsplash.com/photo-1765658737231-0af03872246a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHw0fHxjcmVhdGl2ZSUyMGNvbnRlbnQlMjBjcmVhdG9yJTIwcG9ydHJhaXQlMjB1cmJhbiUyMGxpZ2h0aW5nfGVufDB8fHx8MTc3MzgwMTQyMnww&ixlib=rb-4.1.0&q=85",
+        "alt": "Creator with sparklers - use for 'Persona Card' or Creator Profile demo"
+      },
+      {
+        "category": "agency_workspace",
+        "url": "https://images.unsplash.com/photo-1604611714877-a8108b03132f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNTl8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBjcmVhdGl2ZSUyMGFnZW5jeSUyMG9mZmljZSUyMGRhcmslMjBhZXN0aGV0aWN8ZW58MHx8fHwxNzczODAxNDI0fDA&ixlib=rb-4.1.0&q=85",
+        "alt": "Dark modern desk setup - use for 'Agency Workspace' or 'Studio' features"
+      },
+       {
+        "category": "abstract_texture",
+        "url": "https://images.unsplash.com/photo-1764258559509-0ce1b6f8bce2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRpZ2l0YWwlMjBhcnQlMjBkYXJrJTIwbmVvbiUyMGZsb3d8ZW58MHx8fHwxNzczODAxNDIzfDA&ixlib=rb-4.1.0&q=85",
+        "alt": "Pink/Orange streaks - use for 'Viral Hook' or 'Analytics' accent backgrounds"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "FORCE DARK MODE: In `tailwind.config.js`, ensure `darkMode: ['class']` is set, but default the `html` tag to have class `dark` or set background to #050505 manually in global css.",
+    "NO DEFAULT BORDERS: Avoid standard grey borders. Use `border-white/5` or `border-white/10` for a premium, subtle look.",
+    "COMPONENT OVERRIDES: Customize Shadcn components. Remove the default rounded-md and use `rounded-lg` or `rounded-xl`. Change primary button color to #D4FF00 with black text.",
+    "LAYOUT STRATEGY: Use the 'Shell' concept for the Content Studio. The center should be the 'Canvas' (mimicking LinkedIn/X/IG), left is 'Tools/Agents', right is 'Preview/Feedback'.",
+    "PERSONA ENGINE: Visualise the 'Persona' not just as a form, but as a 'Digital Card' with the creator's avatar and a 'Voice Fingerprint' graphic (use the abstract neon images for this).",
+    "ANIMATION: Add `framer-motion` for page transitions. Use `AnimatePresence` for switching between Studio modes."
+  ],
+  "universal_guidelines": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts. Use Bento grids.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "MUST NOT apply universal transition (transition: all).",
+    "NEVER use AI assistant Emoji characters like 🤖 etc.",
+    "Every interaction needs micro-animations.",
+    "Use 2-3x more spacing than feels comfortable."
+  ]
+}
