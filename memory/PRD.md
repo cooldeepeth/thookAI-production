@@ -183,8 +183,8 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 ### PHASE 4: PUBLISHING
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 7 | Platform Integrations (Meta/LinkedIn/X) + Planner + Ghost Publisher | 🔜 Next |
-| Sprint 8 | Repurpose Agent + Daily Brief + Content Series Planner + Anti-Repetition Engine | Planned |
+| **Sprint 7** | Platform Integrations (Meta/LinkedIn/X) + Planner + Ghost Publisher | ✅ COMPLETE |
+| Sprint 8 | Repurpose Agent + Daily Brief + Content Series Planner + Anti-Repetition Engine | 🔜 Next |
 
 ### PHASE 5: ANALYTICS & GROWTH
 | Sprint | Focus | Status |
@@ -465,3 +465,82 @@ See `/app/backend/.env` for all API key placeholders:
 
 ### Other:
 - `PINECONE_API_KEY`, `PINECONE_ENVIRONMENT`
+
+
+---
+
+## 19. Sprint 7 Implementation Details — July 2025
+
+### Backend Platform OAuth:
+
+- **Platform Routes** (`routes/platforms.py`)
+  - `GET /api/platforms/status` — Returns connection status for all platforms
+  - `GET /api/platforms/connect/linkedin` — Initiates LinkedIn OAuth 2.0 flow
+  - `GET /api/platforms/connect/x` — Initiates X OAuth 2.0 with PKCE
+  - `GET /api/platforms/connect/instagram` — Initiates Instagram/Meta OAuth
+  - `GET /api/platforms/callback/{platform}` — Handles OAuth callbacks
+  - `DELETE /api/platforms/disconnect/{platform}` — Disconnects platform
+
+- **Token Management**
+  - Fernet encryption for stored access tokens
+  - Automatic token refresh on expiry
+  - PKCE support for Twitter/X OAuth
+  - Long-lived token exchange for Instagram
+
+### Backend Planner Agent:
+
+- **Planner Agent** (`agents/planner.py`)
+  - `get_optimal_posting_times()` — Returns best times based on platform engagement patterns
+  - `get_weekly_schedule()` — Generates weekly posting schedule across platforms
+  - `schedule_content()` — Schedules content job for future publishing
+  - Platform-specific peak times (weekday/weekend, best days)
+  - AI-powered reasoning via GPT-4o-mini
+  - UOM-aware burnout risk adjustment
+
+- **Planner API Endpoints** (`routes/dashboard.py`)
+  - `GET /api/dashboard/schedule/optimal-times` — Get optimal times for platform
+  - `GET /api/dashboard/schedule/weekly` — Generate weekly schedule
+  - `POST /api/dashboard/schedule/content` — Schedule content for publishing
+  - `GET /api/dashboard/schedule/upcoming` — List scheduled content
+  - `DELETE /api/dashboard/schedule/{job_id}` — Cancel scheduled post
+
+### Backend Publisher Agent:
+
+- **Publisher Agent** (`agents/publisher.py`)
+  - `publish_to_linkedin()` — Posts via LinkedIn UGC API
+  - `publish_to_x()` — Posts tweets/threads via X API v2
+  - `publish_to_instagram()` — Posts via Instagram Graph API (media container flow)
+  - `publish_content()` — Unified multi-platform publishing
+
+- **Publish API Endpoint**
+  - `POST /api/dashboard/publish/{job_id}` — Immediate publishing to selected platforms
+
+### Frontend Components:
+
+- **Connections Page** (`pages/Dashboard/Connections.jsx`)
+  - Platform cards with connection status
+  - OAuth flow initiation
+  - Disconnect functionality
+  - Visual feedback for configured/connected states
+
+- **Content Calendar Page** (`pages/Dashboard/ContentCalendar.jsx`)
+  - Calendar grid with scheduled content markers
+  - AI-powered schedule suggestions
+  - Quick publish/cancel actions
+  - Upcoming scheduled content list
+
+- **Publish Panel** (`pages/Dashboard/ContentStudio/ContentOutput.jsx`)
+  - Publish Now button for approved content
+  - Schedule for later with date/time picker
+  - Optimal time suggestions from Planner
+  - Post-publish status display
+
+### Database Schema Additions:
+- `platform_tokens` — Stores encrypted OAuth tokens per user/platform
+- `oauth_states` — Temporary storage for OAuth state verification
+- `content_jobs.status: "scheduled"` — New status for scheduled posts
+- `content_jobs.scheduled_at` — Scheduled publish datetime
+- `content_jobs.scheduled_platforms` — Target platforms for scheduled post
+- `content_jobs.published_at` — Actual publish timestamp
+- `content_jobs.publish_results` — Results from publish attempts
+- `users.platforms_connected` — Array of connected platform names
