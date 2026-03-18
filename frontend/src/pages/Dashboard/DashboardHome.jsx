@@ -99,7 +99,7 @@ function RecentJobCard({ job }) {
 }
 
 export default function DashboardHome() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -110,14 +110,12 @@ export default function DashboardHome() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!token) return;
+      if (!user) return;
       
       try {
         setLoading(true);
         const response = await fetch(`${API_URL}/api/dashboard/stats`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          credentials: "include"
         });
         
         if (!response.ok) {
@@ -136,7 +134,7 @@ export default function DashboardHome() {
     };
 
     fetchStats();
-  }, [token]);
+  }, [user]);
 
   const displayStats = [
     { 
