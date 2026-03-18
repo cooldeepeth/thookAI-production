@@ -177,8 +177,8 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 ### PHASE 3: CONTENT PIPELINE
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 5 | Content Pipeline (Raw Input → Draft) + Platform-Native UX Shells | 🔜 Next |
-| Sprint 6 | Media Agents (Visual/Designer/Voice) + Human Review Workflow | Planned |
+| **Sprint 5** | Content Pipeline (Raw Input → Draft) + Platform-Native UX Shells + Daily Brief | ✅ COMPLETE |
+| Sprint 6 | Media Agents (Visual/Designer/Voice) + Human Review Workflow | 🔜 Next |
 
 ### PHASE 4: PUBLISHING
 | Sprint | Focus | Status |
@@ -291,7 +291,46 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 
 ---
 
-## 15. Environment Variables
+## 15. Sprint 5 Implementation Details — July 2025
+
+### Backend:
+- **Daily Brief API** (`routes/dashboard.py`)
+  - `GET /api/dashboard/daily-brief` — Personalized daily content brief with:
+    - Trending topics (via Perplexity Scout)
+    - AI-generated content ideas (via GPT-4o)
+    - UOM-based energy check (low/medium/high burnout)
+    - 6-hour caching in MongoDB
+  - `POST /api/dashboard/daily-brief/dismiss` — Dismiss brief for today
+  - `GET /api/dashboard/daily-brief/status` — Check if brief should be shown
+
+### Frontend:
+- **Platform-Native UX Shells** (`ContentStudio/Shells/`)
+  - `LinkedInShell.jsx` — LinkedIn-styled composer (3000 char limit, hashtag highlighting, profile header)
+  - `XShell.jsx` — X/Twitter-styled composer (280 char limit, thread support, dark theme, char circle)
+  - `InstagramShell.jsx` — Instagram-styled composer (2200 char limit, image placeholder, hashtag counter)
+
+- **Daily Brief Component** (`DailyBrief.jsx`)
+  - Collapsible card at top of dashboard
+  - Trending topics chips
+  - 3 clickable content idea cards (navigate to studio with prefill)
+  - Energy check based on UOM burnout risk
+  - Dismiss/refresh functionality
+
+- **Content Studio Enhancement** (`ContentStudio/index.jsx`)
+  - URL params for prefilling: `?platform=x&prefill=content`
+  - Platform-specific default content types
+
+- **ContentOutput Update** (`ContentOutput.jsx`)
+  - Renders platform-appropriate shell based on job.platform
+  - Repetition risk badge in QC display
+
+### Database Schema Additions:
+- `daily_briefs` — Cached daily briefs per user/date
+- `daily_brief_dismissals` — Tracks dismissed briefs per user/date
+
+---
+
+## 16. Environment Variables
 
 See `/app/backend/.env` for all API key placeholders. User must fill in:
 - `OPENAI_API_KEY`
