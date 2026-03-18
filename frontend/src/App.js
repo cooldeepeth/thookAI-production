@@ -5,6 +5,7 @@ import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
 import AuthCallback from "@/pages/AuthCallback";
 import Dashboard from "@/pages/Dashboard";
+import OnboardingWizard from "@/pages/Onboarding";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -30,6 +31,7 @@ function AppRouter() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/onboarding" element={<ProtectedRoute><OnboardingWizard /></ProtectedRoute>} />
       <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import DashboardHome from "./DashboardHome";
+import PersonaEngine from "./PersonaEngine";
 import ComingSoon from "./ComingSoon";
 
 export default function Dashboard() {
@@ -12,7 +13,7 @@ export default function Dashboard() {
         <Routes>
           <Route path="/" element={<><TopBar title="Dashboard" /><DashboardHome /></>} />
           <Route path="/studio" element={<><TopBar title="Content Studio" /><ComingSoon title="Content Studio" desc="Platform-native content creation with 15 AI agents — coming in Sprint 5." sprint="5" /></>} />
-          <Route path="/persona" element={<><TopBar title="Persona Engine" /><ComingSoon title="Persona Engine" desc="Your AI voice clone. Learns from every post you write." sprint="2" /></>} />
+          <Route path="/persona" element={<><TopBar title="Persona Engine" /><PersonaEngine /></>} />
           <Route path="/repurpose" element={<><TopBar title="Repurpose Agent" /><ComingSoon title="Repurpose Agent" desc="Transform one piece of content into 6 platform-native variants." sprint="8" /></>} />
           <Route path="/calendar" element={<><TopBar title="Content Calendar" /><ComingSoon title="Content Calendar" desc="Optimal scheduling powered by algorithm pulse intelligence." sprint="7" /></>} />
           <Route path="/analytics" element={<><TopBar title="Analytics" /><ComingSoon title="Analytics" desc="Performance intelligence and learning loop insights." sprint="9" /></>} />

@@ -58,7 +58,7 @@ export default function DashboardHome() {
               Your AI voice clone needs 15 minutes to learn your style. This unlocks all content creation features.
             </p>
             <button
-              onClick={() => navigate("/dashboard/persona")}
+              onClick={() => navigate("/onboarding")}
               data-testid="start-onboarding-btn"
               className="flex items-center gap-2 bg-violet text-white text-sm font-medium rounded-full px-5 py-2.5 hover:bg-violet/90 transition-colors"
             >

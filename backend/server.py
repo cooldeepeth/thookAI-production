@@ -5,6 +5,8 @@ import os
 import logging
 from pathlib import Path
 from routes.auth import router as auth_router
+from routes.onboarding import router as onboarding_router
+from routes.persona import router as persona_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -14,6 +16,8 @@ api_router = APIRouter(prefix="/api")
 
 # Include all route modules
 api_router.include_router(auth_router)
+api_router.include_router(onboarding_router)
+api_router.include_router(persona_router)
 
 
 @api_router.get("/")
