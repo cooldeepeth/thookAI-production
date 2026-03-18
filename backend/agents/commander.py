@@ -1,4 +1,7 @@
-import os, json, asyncio, uuid
+import os
+import json
+import asyncio
+import uuid
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
@@ -49,7 +52,19 @@ Return JSON:
 }}"""
 
 
-async def run_commander(raw_input: str, platform: str, content_type: str, persona_card: dict) -> dict:
+async def run_commander(raw_input: str, platform: str, content_type: str, persona_card: dict, anti_rep_prompt: str = "") -> dict:
+    """Run Commander agent to generate content strategy.
+    
+    Args:
+        raw_input: User's raw content idea
+        platform: Target platform (linkedin, x, instagram)
+        content_type: Type of content (post, thread, etc.)
+        persona_card: User's persona information
+        anti_rep_prompt: Optional anti-repetition instructions
+    
+    Returns:
+        Content strategy dictionary
+    """
     if not _valid(LLM_KEY):
         return _mock_commander(raw_input, platform, content_type)
     try:
@@ -67,6 +82,11 @@ async def run_commander(raw_input: str, platform: str, content_type: str, person
             content_goal=persona_card.get("content_goal", "Build personal brand"),
             platform=platform, content_type=content_type, raw_input=raw_input
         )
+        
+        # Add anti-repetition instructions if provided
+        if anti_rep_prompt:
+            prompt += anti_rep_prompt
+        
         response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=20.0)
         return json.loads(_clean_json(response))
     except Exception:

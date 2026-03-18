@@ -2,7 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
-import json, os, uuid
+import json
+import os
+import uuid
 from database import db
 from auth_utils import get_current_user
 from emergentintegrations.llm.chat import LlmChat, UserMessage

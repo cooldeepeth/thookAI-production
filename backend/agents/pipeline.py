@@ -7,6 +7,7 @@ from agents.scout import run_scout
 from agents.thinker import run_thinker
 from agents.writer import run_writer
 from agents.qc import run_qc
+from agents.anti_repetition import get_anti_repetition_context, build_anti_repetition_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +40,14 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
         if user:
             persona_card["creator_name"] = user.get("name", "the creator")
 
-        # COMMANDER — strategy
+        # Get anti-repetition context before Commander runs
+        anti_rep_context = await get_anti_repetition_context(user_id)
+        anti_rep_prompt = build_anti_repetition_prompt(anti_rep_context) if anti_rep_context.get("has_patterns") else ""
+
+        # COMMANDER — strategy (with anti-repetition context)
         await update_job(job_id, {"current_agent": "commander", "status": "running"})
         commander_output = await asyncio.wait_for(
-            run_commander(raw_input, platform, content_type, persona_card), timeout=25.0
+            run_commander(raw_input, platform, content_type, persona_card, anti_rep_prompt), timeout=25.0
         )
         await update_job(job_id, {
             "agent_outputs.commander": commander_output,
@@ -85,18 +90,19 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
             "agent_summaries.writer": f"{len(draft.split())} words drafted in your voice"
         })
 
-        # QC — persona match + AI risk scoring
+        # QC — persona match + AI risk + repetition scoring
         await update_job(job_id, {"current_agent": "qc"})
         qc_output = await asyncio.wait_for(
-            run_qc(draft, persona_card, platform, content_type), timeout=25.0
+            run_qc(draft, persona_card, platform, content_type, user_id=user_id), timeout=25.0
         )
         pass_fail = "PASS" if qc_output.get("overall_pass") else "NEEDS REVIEW"
+        rep_level = qc_output.get("repetition_level", "none")
         await update_job(job_id, {
             "agent_outputs.qc": qc_output,
             "qc_score": qc_output,
             "current_agent": "done",
             "status": "reviewing",
-            "agent_summaries.qc": f"Persona Match {qc_output.get('personaMatch', 0)}/10 · AI Risk {qc_output.get('aiRisk', 0)}/100 · {pass_fail}"
+            "agent_summaries.qc": f"Persona {qc_output.get('personaMatch', 0)}/10 · AI Risk {qc_output.get('aiRisk', 0)}/100 · Rep: {rep_level} · {pass_fail}"
         })
 
     except asyncio.CancelledError:

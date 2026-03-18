@@ -1,4 +1,6 @@
-import os, asyncio, httpx
+import os
+import asyncio
+import httpx
 
 PERPLEXITY_KEY = os.environ.get('PERPLEXITY_API_KEY', '')
 

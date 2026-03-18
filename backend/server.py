@@ -8,6 +8,7 @@ from routes.auth import router as auth_router
 from routes.onboarding import router as onboarding_router
 from routes.persona import router as persona_router
 from routes.content import router as content_router
+from routes.dashboard import router as dashboard_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -20,6 +21,7 @@ api_router.include_router(auth_router)
 api_router.include_router(onboarding_router)
 api_router.include_router(persona_router)
 api_router.include_router(content_router)
+api_router.include_router(dashboard_router)
 
 
 @api_router.get("/")

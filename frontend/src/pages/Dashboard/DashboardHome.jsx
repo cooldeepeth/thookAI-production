@@ -1,10 +1,13 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   PenLine, Brain, RefreshCw, BarChart2, Zap, ArrowRight,
-  Linkedin, Twitter, Instagram
+  Linkedin, Twitter, Instagram, Clock, CheckCircle2, XCircle, AlertCircle
 } from "lucide-react";
+
+const API_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
 
 const quickActions = [
   { label: "Write a LinkedIn post", icon: Linkedin, color: "#0A66C2", to: "/dashboard/studio", tag: "Text" },
@@ -14,16 +17,153 @@ const quickActions = [
 ];
 
 const upcomingFeatures = [
-  { sprint: 2, title: "Persona Engine", desc: "Set up your AI voice clone", icon: Brain, ready: false },
-  { sprint: 5, title: "Content Studio", desc: "Create your first AI post", icon: PenLine, ready: false },
+  { sprint: 5, title: "Platform Publishing", desc: "Auto-publish to LinkedIn, X, Instagram", icon: Zap, ready: false },
+  { sprint: 6, title: "Media Agents", desc: "AI-powered images and videos", icon: PenLine, ready: false },
   { sprint: 9, title: "Analytics", desc: "Track your content performance", icon: BarChart2, ready: false },
 ];
 
+const platformIcons = {
+  linkedin: Linkedin,
+  x: Twitter,
+  instagram: Instagram
+};
+
+const statusIcons = {
+  approved: { icon: CheckCircle2, color: "text-green-500" },
+  rejected: { icon: XCircle, color: "text-red-500" },
+  reviewing: { icon: AlertCircle, color: "text-yellow-500" },
+  running: { icon: Clock, color: "text-blue-500" },
+  error: { icon: XCircle, color: "text-red-500" }
+};
+
+function StatSkeleton() {
+  return (
+    <div className="card-thook p-4 animate-pulse">
+      <div className="h-3 w-16 bg-zinc-800 rounded mb-2" />
+      <div className="h-8 w-20 bg-zinc-800 rounded" />
+    </div>
+  );
+}
+
+function RecentJobCard({ job }) {
+  const navigate = useNavigate();
+  const PlatformIcon = platformIcons[job.platform] || PenLine;
+  const StatusConfig = statusIcons[job.status] || statusIcons.reviewing;
+  const StatusIcon = StatusConfig.icon;
+  
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card-thook p-4 hover:border-zinc-700 transition-colors cursor-pointer"
+      onClick={() => navigate(`/dashboard/studio?job=${job.job_id}`)}
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+          <PlatformIcon size={18} className="text-zinc-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm font-medium text-white capitalize">{job.platform} {job.content_type}</span>
+            <StatusIcon size={14} className={StatusConfig.color} />
+          </div>
+          {job.preview && (
+            <p className="text-xs text-zinc-500 truncate">{job.preview}</p>
+          )}
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-[10px] text-zinc-600">{formatDate(job.created_at)}</span>
+            {job.persona_match && (
+              <span className="text-[10px] text-zinc-500">
+                Persona: <span className="text-lime">{job.persona_match}/10</span>
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function DashboardHome() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!token) return;
+      
+      try {
+        setLoading(true);
+        const response = await fetch(`${API_URL}/api/dashboard/stats`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch stats");
+        }
+        
+        const data = await response.json();
+        setStats(data);
+        setError(null);
+      } catch (err) {
+        console.error("Stats fetch error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [token]);
+
+  const displayStats = [
+    { 
+      label: "Credits", 
+      value: stats?.credits ?? user?.credits ?? 100, 
+      unit: "", 
+      color: "text-lime" 
+    },
+    { 
+      label: "Posts Created", 
+      value: stats?.posts_created ?? 0, 
+      unit: "", 
+      color: "text-white" 
+    },
+    { 
+      label: "Platforms", 
+      value: stats?.platforms_count ?? 0, 
+      unit: "of 3", 
+      color: "text-white" 
+    },
+    { 
+      label: "Persona Score", 
+      value: stats?.persona_score ?? "–", 
+      unit: stats?.persona_score ? "/10" : "", 
+      color: stats?.persona_score ? "text-lime" : "text-zinc-500" 
+    },
+  ];
 
   return (
     <main className="p-6 space-y-6" data-testid="dashboard-home">
@@ -72,27 +212,80 @@ export default function DashboardHome() {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Credits", value: user?.credits ?? 100, unit: "", color: "text-lime" },
-          { label: "Posts Created", value: 0, unit: "", color: "text-white" },
-          { label: "Platforms", value: user?.platforms_connected?.length ?? 0, unit: "of 3", color: "text-white" },
-          { label: "Persona Score", value: "–", unit: "/10", color: "text-zinc-500" },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + i * 0.05 }}
-            className="card-thook p-4"
-            data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
-          >
-            <p className="text-zinc-500 text-xs mb-1">{stat.label}</p>
-            <p className={`font-display font-bold text-2xl ${stat.color}`}>
-              {stat.value}<span className="text-sm text-zinc-500 font-normal">{stat.unit}</span>
-            </p>
-          </motion.div>
-        ))}
+        {loading ? (
+          <>
+            <StatSkeleton />
+            <StatSkeleton />
+            <StatSkeleton />
+            <StatSkeleton />
+          </>
+        ) : (
+          displayStats.map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.05 }}
+              className="card-thook p-4"
+              data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              <p className="text-zinc-500 text-xs mb-1">{stat.label}</p>
+              <p className={`font-display font-bold text-2xl ${stat.color}`}>
+                {stat.value}<span className="text-sm text-zinc-500 font-normal">{stat.unit}</span>
+              </p>
+            </motion.div>
+          ))
+        )}
       </div>
+
+      {/* Recent Content */}
+      {stats?.recent_jobs && stats.recent_jobs.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Recent Content</h3>
+            <button 
+              onClick={() => navigate("/dashboard/library")}
+              className="text-xs text-lime hover:text-lime/80 transition-colors"
+            >
+              View All
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {stats.recent_jobs.map((job, i) => (
+              <RecentJobCard key={job.job_id} job={job} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Learning Insights Banner */}
+      {stats?.learning_signals_count > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="card-thook p-4 border-lime/20"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center">
+              <Brain size={20} className="text-lime" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-white">Your AI is learning</p>
+              <p className="text-xs text-zinc-500">
+                {stats.learning_signals_count} interaction{stats.learning_signals_count !== 1 ? 's' : ''} recorded · 
+                Persona getting smarter with each approval
+              </p>
+            </div>
+            <button 
+              onClick={() => navigate("/dashboard/persona")}
+              className="text-xs text-lime hover:text-lime/80 transition-colors"
+            >
+              View Insights
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Quick Actions */}
       <div>
