@@ -190,12 +190,12 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | **Sprint 9** | Analyst Agent + Learning Loops + Persona Refinement + Pattern Fatigue Shield | ✅ COMPLETE |
-| Sprint 10 | Credit System + Pro/Studio/Agency Tiers + Viral Hook Predictor | 🔜 Next |
+| **Sprint 10** | Credit System + Pro/Studio/Agency Tiers + Viral Hook Predictor | ✅ COMPLETE |
 
 ### PHASE 6: SCALE
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 11 | Shareable Persona Cards + Growth Features + Regional English Format | Planned |
+| Sprint 11 | Shareable Persona Cards + Growth Features + Regional English Format | 🔜 Next |
 | Sprint 12 | B2B Agency Workspace + Templates Marketplace + 3rd Party API | Planned |
 
 ---
@@ -740,3 +740,94 @@ See `/app/backend/.env` for all API key placeholders:
 - `persona_engines.card.last_refined` — Last refinement timestamp
 - `content_jobs.performance_metrics` — Real platform metrics when available
 - `content_jobs.metrics_updated_at` — Last metrics sync time
+
+
+---
+
+## 22. Sprint 10 Implementation Details — July 2025
+
+### Credit System (`services/credits.py`):
+
+- **Credit Operations** with costs:
+  - CONTENT_CREATE: 10 credits
+  - CONTENT_REGENERATE: 5 credits
+  - IMAGE_GENERATE: 8 credits
+  - CAROUSEL_GENERATE: 15 credits
+  - VOICE_NARRATION: 5 credits
+  - VIDEO_GENERATE: 25 credits
+  - REPURPOSE: 3 credits
+  - SERIES_PLAN: 5 credits
+  - AI_INSIGHTS: 2 credits
+  - VIRAL_PREDICT: 1 credit
+
+- **Balance Management**
+  - get_credit_balance() — Current balance with tier info
+  - deduct_credits() — Deduct for operations with transaction log
+  - add_credits() — Add credits (purchase/bonus/refund)
+  - get_usage_history() — Transaction history with breakdown
+
+**API Endpoints:**
+- `GET /api/billing/credits` — Current balance
+- `GET /api/billing/credits/usage` — Usage history
+- `GET /api/billing/credits/costs` — Operation costs
+- `POST /api/billing/credits/purchase` — Purchase credits (placeholder)
+
+### Subscription Tiers (`services/subscriptions.py`):
+
+- **4 Tiers:**
+  1. **Free** — 50 credits/mo, 1 persona, 3 posts/day, LinkedIn only
+  2. **Pro** ($29/mo) — 500 credits/mo, 3 personas, 20 posts/day, all platforms, voice
+  3. **Studio** ($79/mo) — 2000 credits/mo, 10 personas, 100 posts/day, video, priority support
+  4. **Agency** ($199/mo) — 10000 credits/mo, 50 personas, 500 posts/day, API access
+
+- **Feature Gating** by tier:
+  - series_enabled, repurpose_enabled, voice_enabled, video_enabled
+  - priority_support, api_access
+  - analytics_days (7/30/90/365)
+
+**API Endpoints:**
+- `GET /api/billing/subscription` — Current subscription
+- `GET /api/billing/subscription/tiers` — Available tiers
+- `GET /api/billing/subscription/limits` — Feature limits and usage
+- `POST /api/billing/subscription/upgrade` — Upgrade tier
+- `POST /api/billing/subscription/cancel` — Cancel subscription
+
+### Viral Hook Predictor (`agents/viral_predictor.py`):
+
+- **Pattern Detection:**
+  - Positive patterns: curiosity_gap, contrarian, number_hook, story_hook, direct_address, result_hook
+  - Negative patterns: generic_opener, weak_language, clickbait_overload
+
+- **Virality Scoring (0-100):**
+  - Rule-based pattern analysis
+  - AI-enhanced scoring via GPT-4.1-mini
+  - Combined weighted score
+
+- **Hook Improvement:**
+  - 4 styles: curiosity, contrarian, story, number
+  - Generates 3 improved versions per request
+  - Predicted scores for each alternative
+
+**API Endpoints:**
+- `POST /api/viral/predict` — Predict virality score
+- `POST /api/viral/improve` — Generate improved hooks
+- `POST /api/viral/batch-predict` — Compare multiple hooks (A/B testing)
+- `GET /api/viral/patterns` — Get pattern information
+
+### Frontend Components:
+
+- **Settings Page** (`Settings.jsx`)
+  - Current plan display with credits bar
+  - Feature limits and usage
+  - Tier comparison cards
+  - Upgrade/downgrade buttons
+
+### Database Schema Additions:
+- `users.credits` — Current credit balance
+- `users.subscription_tier` — Current tier (free/pro/studio/agency)
+- `users.subscription_started` — Subscription start date
+- `users.subscription_expires` — Expiry date
+- `users.subscription_auto_renew` — Auto-renewal flag
+- `users.credits_last_refresh` — Last monthly credit refresh
+- `credit_transactions` collection — Transaction history
+- `subscription_history` collection — Tier change history
