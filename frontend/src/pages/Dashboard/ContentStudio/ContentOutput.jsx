@@ -2,7 +2,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp, AlertTriangle,
-  Image, Mic, Download, Play, Pause, Loader2, Sparkles
+  Image, Mic, Download, Play, Pause, Loader2, Sparkles,
+  Calendar, Send, Clock, Linkedin, ExternalLink
 } from "lucide-react";
 import { LinkedInShell, XShell, InstagramShell } from "./Shells";
 
@@ -388,7 +389,7 @@ function RejectionModal({ isOpen, onClose, onSubmit }) {
   );
 }
 
-export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
+function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
   const [editing, setEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(job.final_content || "");
   const [approved, setApproved] = useState(job.status === "approved");
@@ -507,6 +508,44 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
         <MediaPanel job={job} onMediaUpdate={handleMediaUpdate} />
       )}
 
+      {/* Publish Panel (for approved content) */}
+      {isApproved && job.status !== "published" && job.status !== "scheduled" && (
+        <PublishPanel job={job} onPublished={() => console.log("Published/Scheduled")} />
+      )}
+
+      {/* Show status for published/scheduled */}
+      {(job.status === "published" || job.status === "scheduled") && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mt-4 p-4 rounded-xl flex items-center gap-3 ${
+            job.status === "published" ? "bg-green-500/10 border border-green-500/20" : "bg-violet/10 border border-violet/20"
+          }`}
+        >
+          {job.status === "published" ? (
+            <>
+              <Check size={18} className="text-green-400" />
+              <div>
+                <p className="text-sm text-white font-medium">Published</p>
+                <p className="text-xs text-zinc-500">
+                  {job.published_at ? new Date(job.published_at).toLocaleString() : ""}
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <Clock size={18} className="text-violet" />
+              <div>
+                <p className="text-sm text-white font-medium">Scheduled</p>
+                <p className="text-xs text-zinc-500">
+                  {job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : ""}
+                </p>
+              </div>
+            </>
+          )}
+        </motion.div>
+      )}
+
       {/* Action buttons */}
       {!isApproved && (
         <div className="flex gap-2 mt-4">
@@ -552,3 +591,252 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
     </div>
   );
 }
+
+// Schedule/Publish Panel for approved content
+function PublishPanel({ job, onPublished }) {
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [optimalTimes, setOptimalTimes] = useState(null);
+  const [loadingTimes, setLoadingTimes] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const platform = job.platform || "linkedin";
+
+  const fetchOptimalTimes = async () => {
+    setLoadingTimes(true);
+    try {
+      const token = localStorage.getItem("thook_token");
+      const res = await fetch(`${API_URL}/api/dashboard/schedule/optimal-times?platform=${platform}&count=3`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setOptimalTimes(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch optimal times:", err);
+    } finally {
+      setLoadingTimes(false);
+    }
+  };
+
+  const handlePublishNow = async () => {
+    setPublishing(true);
+    setResult(null);
+    
+    try {
+      const token = localStorage.getItem("thook_token");
+      const res = await fetch(`${API_URL}/api/dashboard/publish/${job.job_id}?platforms=${platform}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const data = await res.json();
+      
+      if (data.all_success) {
+        setResult({ success: true, message: "Published successfully!", url: data.results?.[platform]?.post_url });
+        onPublished?.();
+      } else if (data.partial_success) {
+        setResult({ success: true, message: "Partially published", platforms: data.successful_platforms });
+      } else {
+        const error = data.results?.[platform]?.error || "Failed to publish";
+        setResult({ success: false, message: error });
+      }
+    } catch (err) {
+      setResult({ success: false, message: "Failed to publish. Please try again." });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleSchedule = async () => {
+    if (!selectedDate || !selectedTime) return;
+    
+    setScheduling(true);
+    setResult(null);
+    
+    try {
+      const scheduledAt = new Date(`${selectedDate}T${selectedTime}:00`).toISOString();
+      const token = localStorage.getItem("thook_token");
+      
+      const res = await fetch(`${API_URL}/api/dashboard/schedule/content?job_id=${job.job_id}&scheduled_at=${scheduledAt}&platforms=${platform}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const data = await res.json();
+      
+      if (data.scheduled) {
+        setResult({ success: true, message: data.message || "Content scheduled!" });
+        onPublished?.();
+      } else {
+        setResult({ success: false, message: data.error || "Failed to schedule" });
+      }
+    } catch (err) {
+      setResult({ success: false, message: "Failed to schedule. Please try again." });
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const selectOptimalTime = (slot) => {
+    const dt = new Date(slot.datetime);
+    setSelectedDate(dt.toISOString().split("T")[0]);
+    setSelectedTime(dt.toTimeString().slice(0, 5));
+    setShowSchedule(true);
+  };
+
+  // Get min date (today)
+  const minDate = new Date().toISOString().split("T")[0];
+
+  return (
+    <div className="card-thook p-4 mt-4" data-testid="publish-panel">
+      <div className="flex items-center gap-2 mb-3">
+        <Send size={14} className="text-lime" />
+        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Publish</span>
+      </div>
+
+      {result && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-4 p-3 rounded-lg flex items-center gap-3 ${
+            result.success ? "bg-lime/10 border border-lime/20" : "bg-red-500/10 border border-red-500/20"
+          }`}
+        >
+          {result.success ? <Check size={16} className="text-lime" /> : <X size={16} className="text-red-400" />}
+          <div className="flex-1">
+            <p className={`text-sm ${result.success ? "text-white" : "text-red-400"}`}>{result.message}</p>
+            {result.url && (
+              <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-xs text-lime hover:underline flex items-center gap-1 mt-1">
+                View post <ExternalLink size={10} />
+              </a>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {!result?.success && (
+        <>
+          {/* Quick publish button */}
+          <button
+            onClick={handlePublishNow}
+            disabled={publishing}
+            className="w-full py-3 bg-lime text-black rounded-xl text-sm font-semibold hover:bg-lime/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {publishing ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              <>
+                <Send size={14} />
+                Publish Now to {platform.charAt(0).toUpperCase() + platform.slice(1)}
+              </>
+            )}
+          </button>
+
+          {/* Schedule toggle */}
+          <button
+            onClick={() => {
+              setShowSchedule(!showSchedule);
+              if (!showSchedule && !optimalTimes) fetchOptimalTimes();
+            }}
+            className="w-full mt-3 py-2 text-xs text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-2"
+          >
+            <Calendar size={12} />
+            {showSchedule ? "Hide scheduling options" : "Schedule for later"}
+          </button>
+
+          {/* Schedule panel */}
+          <AnimatePresence>
+            {showSchedule && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-4 border-t border-white/5 mt-4">
+                  {/* Optimal times suggestions */}
+                  {loadingTimes ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-500 mb-4">
+                      <Loader2 size={12} className="animate-spin" />
+                      Loading optimal times...
+                    </div>
+                  ) : optimalTimes?.best_times?.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs text-zinc-500 mb-2">Suggested times:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {optimalTimes.best_times.map((slot, i) => (
+                          <button
+                            key={i}
+                            onClick={() => selectOptimalTime(slot)}
+                            className="text-xs px-3 py-1.5 bg-violet/10 text-violet rounded-lg hover:bg-violet/20 transition-colors"
+                          >
+                            {slot.display_time}
+                          </button>
+                        ))}
+                      </div>
+                      {optimalTimes.reasoning && (
+                        <p className="text-[10px] text-zinc-600 mt-2">{optimalTimes.reasoning}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Manual date/time picker */}
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-zinc-500 block mb-1">Date</label>
+                      <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        min={minDate}
+                        className="w-full bg-white/5 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-zinc-500 block mb-1">Time</label>
+                      <input
+                        type="time"
+                        value={selectedTime}
+                        onChange={(e) => setSelectedTime(e.target.value)}
+                        className="w-full bg-white/5 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSchedule}
+                    disabled={scheduling || !selectedDate || !selectedTime}
+                    className="w-full mt-4 py-2.5 bg-violet/20 text-violet rounded-lg text-sm font-medium hover:bg-violet/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {scheduling ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Scheduling...
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={14} />
+                        Schedule Post
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+    </div>
+  );
+}
+
+export { ContentOutput as default, PublishPanel };

@@ -10,6 +10,7 @@ import logging
 from fastapi import APIRouter, Depends, Query
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
+from pydantic import BaseModel
 from database import db
 from auth_utils import get_current_user
 
@@ -450,3 +451,200 @@ async def get_brief_status(current_user: dict = Depends(get_current_user)) -> Di
         "dismissed_today": dismissal is not None
     }
 
+
+
+
+# ============ PYDANTIC MODELS ============
+
+class ScheduleContentRequest(BaseModel):
+    job_id: str
+    scheduled_at: datetime
+    platforms: List[str]
+
+
+# ============ PLANNER ENDPOINTS ============
+
+@router.get("/schedule/optimal-times")
+async def get_optimal_times(
+    platform: str = Query(..., description="Platform to get times for"),
+    content_type: Optional[str] = Query(None, description="Type of content"),
+    count: int = Query(3, description="Number of suggestions"),
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Get optimal posting times for a platform."""
+    from agents.planner import get_optimal_posting_times
+    return await get_optimal_posting_times(
+        user_id=current_user["user_id"],
+        platform=platform,
+        content_type=content_type,
+        num_suggestions=count
+    )
+
+
+@router.get("/schedule/weekly")
+async def get_weekly_schedule(
+    platforms: str = Query("linkedin,x,instagram", description="Comma-separated platforms"),
+    posts_per_week: int = Query(5, description="Target posts per week"),
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Generate a weekly posting schedule."""
+    from agents.planner import get_weekly_schedule
+    platform_list = [p.strip() for p in platforms.split(",") if p.strip()]
+    return await get_weekly_schedule(
+        user_id=current_user["user_id"],
+        platforms=platform_list,
+        posts_per_week=posts_per_week
+    )
+
+
+@router.post("/schedule/content")
+async def schedule_content(
+    request: ScheduleContentRequest,
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Schedule content for future publishing."""
+    from agents.planner import schedule_content
+    return await schedule_content(
+        user_id=current_user["user_id"],
+        job_id=request.job_id,
+        scheduled_at=request.scheduled_at,
+        platforms=request.platforms
+    )
+
+
+@router.get("/schedule/upcoming")
+async def get_upcoming_scheduled(
+    limit: int = Query(10, description="Number of items to return"),
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Get upcoming scheduled content."""
+    user_id = current_user["user_id"]
+    now = datetime.now(timezone.utc)
+    
+    scheduled_cursor = db.content_jobs.find(
+        {
+            "user_id": user_id,
+            "status": "scheduled",
+            "scheduled_at": {"$gt": now}
+        },
+        {
+            "_id": 0,
+            "job_id": 1,
+            "platform": 1,
+            "content_type": 1,
+            "final_content": 1,
+            "scheduled_at": 1,
+            "scheduled_platforms": 1,
+            "created_at": 1
+        }
+    ).sort("scheduled_at", 1).limit(limit)
+    
+    scheduled = []
+    async for job in scheduled_cursor:
+        scheduled.append({
+            "job_id": job.get("job_id"),
+            "platform": job.get("platform"),
+            "content_type": job.get("content_type"),
+            "preview": job.get("final_content", "")[:100] + "..." if job.get("final_content") else None,
+            "scheduled_at": job.get("scheduled_at").isoformat() if job.get("scheduled_at") else None,
+            "scheduled_platforms": job.get("scheduled_platforms", []),
+            "created_at": job.get("created_at").isoformat() if job.get("created_at") else None
+        })
+    
+    return {
+        "scheduled": scheduled,
+        "total": len(scheduled)
+    }
+
+
+# ============ PUBLISHER ENDPOINTS ============
+
+@router.post("/publish/{job_id}")
+async def publish_content_now(
+    job_id: str,
+    platforms: List[str] = Query(..., description="Platforms to publish to"),
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Publish approved content immediately to selected platforms."""
+    from agents.publisher import publish_content
+    
+    user_id = current_user["user_id"]
+    
+    # Get the content job
+    job = await db.content_jobs.find_one({
+        "job_id": job_id,
+        "user_id": user_id
+    })
+    
+    if not job:
+        return {"success": False, "error": "Content not found"}
+    
+    if job.get("status") not in ["approved", "scheduled"]:
+        return {"success": False, "error": "Content must be approved before publishing"}
+    
+    content = job.get("final_content", "")
+    media_assets = job.get("media_assets", [])
+    is_thread = job.get("content_type") == "thread"
+    
+    # Publish to platforms
+    result = await publish_content(
+        user_id=user_id,
+        content=content,
+        platforms=platforms,
+        media_assets=media_assets,
+        is_thread=is_thread
+    )
+    
+    # Update job status
+    if result.get("all_success"):
+        new_status = "published"
+    elif result.get("partial_success"):
+        new_status = "partially_published"
+    else:
+        new_status = job.get("status")  # Keep current status on failure
+    
+    await db.content_jobs.update_one(
+        {"job_id": job_id},
+        {
+            "$set": {
+                "status": new_status,
+                "published_at": datetime.now(timezone.utc),
+                "publish_results": result.get("results"),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        **result,
+        "job_id": job_id,
+        "status": new_status
+    }
+
+
+@router.delete("/schedule/{job_id}")
+async def cancel_scheduled(
+    job_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, str]:
+    """Cancel a scheduled post."""
+    result = await db.content_jobs.update_one(
+        {
+            "job_id": job_id,
+            "user_id": current_user["user_id"],
+            "status": "scheduled"
+        },
+        {
+            "$set": {
+                "status": "approved",
+                "scheduled_at": None,
+                "scheduled_platforms": [],
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        return {"message": "Scheduled post not found or already processed"}
+    
+    return {"message": "Scheduled post cancelled", "job_id": job_id}
