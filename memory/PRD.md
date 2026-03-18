@@ -184,7 +184,7 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | **Sprint 7** | Platform Integrations (Meta/LinkedIn/X) + Planner + Ghost Publisher | ✅ COMPLETE |
-| Sprint 8 | Repurpose Agent + Daily Brief + Content Series Planner + Anti-Repetition Engine | 🔜 Next |
+| **Sprint 8** | Repurpose Agent + Content Series Planner + Anti-Repetition V2 + Content Library | ✅ COMPLETE |
 
 ### PHASE 5: ANALYTICS & GROWTH
 | Sprint | Focus | Status |
@@ -544,3 +544,105 @@ See `/app/backend/.env` for all API key placeholders:
 - `content_jobs.published_at` — Actual publish timestamp
 - `content_jobs.publish_results` — Results from publish attempts
 - `users.platforms_connected` — Array of connected platform names
+
+
+---
+
+## 20. Sprint 8 Implementation Details — July 2025
+
+### Repurpose Agent (`agents/repurpose.py`):
+
+- **repurpose_content()** — Transforms content between platforms
+  - Platform-specific format specs (LinkedIn, X, Instagram)
+  - Thread creation for X when content exceeds 280 chars
+  - Hashtag optimization per platform
+  - Voice/tone preservation option
+  - Uses Claude Sonnet for AI-powered adaptation
+
+- **bulk_repurpose()** — Repurposes to multiple platforms, creates new jobs
+- **get_repurpose_suggestions()** — Finds approved content ready for repurposing
+
+**API Endpoints:**
+- `POST /api/content/repurpose` — Repurpose content to multiple platforms
+- `GET /api/content/repurpose/preview/{job_id}` — Preview repurposed versions
+- `GET /api/content/repurpose/suggestions` — Get content ready to repurpose
+
+### Content Series Planner (`agents/series_planner.py`):
+
+- **6 Series Templates:**
+  1. `numbered_tips` — "7 Days of X" style daily tips
+  2. `journey` — Personal/professional journey chronicle
+  3. `myth_busting` — Debunk misconceptions
+  4. `case_study` — Deep dive analysis
+  5. `behind_scenes` — Process/routine reveals
+  6. `contrarian` — Challenge conventional wisdom
+
+- **create_series_plan()** — AI generates series with:
+  - Series title and description
+  - Individual post outlines with hooks, key points, CTAs
+  - Optimal posting schedule
+  - Teasers connecting posts
+
+- **save_series()** — Saves plan with optional start date scheduling
+- **create_series_post()** — Creates content job from series post
+
+**API Endpoints:**
+- `GET /api/content/series/templates` — List available templates
+- `POST /api/content/series/plan` — Create AI-powered series plan
+- `POST /api/content/series/save` — Save series to database
+- `GET /api/content/series` — List user's series
+- `GET /api/content/series/{series_id}` — Get series detail
+- `POST /api/content/series/create-post` — Create job from series post
+
+### Anti-Repetition Engine V2 (`agents/anti_repetition.py`):
+
+**New V2 Features:**
+- **Hook Pattern Detection** — Categorizes hooks into types:
+  - question, number_list, story_start, bold_claim, direct_address, curiosity_gap
+  
+- **analyze_hook_fatigue()** — Detects overused hook patterns
+  - Tracks hook type distribution
+  - Identifies overused (>40% usage) and underused hooks
+  - Provides specific recommendations
+
+- **get_content_diversity_score()** — Comprehensive diversity analysis:
+  - Hook diversity score
+  - Topic diversity score
+  - Platform diversity score
+  - Content type diversity score
+  - Overall weighted score with rating
+
+- **get_variation_suggestions()** — AI-powered suggestions to make content unique
+
+**API Endpoints:**
+- `GET /api/content/diversity/score` — Get diversity score with breakdown
+- `GET /api/content/diversity/hook-analysis` — Analyze hook patterns
+- `POST /api/content/diversity/suggestions` — Get AI variation suggestions
+
+### Frontend Components:
+
+- **Repurpose Agent Page** (`RepurposeAgent.jsx`)
+  - Content selection from approved items
+  - Multi-platform targeting
+  - Live preview of adaptations
+  - One-click repurpose creation
+
+- **Content Library Page** (`ContentLibrary.jsx`)
+  - Grid view of all content
+  - Status/platform filtering
+  - Search functionality
+  - Series tab with progress tracking
+
+### Database Schema Additions:
+- `content_series` collection:
+  - `series_id`, `user_id`, `title`, `description`
+  - `posts[]` — Array of post outlines
+  - `schedule[]` — Posting schedule
+  - `status` — active/completed/paused
+  - `completed_posts`, `total_posts`
+
+- `content_jobs` additions:
+  - `is_repurposed: bool` — Flag for repurposed content
+  - `source_job_id` — Links to original content
+  - `series_id` — Links to series
+  - `series_post_number` — Position in series
