@@ -6,6 +6,7 @@ import {
   PenLine, Brain, RefreshCw, BarChart2, Zap, ArrowRight,
   Linkedin, Twitter, Instagram, Clock, CheckCircle2, XCircle, AlertCircle
 } from "lucide-react";
+import DailyBrief from "./DailyBrief";
 
 const API_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
 
@@ -17,8 +18,8 @@ const quickActions = [
 ];
 
 const upcomingFeatures = [
-  { sprint: 5, title: "Platform Publishing", desc: "Auto-publish to LinkedIn, X, Instagram", icon: Zap, ready: false },
   { sprint: 6, title: "Media Agents", desc: "AI-powered images and videos", icon: PenLine, ready: false },
+  { sprint: 7, title: "Platform Publishing", desc: "Auto-publish to LinkedIn, X, Instagram", icon: Zap, ready: false },
   { sprint: 9, title: "Analytics", desc: "Track your content performance", icon: BarChart2, ready: false },
 ];
 
@@ -207,6 +208,9 @@ export default function DashboardHome() {
           </div>
         </motion.div>
       )}
+
+      {/* Daily Brief - AI-powered content suggestions */}
+      {user?.onboarding_completed && <DailyBrief />}
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

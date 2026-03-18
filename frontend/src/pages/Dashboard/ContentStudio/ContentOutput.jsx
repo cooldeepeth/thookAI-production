@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { LinkedInShell, XShell, InstagramShell } from "./Shells";
 
 function QCBadge({ label, value, max, isRisk = false }) {
   const pct = (value / max) * 100;
@@ -25,6 +26,26 @@ function QCBadge({ label, value, max, isRisk = false }) {
         />
       </div>
       <p className="text-[10px] text-zinc-700 mt-1">{isGood ? "Good" : "Needs work"}</p>
+    </div>
+  );
+}
+
+function RepetitionBadge({ score, level }) {
+  if (!level || level === "none" || level === "unknown") return null;
+  
+  const colors = {
+    low: "text-green-400 bg-green-400/10",
+    medium: "text-yellow-400 bg-yellow-400/10",
+    high: "text-red-400 bg-red-400/10"
+  };
+  
+  const colorClass = colors[level] || colors.low;
+  
+  return (
+    <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg ${colorClass}`}>
+      <AlertTriangle size={12} />
+      <span>Repetition: {level}</span>
+      {score > 0 && <span className="font-mono">({Math.round(score)}%)</span>}
     </div>
   );
 }
@@ -56,6 +77,47 @@ function ScoutResearch({ scout }) {
   );
 }
 
+function PlatformShell({ platform, content, onContentChange, isEditing, readOnly }) {
+  switch (platform) {
+    case "linkedin":
+      return (
+        <LinkedInShell
+          content={content}
+          onContentChange={onContentChange}
+          isEditing={isEditing}
+          readOnly={readOnly}
+        />
+      );
+    case "x":
+      return (
+        <XShell
+          content={content}
+          onContentChange={onContentChange}
+          isEditing={isEditing}
+          readOnly={readOnly}
+        />
+      );
+    case "instagram":
+      return (
+        <InstagramShell
+          content={content}
+          onContentChange={onContentChange}
+          isEditing={isEditing}
+          readOnly={readOnly}
+        />
+      );
+    default:
+      return (
+        <LinkedInShell
+          content={content}
+          onContentChange={onContentChange}
+          isEditing={isEditing}
+          readOnly={readOnly}
+        />
+      );
+  }
+}
+
 export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
   const [editing, setEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(job.final_content || "");
@@ -66,21 +128,18 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
   const platform = job.platform || "linkedin";
   const isApproved = approved || job.status === "approved";
 
-  const platformStyles = {
-    linkedin: { color: "#0A66C2", label: "LinkedIn" },
-    x: { color: "#1D9BF0", label: "X" },
-    instagram: { color: "#E1306C", label: "Instagram" },
-  };
-  const ps = platformStyles[platform] || platformStyles.linkedin;
-
   const handleApprove = async () => {
     await onApprove(editing ? editedContent : job.final_content);
     setApproved(true);
     setEditing(false);
   };
 
+  const handleContentChange = (newContent) => {
+    setEditedContent(newContent);
+  };
+
   return (
-    <div className="max-w-xl mx-auto" data-testid="content-output">
+    <div className="max-w-2xl mx-auto" data-testid="content-output">
       {/* Success banner if approved */}
       {isApproved && (
         <motion.div
@@ -98,11 +157,14 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
       <div className="mb-4" data-testid="qc-scores">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs text-zinc-500 uppercase tracking-wider font-mono">Quality Scores</p>
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-            qc.overall_pass ? "bg-lime/15 text-lime" : "bg-yellow-400/10 text-yellow-400"
-          }`} data-testid="qc-overall-badge">
-            {qc.overall_pass ? "✓ PASS" : "⚠ REVIEW"}
-          </span>
+          <div className="flex items-center gap-2">
+            <RepetitionBadge score={qc.repetition_risk} level={qc.repetition_level} />
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+              qc.overall_pass ? "bg-lime/15 text-lime" : "bg-yellow-400/10 text-yellow-400"
+            }`} data-testid="qc-overall-badge">
+              {qc.overall_pass ? "✓ PASS" : "⚠ REVIEW"}
+            </span>
+          </div>
         </div>
         <div className="flex gap-2">
           <QCBadge label="Persona Match" value={qc.personaMatch || 0} max={10} />
@@ -111,36 +173,15 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
         </div>
       </div>
 
-      {/* Content Preview */}
-      <div className="card-thook overflow-hidden mb-4" data-testid="content-draft-card">
-        {/* Platform header */}
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5"
-          style={{ backgroundColor: `${ps.color}10` }}>
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ps.color }} />
-          <span className="text-xs font-medium" style={{ color: ps.color }}>{ps.label} · {job.content_type}</span>
-          <span className="ml-auto text-[10px] font-mono text-zinc-600">
-            {(job.final_content || "").split(" ").length} words
-          </span>
-        </div>
-
-        {/* Content */}
-        {editing ? (
-          <textarea
-            value={editedContent}
-            onChange={e => setEditedContent(e.target.value)}
-            data-testid="content-edit-textarea"
-            className="w-full min-h-[200px] bg-[#18181B] text-white text-sm p-4 outline-none resize-y leading-relaxed"
-            autoFocus
-          />
-        ) : (
-          <div
-            data-testid="content-text"
-            className="p-4 text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap cursor-text"
-            onClick={() => setEditing(true)}
-          >
-            {job.final_content || "Content unavailable"}
-          </div>
-        )}
+      {/* Platform-Native Shell */}
+      <div className="mb-4" data-testid="platform-shell">
+        <PlatformShell
+          platform={platform}
+          content={editing ? editedContent : job.final_content}
+          onContentChange={handleContentChange}
+          isEditing={editing}
+          readOnly={isApproved}
+        />
       </div>
 
       {/* QC Feedback */}

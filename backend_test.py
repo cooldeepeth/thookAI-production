@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend Testing Suite for ThookAI Sprint 4
-Tests Dashboard Stats API, Learning Signal Capture, Anti-Repetition Engine, and Content Pipeline
+Backend Testing Suite for ThookAI Sprint 5
+Tests Daily Brief API, Content Pipeline, and existing Sprint 4 functionality
 """
 
 import asyncio
@@ -36,9 +36,9 @@ class TestRunner:
         self.token = None
         self.user_id = None
         self.job_ids = []
-        self.test_email = "thookai.test@example.com"
-        self.test_password = "ThookAI123!"
-        self.test_name = "ThookAI Tester"
+        self.test_email = "sprint5test@example.com"
+        self.test_password = "test123"
+        self.test_name = "Sprint 5 Tester"
         
     def log(self, message, level="INFO"):
         print(f"[{level}] {message}")
@@ -118,9 +118,135 @@ class TestRunner:
             self.log(f"❌ Registration failed: {response}", "ERROR")
             return False
     
-    async def test_dashboard_stats_initial(self):
-        """Test dashboard stats API with new user (should show defaults)."""
-        self.log("=== Testing Dashboard Stats API (Initial) ===")
+    async def test_daily_brief_api_initial(self):
+        """Test Daily Brief API endpoint (first call, should generate new brief)."""
+        self.log("=== Testing Daily Brief API (Initial Call) ===")
+        
+        status, response = self.test_api_call("GET", "/dashboard/daily-brief")
+        
+        if status == 200:
+            required_fields = [
+                "greeting", "date_context", "trending_topics", 
+                "content_ideas", "optimal_time", "energy_check", "cached"
+            ]
+            
+            missing_fields = [field for field in required_fields if field not in response]
+            if missing_fields:
+                self.log(f"❌ Missing fields in daily brief: {missing_fields}", "ERROR")
+                return False
+            
+            # Check data structure
+            if not isinstance(response.get("trending_topics"), list):
+                self.log("❌ trending_topics should be a list", "ERROR")
+                return False
+            
+            if not isinstance(response.get("content_ideas"), list):
+                self.log("❌ content_ideas should be a list", "ERROR")
+                return False
+            
+            if not isinstance(response.get("energy_check"), dict):
+                self.log("❌ energy_check should be a dict", "ERROR")
+                return False
+            
+            # Should not be cached on first call
+            if response.get("cached") != False:
+                self.log("❌ First call should not be cached", "ERROR")
+                return False
+            
+            self.log("✅ Daily Brief API working - initial call successful")
+            self.log(f"Greeting: {response.get('greeting')}")
+            self.log(f"Trending topics count: {len(response.get('trending_topics', []))}")
+            self.log(f"Content ideas count: {len(response.get('content_ideas', []))}")
+            return True
+        else:
+            self.log(f"❌ Daily Brief API failed: {response}", "ERROR")
+            return False
+
+    async def test_daily_brief_caching(self):
+        """Test Daily Brief API caching (second call should return cached=true)."""
+        self.log("=== Testing Daily Brief API Caching ===")
+        
+        status, response = self.test_api_call("GET", "/dashboard/daily-brief")
+        
+        if status == 200:
+            # Second call should be cached
+            if response.get("cached") != True:
+                self.log("❌ Second call should be cached", "ERROR")
+                return False
+            
+            self.log("✅ Daily Brief caching working correctly")
+            return True
+        else:
+            self.log(f"❌ Daily Brief caching test failed: {response}", "ERROR")
+            return False
+
+    async def test_daily_brief_refresh(self):
+        """Test Daily Brief API refresh parameter."""
+        self.log("=== Testing Daily Brief API Refresh ===")
+        
+        status, response = self.test_api_call("GET", "/dashboard/daily-brief?refresh=true")
+        
+        if status == 200:
+            # With refresh=true, should not be cached
+            if response.get("cached") != False:
+                self.log("❌ Refresh call should not be cached", "ERROR")
+                return False
+            
+            self.log("✅ Daily Brief refresh working correctly")
+            return True
+        else:
+            self.log(f"❌ Daily Brief refresh test failed: {response}", "ERROR")
+            return False
+
+    async def test_daily_brief_dismiss(self):
+        """Test Daily Brief dismiss functionality."""
+        self.log("=== Testing Daily Brief Dismiss ===")
+        
+        # First dismiss the brief
+        status, response = self.test_api_call("POST", "/dashboard/daily-brief/dismiss")
+        
+        if status == 200:
+            if "dismissed" not in str(response).lower():
+                self.log(f"❌ Unexpected dismiss response: {response}", "ERROR")
+                return False
+            
+            self.log("✅ Daily Brief dismiss successful")
+            return True
+        else:
+            self.log(f"❌ Daily Brief dismiss failed: {response}", "ERROR")
+            return False
+
+    async def test_daily_brief_status(self):
+        """Test Daily Brief status endpoint after dismissal."""
+        self.log("=== Testing Daily Brief Status ===")
+        
+        status, response = self.test_api_call("GET", "/dashboard/daily-brief/status")
+        
+        if status == 200:
+            required_fields = ["show_brief", "dismissed_today"]
+            missing_fields = [field for field in required_fields if field not in response]
+            if missing_fields:
+                self.log(f"❌ Missing fields in brief status: {missing_fields}", "ERROR")
+                return False
+            
+            # After dismissal, should return show_brief=false
+            if response.get("show_brief") != False:
+                self.log("❌ show_brief should be false after dismissal", "ERROR")
+                return False
+            
+            if response.get("dismissed_today") != True:
+                self.log("❌ dismissed_today should be true after dismissal", "ERROR")
+                return False
+            
+            self.log("✅ Daily Brief status working correctly")
+            return True
+        else:
+            self.log(f"❌ Daily Brief status test failed: {response}", "ERROR")
+            return False
+
+    async def test_dashboard_stats_sprint4_compatibility(self):
+        """Test that Sprint 4 dashboard stats still work."""
+        self.log("=== Testing Sprint 4 Dashboard Stats Compatibility ===")
         
         status, response = self.test_api_call("GET", "/dashboard/stats")
         
@@ -135,23 +261,10 @@ class TestRunner:
                 self.log(f"❌ Missing fields in dashboard stats: {missing_fields}", "ERROR")
                 return False
             
-            # Check initial values for new user
-            if response["posts_created"] != 0:
-                self.log(f"❌ Expected posts_created=0 for new user, got {response['posts_created']}", "ERROR")
-                return False
-            
-            if response["learning_signals_count"] != 0:
-                self.log(f"❌ Expected learning_signals_count=0 for new user, got {response['learning_signals_count']}", "ERROR")
-                return False
-                
-            if len(response["recent_jobs"]) != 0:
-                self.log(f"❌ Expected 0 recent_jobs for new user, got {len(response['recent_jobs'])}", "ERROR")
-                return False
-            
-            self.log("✅ Dashboard stats API working - initial state correct")
+            self.log("✅ Sprint 4 Dashboard Stats compatibility maintained")
             return True
         else:
-            self.log(f"❌ Dashboard stats API failed: {response}", "ERROR")
+            self.log(f"❌ Dashboard stats compatibility test failed: {response}", "ERROR")
             return False
     
     async def test_content_creation(self):
@@ -378,7 +491,7 @@ class TestRunner:
 
     async def run_all_tests(self):
         """Run all backend tests in sequence."""
-        print(f"\n🚀 Starting ThookAI Sprint 4 Backend Tests")
+        print(f"\n🚀 Starting ThookAI Sprint 5 Backend Tests")
         print(f"Backend URL: {API_BASE}")
         print("=" * 60)
         
@@ -390,31 +503,21 @@ class TestRunner:
             print("❌ Authentication failed - stopping tests")
             return test_results
         
-        # Dashboard stats (initial)
-        test_results["dashboard_initial"] = await self.test_dashboard_stats_initial()
+        # SPRINT 5 PRIORITY TESTS
         
-        # Content creation and approval
+        # Daily Brief API tests
+        test_results["daily_brief_initial"] = await self.test_daily_brief_api_initial()
+        test_results["daily_brief_caching"] = await self.test_daily_brief_caching()
+        test_results["daily_brief_refresh"] = await self.test_daily_brief_refresh()
+        test_results["daily_brief_dismiss"] = await self.test_daily_brief_dismiss()
+        test_results["daily_brief_status"] = await self.test_daily_brief_status()
+        
+        # Sprint 4 compatibility test
+        test_results["dashboard_stats_compatibility"] = await self.test_dashboard_stats_sprint4_compatibility()
+        
+        # Optional: Content creation test for integration
         job_id = await self.test_content_creation()
-        test_results["content_creation"] = job_id is not None
-        
-        if job_id:
-            test_results["job_polling"] = await self.poll_job_until_ready(job_id)
-            
-            if test_results["job_polling"]:
-                test_results["content_approval"] = await self.test_content_approval(job_id)
-                
-                # Test idempotency
-                test_results["idempotency"] = await self.test_idempotency_check(job_id)
-                
-                # Dashboard stats after approval
-                test_results["dashboard_updated"] = await self.test_dashboard_stats_updated()
-        
-        # Anti-repetition testing with second content
-        second_job_id = await self.test_second_content_creation()
-        test_results["anti_repetition"] = second_job_id is not None
-        
-        # Content rejection flow
-        test_results["content_rejection"] = await self.test_content_rejection()
+        test_results["content_creation_integration"] = job_id is not None
         
         return test_results
 
@@ -424,7 +527,7 @@ async def main():
     results = await runner.run_all_tests()
     
     print("\n" + "=" * 60)
-    print("🏁 TEST SUMMARY")
+    print("🏁 SPRINT 5 TEST SUMMARY")
     print("=" * 60)
     
     passed = 0

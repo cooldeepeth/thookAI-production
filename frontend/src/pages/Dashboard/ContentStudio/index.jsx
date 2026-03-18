@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import InputPanel from "./InputPanel";
 import AgentPipeline from "./AgentPipeline";
@@ -8,15 +8,32 @@ import ContentOutput from "./ContentOutput";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function ContentStudio() {
-  const [platform, setPlatform] = useState("linkedin");
+  const [searchParams] = useSearchParams();
+  const [platform, setPlatform] = useState(searchParams.get("platform") || "linkedin");
   const [contentType, setContentType] = useState("post");
-  const [rawInput, setRawInput] = useState("");
+  const [rawInput, setRawInput] = useState(searchParams.get("prefill") || "");
   const [jobId, setJobId] = useState(null);
   const [job, setJob] = useState(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const pollRef = useRef(null);
   const navigate = useNavigate();
+
+  // Handle URL params for prefilling from Daily Brief
+  useEffect(() => {
+    const prefill = searchParams.get("prefill");
+    const urlPlatform = searchParams.get("platform");
+    
+    if (prefill) {
+      setRawInput(prefill);
+    }
+    if (urlPlatform && ["linkedin", "x", "instagram"].includes(urlPlatform)) {
+      setPlatform(urlPlatform);
+      // Set appropriate content type based on platform
+      const defaultTypes = { linkedin: "post", x: "tweet", instagram: "feed_caption" };
+      setContentType(defaultTypes[urlPlatform] || "post");
+    }
+  }, [searchParams]);
 
   // Poll job status
   const pollJob = useCallback(async (id) => {
