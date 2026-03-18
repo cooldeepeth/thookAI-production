@@ -172,12 +172,12 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | **Sprint 3** | Commander + Scout + Thinker + Writer + QC Agents + Content Studio UI | ✅ COMPLETE |
-| Sprint 4 | Persona Agent (Voice Fingerprint) + UOM Engine + Vector DB (Pinecone) | 🔜 Next |
+| **Sprint 4** | Persona Agent (Voice Fingerprint) + UOM Engine + Vector DB (Pinecone) + Dashboard Stats | ✅ COMPLETE |
 
 ### PHASE 3: CONTENT PIPELINE
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 5 | Content Pipeline (Raw Input → Draft) + Platform-Native UX Shells | Planned |
+| Sprint 5 | Content Pipeline (Raw Input → Draft) + Platform-Native UX Shells | 🔜 Next |
 | Sprint 6 | Media Agents (Visual/Designer/Voice) + Human Review Workflow | Planned |
 
 ### PHASE 4: PUBLISHING
@@ -225,10 +225,10 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 ## 13. Backlog (Prioritized)
 
 ### P0 (Critical for core value)
-- Onboarding wizard (3-phase: Social Analysis → Adaptive Interview → Persona Card)
-- Persona Engine (voice fingerprint, content identity, learning signals)
-- Agent Council core (Commander + Writer + QC)
-- Content Pipeline (text-first: raw input → draft → human review)
+- ~~Onboarding wizard (3-phase: Social Analysis → Adaptive Interview → Persona Card)~~ ✅ DONE
+- ~~Persona Engine (voice fingerprint, content identity, learning signals)~~ ✅ DONE
+- ~~Agent Council core (Commander + Writer + QC)~~ ✅ DONE
+- Content Pipeline (text-first: raw input → draft → human review) — Partially done, needs platform-native UX
 
 ### P1 (Essential for launch)
 - Platform-native UX shells (LinkedIn/X/IG editors)
@@ -243,12 +243,55 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 - Daily Brief
 - Content Series Planner
 - Shareable Persona Cards
-- Anti-Repetition Engine
+- ~~Anti-Repetition Engine~~ ✅ DONE (Sprint 4)
 - B2B Agency workspace
 
 ---
 
-## 14. Environment Variables
+## 14. Sprint 4 Implementation Details — July 2025
+
+### Backend:
+- **Persona Learning Agent** (`agents/learning.py`)
+  - `capture_learning_signal()` — Analyzes edits using Claude AI, stores patterns
+  - `update_uom_after_interaction()` — Updates UOM (trust, maturity, burnout risk)
+  - `analyze_edit_delta()` — AI-powered diff analysis
+  - `get_learning_insights()` — Aggregated learning data for UI
+
+- **Anti-Repetition Engine** (`agents/anti_repetition.py`)
+  - `get_anti_repetition_context()` — Fetches recent patterns to avoid
+  - `build_anti_repetition_prompt()` — Generates Commander prompt addition
+  - `score_repetition_risk()` — Scores draft similarity to past content
+
+- **Vector Store Service** (`services/vector_store.py`)
+  - Pinecone integration with graceful fallback to mock mode
+  - `upsert_approved_embedding()` — Stores approved content vectors
+  - `query_similar_content()` — Semantic similarity search
+  - `get_recent_patterns()` — Retrieves recent topics/hooks/structures
+
+- **Dashboard Stats API** (`routes/dashboard.py`)
+  - `GET /api/dashboard/stats` — Live stats (posts, credits, persona score, recent jobs)
+  - `GET /api/dashboard/activity` — Activity feed
+  - `GET /api/dashboard/learning-insights` — AI learning summary
+
+- **Pipeline Integration**
+  - Commander now receives anti-repetition context
+  - QC now includes repetition_risk and repetition_level scoring
+  - Content approval/rejection triggers learning signal capture
+
+### Frontend:
+- **Dashboard Home** (`DashboardHome.jsx`)
+  - Live stats fetched from `/api/dashboard/stats`
+  - Loading skeletons during data fetch
+  - Recent Content section with last 3 jobs
+  - Learning Insights banner showing interaction count
+
+### Database Schema Additions:
+- `persona_engines.learning_signals` — Stores edit_deltas, approved_count, rejected_count
+- `persona_engines.uom` — User Operating Model (trust, maturity, burnout)
+
+---
+
+## 15. Environment Variables
 
 See `/app/backend/.env` for all API key placeholders. User must fill in:
 - `OPENAI_API_KEY`
