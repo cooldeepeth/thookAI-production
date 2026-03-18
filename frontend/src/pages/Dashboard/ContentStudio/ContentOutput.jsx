@@ -95,7 +95,7 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
       )}
 
       {/* QC Scores */}
-      <div className="mb-4">
+      <div className="mb-4" data-testid="qc-scores">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs text-zinc-500 uppercase tracking-wider font-mono">Quality Scores</p>
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${

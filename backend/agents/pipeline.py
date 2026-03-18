@@ -41,7 +41,9 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
 
         # COMMANDER — strategy
         await update_job(job_id, {"current_agent": "commander", "status": "running"})
-        commander_output = await run_commander(raw_input, platform, content_type, persona_card)
+        commander_output = await asyncio.wait_for(
+            run_commander(raw_input, platform, content_type, persona_card), timeout=25.0
+        )
         await update_job(job_id, {
             "agent_outputs.commander": commander_output,
             "agent_summaries.commander": f"Strategy: {commander_output.get('primary_angle', '')[:80]}"
@@ -51,7 +53,9 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
         await update_job(job_id, {"current_agent": "scout"})
         research_needed = commander_output.get("research_needed", True)
         if research_needed:
-            scout_output = await run_scout(raw_input, commander_output.get("research_query", raw_input), platform)
+            scout_output = await asyncio.wait_for(
+                run_scout(raw_input, commander_output.get("research_query", raw_input), platform), timeout=25.0
+            )
         else:
             scout_output = {"findings": "No external research required for this content.", "citations": [], "sources_found": 0}
         await update_job(job_id, {
@@ -61,7 +65,9 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
 
         # THINKER — strategy + structure
         await update_job(job_id, {"current_agent": "thinker"})
-        thinker_output = await run_thinker(raw_input, commander_output, scout_output, persona_card)
+        thinker_output = await asyncio.wait_for(
+            run_thinker(raw_input, commander_output, scout_output, persona_card), timeout=30.0
+        )
         await update_job(job_id, {
             "agent_outputs.thinker": thinker_output,
             "agent_summaries.thinker": f"Angle: {thinker_output.get('angle', '')[:80]}"
@@ -69,7 +75,9 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
 
         # WRITER — voice-matched copy
         await update_job(job_id, {"current_agent": "writer"})
-        writer_output = await run_writer(platform, content_type, commander_output, scout_output, thinker_output, persona_card)
+        writer_output = await asyncio.wait_for(
+            run_writer(platform, content_type, commander_output, scout_output, thinker_output, persona_card), timeout=40.0
+        )
         draft = writer_output.get("draft", "") if isinstance(writer_output, dict) else writer_output
         await update_job(job_id, {
             "agent_outputs.writer": writer_output if isinstance(writer_output, dict) else {"draft": draft},
@@ -79,7 +87,9 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
 
         # QC — persona match + AI risk scoring
         await update_job(job_id, {"current_agent": "qc"})
-        qc_output = await run_qc(draft, persona_card, platform, content_type)
+        qc_output = await asyncio.wait_for(
+            run_qc(draft, persona_card, platform, content_type), timeout=25.0
+        )
         pass_fail = "PASS" if qc_output.get("overall_pass") else "NEEDS REVIEW"
         await update_job(job_id, {
             "agent_outputs.qc": qc_output,
