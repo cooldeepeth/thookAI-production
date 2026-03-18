@@ -383,17 +383,85 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 - `content_jobs.version` — Version number (1-based)
 - `content_jobs.parent_job_id` — Links to original job
 - `content_jobs.regeneration_count` — Tracks regenerations
+- `content_jobs.video_assets[]` — Stores generated videos
+- `content_jobs.avatar_video` — Stores avatar video data
 
 ---
 
-## 17. Environment Variables
+## 17. Multi-Provider Creative AI System (Updated Sprint 6)
 
-See `/app/backend/.env` for all API key placeholders. User must fill in:
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY`
-- `GEMINI_API_KEY`
-- `PERPLEXITY_API_KEY`
-- `ELEVENLABS_API_KEY`
-- Social platform credentials (LinkedIn, Meta, Twitter)
-- `PINECONE_API_KEY`
-- Video/Avatar API keys (Kling, Runway, HeyGen)
+ThookAI now supports multiple AI providers for diversified load and versatility:
+
+### Image Generation Providers (6 providers):
+| Provider | Models | Speed | Quality | Env Key |
+|----------|--------|-------|---------|---------|
+| **OpenAI** | gpt-image-1, dall-e-3 | Medium | High | `EMERGENT_LLM_KEY` |
+| **Stability AI** | sd3-large, sdxl-1.0 | Fast | High | `STABILITY_API_KEY` |
+| **FAL AI** | flux-pro, flux-dev, sdxl-lightning | Very Fast | High | `FAL_API_KEY` |
+| **Replicate** | sdxl, kandinsky | Medium | Varies | `REPLICATE_API_TOKEN` |
+| **Leonardo AI** | leonardo-diffusion-xl | Medium | High | `LEONARDO_API_KEY` |
+| **Ideogram** | ideogram-v2 (best for text) | Fast | High | `IDEOGRAM_API_KEY` |
+
+### Video Generation Providers (7 providers):
+| Provider | Models | Duration | Quality | Env Key |
+|----------|--------|----------|---------|---------|
+| **Runway** | gen-3-alpha, gen-3-alpha-turbo | 5-10s | Cinematic | `RUNWAY_API_KEY` |
+| **Kling AI** | kling-v1, kling-v1.5 | 5-10s | High | `KLING_API_KEY` |
+| **Pika Labs** | pika-1.0 | 3-4s | Good | `PIKA_API_KEY` |
+| **Luma AI** | dream-machine | 5s | High | `LUMA_API_KEY` |
+| **HeyGen** | avatar-v2 | Unlimited | High | `HEYGEN_API_KEY` |
+| **D-ID** | talks | Unlimited | Good | `DID_API_KEY` |
+| **Synthesia** | studio | Unlimited | Enterprise | `SYNTHESIA_API_KEY` |
+
+### Voice/TTS Providers (6 providers):
+| Provider | Models | Languages | Quality | Env Key |
+|----------|--------|-----------|---------|---------|
+| **ElevenLabs** | eleven_multilingual_v2 | 29 | Premium | `ELEVENLABS_API_KEY` |
+| **OpenAI TTS** | tts-1, tts-1-hd | 50+ | High | `EMERGENT_LLM_KEY` |
+| **Play.ht** | playht2.0, playht2.0-turbo | 142 | Premium | `PLAYHT_API_KEY` |
+| **Murf AI** | murf-studio | 20 | Studio | `MURF_API_KEY` |
+| **Resemble AI** | resemble-v3 | 24 | High | `RESEMBLE_API_KEY` |
+| **Google TTS** | neural2, wavenet | 220+ | Good | `GOOGLE_TTS_API_KEY` |
+
+### New API Endpoints:
+- `GET /api/content/providers` — Get status of all configured providers
+- `GET /api/content/providers/image` — Image providers list
+- `GET /api/content/providers/video` — Video providers list
+- `GET /api/content/providers/voice` — Voice providers list
+- `POST /api/content/generate-video` — Generate video with provider selection
+- `POST /api/content/generate-avatar-video` — Generate avatar video
+
+### Style Presets (8 styles):
+- minimal, bold, data-viz, personal, cinematic, illustration, 3d, retro
+
+---
+
+## 18. Environment Variables
+
+See `/app/backend/.env` for all API key placeholders:
+
+### LLM Providers:
+- `EMERGENT_LLM_KEY` (Universal key for OpenAI/Anthropic/Google)
+- `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `PERPLEXITY_API_KEY`
+
+### Image Generation:
+- `STABILITY_API_KEY`, `FAL_API_KEY`, `REPLICATE_API_TOKEN`
+- `LEONARDO_API_KEY`, `IDEOGRAM_API_KEY`, `MIDJOURNEY_API_KEY`
+- `GOOGLE_IMAGEN_API_KEY`
+
+### Video Generation:
+- `RUNWAY_API_KEY`, `KLING_API_KEY`, `PIKA_API_KEY`, `LUMA_API_KEY`
+- `HEYGEN_API_KEY`, `DID_API_KEY`, `SYNTHESIA_API_KEY`
+
+### Voice/Audio:
+- `ELEVENLABS_API_KEY`, `PLAYHT_API_KEY`, `PLAYHT_USER_ID`
+- `MURF_API_KEY`, `RESEMBLE_API_KEY`, `GOOGLE_TTS_API_KEY`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (for Polly)
+
+### Social Platforms:
+- `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`
+- `META_APP_ID`, `META_APP_SECRET`
+- `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_SECRET`
+
+### Other:
+- `PINECONE_API_KEY`, `PINECONE_ENVIRONMENT`

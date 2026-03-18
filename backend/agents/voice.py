@@ -1,69 +1,79 @@
 """Voice Agent for ThookAI.
 
-Converts text to audio narration using ElevenLabs API.
+Converts text to audio narration using multiple AI providers.
+Supports: ElevenLabs, OpenAI TTS, Play.ht, Murf, Resemble, Google TTS
 """
 import os
 import base64
+import asyncio
 import logging
+import httpx
 from typing import Dict, Any, Optional, List
+from services.creative_providers import (
+    get_best_available_provider,
+    get_available_voice_providers,
+    VOICE_PROVIDERS_INFO
+)
 
 logger = logging.getLogger(__name__)
 
-ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
+MAX_CHARS = 5000  # Character limit for most providers
 
-# Default voices
-DEFAULT_VOICES = [
-    {"id": "21m00Tcm4TlvDq8ikWAM", "name": "Rachel", "description": "American female, calm and professional"},
-    {"id": "AZnzlk1XvdvUeBnXmlld", "name": "Domi", "description": "American female, strong and confident"},
-    {"id": "EXAVITQu4vr4xnSDxMaL", "name": "Bella", "description": "American female, soft and warm"},
-    {"id": "ErXwobaYiN019PkySvjV", "name": "Antoni", "description": "American male, well-rounded and calm"},
-    {"id": "MF3mGyEYCl7XYWbV9V6O", "name": "Elli", "description": "American female, young and pleasant"},
-    {"id": "TxGEqnHWrfWFTfGW9XjX", "name": "Josh", "description": "American male, deep and narrative"},
-]
-
-MAX_CHARS = 5000  # ElevenLabs character limit for standard tier
+# Default voices per provider
+DEFAULT_VOICES = {
+    "elevenlabs": [
+        {"id": "21m00Tcm4TlvDq8ikWAM", "name": "Rachel", "description": "American female, calm and professional"},
+        {"id": "AZnzlk1XvdvUeBnXmlld", "name": "Domi", "description": "American female, strong and confident"},
+        {"id": "EXAVITQu4vr4xnSDxMaL", "name": "Bella", "description": "American female, soft and warm"},
+        {"id": "ErXwobaYiN019PkySvjV", "name": "Antoni", "description": "American male, well-rounded and calm"},
+        {"id": "MF3mGyEYCl7XYWbV9V6O", "name": "Elli", "description": "American female, young and pleasant"},
+        {"id": "TxGEqnHWrfWFTfGW9XjX", "name": "Josh", "description": "American male, deep and narrative"},
+    ],
+    "openai_tts": [
+        {"id": "alloy", "name": "Alloy", "description": "Neutral and balanced"},
+        {"id": "echo", "name": "Echo", "description": "Warm and engaging"},
+        {"id": "fable", "name": "Fable", "description": "Expressive and dynamic"},
+        {"id": "onyx", "name": "Onyx", "description": "Deep and authoritative"},
+        {"id": "nova", "name": "Nova", "description": "Friendly and upbeat"},
+        {"id": "shimmer", "name": "Shimmer", "description": "Clear and optimistic"},
+    ],
+    "playht": [
+        {"id": "s3://voice-cloning-zero-shot/775ae416-49bb-4fb6-bd45-740f205d20a1/jennifersaad/manifest.json", "name": "Jennifer", "description": "American female, professional"},
+        {"id": "s3://voice-cloning-zero-shot/d9ff78ba-d016-47f6-b0ef-dd630f59414e/male-cs/manifest.json", "name": "Michael", "description": "American male, conversational"},
+    ],
+    "murf": [
+        {"id": "en-US-natalie", "name": "Natalie", "description": "American female, professional"},
+        {"id": "en-US-marcus", "name": "Marcus", "description": "American male, authoritative"},
+    ],
+    "google_tts": [
+        {"id": "en-US-Neural2-C", "name": "Neural2 Female", "description": "High quality female voice"},
+        {"id": "en-US-Neural2-D", "name": "Neural2 Male", "description": "High quality male voice"},
+        {"id": "en-US-Wavenet-F", "name": "Wavenet Female", "description": "Natural female voice"},
+        {"id": "en-US-Wavenet-D", "name": "Wavenet Male", "description": "Natural male voice"},
+    ]
+}
 
 
 def _valid_key(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder', 'el-placeholder'])
+    if not key:
+        return False
+    placeholders = ['placeholder', 'sk-placeholder', 'your_', 'xxx']
+    return not any(key.lower().startswith(p) for p in placeholders)
 
 
-async def generate_voice_narration(
-    text: str,
-    voice_id: Optional[str] = None,
-    stability: float = 0.5,
-    similarity_boost: float = 0.75
-) -> Dict[str, Any]:
-    """Generate voice narration from text using ElevenLabs.
-    
-    Args:
-        text: Text to convert to speech
-        voice_id: ElevenLabs voice ID (defaults to Rachel)
-        stability: Voice stability (0-1)
-        similarity_boost: Voice similarity (0-1)
-    
-    Returns:
-        {audio_base64, audio_url, duration_estimate, voice_used, truncated}
-    """
-    if not _valid_key(ELEVENLABS_API_KEY):
-        return _mock_voice(text)
-    
-    # Truncate if too long
-    truncated = False
-    if len(text) > MAX_CHARS:
-        text = text[:MAX_CHARS]
-        truncated = True
-        logger.warning(f"Text truncated to {MAX_CHARS} characters")
-    
-    # Default voice
-    if not voice_id:
-        voice_id = DEFAULT_VOICES[0]["id"]  # Rachel
+# ============ PROVIDER-SPECIFIC IMPLEMENTATIONS ============
+
+async def _generate_elevenlabs(text: str, voice_id: str, stability: float, similarity_boost: float) -> Dict[str, Any]:
+    """Generate voice using ElevenLabs."""
+    api_key = os.environ.get('ELEVENLABS_API_KEY', '')
+    if not _valid_key(api_key):
+        return {"generated": False, "error": "no_key", "provider": "elevenlabs"}
     
     try:
         from elevenlabs import ElevenLabs
         from elevenlabs.types import VoiceSettings
         
-        client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+        client = ElevenLabs(api_key=api_key)
         
         voice_settings = VoiceSettings(
             stability=stability,
@@ -72,61 +82,251 @@ async def generate_voice_narration(
             use_speaker_boost=True
         )
         
-        # Generate audio
         audio_generator = client.text_to_speech.convert(
             text=text,
-            voice_id=voice_id,
+            voice_id=voice_id or DEFAULT_VOICES["elevenlabs"][0]["id"],
             model_id="eleven_multilingual_v2",
             voice_settings=voice_settings
         )
         
-        # Collect audio data
         audio_data = b""
         for chunk in audio_generator:
             audio_data += chunk
         
-        # Convert to base64
         audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-        
-        # Estimate duration (rough: ~150 words per minute, ~5 chars per word)
-        word_count = len(text.split())
-        duration_estimate = round(word_count / 150 * 60, 1)  # seconds
-        
-        # Find voice name
-        voice_name = next((v["name"] for v in DEFAULT_VOICES if v["id"] == voice_id), "Custom Voice")
         
         return {
             "audio_base64": audio_base64,
             "audio_url": f"data:audio/mpeg;base64,{audio_base64}",
-            "duration_estimate": duration_estimate,
-            "voice_used": {"id": voice_id, "name": voice_name},
-            "char_count": len(text),
-            "truncated": truncated,
-            "generated": True
+            "generated": True,
+            "provider": "elevenlabs",
+            "model": "eleven_multilingual_v2"
         }
-    
     except Exception as e:
-        logger.error(f"Voice agent error: {e}")
-        error_msg = str(e).lower()
-        
-        if "quota" in error_msg or "limit" in error_msg:
-            return {
-                "generated": False,
-                "error": "quota_exceeded",
-                "message": "Voice generation quota exceeded. Please try again later."
-            }
-        elif "unauthorized" in error_msg or "invalid" in error_msg:
-            return {
-                "generated": False,
-                "error": "invalid_key",
-                "message": "Invalid ElevenLabs API key. Please check your settings."
-            }
-        
-        return _mock_voice(text)
+        logger.error(f"ElevenLabs error: {e}")
+        return {"generated": False, "error": str(e), "provider": "elevenlabs"}
 
 
-def _mock_voice(text: str) -> Dict[str, Any]:
-    """Return mock voice data when API unavailable."""
+async def _generate_openai_tts(text: str, voice_id: str, model: str = "tts-1-hd") -> Dict[str, Any]:
+    """Generate voice using OpenAI TTS."""
+    api_key = os.environ.get('EMERGENT_LLM_KEY', '')
+    if not _valid_key(api_key):
+        return {"generated": False, "error": "no_key", "provider": "openai_tts"}
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.openai.com/v1/audio/speech",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "input": text,
+                    "voice": voice_id or "alloy",
+                    "response_format": "mp3"
+                },
+                timeout=60.0
+            )
+            
+            if response.status_code == 200:
+                audio_base64 = base64.b64encode(response.content).decode('utf-8')
+                return {
+                    "audio_base64": audio_base64,
+                    "audio_url": f"data:audio/mpeg;base64,{audio_base64}",
+                    "generated": True,
+                    "provider": "openai_tts",
+                    "model": model
+                }
+            else:
+                return {"generated": False, "error": response.text, "provider": "openai_tts"}
+    except Exception as e:
+        logger.error(f"OpenAI TTS error: {e}")
+        return {"generated": False, "error": str(e), "provider": "openai_tts"}
+
+
+async def _generate_playht(text: str, voice_id: str) -> Dict[str, Any]:
+    """Generate voice using Play.ht."""
+    api_key = os.environ.get('PLAYHT_API_KEY', '')
+    user_id = os.environ.get('PLAYHT_USER_ID', '')
+    if not _valid_key(api_key) or not _valid_key(user_id):
+        return {"generated": False, "error": "no_key", "provider": "playht"}
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # Create speech request
+            response = await client.post(
+                "https://api.play.ht/api/v2/tts",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "X-User-ID": user_id,
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "text": text,
+                    "voice": voice_id or DEFAULT_VOICES["playht"][0]["id"],
+                    "output_format": "mp3",
+                    "quality": "premium"
+                },
+                timeout=60.0
+            )
+            
+            if response.status_code == 201:
+                data = response.json()
+                audio_url = data.get("url")
+                
+                if audio_url:
+                    # Download audio
+                    audio_response = await client.get(audio_url, timeout=30.0)
+                    audio_base64 = base64.b64encode(audio_response.content).decode('utf-8')
+                    return {
+                        "audio_base64": audio_base64,
+                        "audio_url": f"data:audio/mpeg;base64,{audio_base64}",
+                        "generated": True,
+                        "provider": "playht",
+                        "model": "playht2.0"
+                    }
+            
+            return {"generated": False, "error": "generation_failed", "provider": "playht"}
+    except Exception as e:
+        logger.error(f"Play.ht error: {e}")
+        return {"generated": False, "error": str(e), "provider": "playht"}
+
+
+async def _generate_google_tts(text: str, voice_id: str) -> Dict[str, Any]:
+    """Generate voice using Google Cloud TTS."""
+    api_key = os.environ.get('GOOGLE_TTS_API_KEY', '')
+    if not _valid_key(api_key):
+        return {"generated": False, "error": "no_key", "provider": "google_tts"}
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            voice_name = voice_id or "en-US-Neural2-C"
+            
+            response = await client.post(
+                f"https://texttospeech.googleapis.com/v1/text:synthesize?key={api_key}",
+                json={
+                    "input": {"text": text},
+                    "voice": {
+                        "languageCode": "en-US",
+                        "name": voice_name
+                    },
+                    "audioConfig": {
+                        "audioEncoding": "MP3",
+                        "speakingRate": 1.0,
+                        "pitch": 0.0
+                    }
+                },
+                timeout=60.0
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                audio_content = data.get("audioContent", "")
+                
+                if audio_content:
+                    return {
+                        "audio_base64": audio_content,
+                        "audio_url": f"data:audio/mpeg;base64,{audio_content}",
+                        "generated": True,
+                        "provider": "google_tts",
+                        "model": "neural2"
+                    }
+            
+            return {"generated": False, "error": "generation_failed", "provider": "google_tts"}
+    except Exception as e:
+        logger.error(f"Google TTS error: {e}")
+        return {"generated": False, "error": str(e), "provider": "google_tts"}
+
+
+# ============ MAIN GENERATION FUNCTIONS ============
+
+async def generate_voice_narration(
+    text: str,
+    voice_id: Optional[str] = None,
+    stability: float = 0.5,
+    similarity_boost: float = 0.75,
+    provider: Optional[str] = None,
+    model: Optional[str] = None
+) -> Dict[str, Any]:
+    """Generate voice narration using the best available provider.
+    
+    Args:
+        text: Text to convert to speech
+        voice_id: Voice ID (provider-specific)
+        stability: Voice stability (0-1)
+        similarity_boost: Voice similarity (0-1)
+        provider: Specific provider to use (optional)
+        model: Specific model to use (optional)
+    
+    Returns:
+        {audio_base64, audio_url, duration_estimate, voice_used, truncated, provider, generated}
+    """
+    # Truncate if too long
+    truncated = False
+    original_length = len(text)
+    if len(text) > MAX_CHARS:
+        text = text[:MAX_CHARS]
+        truncated = True
+        logger.warning(f"Text truncated from {original_length} to {MAX_CHARS} characters")
+    
+    # Determine provider
+    selected_provider = provider or get_best_available_provider("voice")
+    
+    if not selected_provider:
+        return _mock_voice(text, truncated)
+    
+    # Get default voice for provider if not specified
+    if not voice_id:
+        provider_voices = DEFAULT_VOICES.get(selected_provider, [])
+        voice_id = provider_voices[0]["id"] if provider_voices else None
+    
+    # Route to appropriate provider
+    provider_funcs = {
+        "elevenlabs": lambda: _generate_elevenlabs(text, voice_id, stability, similarity_boost),
+        "openai_tts": lambda: _generate_openai_tts(text, voice_id, model or "tts-1-hd"),
+        "playht": lambda: _generate_playht(text, voice_id),
+        "google_tts": lambda: _generate_google_tts(text, voice_id),
+    }
+    
+    generate_func = provider_funcs.get(selected_provider)
+    if not generate_func:
+        return _mock_voice(text, truncated)
+    
+    result = await generate_func()
+    
+    # Add metadata
+    word_count = len(text.split())
+    duration_estimate = round(word_count / 150 * 60, 1)  # ~150 words per minute
+    
+    result["duration_estimate"] = duration_estimate
+    result["char_count"] = len(text)
+    result["truncated"] = truncated
+    result["voice_used"] = {"id": voice_id, "provider": selected_provider}
+    
+    # If this provider failed, try fallback
+    if not result.get("generated") and provider is None:
+        logger.warning(f"Provider {selected_provider} failed, trying fallback")
+        fallback_providers = ["openai_tts", "elevenlabs", "google_tts", "playht"]
+        for fallback in fallback_providers:
+            if fallback != selected_provider and fallback in provider_funcs:
+                fallback_voice = DEFAULT_VOICES.get(fallback, [{}])[0].get("id")
+                fallback_result = await provider_funcs[fallback]()
+                if fallback_result.get("generated"):
+                    fallback_result["duration_estimate"] = duration_estimate
+                    fallback_result["char_count"] = len(text)
+                    fallback_result["truncated"] = truncated
+                    fallback_result["voice_used"] = {"id": fallback_voice, "provider": fallback}
+                    return fallback_result
+        
+        return _mock_voice(text, truncated)
+    
+    return result
+
+
+def _mock_voice(text: str, truncated: bool = False) -> Dict[str, Any]:
+    """Return mock voice data when no providers available."""
     word_count = len(text.split())
     duration_estimate = round(word_count / 150 * 60, 1)
     
@@ -134,41 +334,45 @@ def _mock_voice(text: str) -> Dict[str, Any]:
         "audio_base64": None,
         "audio_url": None,
         "duration_estimate": duration_estimate,
-        "voice_used": {"id": "mock", "name": "Mock Voice"},
+        "voice_used": {"id": "mock", "name": "Mock Voice", "provider": "none"},
         "char_count": len(text),
-        "truncated": len(text) > MAX_CHARS,
+        "truncated": truncated,
         "generated": False,
         "mock": True,
-        "message": "Voice generation unavailable. Configure ELEVENLABS_API_KEY to enable."
+        "provider": "none",
+        "message": "No voice provider configured. Add API keys in Settings to enable voice narration."
     }
 
 
-def get_available_voices() -> List[Dict[str, str]]:
-    """Return list of available default voices."""
+def get_available_voices(provider: Optional[str] = None) -> Dict[str, List[Dict[str, str]]]:
+    """Get available voices, optionally filtered by provider."""
+    if provider:
+        return {provider: DEFAULT_VOICES.get(provider, [])}
     return DEFAULT_VOICES
 
 
-async def get_user_voices() -> List[Dict[str, Any]]:
-    """Fetch user's custom cloned voices from ElevenLabs."""
-    if not _valid_key(ELEVENLABS_API_KEY):
-        return []
+async def get_user_cloned_voices() -> List[Dict[str, Any]]:
+    """Fetch user's custom cloned voices from supported providers."""
+    cloned_voices = []
     
-    try:
-        from elevenlabs import ElevenLabs
-        
-        client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
-        voices_response = client.voices.get_all()
-        
-        return [
-            {
-                "id": voice.voice_id,
-                "name": voice.name,
-                "description": voice.description or "Custom voice",
-                "category": voice.category
-            }
-            for voice in voices_response.voices
-            if voice.category == "cloned"
-        ]
-    except Exception as e:
-        logger.error(f"Failed to fetch user voices: {e}")
-        return []
+    # ElevenLabs cloned voices
+    api_key = os.environ.get('ELEVENLABS_API_KEY', '')
+    if _valid_key(api_key):
+        try:
+            from elevenlabs import ElevenLabs
+            client = ElevenLabs(api_key=api_key)
+            voices_response = client.voices.get_all()
+            
+            for voice in voices_response.voices:
+                if voice.category == "cloned":
+                    cloned_voices.append({
+                        "id": voice.voice_id,
+                        "name": voice.name,
+                        "description": voice.description or "Custom cloned voice",
+                        "provider": "elevenlabs",
+                        "category": "cloned"
+                    })
+        except Exception as e:
+            logger.error(f"Failed to fetch ElevenLabs cloned voices: {e}")
+    
+    return cloned_voices

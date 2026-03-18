@@ -36,14 +36,17 @@ class ContentStatusUpdate(BaseModel):
 
 class ImageGenerateRequest(BaseModel):
     job_id: str
-    style: str = "minimal"  # minimal, bold, data-viz, personal
+    style: str = "minimal"  # minimal, bold, data-viz, personal, cinematic, etc.
     prompt_override: Optional[str] = None
+    provider: Optional[str] = None  # openai, stability, fal, replicate, leonardo, ideogram
+    model: Optional[str] = None
 
 
 class CarouselGenerateRequest(BaseModel):
     job_id: str
     style: str = "minimal"
     key_points: Optional[List[str]] = None
+    provider: Optional[str] = None
 
 
 class VoiceGenerateRequest(BaseModel):
@@ -51,6 +54,23 @@ class VoiceGenerateRequest(BaseModel):
     voice_id: Optional[str] = None
     stability: float = 0.5
     similarity_boost: float = 0.75
+    provider: Optional[str] = None  # elevenlabs, openai_tts, playht, murf, google_tts
+    model: Optional[str] = None
+
+
+class VideoGenerateRequest(BaseModel):
+    job_id: str
+    prompt_override: Optional[str] = None
+    duration: int = 5
+    provider: Optional[str] = None  # runway, kling, pika, luma
+    model: Optional[str] = None
+
+
+class AvatarVideoRequest(BaseModel):
+    job_id: str
+    avatar_id: Optional[str] = None
+    source_image_url: Optional[str] = None
+    provider: Optional[str] = None  # heygen, did
 
 
 class RegenerateRequest(BaseModel):
@@ -209,7 +229,9 @@ async def generate_image(
         prompt=prompt,
         style=data.style,
         platform=job.get("platform", "linkedin"),
-        persona_card=persona_card
+        persona_card=persona_card,
+        provider=data.provider,
+        model=data.model
     )
     
     # Store in job's media_assets
@@ -307,7 +329,9 @@ async def narrate_content(
         text=content,
         voice_id=data.voice_id,
         stability=data.stability,
-        similarity_boost=data.similarity_boost
+        similarity_boost=data.similarity_boost,
+        provider=data.provider,
+        model=data.model
     )
     
     # Store audio in job
@@ -328,11 +352,11 @@ async def narrate_content(
 
 @router.get("/voices")
 async def list_voices(current_user: dict = Depends(get_current_user)):
-    """Get available voices for narration."""
-    from agents.voice import get_available_voices, get_user_voices
+    """Get available voices for narration from all providers."""
+    from agents.voice import get_available_voices, get_user_cloned_voices
     
     default_voices = get_available_voices()
-    user_voices = await get_user_voices()
+    user_voices = await get_user_cloned_voices()
     
     return {
         "default_voices": default_voices,
@@ -345,6 +369,144 @@ async def list_image_styles():
     """Get available image generation styles."""
     from agents.designer import get_available_styles
     return {"styles": get_available_styles()}
+
+
+# ============ CREATIVE PROVIDERS ============
+
+@router.get("/providers")
+async def get_all_providers():
+    """Get status of all creative AI providers."""
+    from services.creative_providers import (
+        get_available_image_providers,
+        get_available_video_providers,
+        get_available_voice_providers,
+        get_provider_status_summary
+    )
+    
+    return {
+        "summary": get_provider_status_summary(),
+        "image_providers": get_available_image_providers(),
+        "video_providers": get_available_video_providers(),
+        "voice_providers": get_available_voice_providers()
+    }
+
+
+@router.get("/providers/image")
+async def get_image_providers():
+    """Get available image generation providers."""
+    from services.creative_providers import get_available_image_providers
+    return {"providers": get_available_image_providers()}
+
+
+@router.get("/providers/video")
+async def get_video_providers():
+    """Get available video generation providers."""
+    from services.creative_providers import get_available_video_providers
+    return {"providers": get_available_video_providers()}
+
+
+@router.get("/providers/voice")
+async def get_voice_providers():
+    """Get available voice/TTS providers."""
+    from services.creative_providers import get_available_voice_providers
+    return {"providers": get_available_voice_providers()}
+
+
+# ============ VIDEO GENERATION ============
+
+@router.post("/generate-video")
+async def generate_video(
+    data: VideoGenerateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate a video for a content job."""
+    from agents.video import generate_video as video_generate
+    
+    job = await db.content_jobs.find_one({
+        "job_id": data.job_id,
+        "user_id": current_user["user_id"]
+    })
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Build prompt from content or override
+    if data.prompt_override:
+        prompt = data.prompt_override
+    else:
+        content = job.get("final_content", "") or job.get("raw_input", "")
+        commander = job.get("agent_outputs", {}).get("commander", {})
+        primary_angle = commander.get("primary_angle", "")
+        prompt = f"Video visualizing: {primary_angle or content[:200]}"
+    
+    result = await video_generate(
+        prompt=prompt,
+        duration=data.duration,
+        provider=data.provider,
+        model=data.model
+    )
+    
+    # Store in job
+    if result.get("generated"):
+        await db.content_jobs.update_one(
+            {"job_id": data.job_id},
+            {
+                "$push": {"video_assets": {
+                    "video_url": result.get("video_url"),
+                    "provider": result.get("provider"),
+                    "duration": result.get("duration"),
+                    "prompt_used": result.get("prompt_used"),
+                    "created_at": datetime.now(timezone.utc)
+                }},
+                "$set": {"updated_at": datetime.now(timezone.utc)}
+            }
+        )
+    
+    return result
+
+
+@router.post("/generate-avatar-video")
+async def generate_avatar_video(
+    data: AvatarVideoRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate an avatar/talking head video."""
+    from agents.video import generate_avatar_video as avatar_generate
+    
+    job = await db.content_jobs.find_one({
+        "job_id": data.job_id,
+        "user_id": current_user["user_id"]
+    })
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    script = job.get("final_content", "")
+    if not script:
+        raise HTTPException(status_code=400, detail="No content for avatar. Generate content first.")
+    
+    result = await avatar_generate(
+        script=script,
+        avatar_id=data.avatar_id,
+        source_image_url=data.source_image_url,
+        provider=data.provider
+    )
+    
+    # Store in job
+    if result.get("generated"):
+        await db.content_jobs.update_one(
+            {"job_id": data.job_id},
+            {
+                "$set": {
+                    "avatar_video": {
+                        "video_url": result.get("video_url"),
+                        "provider": result.get("provider"),
+                        "created_at": datetime.now(timezone.utc)
+                    },
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+    
+    return result
 
 
 # ============ REGENERATION & VERSION TRACKING ============
