@@ -1,614 +1,671 @@
 #!/usr/bin/env python3
-"""Backend Testing Suite for ThookAI Sprint 9 Analytics Features
-
-Tests all analytics endpoints including:
-- Analytics overview  
-- Performance trends
-- AI insights generation
-- Pattern Fatigue Shield
-- Learning insights
-- Persona evolution
-- Voice evolution analysis
-- Persona suggestions
-
-Requires: python3 -m pip install requests python-dotenv
 """
+Sprint 10 Backend Testing for ThookAI Platform
 
-import sys
+Tests:
+- Credit System (balance, usage, costs)
+- Subscription Tiers (details, tiers, limits, upgrade)
+- Viral Hook Predictor (predict, improve, batch, patterns)
+
+All tests use the external production URL and real authentication.
+"""
+import requests
 import json
 import time
-import requests
-from datetime import datetime, timezone, timedelta
-import uuid
-import os
-from dotenv import load_dotenv
+from datetime import datetime
+from typing import Dict, Any
 
-# Load environment variables
-load_dotenv("/app/frontend/.env")
+# Production configuration - DO NOT CHANGE
+BASE_URL = "https://social-scheduler-87.preview.emergentagent.com/api"
+session = requests.Session()
 
-# Configuration - Use external URL from frontend .env
-BASE_URL = os.getenv('REACT_APP_BACKEND_URL', 'https://social-scheduler-87.preview.emergentagent.com')
-API_BASE = f"{BASE_URL}/api"
+def log_test(test_name: str, success: bool, details: str = ""):
+    """Log test results with timestamp."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    status = "✅ PASS" if success else "❌ FAIL"
+    print(f"[{timestamp}] {status} - {test_name}")
+    if details:
+        print(f"    Details: {details}")
+    print()
 
-# Test configuration
-TIMEOUT = 90  # Increased timeout for content generation
-TEST_USER_EMAIL = f"test_analytics_{int(time.time())}@example.com"
-TEST_PASSWORD = "TestPassword123!"
-
-class TestResults:
-    """Track test results"""
-    def __init__(self):
-        self.passed = 0
-        self.failed = 0
-        self.results = []
-    
-    def log_test(self, name, success, details=""):
-        """Log a test result"""
-        self.results.append({
-            "test": name, 
-            "status": "PASS" if success else "FAIL",
-            "details": details
-        })
-        if success:
-            self.passed += 1
-            print(f"✅ {name}")
-        else:
-            self.failed += 1
-            print(f"❌ {name}: {details}")
-    
-    def summary(self):
-        """Print final summary"""
-        total = self.passed + self.failed
-        print(f"\n🎯 SPRINT 9 ANALYTICS BACKEND TEST SUMMARY")
-        print(f"Total Tests: {total}")
-        print(f"✅ Passed: {self.passed}")
-        print(f"❌ Failed: {self.failed}")
-        print(f"Success Rate: {(self.passed/total*100):.1f}%" if total > 0 else "No tests run")
-        return self.failed == 0
-
-# Global test results tracker
-results = TestResults()
-
-def safe_request(method, url, **kwargs):
-    """Make HTTP request with timeout and error handling"""
-    try:
-        kwargs.setdefault('timeout', TIMEOUT)
-        response = requests.request(method, url, **kwargs)
-        return response
-    except requests.exceptions.Timeout:
-        print(f"⚠️ Request timeout for {method} {url}")
-        return None
-    except Exception as e:
-        print(f"⚠️ Request error for {method} {url}: {e}")
-        return None
-
-def register_test_user():
-    """Register a new test user and return auth token"""
-    print(f"\n🔐 Registering test user: {TEST_USER_EMAIL}")
-    
-    # Register user
-    register_data = {
-        "name": "Test Analytics User", 
-        "email": TEST_USER_EMAIL,
-        "password": TEST_PASSWORD
+def register_and_auth() -> Dict[str, Any]:
+    """Register a new test user and get authentication token."""
+    timestamp = int(time.time() * 1000)
+    test_user = {
+        "email": f"sprint10test{timestamp}@example.com",
+        "password": "TestPass123!",
+        "name": f"Sprint10 Test User {timestamp}"
     }
     
-    response = safe_request("POST", f"{API_BASE}/auth/register", json=register_data)
-    if not response or response.status_code != 200:
-        results.log_test("User Registration", False, f"Registration failed: {response.status_code if response else 'No response'}")
-        return None
+    print(f"🔐 Registering test user: {test_user['email']}")
+    
+    # Register user
+    register_response = session.post(f"{BASE_URL}/auth/register", json=test_user)
+    if register_response.status_code != 200:
+        raise Exception(f"Registration failed: {register_response.text}")
     
     # Login to get token
-    login_data = {"email": TEST_USER_EMAIL, "password": TEST_PASSWORD}
-    response = safe_request("POST", f"{API_BASE}/auth/login", json=login_data)
+    login_response = session.post(f"{BASE_URL}/auth/login", json={
+        "email": test_user["email"],
+        "password": test_user["password"]
+    })
     
-    if not response or response.status_code != 200:
-        results.log_test("User Login", False, f"Login failed: {response.status_code if response else 'No response'}")
-        return None
+    if login_response.status_code != 200:
+        raise Exception(f"Login failed: {login_response.text}")
     
-    data = response.json()
-    token = data.get("token")
+    login_data = login_response.json()
+    token = login_data.get("token")
     
     if not token:
-        results.log_test("User Authentication", False, "No token in response")
-        return None
+        raise Exception("No token received")
     
-    results.log_test("User Authentication Setup", True, f"Token obtained for {TEST_USER_EMAIL}")
-    return token
+    # Set auth header for all future requests
+    session.headers.update({"Authorization": f"Bearer {token}"})
+    
+    print(f"✅ Authentication successful for {test_user['email']}")
+    print(f"🪙 Token: {token[:20]}...")
+    print()
+    
+    return {
+        "user": test_user,
+        "token": token,
+        "user_id": login_data.get("user_id")
+    }
 
-def complete_onboarding(token):
-    """Complete onboarding to create persona using new interview system"""
-    print("\n📝 Completing onboarding to create persona")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    # Use the new onboarding system with interview questions
-    answers = [
-        {"question_id": 0, "answer": "I'm a digital marketing strategist helping SaaS companies grow through data-driven content strategies and thought leadership."},
-        {"question_id": 1, "answer": "LinkedIn"},
-        {"question_id": 2, "answer": "Strategic, Analytical, Actionable"},
-        {"question_id": 3, "answer": "Lenny Rachitsky for depth and accessibility in product strategy content. Clear explanations with real examples."},
-        {"question_id": 4, "answer": "Crypto speculation, hustle culture, generic motivational quotes"},
-        {"question_id": 5, "answer": "Generate leads/clients"},
-        {"question_id": 6, "answer": "3-5 hours"}
-    ]
-    
-    # Generate persona directly
-    persona_data = {"answers": answers}
-    response = safe_request("POST", f"{API_BASE}/onboarding/generate-persona", json=persona_data, headers=headers)
-    
-    if not response or response.status_code != 200:
-        results.log_test("Persona Generation", False, f"Persona generation failed: {response.status_code if response else 'No response'}")
-        return False
-    
+# ============ CREDIT SYSTEM TESTS ============
+
+def test_get_credit_balance():
+    """Test GET /api/billing/credits - Credit balance endpoint"""
     try:
-        data = response.json()
-        if data.get("persona_card"):
-            results.log_test("Onboarding Process", True, "Persona created successfully")
-            return True
-        else:
-            results.log_test("Persona Generation", False, "No persona card in response")
+        response = session.get(f"{BASE_URL}/billing/credits")
+        
+        if response.status_code != 200:
+            log_test("Credit Balance Endpoint", False, f"Status: {response.status_code}, Response: {response.text}")
             return False
-    except:
-        results.log_test("Persona Generation", False, "Invalid JSON response")
+        
+        data = response.json()
+        
+        # Validate response structure
+        required_fields = ["success", "credits", "monthly_allowance", "used_this_period", "tier", "is_low_balance"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Credit Balance Endpoint", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Credit Balance Endpoint", False, f"API returned success=false: {data}")
+            return False
+        
+        # Validate data types and ranges
+        if not isinstance(data["credits"], int) or data["credits"] < 0:
+            log_test("Credit Balance Endpoint", False, f"Invalid credits value: {data['credits']}")
+            return False
+        
+        if not isinstance(data["monthly_allowance"], int) or data["monthly_allowance"] <= 0:
+            log_test("Credit Balance Endpoint", False, f"Invalid monthly_allowance: {data['monthly_allowance']}")
+            return False
+        
+        log_test("Credit Balance Endpoint", True, f"Credits: {data['credits']}, Tier: {data['tier']}, Monthly: {data['monthly_allowance']}")
+        return True
+        
+    except Exception as e:
+        log_test("Credit Balance Endpoint", False, f"Exception: {str(e)}")
         return False
 
-def create_test_content(token):
-    """Create and approve test content for analytics"""
-    print("\n📄 Creating test content for analytics data")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    content_jobs = []
-    
-    # Create 3 pieces of content
-    test_topics = [
-        "5 productivity tips for remote workers",
-        "How to build a personal brand on LinkedIn", 
-        "The future of AI in marketing"
-    ]
-    
-    for i, topic in enumerate(test_topics):
-        content_data = {
-            "platform": "linkedin",
-            "content_type": "post",
-            "raw_input": topic
+def test_get_credit_usage():
+    """Test GET /api/billing/credits/usage - Credit usage history"""
+    try:
+        response = session.get(f"{BASE_URL}/billing/credits/usage?days=30&limit=50")
+        
+        if response.status_code != 200:
+            log_test("Credit Usage History", False, f"Status: {response.status_code}, Response: {response.text}")
+            return False
+        
+        data = response.json()
+        
+        # Validate response structure
+        required_fields = ["success", "transactions", "summary"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Credit Usage History", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Credit Usage History", False, f"API returned success=false: {data}")
+            return False
+        
+        # Validate summary structure
+        summary = data.get("summary", {})
+        summary_fields = ["total_deducted", "total_added", "net_change", "by_operation"]
+        missing_summary = [f for f in summary_fields if f not in summary]
+        
+        if missing_summary:
+            log_test("Credit Usage History", False, f"Missing summary fields: {missing_summary}")
+            return False
+        
+        transaction_count = len(data.get("transactions", []))
+        log_test("Credit Usage History", True, f"Retrieved {transaction_count} transactions, Net change: {summary['net_change']}")
+        return True
+        
+    except Exception as e:
+        log_test("Credit Usage History", False, f"Exception: {str(e)}")
+        return False
+
+def test_get_operation_costs():
+    """Test GET /api/billing/credits/costs - Operation costs"""
+    try:
+        response = session.get(f"{BASE_URL}/billing/credits/costs")
+        
+        if response.status_code != 200:
+            log_test("Operation Costs", False, f"Status: {response.status_code}, Response: {response.text}")
+            return False
+        
+        data = response.json()
+        
+        if "costs" not in data:
+            log_test("Operation Costs", False, f"Missing 'costs' field in response: {data}")
+            return False
+        
+        costs = data["costs"]
+        
+        # Check for expected operations
+        expected_operations = ["content_create", "viral_predict", "repurpose", "ai_insights"]
+        found_operations = []
+        
+        for op_name, op_data in costs.items():
+            found_operations.append(op_name)
+            if not isinstance(op_data, dict) or "credits" not in op_data or "name" not in op_data:
+                log_test("Operation Costs", False, f"Invalid operation data for {op_name}: {op_data}")
+                return False
+        
+        log_test("Operation Costs", True, f"Found {len(costs)} operations: {', '.join(found_operations[:5])}")
+        return True
+        
+    except Exception as e:
+        log_test("Operation Costs", False, f"Exception: {str(e)}")
+        return False
+
+# ============ SUBSCRIPTION TESTS ============
+
+def test_get_subscription_details():
+    """Test GET /api/billing/subscription - Current subscription details"""
+    try:
+        response = session.get(f"{BASE_URL}/billing/subscription")
+        
+        if response.status_code != 200:
+            log_test("Subscription Details", False, f"Status: {response.status_code}, Response: {response.text}")
+            return False
+        
+        data = response.json()
+        
+        # Validate response structure
+        required_fields = ["success", "tier", "tier_name", "is_active", "features"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Subscription Details", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Subscription Details", False, f"API returned success=false: {data}")
+            return False
+        
+        # Validate features structure
+        features = data.get("features", {})
+        expected_features = ["max_personas", "platforms", "content_per_day", "series_enabled"]
+        
+        missing_features = [f for f in expected_features if f not in features]
+        if missing_features:
+            log_test("Subscription Details", False, f"Missing feature fields: {missing_features}")
+            return False
+        
+        log_test("Subscription Details", True, f"Tier: {data['tier_name']}, Active: {data['is_active']}, Platforms: {len(features.get('platforms', []))}")
+        return True
+        
+    except Exception as e:
+        log_test("Subscription Details", False, f"Exception: {str(e)}")
+        return False
+
+def test_get_available_tiers():
+    """Test GET /api/billing/subscription/tiers - Available subscription tiers"""
+    try:
+        response = session.get(f"{BASE_URL}/billing/subscription/tiers")
+        
+        if response.status_code != 200:
+            log_test("Available Tiers", False, f"Status: {response.status_code}, Response: {response.text}")
+            return False
+        
+        data = response.json()
+        
+        # Validate response structure
+        required_fields = ["success", "tiers", "current_tier"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Available Tiers", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Available Tiers", False, f"API returned success=false: {data}")
+            return False
+        
+        tiers = data.get("tiers", [])
+        
+        if len(tiers) != 4:
+            log_test("Available Tiers", False, f"Expected 4 tiers, got {len(tiers)}")
+            return False
+        
+        # Check for expected tiers
+        expected_tier_ids = {"free", "pro", "studio", "agency"}
+        found_tier_ids = {tier.get("id") for tier in tiers}
+        
+        if expected_tier_ids != found_tier_ids:
+            log_test("Available Tiers", False, f"Expected tiers {expected_tier_ids}, got {found_tier_ids}")
+            return False
+        
+        # Validate tier structure
+        for tier in tiers:
+            required_tier_fields = ["id", "name", "price_monthly", "monthly_credits", "features"]
+            missing_tier_fields = [f for f in required_tier_fields if f not in tier]
+            if missing_tier_fields:
+                log_test("Available Tiers", False, f"Missing tier fields in {tier.get('id')}: {missing_tier_fields}")
+                return False
+        
+        tier_names = [tier["name"] for tier in tiers]
+        log_test("Available Tiers", True, f"Found all 4 tiers: {', '.join(tier_names)}, Current: {data['current_tier']}")
+        return True
+        
+    except Exception as e:
+        log_test("Available Tiers", False, f"Exception: {str(e)}")
+        return False
+
+def test_get_feature_limits():
+    """Test GET /api/billing/subscription/limits - Feature limits"""
+    try:
+        response = session.get(f"{BASE_URL}/billing/subscription/limits")
+        
+        if response.status_code != 200:
+            log_test("Feature Limits", False, f"Status: {response.status_code}, Response: {response.text}")
+            return False
+        
+        data = response.json()
+        
+        # Validate response structure
+        required_fields = ["success", "tier", "limits", "feature_access"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Feature Limits", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Feature Limits", False, f"API returned success=false: {data}")
+            return False
+        
+        limits = data.get("limits", {})
+        expected_limits = ["max_personas", "content_per_day", "team_members"]
+        
+        missing_limits = [l for l in expected_limits if l not in limits]
+        if missing_limits:
+            log_test("Feature Limits", False, f"Missing limit fields: {missing_limits}")
+            return False
+        
+        # Validate limit structure (each should have limit, used, remaining)
+        for limit_name, limit_data in limits.items():
+            if isinstance(limit_data, dict):
+                if "limit" not in limit_data:
+                    log_test("Feature Limits", False, f"Missing 'limit' in {limit_name}")
+                    return False
+        
+        feature_access = data.get("feature_access", {})
+        expected_features = ["platforms", "series_enabled", "repurpose_enabled"]
+        
+        missing_features = [f for f in expected_features if f not in feature_access]
+        if missing_features:
+            log_test("Feature Limits", False, f"Missing feature access fields: {missing_features}")
+            return False
+        
+        log_test("Feature Limits", True, f"Limits for {data['tier']} tier, Platforms: {len(feature_access.get('platforms', []))}")
+        return True
+        
+    except Exception as e:
+        log_test("Feature Limits", False, f"Exception: {str(e)}")
+        return False
+
+def test_upgrade_subscription():
+    """Test POST /api/billing/subscription/upgrade - Tier upgrade"""
+    try:
+        # Try upgrading to pro
+        upgrade_data = {
+            "tier": "pro",
+            "billing_period": "monthly"
         }
         
-        # Create content
-        response = safe_request("POST", f"{API_BASE}/content/create", json=content_data, headers=headers)
-        if not response or response.status_code != 200:
-            results.log_test(f"Content Creation {i+1}", False, f"Failed: {response.status_code if response else 'No response'}")
-            continue
+        response = session.post(f"{BASE_URL}/billing/subscription/upgrade", json=upgrade_data)
+        
+        if response.status_code != 200:
+            log_test("Upgrade Subscription", False, f"Status: {response.status_code}, Response: {response.text}")
+            return False
         
         data = response.json()
-        job_id = data.get("job_id")
-        if not job_id:
-            results.log_test(f"Content Creation {i+1}", False, "No job_id returned")
-            continue
         
-        # Poll until reviewing (max 90 seconds)
-        for attempt in range(18):  # 18 * 5 = 90 seconds
-            time.sleep(5)
-            response = safe_request("GET", f"{API_BASE}/content/job/{job_id}", headers=headers)
-            if response and response.status_code == 200:
-                job_data = response.json()
-                if job_data.get("status") == "reviewing":
-                    break
-                elif job_data.get("status") == "failed":
-                    results.log_test(f"Content Generation {i+1}", False, f"Content generation failed")
-                    break
-        else:
-            results.log_test(f"Content Generation {i+1}", False, f"Timeout waiting for content to reach reviewing status")
-            continue
+        # Validate response structure
+        required_fields = ["success", "new_tier", "credits_granted"]
+        missing_fields = [f for f in required_fields if f not in data]
         
-        # Approve content
-        response = safe_request("POST", f"{API_BASE}/content/approve/{job_id}", headers=headers)
-        if response and response.status_code == 200:
-            content_jobs.append(job_id)
-            results.log_test(f"Content Approval {i+1}", True, f"Job {job_id} approved")
-        else:
-            results.log_test(f"Content Approval {i+1}", False, f"Approval failed: {response.status_code if response else 'No response'}")
-    
-    print(f"Created and approved {len(content_jobs)} content pieces")
-    return content_jobs
+        if missing_fields:
+            log_test("Upgrade Subscription", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Upgrade Subscription", False, f"API returned success=false: {data}")
+            return False
+        
+        if data.get("new_tier") != "pro":
+            log_test("Upgrade Subscription", False, f"Expected new_tier 'pro', got {data.get('new_tier')}")
+            return False
+        
+        credits_granted = data.get("credits_granted", 0)
+        if credits_granted <= 0:
+            log_test("Upgrade Subscription", False, f"Expected credits > 0, got {credits_granted}")
+            return False
+        
+        log_test("Upgrade Subscription", True, f"Upgraded to {data['new_tier']}, Credits granted: {credits_granted}")
+        return True
+        
+    except Exception as e:
+        log_test("Upgrade Subscription", False, f"Exception: {str(e)}")
+        return False
 
-def test_analytics_overview(token):
-    """Test GET /api/analytics/overview"""
-    print("\n📊 Testing Analytics Overview")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    # Test with default parameters (30 days)
-    response = safe_request("GET", f"{API_BASE}/analytics/overview", headers=headers)
-    if not response:
-        results.log_test("Analytics Overview - Request", False, "No response received")
-        return False
-    
-    if response.status_code != 200:
-        results.log_test("Analytics Overview - Status", False, f"Status: {response.status_code}")
-        return False
-    
+# ============ VIRAL HOOK PREDICTOR TESTS ============
+
+def test_viral_predict():
+    """Test POST /api/viral/predict - Viral hook prediction"""
     try:
-        data = response.json()
-    except:
-        results.log_test("Analytics Overview - JSON", False, "Invalid JSON response")
-        return False
-    
-    # Validate structure
-    required_fields = ["success", "has_data"]
-    for field in required_fields:
-        if field not in data:
-            results.log_test("Analytics Overview - Structure", False, f"Missing {field}")
-            return False
-    
-    if data.get("has_data"):
-        # If has_data=true, check for summary and by_platform
-        if "summary" not in data or "by_platform" not in data:
-            results.log_test("Analytics Overview - Data Fields", False, "Missing summary or by_platform")
+        predict_data = {
+            "content": "Stop doing this one thing that's killing your productivity. I spent 10 years figuring this out.",
+            "platform": "linkedin"
+        }
+        
+        response = session.post(f"{BASE_URL}/viral/predict", json=predict_data)
+        
+        if response.status_code != 200:
+            log_test("Viral Hook Prediction", False, f"Status: {response.status_code}, Response: {response.text}")
             return False
         
-        # Check summary structure
-        summary = data.get("summary", {})
-        summary_fields = ["total_posts", "total_impressions", "total_engagements"]
-        for field in summary_fields:
-            if field not in summary:
-                results.log_test("Analytics Overview - Summary", False, f"Missing {field} in summary")
+        data = response.json()
+        
+        # Validate response structure
+        required_fields = ["success", "virality_score", "virality_level", "pattern_analysis", "improvements"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Viral Hook Prediction", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Viral Hook Prediction", False, f"API returned success=false: {data}")
+            return False
+        
+        virality_score = data.get("virality_score", 0)
+        if not isinstance(virality_score, int) or virality_score < 0 or virality_score > 100:
+            log_test("Viral Hook Prediction", False, f"Invalid virality_score: {virality_score}")
+            return False
+        
+        virality_level = data.get("virality_level", "")
+        valid_levels = ["high", "moderate", "low", "poor"]
+        if virality_level not in valid_levels:
+            log_test("Viral Hook Prediction", False, f"Invalid virality_level: {virality_level}")
+            return False
+        
+        pattern_analysis = data.get("pattern_analysis", {})
+        if "hook" not in pattern_analysis or "final_score" not in pattern_analysis:
+            log_test("Viral Hook Prediction", False, f"Invalid pattern_analysis structure: {pattern_analysis}")
+            return False
+        
+        log_test("Viral Hook Prediction", True, f"Score: {virality_score}/100, Level: {virality_level}, Improvements: {len(data.get('improvements', []))}")
+        return True
+        
+    except Exception as e:
+        log_test("Viral Hook Prediction", False, f"Exception: {str(e)}")
+        return False
+
+def test_viral_improve():
+    """Test POST /api/viral/improve - Hook improvement"""
+    try:
+        improve_data = {
+            "hook": "Here's my tip for better content",
+            "platform": "linkedin",
+            "style": "curiosity"
+        }
+        
+        response = session.post(f"{BASE_URL}/viral/improve", json=improve_data)
+        
+        if response.status_code != 200:
+            log_test("Hook Improvement", False, f"Status: {response.status_code}, Response: {response.text}")
+            return False
+        
+        data = response.json()
+        
+        # Validate response structure
+        required_fields = ["success", "improved_hooks"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Hook Improvement", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Hook Improvement", False, f"API returned success=false: {data}")
+            return False
+        
+        improved_hooks = data.get("improved_hooks", [])
+        if not isinstance(improved_hooks, list) or len(improved_hooks) == 0:
+            log_test("Hook Improvement", False, f"Expected non-empty list of improved_hooks, got: {improved_hooks}")
+            return False
+        
+        # Validate hook structure
+        for hook in improved_hooks[:3]:  # Check first 3
+            if not isinstance(hook, dict) or "text" not in hook:
+                log_test("Hook Improvement", False, f"Invalid hook structure: {hook}")
                 return False
         
-        results.log_test("Analytics Overview", True, f"Data available: {summary.get('total_posts', 0)} posts analyzed")
-    else:
-        results.log_test("Analytics Overview", True, "No data available (expected for new user)")
-    
-    return True
+        log_test("Hook Improvement", True, f"Generated {len(improved_hooks)} improved hooks using {data.get('style', 'unknown')} style")
+        return True
+        
+    except Exception as e:
+        log_test("Hook Improvement", False, f"Exception: {str(e)}")
+        return False
 
-def test_performance_trends(token):
-    """Test GET /api/analytics/trends"""
-    print("\n📈 Testing Performance Trends")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    # Test with parameters
-    params = {"days": 30, "granularity": "week"}
-    response = safe_request("GET", f"{API_BASE}/analytics/trends", headers=headers, params=params)
-    
-    if not response:
-        results.log_test("Performance Trends - Request", False, "No response received")
-        return False
-    
-    if response.status_code != 200:
-        results.log_test("Performance Trends - Status", False, f"Status: {response.status_code}")
-        return False
-    
+def test_viral_batch_predict():
+    """Test POST /api/viral/batch-predict - Batch prediction"""
     try:
+        batch_data = {
+            "hooks": [
+                "Stop doing this mistake in your content strategy",
+                "3 content tips that actually work",
+                "Here's what I learned after 1000 posts"
+            ],
+            "platform": "linkedin"
+        }
+        
+        response = session.post(f"{BASE_URL}/viral/batch-predict", json=batch_data)
+        
+        if response.status_code != 200:
+            log_test("Batch Prediction", False, f"Status: {response.status_code}, Response: {response.text}")
+            return False
+        
         data = response.json()
-    except:
-        results.log_test("Performance Trends - JSON", False, "Invalid JSON response")
+        
+        # Validate response structure
+        required_fields = ["success", "predictions", "recommended"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Batch Prediction", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        if not data.get("success"):
+            log_test("Batch Prediction", False, f"API returned success=false: {data}")
+            return False
+        
+        predictions = data.get("predictions", [])
+        if len(predictions) != 3:
+            log_test("Batch Prediction", False, f"Expected 3 predictions, got {len(predictions)}")
+            return False
+        
+        # Check that hooks are ranked (first should have highest score)
+        scores = [p.get("score", 0) for p in predictions]
+        if scores != sorted(scores, reverse=True):
+            log_test("Batch Prediction", False, f"Hooks not ranked by score: {scores}")
+            return False
+        
+        recommended = data.get("recommended", {})
+        if "hook" not in recommended or "score" not in recommended:
+            log_test("Batch Prediction", False, f"Invalid recommended structure: {recommended}")
+            return False
+        
+        log_test("Batch Prediction", True, f"Ranked 3 hooks, Best score: {scores[0]}, Recommended: '{recommended['hook'][:40]}...'")
+        return True
+        
+    except Exception as e:
+        log_test("Batch Prediction", False, f"Exception: {str(e)}")
         return False
-    
-    # Validate structure - handle both cases with and without data
-    required_fields = ["success", "has_data"]
-    for field in required_fields:
-        if field not in data:
-            results.log_test("Performance Trends - Structure", False, f"Missing {field}")
-            return False
-    
-    # Check trend field - only required when has_data=true
-    if data.get("has_data"):
-        if "trend" not in data:
-            results.log_test("Performance Trends - Trend Missing", False, "Missing trend field when has_data=true")
-            return False
-        
-        trend_value = data.get("trend")
-        valid_trends = ["improving", "stable", "declining", "insufficient_data"]
-        if trend_value not in valid_trends:
-            results.log_test("Performance Trends - Trend Value", False, f"Invalid trend: {trend_value}")
-            return False
-        
-        if "periods" not in data:
-            results.log_test("Performance Trends - Periods", False, "Missing periods array")
-            return False
-        
-        results.log_test("Performance Trends", True, f"Trend: {trend_value}, {len(data.get('periods', []))} periods")
-    else:
-        # No data case
-        results.log_test("Performance Trends", True, "No data available (expected for new user)")
-    
-    return True
 
-def test_ai_insights(token):
-    """Test GET /api/analytics/insights"""
-    print("\n🧠 Testing AI Insights Generation")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    response = safe_request("GET", f"{API_BASE}/analytics/insights", headers=headers)
-    
-    if not response:
-        results.log_test("AI Insights - Request", False, "No response received")
-        return False
-    
-    if response.status_code != 200:
-        results.log_test("AI Insights - Status", False, f"Status: {response.status_code}")
-        return False
-    
+def test_viral_patterns():
+    """Test GET /api/viral/patterns - Viral patterns info"""
     try:
-        data = response.json()
-    except:
-        results.log_test("AI Insights - JSON", False, "Invalid JSON response")
-        return False
-    
-    # Validate structure
-    required_fields = ["success", "has_insights"]
-    for field in required_fields:
-        if field not in data:
-            results.log_test("AI Insights - Structure", False, f"Missing {field}")
+        response = session.get(f"{BASE_URL}/viral/patterns")
+        
+        if response.status_code != 200:
+            log_test("Viral Patterns", False, f"Status: {response.status_code}, Response: {response.text}")
             return False
-    
-    if data.get("has_insights"):
-        # Check for insights fields
-        insights_fields = ["summary", "key_insights", "recommendations"]
-        for field in insights_fields:
-            if field not in data:
-                results.log_test("AI Insights - Content", False, f"Missing {field}")
+        
+        data = response.json()
+        
+        # Validate response structure
+        required_fields = ["positive_patterns", "negative_patterns", "tips"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            log_test("Viral Patterns", False, f"Missing fields: {missing_fields}")
+            return False
+        
+        positive_patterns = data.get("positive_patterns", [])
+        if not isinstance(positive_patterns, list) or len(positive_patterns) == 0:
+            log_test("Viral Patterns", False, f"Expected non-empty positive_patterns list, got: {positive_patterns}")
+            return False
+        
+        negative_patterns = data.get("negative_patterns", [])
+        if not isinstance(negative_patterns, list) or len(negative_patterns) == 0:
+            log_test("Viral Patterns", False, f"Expected non-empty negative_patterns list, got: {negative_patterns}")
+            return False
+        
+        tips = data.get("tips", [])
+        if not isinstance(tips, list) or len(tips) == 0:
+            log_test("Viral Patterns", False, f"Expected non-empty tips list, got: {tips}")
+            return False
+        
+        # Validate pattern structure
+        for pattern in positive_patterns[:2]:
+            if not isinstance(pattern, dict) or "name" not in pattern or "description" not in pattern:
+                log_test("Viral Patterns", False, f"Invalid positive pattern structure: {pattern}")
                 return False
         
-        results.log_test("AI Insights", True, f"Generated insights with {len(data.get('key_insights', []))} insights")
-    else:
-        results.log_test("AI Insights", True, "No insights available (expected for limited content)")
-    
-    return True
-
-def test_fatigue_shield(token):
-    """Test GET /api/analytics/fatigue-shield"""
-    print("\n🛡️ Testing Pattern Fatigue Shield")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    response = safe_request("GET", f"{API_BASE}/analytics/fatigue-shield", headers=headers)
-    
-    if not response:
-        results.log_test("Fatigue Shield - Request", False, "No response received")
-        return False
-    
-    if response.status_code != 200:
-        results.log_test("Fatigue Shield - Status", False, f"Status: {response.status_code}")
-        return False
-    
-    try:
-        data = response.json()
-    except:
-        results.log_test("Fatigue Shield - JSON", False, "Invalid JSON response")
-        return False
-    
-    # Validate structure
-    required_fields = ["success", "shield_status", "shield_message", "fatigue_risk_score"]
-    for field in required_fields:
-        if field not in data:
-            results.log_test("Fatigue Shield - Structure", False, f"Missing {field}")
-            return False
-    
-    # Check valid shield status
-    shield_status = data.get("shield_status")
-    valid_statuses = ["healthy", "caution", "warning", "critical"]
-    if shield_status not in valid_statuses:
-        results.log_test("Fatigue Shield - Status Value", False, f"Invalid shield status: {shield_status}")
-        return False
-    
-    # Check risk score range
-    risk_score = data.get("fatigue_risk_score")
-    if not isinstance(risk_score, (int, float)) or risk_score < 0 or risk_score > 100:
-        results.log_test("Fatigue Shield - Risk Score", False, f"Invalid risk score: {risk_score}")
-        return False
-    
-    results.log_test("Fatigue Shield", True, f"Status: {shield_status}, Risk: {risk_score}/100")
-    return True
-
-def test_learning_insights(token):
-    """Test GET /api/analytics/learning"""
-    print("\n📚 Testing Learning Insights")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    response = safe_request("GET", f"{API_BASE}/analytics/learning", headers=headers)
-    
-    if not response:
-        results.log_test("Learning Insights - Request", False, "No response received")
-        return False
-    
-    if response.status_code != 200:
-        results.log_test("Learning Insights - Status", False, f"Status: {response.status_code}")
-        return False
-    
-    try:
-        data = response.json()
-    except:
-        results.log_test("Learning Insights - JSON", False, "Invalid JSON response")
-        return False
-    
-    # Validate structure
-    if "has_data" not in data:
-        results.log_test("Learning Insights - Structure", False, "Missing has_data field")
-        return False
-    
-    if data.get("has_data"):
-        # Check for learning data fields
-        learning_fields = ["approved_count", "rejected_count"]
-        for field in learning_fields:
-            if field not in data:
-                results.log_test("Learning Insights - Data", False, f"Missing {field}")
+        for pattern in negative_patterns[:2]:
+            if not isinstance(pattern, dict) or "name" not in pattern or "reason" not in pattern:
+                log_test("Viral Patterns", False, f"Invalid negative pattern structure: {pattern}")
                 return False
         
-        approved = data.get("approved_count", 0)
-        rejected = data.get("rejected_count", 0)
-        results.log_test("Learning Insights", True, f"Approved: {approved}, Rejected: {rejected}")
-    else:
-        results.log_test("Learning Insights", True, "No learning data yet (expected for new user)")
-    
-    return True
-
-def test_persona_evolution(token):
-    """Test GET /api/analytics/persona/evolution"""
-    print("\n🧬 Testing Persona Evolution Timeline")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    response = safe_request("GET", f"{API_BASE}/analytics/persona/evolution", headers=headers)
-    
-    if not response:
-        results.log_test("Persona Evolution - Request", False, "No response received")
-        return False
-    
-    if response.status_code != 200:
-        results.log_test("Persona Evolution - Status", False, f"Status: {response.status_code}")
-        return False
-    
-    try:
-        data = response.json()
-    except:
-        results.log_test("Persona Evolution - JSON", False, "Invalid JSON response")
-        return False
-    
-    # Validate structure
-    required_fields = ["success", "current_card_summary", "timeline", "total_refinements"]
-    for field in required_fields:
-        if field not in data:
-            results.log_test("Persona Evolution - Structure", False, f"Missing {field}")
-            return False
-    
-    timeline = data.get("timeline", [])
-    refinements = data.get("total_refinements", 0)
-    results.log_test("Persona Evolution", True, f"Timeline has {len(timeline)} events, {refinements} refinements")
-    return True
-
-def test_voice_evolution(token):
-    """Test GET /api/analytics/persona/voice-evolution"""
-    print("\n🎙️ Testing Voice Evolution Analysis")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    response = safe_request("GET", f"{API_BASE}/analytics/persona/voice-evolution", headers=headers)
-    
-    if not response:
-        results.log_test("Voice Evolution - Request", False, "No response received")
-        return False
-    
-    if response.status_code != 200:
-        results.log_test("Voice Evolution - Status", False, f"Status: {response.status_code}")
-        return False
-    
-    try:
-        data = response.json()
-    except:
-        results.log_test("Voice Evolution - JSON", False, "Invalid JSON response")
-        return False
-    
-    # Validate structure
-    if "has_data" not in data:
-        results.log_test("Voice Evolution - Structure", False, "Missing has_data field")
-        return False
-    
-    if data.get("has_data"):
-        # Check for analysis fields
-        analysis_fields = ["evolution_detected", "evolution_summary"]
-        for field in analysis_fields:
-            if field not in data:
-                results.log_test("Voice Evolution - Analysis", False, f"Missing {field}")
-                return False
+        log_test("Viral Patterns", True, f"Positive: {len(positive_patterns)}, Negative: {len(negative_patterns)}, Tips: {len(tips)}")
+        return True
         
-        evolution_detected = data.get("evolution_detected", False)
-        total_posts = data.get("total_posts_analyzed", 0)
-        results.log_test("Voice Evolution", True, f"Analyzed {total_posts} posts, evolution detected: {evolution_detected}")
-    else:
-        results.log_test("Voice Evolution", True, "Insufficient data for voice evolution analysis")
-    
-    return True
+    except Exception as e:
+        log_test("Viral Patterns", False, f"Exception: {str(e)}")
+        return False
 
-def test_persona_suggestions(token):
-    """Test GET /api/analytics/persona/suggestions"""
-    print("\n💡 Testing Persona Update Suggestions")
+def run_all_tests():
+    """Run all Sprint 10 backend tests."""
+    print("🚀 SPRINT 10 BACKEND TESTING - THOOKAI PLATFORM")
+    print("=" * 60)
+    print()
     
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    response = safe_request("GET", f"{API_BASE}/analytics/persona/suggestions", headers=headers)
-    
-    if not response:
-        results.log_test("Persona Suggestions - Request", False, "No response received")
-        return False
-    
-    if response.status_code != 200:
-        results.log_test("Persona Suggestions - Status", False, f"Status: {response.status_code}")
-        return False
-    
+    # Setup authentication
     try:
-        data = response.json()
-    except:
-        results.log_test("Persona Suggestions - JSON", False, "Invalid JSON response")
-        return False
+        auth_info = register_and_auth()
+        print(f"🎯 Testing with user: {auth_info['user']['email']}")
+        print()
+    except Exception as e:
+        print(f"❌ Authentication setup failed: {e}")
+        return
     
-    # Validate structure
-    required_fields = ["success", "should_update"]
-    for field in required_fields:
-        if field not in data:
-            results.log_test("Persona Suggestions - Structure", False, f"Missing {field}")
-            return False
+    # Track test results
+    tests = []
     
-    should_update = data.get("should_update", False)
-    suggested_updates = data.get("suggested_updates", [])
-    confidence = data.get("confidence", 0)
+    print("📊 CREDIT SYSTEM TESTS")
+    print("-" * 30)
+    tests.append(("Credit Balance Endpoint", test_get_credit_balance()))
+    tests.append(("Credit Usage History", test_get_credit_usage()))  
+    tests.append(("Operation Costs", test_get_operation_costs()))
     
-    results.log_test("Persona Suggestions", True, f"Should update: {should_update}, Suggestions: {len(suggested_updates)}, Confidence: {confidence}%")
-    return True
-
-def main():
-    """Run all Sprint 9 analytics backend tests"""
-    print("🚀 THOOKAI SPRINT 9 ANALYTICS BACKEND TESTS")
-    print(f"Target: {API_BASE}")
+    print("💳 SUBSCRIPTION TESTS")
+    print("-" * 30)
+    tests.append(("Subscription Details", test_get_subscription_details()))
+    tests.append(("Available Tiers", test_get_available_tiers()))
+    tests.append(("Feature Limits", test_get_feature_limits()))
+    tests.append(("Upgrade Subscription", test_upgrade_subscription()))
+    
+    print("🔥 VIRAL HOOK PREDICTOR TESTS")  
+    print("-" * 30)
+    tests.append(("Viral Hook Prediction", test_viral_predict()))
+    tests.append(("Hook Improvement", test_viral_improve()))
+    tests.append(("Batch Prediction", test_viral_batch_predict()))
+    tests.append(("Viral Patterns", test_viral_patterns()))
+    
+    # Summary
+    print("=" * 60)
+    print("🏁 SPRINT 10 TEST SUMMARY")
     print("=" * 60)
     
-    # Step 1: Register test user and get token
-    token = register_test_user()
-    if not token:
-        print("\n❌ Cannot proceed without authentication")
-        return False
+    passed = sum(1 for name, result in tests if result)
+    total = len(tests)
     
-    # Step 2: Complete onboarding
-    if not complete_onboarding(token):
-        print("\n❌ Cannot proceed without persona")
-        return False
+    print(f"✅ PASSED: {passed}/{total} tests")
+    print(f"❌ FAILED: {total - passed}/{total} tests")
+    print()
     
-    # Step 3: Create test content
-    content_jobs = create_test_content(token)
-    print(f"\nCreated {len(content_jobs)} content pieces for testing")
+    # Details
+    for test_name, result in tests:
+        status = "✅" if result else "❌"
+        print(f"{status} {test_name}")
     
-    # Small delay to let content settle
-    time.sleep(2)
+    print()
+    print("🎯 CRITICAL ENDPOINTS STATUS:")
     
-    # Step 4: Test all analytics endpoints
-    print("\n" + "=" * 60)
-    print("🧪 RUNNING ANALYTICS ENDPOINT TESTS")
-    print("=" * 60)
+    # Group by category
+    credit_tests = [(n, r) for n, r in tests[:3]]
+    subscription_tests = [(n, r) for n, r in tests[3:7]]
+    viral_tests = [(n, r) for n, r in tests[7:]]
     
-    test_analytics_overview(token)
-    test_performance_trends(token)
-    test_ai_insights(token)
-    test_fatigue_shield(token)
-    test_learning_insights(token)
-    test_persona_evolution(token) 
-    test_voice_evolution(token)
-    test_persona_suggestions(token)
+    credit_pass = sum(1 for _, r in credit_tests if r)
+    sub_pass = sum(1 for _, r in subscription_tests if r)  
+    viral_pass = sum(1 for _, r in viral_tests if r)
     
-    # Final results
-    print("\n" + "=" * 60)
-    success = results.summary()
-    print("=" * 60)
+    print(f"📊 Credit System: {credit_pass}/{len(credit_tests)} working")
+    print(f"💳 Subscription Tiers: {sub_pass}/{len(subscription_tests)} working") 
+    print(f"🔥 Viral Hook Predictor: {viral_pass}/{len(viral_tests)} working")
     
-    if success:
-        print("🎉 ALL TESTS PASSED! Sprint 9 Analytics Backend is working correctly.")
+    if passed == total:
+        print()
+        print("🎉 ALL SPRINT 10 FEATURES WORKING CORRECTLY!")
+        print("🚀 READY FOR PRODUCTION")
     else:
-        print("⚠️ Some tests failed. Check the results above.")
-    
-    return success
+        print()
+        print("⚠️  SOME FEATURES NEED ATTENTION")
+        failed_tests = [name for name, result in tests if not result]
+        print(f"🔧 Failed: {', '.join(failed_tests)}")
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    run_all_tests()

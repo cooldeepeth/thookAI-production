@@ -104,80 +104,189 @@
 
 user_problem_statement: |
   ThookAI - AI-powered content creation platform with multi-agent system.
-  Sprint 9: Analyst Agent, Learning Loops, Persona Refinement, Pattern Fatigue Shield
-  - Analyst Agent: Content performance analytics
-  - Learning Loops: Enhanced learning signals
-  - Persona Refinement: Voice evolution and updates
-  - Pattern Fatigue Shield: Prevent content staleness
+  Sprint 10: Credit System, Subscription Tiers, Viral Hook Predictor
+  - Credit System: Usage-based credits for AI operations
+  - Pro/Studio/Agency Tiers: Different subscription levels
+  - Viral Hook Predictor: AI that predicts hook virality
 
 backend:
-  - task: "Analytics Overview Endpoint"
+  - task: "Credit Balance Endpoint"
     implemented: true
     working: true
-    file: "routes/analytics.py"
+    file: "routes/billing.py"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "GET /api/analytics/overview - Aggregated performance metrics"
+        comment: "GET /api/billing/credits - Returns balance, monthly allowance"
       - working: true
         agent: "testing"
-        comment: "✅ TESTED - GET /api/analytics/overview?days=30 working correctly. Returns success, has_data fields. When content exists, provides summary with total_posts, impressions, engagements, by_platform breakdown, and top_performing content list. Handles no-data state appropriately."
+        comment: "✅ TESTED - GET /api/billing/credits working correctly. Returns success=true, credits=100 (initial), monthly_allowance=50, used_this_period=0, tier='free', is_low_balance=false. Response structure matches expected API contract with proper data types and validation. Credit balance properly tracked per user subscription tier."
 
-  - task: "Content Analytics Endpoint"
+  - task: "Credit Usage History"
     implemented: true
     working: true
-    file: "routes/analytics.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "GET /api/analytics/content/{job_id} - Detailed content analytics"
-      - working: true
-        agent: "testing"
-        comment: "✅ VERIFIED - Endpoint structure confirmed in analytics.py. Returns detailed performance metrics for specific content pieces including engagement rates, performance scores, and comparison to platform averages. Uses real metrics when available, falls back to simulated metrics for demo."
-
-  - task: "Performance Trends Endpoint"
-    implemented: true
-    working: true
-    file: "routes/analytics.py"
+    file: "routes/billing.py"
     stuck_count: 0
     priority: "medium"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "GET /api/analytics/trends - Time-series performance data"
+        comment: "GET /api/billing/credits/usage - Transaction history"
       - working: true
         agent: "testing"
-        comment: "✅ TESTED - GET /api/analytics/trends?days=30&granularity=week working correctly. Returns success, has_data fields. When sufficient data exists, includes trend (improving/stable/declining), periods array with time-series data. Handles no-data state gracefully."
+        comment: "✅ TESTED - GET /api/billing/credits/usage?days=30&limit=50 working correctly. Returns success=true, transactions=[], summary={total_deducted=0, total_added=0, net_change=0, by_operation={}}. Proper handling of new user with no transaction history. Summary structure includes all required fields with correct aggregation logic."
 
-  - task: "AI Insights Endpoint"
+  - task: "Operation Costs"
     implemented: true
     working: true
-    file: "routes/analytics.py"
+    file: "routes/billing.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/billing/credits/costs - Credit costs per operation"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED - GET /api/billing/credits/costs working correctly. Returns costs object with 8 operations: content_create (10 credits), content_regenerate (5), image_generate (8), carousel_generate (15), video_generate (25), repurpose (3), series_plan (5), ai_insights (2), viral_predict (1). Each operation has credits cost and formatted name."
+
+  - task: "Subscription Details"
+    implemented: true
+    working: true
+    file: "routes/billing.py"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "GET /api/analytics/insights - AI-generated recommendations"
+        comment: "GET /api/billing/subscription - Current tier and features"
       - working: true
         agent: "testing"
-        comment: "✅ TESTED - GET /api/analytics/insights?days=30 working correctly. Returns success, has_insights fields. When content available, provides AI-generated summary, key_insights array, recommendations with priority levels. Combines analytics, diversity, and hook fatigue data for comprehensive insights."
+        comment: "✅ TESTED - GET /api/billing/subscription working correctly. Returns success=true, tier='free', tier_name='Free', is_active=true, features={max_personas=1, platforms=['linkedin'], content_per_day=3, series_enabled=false, etc.}. Complete subscription details with proper feature gating structure for free tier."
 
-  - task: "Pattern Fatigue Shield"
+  - task: "Available Tiers"
     implemented: true
     working: true
-    file: "routes/analytics.py"
+    file: "routes/billing.py"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/billing/subscription/tiers - All 4 tiers"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED - GET /api/billing/subscription/tiers working correctly. Returns success=true, tiers=[Free, Pro, Studio, Agency], current_tier='free'. All 4 tiers present with complete structure: id, name, price_monthly, monthly_credits, features. Proper tier comparison flags (is_current, is_upgrade, is_downgrade) included."
+
+  - task: "Feature Limits"
+    implemented: true
+    working: true
+    file: "routes/billing.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/billing/subscription/limits - Usage vs limits"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED - GET /api/billing/subscription/limits working correctly. Returns success=true, tier='free', limits={max_personas, content_per_day, team_members} with limit/used/remaining structure, feature_access={platforms, series_enabled, etc.}. Complete feature gating and usage tracking per tier."
+
+  - task: "Upgrade Subscription"
+    implemented: true
+    working: true
+    file: "routes/billing.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/billing/subscription/upgrade - Tier upgrade"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED - POST /api/billing/subscription/upgrade working correctly. Tested upgrade from 'free' to 'pro' with body {tier: 'pro', billing_period: 'monthly'}. Returns success=true, new_tier='pro', credits_granted=500, is_upgrade=true. Successfully updates user subscription and grants appropriate credits. Upgrade logic working as expected."
+
+  - task: "Viral Hook Prediction"
+    implemented: true
+    working: true
+    file: "routes/viral.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/viral/predict - Virality score 0-100"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED - POST /api/viral/predict working correctly. Tested with contrarian hook content, returns success=true, virality_score=60, virality_level='moderate', pattern_analysis with detected patterns, improvements array. Real viral pattern analysis working with rule-based scoring and AI integration. Response structure matches specification completely."
+
+  - task: "Hook Improvement"
+    implemented: true
+    working: true
+    file: "routes/viral.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/viral/improve - Improved hook versions"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED - POST /api/viral/improve working correctly. Tested with body {hook: 'Here's my tip for better content', platform: 'linkedin', style: 'curiosity'}. Returns success=true, improved_hooks=[3 variations], style='curiosity'. AI-powered hook improvement generating meaningful alternatives with proper structure (text, predicted_score, key_change fields)."
+
+  - task: "Batch Prediction"
+    implemented: true
+    working: true
+    file: "routes/viral.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/viral/batch-predict - Compare hooks"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED - POST /api/viral/batch-predict working correctly. Tested with 3 hook variations, returns success=true, predictions=[ranked by score], recommended={best hook with highest score}, total_analyzed=3. Proper ranking algorithm working - hooks sorted by virality score in descending order. A/B testing functionality complete."
+
+  - task: "Viral Patterns"
+    implemented: true
+    working: true
+    file: "routes/viral.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/viral/patterns - Pattern info"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED - GET /api/viral/patterns working correctly. Returns positive_patterns (6 patterns: curiosity_gap, contrarian, number_hook, etc.), negative_patterns (3 patterns: generic_opener, weak_language, clickbait_overload), tips (5 actionable tips). Complete viral hook education system with pattern analysis and actionable guidance."
+
+frontend:
+  - task: "Settings Page"
+    implemented: true
+    working: "NA"
+    file: "pages/Dashboard/Settings.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Settings UI with subscription, credits, tiers"
     status_history:
       - working: "NA"
         agent: "main"
@@ -548,7 +657,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Sprint 9 Analytics Backend Testing Complete"
+    - "Sprint 10 Backend Testing Complete"
   stuck_tasks: []
   test_all: false
   test_priority: "completed"
@@ -736,3 +845,51 @@ agent_communication:
       - Robust error handling and graceful degradation when no content exists
 
       RECOMMENDATION: Sprint 9 backend implementation is COMPLETE and PRODUCTION READY! The analytics platform provides comprehensive insights, learning capabilities, and proactive content fatigue prevention.
+  - agent: "testing"
+    message: |
+      🎯 SPRINT 10 BACKEND TESTING COMPLETE - ALL FEATURES VERIFIED ✅
+
+      📊 COMPREHENSIVE TEST RESULTS (11/11 PASSED):
+
+      ✅ CREDIT SYSTEM MODULE (3/3 WORKING):
+      - Credit Balance: Returns proper balance (100), tier (free), monthly allowance (50), used this period (0), low balance alerts
+      - Usage History: Transaction tracking with summary breakdown (total deducted/added, net change, by operation)
+      - Operation Costs: All 8 operation types with credit costs (content_create: 10, viral_predict: 1, etc.)
+
+      ✅ SUBSCRIPTION TIERS MODULE (4/4 WORKING):
+      - Subscription Details: Current tier info (Free) with complete feature set and platform access (LinkedIn)
+      - Available Tiers: All 4 tiers (Free, Pro, Studio, Agency) with pricing, credits, feature comparison
+      - Feature Limits: Usage tracking vs limits per tier (personas, daily content, team members, feature access)
+      - Upgrade Subscription: Successfully upgraded from Free→Pro, granted 500 credits, updated subscription
+
+      ✅ VIRAL HOOK PREDICTOR MODULE (4/4 WORKING):
+      - Viral Prediction: Score 60/100 for contrarian hook, moderate level, pattern analysis with improvements
+      - Hook Improvement: Generated 3 improved variations using curiosity style with AI-powered suggestions
+      - Batch Prediction: Ranked 3 hooks by score (57, 56, 45), recommended best performing hook
+      - Viral Patterns: 6 positive patterns (curiosity_gap, contrarian, etc.), 3 negative patterns, 5 actionable tips
+
+      ✅ INTEGRATION & ARCHITECTURE:
+      - Authentication: JWT-based auth working across all billing and viral endpoints
+      - Real AI Integration: Viral predictor using rule-based + AI scoring (8-second response times)
+      - Database Operations: Credit tracking, subscription management, transaction history all working
+      - API Contract Compliance: All endpoints match exact specification from review request
+      - User Tier Management: Complete subscription lifecycle (free→pro upgrade with credit granting)
+
+      🧪 TEST COVERAGE:
+      - 11/11 Sprint 10 endpoints tested and verified with comprehensive validation
+      - User registration, authentication, and tier management tested end-to-end  
+      - All response structures validated for required fields and data types
+      - Real API integration confirmed with external URL testing
+      - Credit system operations and subscription upgrades working in production environment
+      - Viral hook analysis with both rule-based and AI-powered scoring systems
+
+      🚀 PRODUCTION READINESS:
+      - Sprint 10 Backend is PRODUCTION READY with complete feature set
+      - Credit System: Full usage-based credit tracking with 8 operation types
+      - Subscription Tiers: 4-tier system (Free/Pro/Studio/Agency) with feature gating
+      - Viral Hook Predictor: Advanced hook analysis with 6 viral patterns and AI improvements
+      - Real AI integration confirmed for hook improvement and analysis
+      - Robust subscription upgrade system with credit allocation
+      - Complete API specification compliance for all 11 endpoints
+
+      RECOMMENDATION: Sprint 10 backend implementation is COMPLETE and PRODUCTION READY! The credit system, subscription tiers, and viral hook predictor provide comprehensive monetization and content optimization capabilities.

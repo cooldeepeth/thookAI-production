@@ -9,6 +9,7 @@ import ContentCalendar from "./ContentCalendar";
 import RepurposeAgent from "./RepurposeAgent";
 import ContentLibrary from "./ContentLibrary";
 import Analytics from "./Analytics";
+import Settings from "./Settings";
 import ComingSoon from "./ComingSoon";
 
 export default function Dashboard() {
@@ -25,7 +26,7 @@ export default function Dashboard() {
           <Route path="/analytics" element={<><TopBar title="Analytics" /><Analytics /></>} />
           <Route path="/library" element={<><TopBar title="Content Library" /><ContentLibrary /></>} />
           <Route path="/connections" element={<><TopBar title="Platform Connections" /><Connections /></>} />
-          <Route path="/settings" element={<><TopBar title="Settings" /><ComingSoon title="Settings" desc="Account, billing, and preferences." sprint="10" /></>} />
+          <Route path="/settings" element={<><TopBar title="Settings" /><Settings /></>} />
         </Routes>
       </div>
     </div>
