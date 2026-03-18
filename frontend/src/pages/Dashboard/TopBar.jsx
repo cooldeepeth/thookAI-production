@@ -1,0 +1,39 @@
+import { Bell, Plus, Search } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
+
+export default function TopBar({ title = "Dashboard" }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <header className="h-16 bg-[#050505]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 flex items-center justify-between px-6" data-testid="topbar">
+      <div className="flex items-center gap-4">
+        <h1 className="font-display font-semibold text-lg text-white">{title}</h1>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {/* Search */}
+        <button data-testid="search-btn" className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors">
+          <Search size={16} />
+        </button>
+
+        {/* Notifications */}
+        <button data-testid="notifications-btn" className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors relative">
+          <Bell size={16} />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-lime rounded-full" />
+        </button>
+
+        {/* Create button */}
+        <button
+          onClick={() => navigate("/dashboard/studio")}
+          data-testid="create-content-btn"
+          className="flex items-center gap-2 btn-primary text-sm py-2 px-4"
+        >
+          <Plus size={15} />
+          Create
+        </button>
+      </div>
+    </header>
+  );
+}
