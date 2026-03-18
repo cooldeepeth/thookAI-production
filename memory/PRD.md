@@ -189,8 +189,8 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 ### PHASE 5: ANALYTICS & GROWTH
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 9 | Analyst Agent + Learning Loops + Persona Refinement + Pattern Fatigue Shield | Planned |
-| Sprint 10 | Credit System + Pro/Studio/Agency Tiers + Viral Hook Predictor | Planned |
+| **Sprint 9** | Analyst Agent + Learning Loops + Persona Refinement + Pattern Fatigue Shield | ✅ COMPLETE |
+| Sprint 10 | Credit System + Pro/Studio/Agency Tiers + Viral Hook Predictor | 🔜 Next |
 
 ### PHASE 6: SCALE
 | Sprint | Focus | Status |
@@ -646,3 +646,97 @@ See `/app/backend/.env` for all API key placeholders:
   - `source_job_id` — Links to original content
   - `series_id` — Links to series
   - `series_post_number` — Position in series
+
+
+---
+
+## 21. Sprint 9 Implementation Details — July 2025
+
+### Analyst Agent (`agents/analyst.py`):
+
+- **get_content_analytics()** — Detailed analytics for specific content
+  - Performance metrics (impressions, engagements, clicks, shares)
+  - Performance score calculation (0-100)
+  - Simulated metrics when real platform data unavailable
+  - Platform-specific engagement benchmarks
+
+- **get_analytics_overview()** — Aggregated performance summary
+  - Total posts, impressions, engagements
+  - Average performance score
+  - Platform breakdown with per-platform stats
+  - Top and bottom performing content
+
+- **get_performance_trends()** — Time-series analysis
+  - Weekly or monthly granularity
+  - Trend direction detection (improving/stable/declining)
+  - Performance trajectory over time
+
+- **generate_insights()** — AI-powered recommendations
+  - Key insights with data backing
+  - Prioritized recommendations (high/medium/low)
+  - Best performing patterns identification
+  - 30-day strategic focus suggestion
+
+**API Endpoints:**
+- `GET /api/analytics/overview` — Aggregated metrics
+- `GET /api/analytics/content/{job_id}` — Individual content analytics
+- `GET /api/analytics/trends` — Time-series trends
+- `GET /api/analytics/insights` — AI-generated insights
+- `GET /api/analytics/learning` — Learning signals
+
+### Persona Refinement Service (`services/persona_refinement.py`):
+
+- **analyze_voice_evolution()** — Tracks voice changes over time
+  - Compares early vs recent content
+  - Identifies tone, structure, vocabulary shifts
+  - Consistency scoring
+  - Maturity direction assessment
+
+- **suggest_persona_updates()** — AI recommendations for persona card
+  - Based on learning signals and performance
+  - Specific field-level suggestions
+  - Confidence scoring
+  - New strengths identification
+
+- **apply_persona_refinements()** — Apply suggested updates
+  - Evolution history tracking
+  - Timestamp and source logging
+
+- **get_persona_evolution_timeline()** — Full change history
+  - All refinement events
+  - Before/after values
+  - Source of each change
+
+**API Endpoints:**
+- `GET /api/analytics/persona/evolution` — Change timeline
+- `GET /api/analytics/persona/voice-evolution` — Voice analysis
+- `GET /api/analytics/persona/suggestions` — AI suggestions
+- `POST /api/analytics/persona/refine` — Apply updates
+
+### Pattern Fatigue Shield:
+
+- **get_pattern_fatigue_shield()** — Comprehensive staleness protection
+  - Combines anti-repetition, diversity, trends data
+  - Risk score calculation (0-100)
+  - Status levels: healthy, caution, warning, critical
+  - Risk factors breakdown
+  - Actionable recommendations
+  - Cooldown suggestions for overused patterns
+
+**API Endpoint:**
+- `GET /api/analytics/fatigue-shield` — Full fatigue analysis
+
+### Frontend Components:
+
+- **Analytics Dashboard** (`Analytics.jsx`)
+  - Summary cards (posts, impressions, performance, engagement)
+  - Pattern Fatigue Shield display
+  - AI Insights panel with recommendations
+  - Platform breakdown cards
+  - Top performing content list
+
+### Database Schema Additions:
+- `persona_engines.evolution_history[]` — Array of refinement events
+- `persona_engines.card.last_refined` — Last refinement timestamp
+- `content_jobs.performance_metrics` — Real platform metrics when available
+- `content_jobs.metrics_updated_at` — Last metrics sync time
