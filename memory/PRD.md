@@ -178,12 +178,12 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | **Sprint 5** | Content Pipeline (Raw Input → Draft) + Platform-Native UX Shells + Daily Brief | ✅ COMPLETE |
-| Sprint 6 | Media Agents (Visual/Designer/Voice) + Human Review Workflow | 🔜 Next |
+| **Sprint 6** | Media Agents (Visual/Designer/Voice) + Human Review Workflow | ✅ COMPLETE |
 
 ### PHASE 4: PUBLISHING
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 7 | Platform Integrations (Meta/LinkedIn/X) + Planner + Ghost Publisher | Planned |
+| Sprint 7 | Platform Integrations (Meta/LinkedIn/X) + Planner + Ghost Publisher | 🔜 Next |
 | Sprint 8 | Repurpose Agent + Daily Brief + Content Series Planner + Anti-Repetition Engine | Planned |
 
 ### PHASE 5: ANALYTICS & GROWTH
@@ -330,7 +330,63 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 
 ---
 
-## 16. Environment Variables
+## 16. Sprint 6 Implementation Details — July 2025
+
+### Backend Media Agents:
+
+- **Visual Agent** (`agents/visual.py`)
+  - `run_visual(image_url_or_base64, platform, content_context)` — Analyzes images using GPT-4o Vision
+  - Returns: subject, tone, key_message, caption_angles[], is_safe
+  - Safety check for NSFW content
+
+- **Designer Agent** (`agents/designer.py`)
+  - `generate_image(prompt, style, platform, persona_card)` — Generates images using GPT Image (gpt-image-1)
+  - Style presets: minimal, bold, data-viz, personal
+  - `generate_carousel(topic, key_points, style, platform)` — Creates carousel slides (cover + content + CTA)
+  - Platform-specific aspect ratios
+
+- **Voice Agent** (`agents/voice.py`)
+  - `generate_voice_narration(text, voice_id, stability, similarity_boost)` — Converts text to speech via ElevenLabs
+  - Default voice: Rachel
+  - 5000 character limit per generation
+  - Returns audio_base64 and audio_url
+
+### Backend API Endpoints:
+
+- `POST /api/content/generate-image` — Generate image for job (stores in media_assets[])
+- `POST /api/content/generate-carousel` — Generate carousel slides
+- `POST /api/content/narrate` — Generate voice narration (stores in audio_url)
+- `GET /api/content/image-styles` — List available style presets
+- `GET /api/content/voices` — List default and user voices
+- `PATCH /api/content/job/{job_id}/regenerate` — Create new version (max 5)
+- `GET /api/content/job/{job_id}/history` — Get version history
+
+### Frontend Components:
+
+- **MediaPanel** (`ContentOutput.jsx`)
+  - Image generation with style selector
+  - Voice generation with audio player (waveform visualization)
+  - Download button for audio
+
+- **RejectionModal** (`ContentOutput.jsx`)
+  - Modal for providing rejection feedback
+  - Stores notes with learning signals
+
+- **Version Tracking**
+  - Version indicator in ContentOutput
+  - Regeneration creates new version with hints
+
+### Database Schema Additions:
+- `content_jobs.media_assets[]` — Stores generated images
+- `content_jobs.audio_url` — Stores voice narration
+- `content_jobs.carousel` — Stores carousel data
+- `content_jobs.version` — Version number (1-based)
+- `content_jobs.parent_job_id` — Links to original job
+- `content_jobs.regeneration_count` — Tracks regenerations
+
+---
+
+## 17. Environment Variables
 
 See `/app/backend/.env` for all API key placeholders. User must fill in:
 - `OPENAI_API_KEY`
