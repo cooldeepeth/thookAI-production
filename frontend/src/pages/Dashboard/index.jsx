@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import DashboardHome from "./DashboardHome";
 import PersonaEngine from "./PersonaEngine";
+import ContentStudio from "./ContentStudio";
 import ComingSoon from "./ComingSoon";
 
 export default function Dashboard() {
@@ -12,7 +13,7 @@ export default function Dashboard() {
       <div className="flex-1 ml-64 flex flex-col min-h-screen">
         <Routes>
           <Route path="/" element={<><TopBar title="Dashboard" /><DashboardHome /></>} />
-          <Route path="/studio" element={<><TopBar title="Content Studio" /><ComingSoon title="Content Studio" desc="Platform-native content creation with 15 AI agents — coming in Sprint 5." sprint="5" /></>} />
+          <Route path="/studio" element={<><TopBar title="Content Studio" /><ContentStudio /></>} />
           <Route path="/persona" element={<><TopBar title="Persona Engine" /><PersonaEngine /></>} />
           <Route path="/repurpose" element={<><TopBar title="Repurpose Agent" /><ComingSoon title="Repurpose Agent" desc="Transform one piece of content into 6 platform-native variants." sprint="8" /></>} />
           <Route path="/calendar" element={<><TopBar title="Content Calendar" /><ComingSoon title="Content Calendar" desc="Optimal scheduling powered by algorithm pulse intelligence." sprint="7" /></>} />
