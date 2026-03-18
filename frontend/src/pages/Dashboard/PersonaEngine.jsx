@@ -20,13 +20,14 @@ const UOM_LABELS = {
   risk_tolerance: { label: "Risk Tolerance", values: { conservative: "text-blue-400", balanced: "text-zinc-300", bold: "text-orange-400" } },
 };
 
-function VoiceFingerprintBars() {
+function VoiceFingerprintBars({ fingerprint = {} }) {
+  const dist = fingerprint.sentence_length_distribution || {};
   const bars = [
-    { label: "Sentence rhythm", value: 0.72, desc: "Mixed short & medium sentences" },
-    { label: "Vocabulary depth", value: 0.68, desc: "Professional, accessible vocabulary" },
-    { label: "Emoji usage", value: 0.12, desc: "Minimal, purposeful emoji use" },
-    { label: "Hook strength", value: 0.85, desc: "Strong opening statements" },
-    { label: "CTA clarity", value: 0.78, desc: "Clear, non-pushy calls-to-action" },
+    { label: "Sentence rhythm", value: (dist.medium ?? 0.50), desc: dist.medium ? `${Math.round((dist.medium||0.5)*100)}% medium-length sentences` : "Mixed short & medium sentences" },
+    { label: "Vocabulary depth", value: (fingerprint.vocabulary_complexity ?? 0.65), desc: "Professional, accessible vocabulary" },
+    { label: "Emoji usage", value: (fingerprint.emoji_frequency ?? 0.05), desc: fingerprint.emoji_frequency < 0.1 ? "Minimal, purposeful emoji use" : "Moderate emoji integration" },
+    { label: "Hook strength", value: 0.85, desc: fingerprint.hook_style_preferences?.[0] || "Strong opening statements" },
+    { label: "CTA clarity", value: 0.78, desc: fingerprint.cta_patterns?.[0] || "Clear, non-pushy calls-to-action" },
   ];
   return (
     <div className="space-y-3">
@@ -215,7 +216,7 @@ export default function PersonaEngine() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card-thook p-5">
             <h3 className="font-display font-semibold text-white mb-1">Voice Fingerprint</h3>
             <p className="text-zinc-500 text-xs mb-4">Calibrated from your interview and content analysis. Updates as you create.</p>
-            <VoiceFingerprintBars />
+            <VoiceFingerprintBars fingerprint={persona.voice_fingerprint || {}} />
           </motion.div>
         </div>
 

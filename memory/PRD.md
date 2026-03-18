@@ -166,12 +166,12 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | **Sprint 1** | Infrastructure + Design System + Auth (JWT + Google OAuth) + Landing Page + Dashboard Shell | ✅ COMPLETE |
-| Sprint 2 | Onboarding Wizard (3-phase) + Persona Engine Core + Persona Card Reveal | 🔜 Next |
+| **Sprint 2** | Onboarding Wizard (3-phase) + Persona Engine Core + AI Persona Card Reveal | ✅ COMPLETE |
 
 ### PHASE 2: AGENT COUNCIL
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 3 | Commander + Scout + Thinker + Writer + QC Agents | Planned |
+| Sprint 3 | Commander + Scout + Thinker + Writer + QC Agents | 🔜 Next |
 | Sprint 4 | Persona Agent (Voice Fingerprint) + UOM Engine + Vector DB (Pinecone) | Planned |
 
 ### PHASE 3: CONTENT PIPELINE

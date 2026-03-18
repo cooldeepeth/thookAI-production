@@ -129,7 +129,8 @@ Return a 2-3 sentence analysis covering:
 3. Distinctive style elements
 
 Be specific and actionable."""
-        response = await chat.send_message(UserMessage(text=prompt))
+        import asyncio
+        response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=25.0)
         return {"analysis": response, "demo_mode": False}
     except Exception:
         return {
@@ -160,8 +161,12 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
                 system_message="You are the Persona Agent for ThookAI. Return only valid JSON with no additional text."
             ).with_model("anthropic", "claude-4-sonnet-20250514")
 
+            import asyncio
             prompt = PERSONA_PROMPT.format(answers_text=answers_text, posts_context=posts_context)
-            response = await chat.send_message(UserMessage(text=prompt))
+            response = await asyncio.wait_for(
+                chat.send_message(UserMessage(text=prompt)),
+                timeout=30.0
+            )
 
             # Clean up any markdown wrapping
             clean = response.strip()
