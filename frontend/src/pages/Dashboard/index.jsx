@@ -8,6 +8,7 @@ import Connections from "./Connections";
 import ContentCalendar from "./ContentCalendar";
 import RepurposeAgent from "./RepurposeAgent";
 import ContentLibrary from "./ContentLibrary";
+import Analytics from "./Analytics";
 import ComingSoon from "./ComingSoon";
 
 export default function Dashboard() {
@@ -21,7 +22,7 @@ export default function Dashboard() {
           <Route path="/persona" element={<><TopBar title="Persona Engine" /><PersonaEngine /></>} />
           <Route path="/repurpose" element={<><TopBar title="Repurpose Agent" /><RepurposeAgent /></>} />
           <Route path="/calendar" element={<><TopBar title="Content Calendar" /><ContentCalendar /></>} />
-          <Route path="/analytics" element={<><TopBar title="Analytics" /><ComingSoon title="Analytics" desc="Performance intelligence and learning loop insights." sprint="9" /></>} />
+          <Route path="/analytics" element={<><TopBar title="Analytics" /><Analytics /></>} />
           <Route path="/library" element={<><TopBar title="Content Library" /><ContentLibrary /></>} />
           <Route path="/connections" element={<><TopBar title="Platform Connections" /><Connections /></>} />
           <Route path="/settings" element={<><TopBar title="Settings" /><ComingSoon title="Settings" desc="Account, billing, and preferences." sprint="10" /></>} />

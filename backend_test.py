@@ -1,1517 +1,614 @@
 #!/usr/bin/env python3
-"""
-Backend Testing Suite for ThookAI Sprint 8
-Tests Repurpose Agent, Content Series Planner, Anti-Repetition Engine V2
+"""Backend Testing Suite for ThookAI Sprint 9 Analytics Features
+
+Tests all analytics endpoints including:
+- Analytics overview  
+- Performance trends
+- AI insights generation
+- Pattern Fatigue Shield
+- Learning insights
+- Persona evolution
+- Voice evolution analysis
+- Persona suggestions
+
+Requires: python3 -m pip install requests python-dotenv
 """
 
-import asyncio
-import requests
+import sys
 import json
 import time
-import sys
+import requests
+from datetime import datetime, timezone, timedelta
+import uuid
 import os
+from dotenv import load_dotenv
 
-# Get backend URL from frontend env
-FRONTEND_ENV_PATH = "/app/frontend/.env"
-BACKEND_URL = None
+# Load environment variables
+load_dotenv("/app/frontend/.env")
 
-try:
-    with open(FRONTEND_ENV_PATH, "r") as f:
-        for line in f:
-            if line.startswith("REACT_APP_BACKEND_URL="):
-                BACKEND_URL = line.split("=", 1)[1].strip()
-                break
-except Exception as e:
-    print(f"Error reading frontend .env: {e}")
-    sys.exit(1)
+# Configuration - Use external URL from frontend .env
+BASE_URL = os.getenv('REACT_APP_BACKEND_URL', 'https://social-scheduler-87.preview.emergentagent.com')
+API_BASE = f"{BASE_URL}/api"
 
-if not BACKEND_URL:
-    print("Error: REACT_APP_BACKEND_URL not found in frontend/.env")
-    sys.exit(1)
+# Test configuration
+TIMEOUT = 90  # Increased timeout for content generation
+TEST_USER_EMAIL = f"test_analytics_{int(time.time())}@example.com"
+TEST_PASSWORD = "TestPassword123!"
 
-API_BASE = f"{BACKEND_URL}/api"
-
-class TestRunner:
+class TestResults:
+    """Track test results"""
     def __init__(self):
-        self.token = None
-        self.user_id = None
-        self.job_ids = []
-        # Use timestamp to ensure unique email
-        import time
-        timestamp = int(time.time())
-        self.test_email = f"sprint8test{timestamp}@example.com"
-        self.test_password = "test123"
-        self.test_name = "Sprint 8 Tester"
-        self.approved_job_id = None  # Store for repurpose tests
-        
-    def log(self, message, level="INFO"):
-        print(f"[{level}] {message}")
-        
-    def test_api_call(self, method, endpoint, data=None, headers=None, timeout=30):
-        """Make API call and return response with error handling."""
-        try:
-            url = f"{API_BASE}{endpoint}"
-            default_headers = {"Content-Type": "application/json"}
-            if self.token:
-                default_headers["Authorization"] = f"Bearer {self.token}"
-            if headers:
-                default_headers.update(headers)
-                
-            self.log(f"{method} {url}")
-            
-            if method == "GET":
-                response = requests.get(url, headers=default_headers, timeout=timeout)
-            elif method == "POST":
-                response = requests.post(url, json=data, headers=default_headers, timeout=timeout)
-            elif method == "PATCH":
-                response = requests.patch(url, json=data, headers=default_headers, timeout=timeout)
-            else:
-                raise ValueError(f"Unsupported method: {method}")
-                
-            self.log(f"Response: {response.status_code}")
-            
-            if response.headers.get('content-type', '').startswith('application/json'):
-                return response.status_code, response.json()
-            else:
-                return response.status_code, response.text
-                
-        except Exception as e:
-            self.log(f"API call failed: {e}", "ERROR")
-            return None, str(e)
+        self.passed = 0
+        self.failed = 0
+        self.results = []
     
-    async def test_auth_flow(self):
-        """Test user registration and authentication."""
-        self.log("=== Testing Authentication Flow ===")
-        
-        # Register new user
-        register_data = {
-            "email": self.test_email,
-            "password": self.test_password,
-            "name": self.test_name
-        }
-        
-        status, response = self.test_api_call("POST", "/auth/register", register_data)
-        
-        if status == 200:
-            if isinstance(response, dict) and "token" in response:
-                self.token = response["token"]
-                self.user_id = response.get("user_id")
-                self.log("✅ User registration successful")
-                return True
-            else:
-                self.log("❌ Registration response missing token", "ERROR")
-                return False
-        elif status == 400 and "already exists" in str(response):
-            # Try logging in instead
-            self.log("User already exists, trying login...")
-            login_data = {
-                "email": self.test_email,
-                "password": self.test_password
-            }
-            status, response = self.test_api_call("POST", "/auth/login", login_data)
-            
-            if status == 200 and isinstance(response, dict) and "token" in response:
-                self.token = response["token"]
-                self.user_id = response.get("user_id")
-                self.log("✅ User login successful")
-                return True
-            else:
-                self.log("❌ Login failed after registration conflict", "ERROR")
-                return False
+    def log_test(self, name, success, details=""):
+        """Log a test result"""
+        self.results.append({
+            "test": name, 
+            "status": "PASS" if success else "FAIL",
+            "details": details
+        })
+        if success:
+            self.passed += 1
+            print(f"✅ {name}")
         else:
-            self.log(f"❌ Registration failed: {response}", "ERROR")
-            return False
+            self.failed += 1
+            print(f"❌ {name}: {details}")
+    
+    def summary(self):
+        """Print final summary"""
+        total = self.passed + self.failed
+        print(f"\n🎯 SPRINT 9 ANALYTICS BACKEND TEST SUMMARY")
+        print(f"Total Tests: {total}")
+        print(f"✅ Passed: {self.passed}")
+        print(f"❌ Failed: {self.failed}")
+        print(f"Success Rate: {(self.passed/total*100):.1f}%" if total > 0 else "No tests run")
+        return self.failed == 0
 
-    # ============ SPRINT 6 TESTS ============
-    
-    async def test_image_styles_endpoint(self):
-        """Test GET /api/content/image-styles - should return 4 styles."""
-        self.log("=== Testing Image Styles Endpoint ===")
-        
-        status, response = self.test_api_call("GET", "/content/image-styles")
-        
-        if status == 200:
-            if not isinstance(response, dict) or "styles" not in response:
-                self.log("❌ Response should contain 'styles' key", "ERROR")
-                return False
-            
-            styles = response["styles"]
-            if not isinstance(styles, list):
-                self.log("❌ Styles should be a list", "ERROR")
-                return False
-            
-            if len(styles) != 4:
-                self.log(f"❌ Expected 4 styles, got {len(styles)}", "ERROR")
-                return False
-            
-            expected_style_ids = ["minimal", "bold", "data-viz", "personal"]
-            actual_style_ids = [style.get("id") for style in styles]
-            
-            missing_styles = [sid for sid in expected_style_ids if sid not in actual_style_ids]
-            if missing_styles:
-                self.log(f"❌ Missing style IDs: {missing_styles}", "ERROR")
-                return False
-            
-            # Check style structure
-            for style in styles:
-                if not all(key in style for key in ["id", "name", "description"]):
-                    self.log("❌ Each style should have id, name, description", "ERROR")
-                    return False
-            
-            self.log("✅ Image Styles endpoint working correctly")
-            self.log(f"Available styles: {actual_style_ids}")
-            return True
-        else:
-            self.log(f"❌ Image Styles endpoint failed: {response}", "ERROR")
-            return False
-    
-    async def test_voices_endpoint(self):
-        """Test GET /api/content/voices - should return default voices with Rachel, Domi, etc."""
-        self.log("=== Testing Voices Endpoint ===")
-        
-        status, response = self.test_api_call("GET", "/content/voices")
-        
-        if status == 200:
-            if not isinstance(response, dict):
-                self.log("❌ Response should be a dict", "ERROR")
-                return False
-            
-            if "default_voices" not in response:
-                self.log("❌ Response should contain 'default_voices'", "ERROR")
-                return False
-            
-            default_voices = response["default_voices"]
-            if not isinstance(default_voices, list):
-                self.log("❌ default_voices should be a list", "ERROR")
-                return False
-            
-            if len(default_voices) == 0:
-                self.log("❌ Should have at least one default voice", "ERROR")
-                return False
-            
-            # Check for expected voices
-            voice_names = [voice.get("name", "").lower() for voice in default_voices]
-            expected_voices = ["rachel", "domi"]  # At least these should be present
-            
-            missing_voices = [name for name in expected_voices if name not in voice_names]
-            if missing_voices:
-                self.log(f"❌ Missing expected voices: {missing_voices}", "ERROR")
-                return False
-            
-            # Check voice structure
-            for voice in default_voices[:2]:  # Check first 2 voices
-                if not all(key in voice for key in ["id", "name", "description"]):
-                    self.log("❌ Each voice should have id, name, description", "ERROR")
-                    return False
-            
-            self.log("✅ Voices endpoint working correctly")
-            self.log(f"Found {len(default_voices)} default voices: {[v.get('name') for v in default_voices[:3]]}")
-            return True
-        else:
-            self.log(f"❌ Voices endpoint failed: {response}", "ERROR")
-            return False
-    
-    async def test_content_regeneration_flow(self):
-        """Test full content regeneration flow with version tracking."""
-        self.log("=== Testing Content Regeneration Flow ===")
-        
-        # First create content
-        content_data = {
-            "platform": "linkedin",
-            "content_type": "post",
-            "raw_input": "The future of artificial intelligence in creative industries looks promising with innovative tools emerging."
-        }
-        
-        status, response = self.test_api_call("POST", "/content/create", content_data)
-        
-        if status != 200 or "job_id" not in response:
-            self.log("❌ Failed to create initial content for regeneration test", "ERROR")
-            return None
-        
-        original_job_id = response["job_id"]
-        self.job_ids.append(original_job_id)
-        self.log(f"Created original job: {original_job_id}")
-        
-        # Poll until ready
-        if not await self.poll_job_until_ready(original_job_id):
-            self.log("❌ Original job failed to complete", "ERROR")
-            return None
-        
-        # Now test regeneration
-        regen_data = {
-            "hint": "Make it more engaging and add a personal touch"
-        }
-        
-        status, response = self.test_api_call("PATCH", f"/content/job/{original_job_id}/regenerate", regen_data)
-        
-        if status != 200:
-            self.log(f"❌ Regeneration failed: {response}", "ERROR")
-            return None
-        
-        if not isinstance(response, dict) or "job_id" not in response:
-            self.log("❌ Regeneration response should contain new job_id", "ERROR")
-            return None
-        
-        new_job_id = response["job_id"]
-        version = response.get("version", 0)
-        parent_job_id = response.get("parent_job_id")
-        
-        if version != 2:
-            self.log(f"❌ Expected version 2, got {version}", "ERROR")
-            return None
-        
-        if parent_job_id != original_job_id:
-            self.log(f"❌ Expected parent_job_id to be {original_job_id}, got {parent_job_id}", "ERROR")
-            return None
-        
-        self.job_ids.append(new_job_id)
-        self.log(f"✅ Regeneration successful: new job {new_job_id}, version {version}")
-        
-        # Wait for regenerated content to complete
-        if not await self.poll_job_until_ready(new_job_id):
-            self.log("❌ Regenerated job failed to complete", "ERROR")
-            return None
-        
-        return {"original_job_id": original_job_id, "new_job_id": new_job_id}
-    
-    async def test_job_history_endpoint(self, job_ids_dict):
-        """Test GET /api/content/job/{job_id}/history."""
-        if not job_ids_dict:
-            self.log("❌ No job IDs available for history test", "ERROR")
-            return False
-        
-        self.log("=== Testing Job History Endpoint ===")
-        
-        original_job_id = job_ids_dict["original_job_id"]
-        
-        status, response = self.test_api_call("GET", f"/content/job/{original_job_id}/history")
-        
-        if status != 200:
-            self.log(f"❌ Job history failed: {response}", "ERROR")
-            return False
-        
-        if not isinstance(response, dict):
-            self.log("❌ History response should be a dict", "ERROR")
-            return False
-        
-        required_fields = ["root_job_id", "versions", "total_versions"]
-        missing_fields = [field for field in required_fields if field not in response]
-        if missing_fields:
-            self.log(f"❌ Missing fields in history response: {missing_fields}", "ERROR")
-            return False
-        
-        versions = response["versions"]
-        if not isinstance(versions, list):
-            self.log("❌ Versions should be a list", "ERROR")
-            return False
-        
-        if len(versions) < 2:
-            self.log(f"❌ Expected at least 2 versions after regeneration, got {len(versions)}", "ERROR")
-            return False
-        
-        # Check version structure - original jobs may not have version field
-        for version in versions:
-            required_fields = ["job_id", "status", "created_at"]
-            missing_fields = [field for field in required_fields if field not in version]
-            if missing_fields:
-                self.log(f"❌ Version missing required fields: {missing_fields}", "ERROR")
-                return False
-        
-        # Check that we have at least one regenerated version (should have version field)
-        versioned_jobs = [v for v in versions if "version" in v]
-        if len(versioned_jobs) == 0:
-            self.log("❌ Should have at least one job with version field after regeneration", "ERROR")
-            return False
-        
-        # Check that regenerated job has version 2
-        regen_versions = [v.get("version") for v in versioned_jobs if v.get("version")]
-        if 2 not in regen_versions:
-            self.log(f"❌ Should have regenerated job with version 2, found: {regen_versions}", "ERROR") 
-            return False
-        
-        self.log("✅ Job History endpoint working correctly")
-        self.log(f"Found {len(versions)} versions, regenerated versions: {regen_versions}")
-        return True
-    
-    async def test_image_generation(self):
-        """Test POST /api/content/generate-image with extended timeout."""
-        self.log("=== Testing Image Generation (90s timeout) ===")
-        
-        # Try to use an existing completed job first
-        existing_job_id = None
-        if self.job_ids:
-            for job_id in self.job_ids:
-                status, response = self.test_api_call("GET", f"/content/job/{job_id}")
-                if status == 200 and response.get("status") == "reviewing":
-                    existing_job_id = job_id
-                    self.log(f"Using existing completed job: {job_id}")
-                    break
-        
-        if not existing_job_id:
-            # Create a new job only if needed
-            content_data = {
-                "platform": "linkedin", 
-                "content_type": "post",
-                "raw_input": "Visual representation of sustainable technology."
-            }
-            
-            status, response = self.test_api_call("POST", "/content/create", content_data)
-            
-            if status != 200 or "job_id" not in response:
-                self.log("❌ Failed to create job for image generation test", "ERROR")
-                return False
-            
-            existing_job_id = response["job_id"]
-            self.job_ids.append(existing_job_id)
-            
-            # Wait for job to complete with shorter timeout
-            if not await self.poll_job_until_ready(existing_job_id, max_wait=30):
-                self.log("❌ Job failed to complete quickly, testing with partial job", "ERROR")
-                # Continue with test anyway - the image generation endpoint should handle this
-        
-        # Test image generation
-        image_data = {
-            "job_id": existing_job_id,
-            "style": "minimal"
-        }
-        
-        # Use extended timeout for image generation (90 seconds as requested)
-        status, response = self.test_api_call("POST", "/content/generate-image", image_data, timeout=90)
-        
-        if status != 200:
-            self.log(f"❌ Image generation failed: {response}", "ERROR")
-            return False
-        
-        if not isinstance(response, dict):
-            self.log("❌ Image generation response should be a dict", "ERROR")
-            return False
-        
-        # Check response structure - both real and mock responses are acceptable
-        expected_fields = ["generated", "style"]
-        missing_fields = [field for field in expected_fields if field not in response]
-        if missing_fields:
-            self.log(f"❌ Missing fields in image response: {missing_fields}", "ERROR")
-            return False
-        
-        generated = response.get("generated", False)
-        is_mock = response.get("mock", False)
-        
-        if generated:
-            # Real image generation
-            if "image_base64" not in response or "image_url" not in response:
-                self.log("❌ Generated image should have image_base64 and image_url", "ERROR")
-                return False
-            self.log("✅ Image generation successful (real image generated)")
-        elif is_mock:
-            # Mock response due to missing API key
-            if "message" not in response:
-                self.log("❌ Mock response should have message field", "ERROR")
-                return False
-            self.log("✅ Image generation returned mock response (API key not configured)")
-        else:
-            self.log("❌ Image generation failed without mock fallback", "ERROR")
-            return False
-        
-        # Check that style was preserved
-        if response.get("style") != "minimal":
-            self.log(f"❌ Style should be 'minimal', got {response.get('style')}", "ERROR")
-            return False
-        
-        return True
-    
-    async def test_voice_narration(self):
-        """Test POST /api/content/narrate."""
-        self.log("=== Testing Voice Narration ===")
-        
-        # Try to use an existing completed job first
-        existing_job_id = None
-        if self.job_ids:
-            for job_id in self.job_ids:
-                status, response = self.test_api_call("GET", f"/content/job/{job_id}")
-                if status == 200 and response.get("status") == "reviewing":
-                    existing_job_id = job_id
-                    self.log(f"Using existing completed job: {job_id}")
-                    break
-        
-        if not existing_job_id:
-            # Create a job with content to narrate
-            content_data = {
-                "platform": "linkedin",
-                "content_type": "post", 
-                "raw_input": "Explore blockchain technology in financial systems."
-            }
-            
-            status, response = self.test_api_call("POST", "/content/create", content_data)
-            
-            if status != 200 or "job_id" not in response:
-                self.log("❌ Failed to create job for voice narration test", "ERROR")
-                return False
-            
-            existing_job_id = response["job_id"]
-            self.job_ids.append(existing_job_id)
-            
-            # Wait for job to complete with shorter timeout
-            if not await self.poll_job_until_ready(existing_job_id, max_wait=30):
-                self.log("❌ Job failed to complete quickly, testing with partial job", "ERROR")
-                # Continue with test anyway
-        
-        # Test voice narration
-        voice_data = {
-            "job_id": existing_job_id,
-            "stability": 0.6,
-            "similarity_boost": 0.8
-        }
-        
-        status, response = self.test_api_call("POST", "/content/narrate", voice_data)
-        
-        if status != 200:
-            self.log(f"❌ Voice narration failed: {response}", "ERROR")
-            return False
-        
-        if not isinstance(response, dict):
-            self.log("❌ Voice response should be a dict", "ERROR")
-            return False
-        
-        # Check response structure - both real and mock responses are acceptable
-        expected_fields = ["generated", "voice_used", "duration_estimate"]
-        missing_fields = [field for field in expected_fields if field not in response]
-        if missing_fields:
-            self.log(f"❌ Missing fields in voice response: {missing_fields}", "ERROR")
-            return False
-        
-        generated = response.get("generated", False) 
-        is_mock = response.get("mock", False)
-        
-        if generated:
-            # Real voice generation
-            if "audio_base64" not in response or "audio_url" not in response:
-                self.log("❌ Generated audio should have audio_base64 and audio_url", "ERROR")
-                return False
-            self.log("✅ Voice narration successful (real audio generated)")
-        elif is_mock:
-            # Mock response due to missing API key
-            if "message" not in response:
-                self.log("❌ Mock response should have message field", "ERROR") 
-                return False
-            self.log("✅ Voice narration returned mock response (ELEVENLABS_API_KEY placeholder)")
-        else:
-            self.log("❌ Voice narration failed without mock fallback", "ERROR")
-            return False
-        
-        # Check duration estimate
-        duration = response.get("duration_estimate", 0)
-        if not isinstance(duration, (int, float)) or duration <= 0:
-            self.log("❌ Duration estimate should be a positive number", "ERROR")
-            return False
-        
-        # Check voice info
-        voice_used = response.get("voice_used", {})
-        if not isinstance(voice_used, dict) or "name" not in voice_used:
-            self.log("❌ voice_used should be a dict with name field", "ERROR") 
-            return False
-        
-        self.log(f"Voice used: {voice_used.get('name')}, Duration: {duration}s")
-        return True
-    
-    async def test_daily_brief_api_initial(self):
-        """Test Daily Brief API endpoint (first call, should generate new brief)."""
-        self.log("=== Testing Daily Brief API (Initial Call) ===")
-        
-        status, response = self.test_api_call("GET", "/dashboard/daily-brief")
-        
-        if status == 200:
-            required_fields = [
-                "greeting", "date_context", "trending_topics", 
-                "content_ideas", "optimal_time", "energy_check", "cached"
-            ]
-            
-            missing_fields = [field for field in required_fields if field not in response]
-            if missing_fields:
-                self.log(f"❌ Missing fields in daily brief: {missing_fields}", "ERROR")
-                return False
-            
-            # Check data structure
-            if not isinstance(response.get("trending_topics"), list):
-                self.log("❌ trending_topics should be a list", "ERROR")
-                return False
-            
-            if not isinstance(response.get("content_ideas"), list):
-                self.log("❌ content_ideas should be a list", "ERROR")
-                return False
-            
-            if not isinstance(response.get("energy_check"), dict):
-                self.log("❌ energy_check should be a dict", "ERROR")
-                return False
-            
-            # Should not be cached on first call
-            if response.get("cached") != False:
-                self.log("❌ First call should not be cached", "ERROR")
-                return False
-            
-            self.log("✅ Daily Brief API working - initial call successful")
-            self.log(f"Greeting: {response.get('greeting')}")
-            self.log(f"Trending topics count: {len(response.get('trending_topics', []))}")
-            self.log(f"Content ideas count: {len(response.get('content_ideas', []))}")
-            return True
-        else:
-            self.log(f"❌ Daily Brief API failed: {response}", "ERROR")
-            return False
+# Global test results tracker
+results = TestResults()
 
-    async def test_daily_brief_caching(self):
-        """Test Daily Brief API caching (second call should return cached=true)."""
-        self.log("=== Testing Daily Brief API Caching ===")
-        
-        status, response = self.test_api_call("GET", "/dashboard/daily-brief")
-        
-        if status == 200:
-            # Second call should be cached
-            if response.get("cached") != True:
-                self.log("❌ Second call should be cached", "ERROR")
-                return False
-            
-            self.log("✅ Daily Brief caching working correctly")
-            return True
-        else:
-            self.log(f"❌ Daily Brief caching test failed: {response}", "ERROR")
-            return False
+def safe_request(method, url, **kwargs):
+    """Make HTTP request with timeout and error handling"""
+    try:
+        kwargs.setdefault('timeout', TIMEOUT)
+        response = requests.request(method, url, **kwargs)
+        return response
+    except requests.exceptions.Timeout:
+        print(f"⚠️ Request timeout for {method} {url}")
+        return None
+    except Exception as e:
+        print(f"⚠️ Request error for {method} {url}: {e}")
+        return None
 
-    async def test_daily_brief_refresh(self):
-        """Test Daily Brief API refresh parameter."""
-        self.log("=== Testing Daily Brief API Refresh ===")
-        
-        status, response = self.test_api_call("GET", "/dashboard/daily-brief?refresh=true")
-        
-        if status == 200:
-            # With refresh=true, should not be cached
-            if response.get("cached") != False:
-                self.log("❌ Refresh call should not be cached", "ERROR")
-                return False
-            
-            self.log("✅ Daily Brief refresh working correctly")
-            return True
-        else:
-            self.log(f"❌ Daily Brief refresh test failed: {response}", "ERROR")
-            return False
-
-    async def test_daily_brief_dismiss(self):
-        """Test Daily Brief dismiss functionality."""
-        self.log("=== Testing Daily Brief Dismiss ===")
-        
-        # First dismiss the brief
-        status, response = self.test_api_call("POST", "/dashboard/daily-brief/dismiss")
-        
-        if status == 200:
-            if "dismissed" not in str(response).lower():
-                self.log(f"❌ Unexpected dismiss response: {response}", "ERROR")
-                return False
-            
-            self.log("✅ Daily Brief dismiss successful")
-            return True
-        else:
-            self.log(f"❌ Daily Brief dismiss failed: {response}", "ERROR")
-            return False
-
-    async def test_daily_brief_status(self):
-        """Test Daily Brief status endpoint after dismissal."""
-        self.log("=== Testing Daily Brief Status ===")
-        
-        status, response = self.test_api_call("GET", "/dashboard/daily-brief/status")
-        
-        if status == 200:
-            required_fields = ["show_brief", "dismissed_today"]
-            missing_fields = [field for field in required_fields if field not in response]
-            if missing_fields:
-                self.log(f"❌ Missing fields in brief status: {missing_fields}", "ERROR")
-                return False
-            
-            # After dismissal, should return show_brief=false
-            if response.get("show_brief") != False:
-                self.log("❌ show_brief should be false after dismissal", "ERROR")
-                return False
-            
-            if response.get("dismissed_today") != True:
-                self.log("❌ dismissed_today should be true after dismissal", "ERROR")
-                return False
-            
-            self.log("✅ Daily Brief status working correctly")
-            return True
-        else:
-            self.log(f"❌ Daily Brief status test failed: {response}", "ERROR")
-            return False
-
-    async def test_dashboard_stats_sprint4_compatibility(self):
-        """Test that Sprint 4 dashboard stats still work."""
-        self.log("=== Testing Sprint 4 Dashboard Stats Compatibility ===")
-        
-        status, response = self.test_api_call("GET", "/dashboard/stats")
-        
-        if status == 200:
-            required_fields = [
-                "posts_created", "credits", "platforms_count", 
-                "persona_score", "learning_signals_count", "recent_jobs"
-            ]
-            
-            missing_fields = [field for field in required_fields if field not in response]
-            if missing_fields:
-                self.log(f"❌ Missing fields in dashboard stats: {missing_fields}", "ERROR")
-                return False
-            
-            self.log("✅ Sprint 4 Dashboard Stats compatibility maintained")
-            return True
-        else:
-            self.log(f"❌ Dashboard stats compatibility test failed: {response}", "ERROR")
-            return False
+def register_test_user():
+    """Register a new test user and return auth token"""
+    print(f"\n🔐 Registering test user: {TEST_USER_EMAIL}")
     
-    async def test_content_creation(self):
-        """Test content creation flow."""
-        self.log("=== Testing Content Creation Flow ===")
-        
-        content_data = {
-            "platform": "linkedin",
-            "content_type": "post",
-            "raw_input": "AI is transforming the workplace by automating routine tasks and freeing humans to focus on creative problem-solving."
-        }
-        
-        status, response = self.test_api_call("POST", "/content/create", content_data)
-        
-        if status == 200:
-            if isinstance(response, dict) and "job_id" in response:
-                job_id = response["job_id"]
-                self.job_ids.append(job_id)
-                self.log(f"✅ Content creation started: {job_id}")
-                return job_id
-            else:
-                self.log("❌ Content creation response missing job_id", "ERROR")
-                return None
-        else:
-            self.log(f"❌ Content creation failed: {response}", "ERROR")
-            return None
+    # Register user
+    register_data = {
+        "name": "Test Analytics User", 
+        "email": TEST_USER_EMAIL,
+        "password": TEST_PASSWORD
+    }
     
-    async def poll_job_until_ready(self, job_id, max_wait=60):
-        """Poll job until it's ready for review."""
-        self.log(f"=== Polling job {job_id} until ready ===")
-        
-        start_time = time.time()
-        while time.time() - start_time < max_wait:
-            status, response = self.test_api_call("GET", f"/content/job/{job_id}")
-            
-            if status == 200:
-                job_status = response.get("status", "unknown")
-                current_agent = response.get("current_agent", "unknown")
-                
-                self.log(f"Job status: {job_status}, agent: {current_agent}")
-                
-                if job_status == "reviewing":
-                    self.log("✅ Job ready for review")
-                    return True
-                elif job_status == "error":
-                    self.log(f"❌ Job failed with error: {response.get('error', 'Unknown error')}", "ERROR")
-                    return False
-            else:
-                self.log(f"❌ Failed to poll job: {response}", "ERROR")
-                return False
-            
-            await asyncio.sleep(3)
-        
-        self.log("❌ Job polling timed out", "ERROR")
+    response = safe_request("POST", f"{API_BASE}/auth/register", json=register_data)
+    if not response or response.status_code != 200:
+        results.log_test("User Registration", False, f"Registration failed: {response.status_code if response else 'No response'}")
+        return None
+    
+    # Login to get token
+    login_data = {"email": TEST_USER_EMAIL, "password": TEST_PASSWORD}
+    response = safe_request("POST", f"{API_BASE}/auth/login", json=login_data)
+    
+    if not response or response.status_code != 200:
+        results.log_test("User Login", False, f"Login failed: {response.status_code if response else 'No response'}")
+        return None
+    
+    data = response.json()
+    token = data.get("token")
+    
+    if not token:
+        results.log_test("User Authentication", False, "No token in response")
+        return None
+    
+    results.log_test("User Authentication Setup", True, f"Token obtained for {TEST_USER_EMAIL}")
+    return token
+
+def complete_onboarding(token):
+    """Complete onboarding to create persona using new interview system"""
+    print("\n📝 Completing onboarding to create persona")
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Use the new onboarding system with interview questions
+    answers = [
+        {"question_id": 0, "answer": "I'm a digital marketing strategist helping SaaS companies grow through data-driven content strategies and thought leadership."},
+        {"question_id": 1, "answer": "LinkedIn"},
+        {"question_id": 2, "answer": "Strategic, Analytical, Actionable"},
+        {"question_id": 3, "answer": "Lenny Rachitsky for depth and accessibility in product strategy content. Clear explanations with real examples."},
+        {"question_id": 4, "answer": "Crypto speculation, hustle culture, generic motivational quotes"},
+        {"question_id": 5, "answer": "Generate leads/clients"},
+        {"question_id": 6, "answer": "3-5 hours"}
+    ]
+    
+    # Generate persona directly
+    persona_data = {"answers": answers}
+    response = safe_request("POST", f"{API_BASE}/onboarding/generate-persona", json=persona_data, headers=headers)
+    
+    if not response or response.status_code != 200:
+        results.log_test("Persona Generation", False, f"Persona generation failed: {response.status_code if response else 'No response'}")
         return False
     
-    async def test_content_approval(self, job_id):
-        """Test content approval and learning signal capture."""
-        self.log(f"=== Testing Content Approval for {job_id} ===")
-        
-        approval_data = {
-            "status": "approved"
-        }
-        
-        status, response = self.test_api_call("PATCH", f"/content/job/{job_id}/status", approval_data)
-        
-        if status == 200:
-            if "approved" in str(response).lower():
-                self.log("✅ Content approval successful")
-                return True
-            else:
-                self.log(f"❌ Unexpected approval response: {response}", "ERROR")
-                return False
-        else:
-            self.log(f"❌ Content approval failed: {response}", "ERROR")
-            return False
-    
-    async def test_idempotency_check(self, job_id):
-        """Test that approving an already approved job returns appropriate message."""
-        self.log(f"=== Testing Idempotency for {job_id} ===")
-        
-        approval_data = {
-            "status": "approved"
-        }
-        
-        status, response = self.test_api_call("PATCH", f"/content/job/{job_id}/status", approval_data)
-        
-        if status == 200:
-            if "already" in str(response).lower():
-                self.log("✅ Idempotency check working")
-                return True
-            else:
-                self.log(f"❌ Idempotency not working properly: {response}", "ERROR")
-                return False
-        else:
-            self.log(f"❌ Idempotency test failed: {response}", "ERROR")
-            return False
-    
-    async def test_dashboard_stats_updated(self):
-        """Test dashboard stats after content approval."""
-        self.log("=== Testing Dashboard Stats (After Approval) ===")
-        
-        # Wait a bit for background task to complete
-        await asyncio.sleep(3)
-        
-        status, response = self.test_api_call("GET", "/dashboard/stats")
-        
-        if status == 200:
-            posts_created = response.get("posts_created", 0)
-            learning_signals = response.get("learning_signals_count", 0)
-            recent_jobs = response.get("recent_jobs", [])
-            
-            if posts_created < 1:
-                self.log(f"❌ posts_created should be at least 1 after approval, got {posts_created}", "ERROR")
-                return False
-            
-            if learning_signals < 1:
-                self.log(f"❌ learning_signals_count should be at least 1 after approval, got {learning_signals}", "ERROR")
-                return False
-            
-            if len(recent_jobs) < 1:
-                self.log(f"❌ recent_jobs should show at least 1 job, got {len(recent_jobs)}", "ERROR")
-                return False
-            
-            # Check that recent job shows approved status
-            recent_job = recent_jobs[0]
-            if recent_job.get("status") != "approved":
-                self.log(f"❌ Recent job should show approved status, got {recent_job.get('status')}", "ERROR")
-                return False
-            
-            self.log("✅ Dashboard stats updated correctly after approval")
+    try:
+        data = response.json()
+        if data.get("persona_card"):
+            results.log_test("Onboarding Process", True, "Persona created successfully")
             return True
         else:
-            self.log(f"❌ Dashboard stats API failed: {response}", "ERROR")
+            results.log_test("Persona Generation", False, "No persona card in response")
             return False
+    except:
+        results.log_test("Persona Generation", False, "Invalid JSON response")
+        return False
+
+def create_test_content(token):
+    """Create and approve test content for analytics"""
+    print("\n📄 Creating test content for analytics data")
     
-    async def test_second_content_creation(self):
-        """Create second content to test anti-repetition."""
-        self.log("=== Testing Second Content Creation (Anti-Repetition) ===")
-        
-        # Similar but different content to test anti-repetition
+    headers = {"Authorization": f"Bearer {token}"}
+    content_jobs = []
+    
+    # Create 3 pieces of content
+    test_topics = [
+        "5 productivity tips for remote workers",
+        "How to build a personal brand on LinkedIn", 
+        "The future of AI in marketing"
+    ]
+    
+    for i, topic in enumerate(test_topics):
         content_data = {
             "platform": "linkedin",
             "content_type": "post",
-            "raw_input": "Artificial intelligence is revolutionizing business operations by streamlining processes and enhancing human productivity."
+            "raw_input": topic
         }
         
-        job_id = await self.test_content_creation()
+        # Create content
+        response = safe_request("POST", f"{API_BASE}/content/create", json=content_data, headers=headers)
+        if not response or response.status_code != 200:
+            results.log_test(f"Content Creation {i+1}", False, f"Failed: {response.status_code if response else 'No response'}")
+            continue
+        
+        data = response.json()
+        job_id = data.get("job_id")
         if not job_id:
-            return None
+            results.log_test(f"Content Creation {i+1}", False, "No job_id returned")
+            continue
         
-        # Poll until ready
-        if not await self.poll_job_until_ready(job_id):
-            return None
-        
-        # Check if QC output includes repetition fields
-        status, response = self.test_api_call("GET", f"/content/job/{job_id}")
-        
-        if status == 200:
-            qc_output = response.get("qc_score", {})
-            
-            # Check for repetition risk fields
-            if "repetition_risk" not in qc_output:
-                self.log("❌ QC output missing repetition_risk field", "ERROR")
-                return None
-            
-            if "repetition_level" not in qc_output:
-                self.log("❌ QC output missing repetition_level field", "ERROR")
-                return None
-            
-            rep_risk = qc_output.get("repetition_risk", 0)
-            rep_level = qc_output.get("repetition_level", "none")
-            
-            self.log(f"✅ Anti-repetition working: risk={rep_risk}, level={rep_level}")
-            
-            # Since this is similar content, we expect some repetition risk
-            if rep_risk > 50 or rep_level in ["medium", "high"]:
-                self.log("✅ Anti-repetition engine detected similarity as expected")
-            else:
-                self.log("ℹ️ Anti-repetition showed low risk (may be expected with mock mode)")
-            
-            return job_id
+        # Poll until reviewing (max 90 seconds)
+        for attempt in range(18):  # 18 * 5 = 90 seconds
+            time.sleep(5)
+            response = safe_request("GET", f"{API_BASE}/content/job/{job_id}", headers=headers)
+            if response and response.status_code == 200:
+                job_data = response.json()
+                if job_data.get("status") == "reviewing":
+                    break
+                elif job_data.get("status") == "failed":
+                    results.log_test(f"Content Generation {i+1}", False, f"Content generation failed")
+                    break
         else:
-            self.log(f"❌ Failed to check second job: {response}", "ERROR")
-            return None
+            results.log_test(f"Content Generation {i+1}", False, f"Timeout waiting for content to reach reviewing status")
+            continue
+        
+        # Approve content
+        response = safe_request("POST", f"{API_BASE}/content/approve/{job_id}", headers=headers)
+        if response and response.status_code == 200:
+            content_jobs.append(job_id)
+            results.log_test(f"Content Approval {i+1}", True, f"Job {job_id} approved")
+        else:
+            results.log_test(f"Content Approval {i+1}", False, f"Approval failed: {response.status_code if response else 'No response'}")
     
-    async def test_content_rejection(self):
-        """Test content rejection flow."""
-        self.log("=== Testing Content Rejection Flow ===")
-        
-        # Create third content for rejection test
-        content_data = {
-            "platform": "linkedin",
-            "content_type": "post",
-            "raw_input": "Testing rejection flow for learning signal capture"
-        }
-        
-        job_id = await self.test_content_creation()
-        if not job_id:
-            return False
-        
-        # Poll until ready
-        if not await self.poll_job_until_ready(job_id):
-            return False
-        
-        # Reject the content
-        rejection_data = {
-            "status": "rejected",
-            "rejection_reason": "Testing rejection flow"
-        }
-        
-        status, response = self.test_api_call("PATCH", f"/content/job/{job_id}/status", rejection_data)
-        
-        if status == 200:
-            if "rejected" in str(response).lower():
-                self.log("✅ Content rejection successful")
-                return True
-            else:
-                self.log(f"❌ Unexpected rejection response: {response}", "ERROR")
-                return False
-        else:
-            self.log(f"❌ Content rejection failed: {response}", "ERROR")
-            return False
+    print(f"Created and approved {len(content_jobs)} content pieces")
+    return content_jobs
 
-    # ============ SPRINT 8 TESTS ============
+def test_analytics_overview(token):
+    """Test GET /api/analytics/overview"""
+    print("\n📊 Testing Analytics Overview")
     
-    async def test_series_templates(self):
-        """Test GET /api/content/series/templates."""
-        self.log("=== Testing Series Templates Endpoint ===")
-        
-        status, response = self.test_api_call("GET", "/content/series/templates")
-        
-        if status != 200:
-            self.log(f"❌ Series templates failed: {response}", "ERROR")
-            return False
-        
-        if not isinstance(response, dict):
-            self.log("❌ Response should be a dict", "ERROR")
-            return False
-        
-        if "templates" not in response or "total" not in response:
-            self.log("❌ Response missing templates or total", "ERROR")
-            return False
-        
-        templates = response["templates"]
-        total = response["total"]
-        
-        if not isinstance(templates, list):
-            self.log("❌ Templates should be a list", "ERROR")
-            return False
-        
-        if total != 6:
-            self.log(f"❌ Expected 6 templates, got {total}", "ERROR")
-            return False
-        
-        if len(templates) != total:
-            self.log(f"❌ Template count mismatch: {len(templates)} vs {total}", "ERROR")
-            return False
-        
-        # Check template structure
-        for template in templates:
-            required_fields = ["id", "name", "description", "suggested_length", "example"]
-            missing = [f for f in required_fields if f not in template]
-            if missing:
-                self.log(f"❌ Template missing fields: {missing}", "ERROR")
-                return False
-        
-        template_ids = [t["id"] for t in templates]
-        expected_ids = ["numbered_tips", "journey", "myth_busting", "case_study", "behind_scenes", "contrarian"]
-        
-        for exp_id in expected_ids:
-            if exp_id not in template_ids:
-                self.log(f"❌ Missing template ID: {exp_id}", "ERROR")
-                return False
-        
-        self.log("✅ Series templates endpoint working correctly")
-        self.log(f"Available templates: {template_ids}")
-        return True
+    headers = {"Authorization": f"Bearer {token}"}
     
-    async def test_series_plan_creation(self):
-        """Test POST /api/content/series/plan."""
-        self.log("=== Testing Series Plan Creation ===")
-        
-        plan_data = {
-            "topic": "productivity tips",
-            "template_type": "numbered_tips",
-            "num_posts": 5,
-            "platform": "linkedin"
-        }
-        
-        status, response = self.test_api_call("POST", "/content/series/plan", plan_data, timeout=60)
-        
-        if status != 200:
-            self.log(f"❌ Series plan creation failed: {response}", "ERROR")
-            return False, None
-        
-        if not isinstance(response, dict):
-            self.log("❌ Response should be a dict", "ERROR")
-            return False, None
-        
-        required_fields = ["success", "topic", "template", "platform", "plan"]
-        missing = [f for f in required_fields if f not in response]
-        if missing:
-            self.log(f"❌ Response missing fields: {missing}", "ERROR")
-            return False, None
-        
-        if not response.get("success"):
-            self.log(f"❌ Series plan not successful: {response.get('error')}", "ERROR")
-            return False, None
-        
-        plan = response.get("plan", {})
-        plan_required = ["series_title", "posts", "optimal_schedule"]
-        plan_missing = [f for f in plan_required if f not in plan]
-        if plan_missing:
-            self.log(f"❌ Plan missing fields: {plan_missing}", "ERROR")
-            return False, None
-        
-        posts = plan.get("posts", [])
-        if not isinstance(posts, list) or len(posts) != 5:
-            self.log(f"❌ Expected 5 posts in plan, got {len(posts) if isinstance(posts, list) else 'invalid'}", "ERROR")
-            return False, None
-        
-        # Check post structure
-        for i, post in enumerate(posts, 1):
-            post_required = ["number", "title", "outline", "key_points", "cta"]
-            post_missing = [f for f in post_required if f not in post]
-            if post_missing:
-                self.log(f"❌ Post {i} missing fields: {post_missing}", "ERROR")
-                return False, None
-        
-        is_mock = response.get("is_mock", False)
-        if is_mock:
-            self.log("✅ Series plan creation successful (MOCK - no LLM key)")
-        else:
-            self.log("✅ Series plan creation successful (real AI generation)")
-        
-        self.log(f"Plan title: {plan.get('series_title')}")
-        return True, response
+    # Test with default parameters (30 days)
+    response = safe_request("GET", f"{API_BASE}/analytics/overview", headers=headers)
+    if not response:
+        results.log_test("Analytics Overview - Request", False, "No response received")
+        return False
     
-    async def test_series_save(self, plan_data):
-        """Test POST /api/content/series/save."""
-        if not plan_data:
-            self.log("❌ No plan data available for save test", "ERROR")
-            return False, None
-        
-        self.log("=== Testing Series Save ===")
-        
-        save_data = {
-            "plan": plan_data.get("plan", {}),
-            "start_date": "2026-03-20T10:00:00Z"
-        }
-        
-        status, response = self.test_api_call("POST", "/content/series/save", save_data)
-        
-        if status != 200:
-            self.log(f"❌ Series save failed: {response}", "ERROR")
-            return False, None
-        
-        required_fields = ["success", "series_id", "title", "total_posts"]
-        missing = [f for f in required_fields if f not in response]
-        if missing:
-            self.log(f"❌ Save response missing fields: {missing}", "ERROR")
-            return False, None
-        
-        if not response.get("success"):
-            self.log(f"❌ Series save not successful", "ERROR")
-            return False, None
-        
-        series_id = response.get("series_id")
-        if not series_id:
-            self.log("❌ No series_id returned", "ERROR")
-            return False, None
-        
-        self.log("✅ Series save successful")
-        self.log(f"Series ID: {series_id}")
-        return True, series_id
+    if response.status_code != 200:
+        results.log_test("Analytics Overview - Status", False, f"Status: {response.status_code}")
+        return False
     
-    async def test_series_list(self):
-        """Test GET /api/content/series."""
-        self.log("=== Testing Series List ===")
-        
-        status, response = self.test_api_call("GET", "/content/series")
-        
-        if status != 200:
-            self.log(f"❌ Series list failed: {response}", "ERROR")
-            return False
-        
-        required_fields = ["series", "total"]
-        missing = [f for f in required_fields if f not in response]
-        if missing:
-            self.log(f"❌ Response missing fields: {missing}", "ERROR")
-            return False
-        
-        series_list = response.get("series", [])
-        total = response.get("total", 0)
-        
-        if not isinstance(series_list, list):
-            self.log("❌ Series should be a list", "ERROR")
-            return False
-        
-        if len(series_list) != total:
-            self.log(f"❌ Series count mismatch: {len(series_list)} vs {total}", "ERROR")
-            return False
-        
-        # If we have series, check structure
-        if series_list:
-            for series in series_list:
-                required = ["series_id", "title", "platform", "total_posts", "status"]
-                missing = [f for f in required if f not in series]
-                if missing:
-                    self.log(f"❌ Series missing fields: {missing}", "ERROR")
-                    return False
-        
-        self.log("✅ Series list working correctly")
-        self.log(f"Found {total} series")
-        return True
+    try:
+        data = response.json()
+    except:
+        results.log_test("Analytics Overview - JSON", False, "Invalid JSON response")
+        return False
     
-    async def test_diversity_score(self):
-        """Test GET /api/content/diversity/score."""
-        self.log("=== Testing Content Diversity Score ===")
-        
-        status, response = self.test_api_call("GET", "/content/diversity/score?days=30")
-        
-        if status != 200:
-            self.log(f"❌ Diversity score failed: {response}", "ERROR")
+    # Validate structure
+    required_fields = ["success", "has_data"]
+    for field in required_fields:
+        if field not in data:
+            results.log_test("Analytics Overview - Structure", False, f"Missing {field}")
             return False
-        
-        if not isinstance(response, dict):
-            self.log("❌ Response should be a dict", "ERROR")
-            return False
-        
-        # Either has a score or a message explaining why not
-        if "score" not in response and "message" not in response:
-            self.log("❌ Response should have either score or message", "ERROR")
-            return False
-        
-        if "message" in response:
-            # Not enough content for analysis
-            self.log("✅ Diversity score returned informative message (not enough content)")
-            return True
-        
-        # Has score - check structure
-        if "breakdown" not in response:
-            self.log("❌ Score response should include breakdown", "ERROR")
-            return False
-        
-        breakdown = response.get("breakdown", {})
-        required_breakdown = ["hook_diversity", "topic_diversity", "platform_diversity", "content_type_diversity"]
-        missing = [f for f in required_breakdown if f not in breakdown]
-        if missing:
-            self.log(f"❌ Breakdown missing fields: {missing}", "ERROR")
-            return False
-        
-        self.log("✅ Content diversity score working correctly")
-        self.log(f"Diversity score: {response.get('score')}")
-        return True
     
-    async def test_hook_analysis(self):
-        """Test GET /api/content/diversity/hook-analysis."""
-        self.log("=== Testing Hook Analysis ===")
-        
-        status, response = self.test_api_call("GET", "/content/diversity/hook-analysis?limit=10")
-        
-        if status != 200:
-            self.log(f"❌ Hook analysis failed: {response}", "ERROR")
+    if data.get("has_data"):
+        # If has_data=true, check for summary and by_platform
+        if "summary" not in data or "by_platform" not in data:
+            results.log_test("Analytics Overview - Data Fields", False, "Missing summary or by_platform")
             return False
         
-        if not isinstance(response, dict):
-            self.log("❌ Response should be a dict", "ERROR")
-            return False
-        
-        required_fields = ["has_fatigue"]
-        if response.get("has_fatigue") is not False:
-            # If has analysis, check structure
-            if "distribution" not in response or "recommendation" not in response:
-                self.log("❌ Hook analysis should include distribution and recommendation", "ERROR")
-                return False
-        else:
-            # Should have message explaining why
-            if "message" not in response:
-                self.log("❌ Should have message when no fatigue detected", "ERROR")
+        # Check summary structure
+        summary = data.get("summary", {})
+        summary_fields = ["total_posts", "total_impressions", "total_engagements"]
+        for field in summary_fields:
+            if field not in summary:
+                results.log_test("Analytics Overview - Summary", False, f"Missing {field} in summary")
                 return False
         
-        self.log("✅ Hook analysis working correctly")
-        if response.get("has_fatigue"):
-            self.log("Hook fatigue detected with recommendations")
-        else:
-            self.log("No hook fatigue - not enough content or good variety")
-        return True
+        results.log_test("Analytics Overview", True, f"Data available: {summary.get('total_posts', 0)} posts analyzed")
+    else:
+        results.log_test("Analytics Overview", True, "No data available (expected for new user)")
     
-    async def create_content_for_repurpose_test(self):
-        """Create and approve content for repurpose testing."""
-        self.log("=== Creating Content for Repurpose Test ===")
-        
-        content_data = {
-            "platform": "linkedin",
-            "content_type": "post",
-            "raw_input": "The future of AI in content creation is transforming how creators work. Here are the key trends I'm seeing in 2026."
-        }
-        
-        status, response = self.test_api_call("POST", "/content/create", content_data)
-        
-        if status != 200 or "job_id" not in response:
-            self.log("❌ Failed to create content for repurpose test", "ERROR")
-            return None
-        
-        job_id = response["job_id"]
-        self.job_ids.append(job_id)
-        
-        # Wait for content to be ready
-        if not await self.poll_job_until_ready(job_id, max_wait=60):
-            self.log("❌ Content creation failed for repurpose test", "ERROR")
-            return None
-        
-        # Approve the content
-        approval_data = {"status": "approved"}
-        status, response = self.test_api_call("PATCH", f"/content/job/{job_id}/status", approval_data)
-        
-        if status != 200:
-            self.log(f"❌ Failed to approve content: {response}", "ERROR")
-            return None
-        
-        self.log(f"✅ Created and approved content: {job_id}")
-        return job_id
-    
-    async def test_repurpose_suggestions(self):
-        """Test GET /api/content/repurpose/suggestions."""
-        self.log("=== Testing Repurpose Suggestions ===")
-        
-        # Ensure we have approved content
-        if not self.approved_job_id:
-            self.approved_job_id = await self.create_content_for_repurpose_test()
-            if not self.approved_job_id:
-                return False
-        
-        status, response = self.test_api_call("GET", "/content/repurpose/suggestions?limit=5")
-        
-        if status != 200:
-            self.log(f"❌ Repurpose suggestions failed: {response}", "ERROR")
-            return False
-        
-        required_fields = ["suggestions", "total"]
-        missing = [f for f in required_fields if f not in response]
-        if missing:
-            self.log(f"❌ Response missing fields: {missing}", "ERROR")
-            return False
-        
-        suggestions = response.get("suggestions", [])
-        total = response.get("total", 0)
-        
-        if not isinstance(suggestions, list):
-            self.log("❌ Suggestions should be a list", "ERROR")
-            return False
-        
-        if len(suggestions) != total:
-            self.log(f"❌ Suggestions count mismatch: {len(suggestions)} vs {total}", "ERROR")
-            return False
-        
-        # Should find our approved content
-        if total == 0:
-            self.log("❌ Should have at least one suggestion with approved content", "ERROR")
-            return False
-        
-        # Check suggestion structure
-        for suggestion in suggestions:
-            required = ["job_id", "platform", "content_preview", "available_platforms"]
-            missing = [f for f in required if f not in suggestion]
-            if missing:
-                self.log(f"❌ Suggestion missing fields: {missing}", "ERROR")
-                return False
-        
-        self.log("✅ Repurpose suggestions working correctly")
-        self.log(f"Found {total} suggestions")
-        return True
-    
-    async def test_repurpose_preview(self):
-        """Test GET /api/content/repurpose/preview/{job_id}."""
-        if not self.approved_job_id:
-            self.approved_job_id = await self.create_content_for_repurpose_test()
-            if not self.approved_job_id:
-                return False
-        
-        self.log("=== Testing Repurpose Preview ===")
-        
-        # Test preview for X and Instagram
-        status, response = self.test_api_call("GET", f"/content/repurpose/preview/{self.approved_job_id}?platforms=x,instagram", timeout=60)
-        
-        if status != 200:
-            self.log(f"❌ Repurpose preview failed: {response}", "ERROR")
-            return False
-        
-        required_fields = ["source_job_id", "source_platform", "source_preview", "repurposed_previews", "is_preview"]
-        missing = [f for f in required_fields if f not in response]
-        if missing:
-            self.log(f"❌ Preview response missing fields: {missing}", "ERROR")
-            return False
-        
-        if response.get("source_job_id") != self.approved_job_id:
-            self.log(f"❌ Source job ID mismatch", "ERROR")
-            return False
-        
-        if not response.get("is_preview"):
-            self.log(f"❌ Should be marked as preview", "ERROR")
-            return False
-        
-        repurposed = response.get("repurposed_previews", {})
-        if not isinstance(repurposed, dict):
-            self.log("❌ Repurposed previews should be a dict", "ERROR")
-            return False
-        
-        # Should have x and instagram since source is linkedin
-        expected_platforms = ["x", "instagram"]
-        for platform in expected_platforms:
-            if platform not in repurposed:
-                self.log(f"❌ Missing repurposed platform: {platform}", "ERROR")
-                return False
-            
-            platform_data = repurposed[platform]
-            required = ["content", "is_thread", "adaptation_notes"]
-            missing = [f for f in required if f not in platform_data]
-            if missing:
-                self.log(f"❌ Platform {platform} data missing fields: {missing}", "ERROR")
-                return False
-        
-        is_mock = response.get("is_mock", False)
-        if is_mock:
-            self.log("✅ Repurpose preview successful (MOCK - no LLM key)")
-        else:
-            self.log("✅ Repurpose preview successful (real AI repurposing)")
-        
-        return True
-    
-    async def test_repurpose_content(self):
-        """Test POST /api/content/repurpose (full flow)."""
-        if not self.approved_job_id:
-            self.approved_job_id = await self.create_content_for_repurpose_test()
-            if not self.approved_job_id:
-                return False
-        
-        self.log("=== Testing Repurpose Content ===")
-        
-        repurpose_data = {
-            "job_id": self.approved_job_id,
-            "target_platforms": ["x", "instagram"]
-        }
-        
-        status, response = self.test_api_call("POST", "/content/repurpose", repurpose_data, timeout=60)
-        
-        if status != 200:
-            self.log(f"❌ Repurpose content failed: {response}", "ERROR")
-            return False
-        
-        required_fields = ["success", "source_job_id", "source_platform", "created_jobs", "total_created"]
-        missing = [f for f in required_fields if f not in response]
-        if missing:
-            self.log(f"❌ Repurpose response missing fields: {missing}", "ERROR")
-            return False
-        
-        if not response.get("success"):
-            self.log(f"❌ Repurpose not successful: {response.get('error')}", "ERROR")
-            return False
-        
-        created_jobs = response.get("created_jobs", {})
-        total_created = response.get("total_created", 0)
-        
-        if len(created_jobs) != total_created:
-            self.log(f"❌ Created jobs count mismatch: {len(created_jobs)} vs {total_created}", "ERROR")
-            return False
-        
-        if total_created != 2:  # x and instagram
-            self.log(f"❌ Expected 2 created jobs, got {total_created}", "ERROR")
-            return False
-        
-        # Check created job structure
-        for platform, job_info in created_jobs.items():
-            if platform not in ["x", "instagram"]:
-                self.log(f"❌ Unexpected platform: {platform}", "ERROR")
-                return False
-            
-            required = ["job_id", "content_preview"]
-            missing = [f for f in required if f not in job_info]
-            if missing:
-                self.log(f"❌ Created job {platform} missing fields: {missing}", "ERROR")
-                return False
-            
-            # Store the created job IDs for verification
-            self.job_ids.append(job_info["job_id"])
-        
-        self.log("✅ Repurpose content successful")
-        self.log(f"Created {total_created} repurposed jobs")
-        
-        # Verify the jobs were created in the database
-        return await self.verify_repurposed_jobs_exist(created_jobs)
-    
-    async def verify_repurposed_jobs_exist(self, created_jobs):
-        """Verify that repurposed jobs were created and are visible."""
-        self.log("=== Verifying Repurposed Jobs Exist ===")
-        
-        for platform, job_info in created_jobs.items():
-            job_id = job_info["job_id"]
-            
-            status, response = self.test_api_call("GET", f"/content/job/{job_id}")
-            
-            if status != 200:
-                self.log(f"❌ Failed to retrieve repurposed job {job_id}: {response}", "ERROR")
-                return False
-            
-            if response.get("status") != "reviewing":
-                self.log(f"❌ Repurposed job should be in reviewing status, got {response.get('status')}", "ERROR")
-                return False
-            
-            if response.get("platform") != platform:
-                self.log(f"❌ Job platform mismatch: expected {platform}, got {response.get('platform')}", "ERROR")
-                return False
-            
-            if not response.get("is_repurposed"):
-                self.log(f"❌ Job should be marked as repurposed", "ERROR")
-                return False
-        
-        self.log("✅ All repurposed jobs verified successfully")
-        return True
-    
-    async def test_full_repurpose_workflow(self):
-        """Test the complete repurpose workflow."""
-        self.log("=== Testing Full Repurpose Workflow ===")
-        
-        workflow_results = {}
-        
-        # 1. Create and approve content
-        workflow_results["create_content"] = await self.create_content_for_repurpose_test() is not None
-        
-        # 2. Get suggestions
-        workflow_results["get_suggestions"] = await self.test_repurpose_suggestions()
-        
-        # 3. Preview repurpose
-        workflow_results["preview_repurpose"] = await self.test_repurpose_preview()
-        
-        # 4. Execute repurpose
-        workflow_results["repurpose_content"] = await self.test_repurpose_content()
-        
-        # 5. Verify all content appears in content list
-        workflow_results["verify_content_list"] = await self.verify_content_in_list()
-        
-        all_passed = all(workflow_results.values())
-        
-        if all_passed:
-            self.log("✅ Full repurpose workflow completed successfully")
-        else:
-            failed_steps = [step for step, passed in workflow_results.items() if not passed]
-            self.log(f"❌ Repurpose workflow failed at steps: {failed_steps}", "ERROR")
-        
-        return all_passed
-    
-    async def verify_content_in_list(self):
-        """Verify that all created content appears in the content list."""
-        self.log("=== Verifying Content in List ===")
-        
-        status, response = self.test_api_call("GET", "/content/jobs?limit=20")
-        
-        if status != 200:
-            self.log(f"❌ Failed to get content list: {response}", "ERROR")
-            return False
-        
-        jobs = response.get("jobs", [])
-        job_ids_in_list = {job.get("job_id") for job in jobs}
-        
-        # Check that our test job IDs are in the list
-        missing_jobs = []
-        for job_id in self.job_ids:
-            if job_id not in job_ids_in_list:
-                missing_jobs.append(job_id)
-        
-        if missing_jobs:
-            self.log(f"❌ Missing jobs in content list: {missing_jobs[:3]}", "ERROR")
-            return False
-        
-        self.log("✅ All created content appears in content list")
-        return True
+    return True
 
-    async def run_all_tests(self):
-        """Run all backend tests in sequence."""
-        print(f"\n🚀 Starting ThookAI Sprint 8 Backend Tests")
-        print(f"Backend URL: {API_BASE}")
-        print("=" * 60)
-        
-        test_results = {}
-        
-        # Authentication
-        test_results["auth"] = await self.test_auth_flow()
-        if not test_results["auth"]:
-            print("❌ Authentication failed - stopping tests")
-            return test_results
-        
-        # SPRINT 8 PRIORITY TESTS
-        
-        # Series endpoints
-        test_results["series_templates"] = await self.test_series_templates()
-        
-        plan_result, plan_data = await self.test_series_plan_creation()
-        test_results["series_plan_creation"] = plan_result
-        
-        if plan_data:
-            save_result, series_id = await self.test_series_save(plan_data)
-            test_results["series_save"] = save_result
-        else:
-            test_results["series_save"] = False
-            self.log("❌ Skipping series save due to plan creation failure", "ERROR")
-        
-        test_results["series_list"] = await self.test_series_list()
-        
-        # Anti-repetition V2 endpoints
-        test_results["diversity_score"] = await self.test_diversity_score()
-        test_results["hook_analysis"] = await self.test_hook_analysis()
-        
-        # Repurpose endpoints - full workflow test
-        test_results["full_repurpose_workflow"] = await self.test_full_repurpose_workflow()
-        
-        # Optional: Legacy compatibility tests
-        if len([r for r in test_results.values() if r]) >= 6:  # If most tests pass
-            test_results["content_creation_legacy"] = await self.test_content_creation() is not None
-            test_results["dashboard_stats_compatibility"] = await self.test_dashboard_stats_sprint4_compatibility()
-        
-        return test_results
-
-async def main():
-    """Main test runner."""
-    runner = TestRunner()
-    results = await runner.run_all_tests()
+def test_performance_trends(token):
+    """Test GET /api/analytics/trends"""
+    print("\n📈 Testing Performance Trends")
     
-    print("\n" + "=" * 60)
-    print("🏁 SPRINT 8 TEST SUMMARY")
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Test with parameters
+    params = {"days": 30, "granularity": "week"}
+    response = safe_request("GET", f"{API_BASE}/analytics/trends", headers=headers, params=params)
+    
+    if not response:
+        results.log_test("Performance Trends - Request", False, "No response received")
+        return False
+    
+    if response.status_code != 200:
+        results.log_test("Performance Trends - Status", False, f"Status: {response.status_code}")
+        return False
+    
+    try:
+        data = response.json()
+    except:
+        results.log_test("Performance Trends - JSON", False, "Invalid JSON response")
+        return False
+    
+    # Validate structure - handle both cases with and without data
+    required_fields = ["success", "has_data"]
+    for field in required_fields:
+        if field not in data:
+            results.log_test("Performance Trends - Structure", False, f"Missing {field}")
+            return False
+    
+    # Check trend field - only required when has_data=true
+    if data.get("has_data"):
+        if "trend" not in data:
+            results.log_test("Performance Trends - Trend Missing", False, "Missing trend field when has_data=true")
+            return False
+        
+        trend_value = data.get("trend")
+        valid_trends = ["improving", "stable", "declining", "insufficient_data"]
+        if trend_value not in valid_trends:
+            results.log_test("Performance Trends - Trend Value", False, f"Invalid trend: {trend_value}")
+            return False
+        
+        if "periods" not in data:
+            results.log_test("Performance Trends - Periods", False, "Missing periods array")
+            return False
+        
+        results.log_test("Performance Trends", True, f"Trend: {trend_value}, {len(data.get('periods', []))} periods")
+    else:
+        # No data case
+        results.log_test("Performance Trends", True, "No data available (expected for new user)")
+    
+    return True
+
+def test_ai_insights(token):
+    """Test GET /api/analytics/insights"""
+    print("\n🧠 Testing AI Insights Generation")
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    response = safe_request("GET", f"{API_BASE}/analytics/insights", headers=headers)
+    
+    if not response:
+        results.log_test("AI Insights - Request", False, "No response received")
+        return False
+    
+    if response.status_code != 200:
+        results.log_test("AI Insights - Status", False, f"Status: {response.status_code}")
+        return False
+    
+    try:
+        data = response.json()
+    except:
+        results.log_test("AI Insights - JSON", False, "Invalid JSON response")
+        return False
+    
+    # Validate structure
+    required_fields = ["success", "has_insights"]
+    for field in required_fields:
+        if field not in data:
+            results.log_test("AI Insights - Structure", False, f"Missing {field}")
+            return False
+    
+    if data.get("has_insights"):
+        # Check for insights fields
+        insights_fields = ["summary", "key_insights", "recommendations"]
+        for field in insights_fields:
+            if field not in data:
+                results.log_test("AI Insights - Content", False, f"Missing {field}")
+                return False
+        
+        results.log_test("AI Insights", True, f"Generated insights with {len(data.get('key_insights', []))} insights")
+    else:
+        results.log_test("AI Insights", True, "No insights available (expected for limited content)")
+    
+    return True
+
+def test_fatigue_shield(token):
+    """Test GET /api/analytics/fatigue-shield"""
+    print("\n🛡️ Testing Pattern Fatigue Shield")
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    response = safe_request("GET", f"{API_BASE}/analytics/fatigue-shield", headers=headers)
+    
+    if not response:
+        results.log_test("Fatigue Shield - Request", False, "No response received")
+        return False
+    
+    if response.status_code != 200:
+        results.log_test("Fatigue Shield - Status", False, f"Status: {response.status_code}")
+        return False
+    
+    try:
+        data = response.json()
+    except:
+        results.log_test("Fatigue Shield - JSON", False, "Invalid JSON response")
+        return False
+    
+    # Validate structure
+    required_fields = ["success", "shield_status", "shield_message", "fatigue_risk_score"]
+    for field in required_fields:
+        if field not in data:
+            results.log_test("Fatigue Shield - Structure", False, f"Missing {field}")
+            return False
+    
+    # Check valid shield status
+    shield_status = data.get("shield_status")
+    valid_statuses = ["healthy", "caution", "warning", "critical"]
+    if shield_status not in valid_statuses:
+        results.log_test("Fatigue Shield - Status Value", False, f"Invalid shield status: {shield_status}")
+        return False
+    
+    # Check risk score range
+    risk_score = data.get("fatigue_risk_score")
+    if not isinstance(risk_score, (int, float)) or risk_score < 0 or risk_score > 100:
+        results.log_test("Fatigue Shield - Risk Score", False, f"Invalid risk score: {risk_score}")
+        return False
+    
+    results.log_test("Fatigue Shield", True, f"Status: {shield_status}, Risk: {risk_score}/100")
+    return True
+
+def test_learning_insights(token):
+    """Test GET /api/analytics/learning"""
+    print("\n📚 Testing Learning Insights")
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    response = safe_request("GET", f"{API_BASE}/analytics/learning", headers=headers)
+    
+    if not response:
+        results.log_test("Learning Insights - Request", False, "No response received")
+        return False
+    
+    if response.status_code != 200:
+        results.log_test("Learning Insights - Status", False, f"Status: {response.status_code}")
+        return False
+    
+    try:
+        data = response.json()
+    except:
+        results.log_test("Learning Insights - JSON", False, "Invalid JSON response")
+        return False
+    
+    # Validate structure
+    if "has_data" not in data:
+        results.log_test("Learning Insights - Structure", False, "Missing has_data field")
+        return False
+    
+    if data.get("has_data"):
+        # Check for learning data fields
+        learning_fields = ["approved_count", "rejected_count"]
+        for field in learning_fields:
+            if field not in data:
+                results.log_test("Learning Insights - Data", False, f"Missing {field}")
+                return False
+        
+        approved = data.get("approved_count", 0)
+        rejected = data.get("rejected_count", 0)
+        results.log_test("Learning Insights", True, f"Approved: {approved}, Rejected: {rejected}")
+    else:
+        results.log_test("Learning Insights", True, "No learning data yet (expected for new user)")
+    
+    return True
+
+def test_persona_evolution(token):
+    """Test GET /api/analytics/persona/evolution"""
+    print("\n🧬 Testing Persona Evolution Timeline")
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    response = safe_request("GET", f"{API_BASE}/analytics/persona/evolution", headers=headers)
+    
+    if not response:
+        results.log_test("Persona Evolution - Request", False, "No response received")
+        return False
+    
+    if response.status_code != 200:
+        results.log_test("Persona Evolution - Status", False, f"Status: {response.status_code}")
+        return False
+    
+    try:
+        data = response.json()
+    except:
+        results.log_test("Persona Evolution - JSON", False, "Invalid JSON response")
+        return False
+    
+    # Validate structure
+    required_fields = ["success", "current_card_summary", "timeline", "total_refinements"]
+    for field in required_fields:
+        if field not in data:
+            results.log_test("Persona Evolution - Structure", False, f"Missing {field}")
+            return False
+    
+    timeline = data.get("timeline", [])
+    refinements = data.get("total_refinements", 0)
+    results.log_test("Persona Evolution", True, f"Timeline has {len(timeline)} events, {refinements} refinements")
+    return True
+
+def test_voice_evolution(token):
+    """Test GET /api/analytics/persona/voice-evolution"""
+    print("\n🎙️ Testing Voice Evolution Analysis")
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    response = safe_request("GET", f"{API_BASE}/analytics/persona/voice-evolution", headers=headers)
+    
+    if not response:
+        results.log_test("Voice Evolution - Request", False, "No response received")
+        return False
+    
+    if response.status_code != 200:
+        results.log_test("Voice Evolution - Status", False, f"Status: {response.status_code}")
+        return False
+    
+    try:
+        data = response.json()
+    except:
+        results.log_test("Voice Evolution - JSON", False, "Invalid JSON response")
+        return False
+    
+    # Validate structure
+    if "has_data" not in data:
+        results.log_test("Voice Evolution - Structure", False, "Missing has_data field")
+        return False
+    
+    if data.get("has_data"):
+        # Check for analysis fields
+        analysis_fields = ["evolution_detected", "evolution_summary"]
+        for field in analysis_fields:
+            if field not in data:
+                results.log_test("Voice Evolution - Analysis", False, f"Missing {field}")
+                return False
+        
+        evolution_detected = data.get("evolution_detected", False)
+        total_posts = data.get("total_posts_analyzed", 0)
+        results.log_test("Voice Evolution", True, f"Analyzed {total_posts} posts, evolution detected: {evolution_detected}")
+    else:
+        results.log_test("Voice Evolution", True, "Insufficient data for voice evolution analysis")
+    
+    return True
+
+def test_persona_suggestions(token):
+    """Test GET /api/analytics/persona/suggestions"""
+    print("\n💡 Testing Persona Update Suggestions")
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    response = safe_request("GET", f"{API_BASE}/analytics/persona/suggestions", headers=headers)
+    
+    if not response:
+        results.log_test("Persona Suggestions - Request", False, "No response received")
+        return False
+    
+    if response.status_code != 200:
+        results.log_test("Persona Suggestions - Status", False, f"Status: {response.status_code}")
+        return False
+    
+    try:
+        data = response.json()
+    except:
+        results.log_test("Persona Suggestions - JSON", False, "Invalid JSON response")
+        return False
+    
+    # Validate structure
+    required_fields = ["success", "should_update"]
+    for field in required_fields:
+        if field not in data:
+            results.log_test("Persona Suggestions - Structure", False, f"Missing {field}")
+            return False
+    
+    should_update = data.get("should_update", False)
+    suggested_updates = data.get("suggested_updates", [])
+    confidence = data.get("confidence", 0)
+    
+    results.log_test("Persona Suggestions", True, f"Should update: {should_update}, Suggestions: {len(suggested_updates)}, Confidence: {confidence}%")
+    return True
+
+def main():
+    """Run all Sprint 9 analytics backend tests"""
+    print("🚀 THOOKAI SPRINT 9 ANALYTICS BACKEND TESTS")
+    print(f"Target: {API_BASE}")
     print("=" * 60)
     
-    passed = 0
-    total = 0
+    # Step 1: Register test user and get token
+    token = register_test_user()
+    if not token:
+        print("\n❌ Cannot proceed without authentication")
+        return False
     
-    for test_name, result in results.items():
-        total += 1
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status} {test_name.replace('_', ' ').title()}")
-        if result:
-            passed += 1
+    # Step 2: Complete onboarding
+    if not complete_onboarding(token):
+        print("\n❌ Cannot proceed without persona")
+        return False
     
-    print(f"\nResults: {passed}/{total} tests passed")
+    # Step 3: Create test content
+    content_jobs = create_test_content(token)
+    print(f"\nCreated {len(content_jobs)} content pieces for testing")
     
-    if passed == total:
-        print("🎉 ALL TESTS PASSED!")
-        return 0
+    # Small delay to let content settle
+    time.sleep(2)
+    
+    # Step 4: Test all analytics endpoints
+    print("\n" + "=" * 60)
+    print("🧪 RUNNING ANALYTICS ENDPOINT TESTS")
+    print("=" * 60)
+    
+    test_analytics_overview(token)
+    test_performance_trends(token)
+    test_ai_insights(token)
+    test_fatigue_shield(token)
+    test_learning_insights(token)
+    test_persona_evolution(token) 
+    test_voice_evolution(token)
+    test_persona_suggestions(token)
+    
+    # Final results
+    print("\n" + "=" * 60)
+    success = results.summary()
+    print("=" * 60)
+    
+    if success:
+        print("🎉 ALL TESTS PASSED! Sprint 9 Analytics Backend is working correctly.")
     else:
-        print("❌ Some tests failed - check logs above")
-        return 1
+        print("⚠️ Some tests failed. Check the results above.")
+    
+    return success
 
 if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)
+    success = main()
+    sys.exit(0 if success else 1)

@@ -11,6 +11,7 @@ from routes.content import router as content_router
 from routes.dashboard import router as dashboard_router
 from routes.platforms import router as platforms_router
 from routes.repurpose import router as repurpose_router
+from routes.analytics import router as analytics_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -26,6 +27,7 @@ api_router.include_router(content_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(platforms_router)
 api_router.include_router(repurpose_router)
+api_router.include_router(analytics_router)
 
 
 @api_router.get("/")
