@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp, AlertTriangle,
+  Image, Mic, Download, Play, Pause, Loader2, Sparkles
+} from "lucide-react";
 import { LinkedInShell, XShell, InstagramShell } from "./Shells";
+
+const API_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
 
 function QCBadge({ label, value, max, isRisk = false }) {
   const pct = (value / max) * 100;
@@ -118,15 +123,282 @@ function PlatformShell({ platform, content, onContentChange, isEditing, readOnly
   }
 }
 
+// Image Style Selector
+const IMAGE_STYLES = [
+  { id: "minimal", name: "Minimal", desc: "Clean and simple" },
+  { id: "bold", name: "Bold", desc: "Vibrant colors" },
+  { id: "data-viz", name: "Data Viz", desc: "Infographic style" },
+  { id: "personal", name: "Personal", desc: "Warm and authentic" },
+];
+
+function MediaPanel({ job, onMediaUpdate }) {
+  const [generating, setGenerating] = useState(false);
+  const [generatingVoice, setGeneratingVoice] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState("minimal");
+  const [generatedImage, setGeneratedImage] = useState(job.media_assets?.[0]?.image_url || null);
+  const [audioUrl, setAudioUrl] = useState(job.audio_url || null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleGenerateImage = async () => {
+    setGenerating(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/content/generate-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          job_id: job.job_id,
+          style: selectedStyle
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.generated && data.image_url) {
+        setGeneratedImage(data.image_url);
+        onMediaUpdate?.({ type: "image", data });
+      } else {
+        setError(data.message || "Failed to generate image");
+      }
+    } catch (err) {
+      setError("Failed to generate image. Please try again.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleGenerateVoice = async () => {
+    setGeneratingVoice(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/content/narrate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          job_id: job.job_id
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.generated && data.audio_url) {
+        setAudioUrl(data.audio_url);
+        onMediaUpdate?.({ type: "voice", data });
+      } else {
+        setError(data.message || "Failed to generate voice");
+      }
+    } catch (err) {
+      setError("Failed to generate voice. Please try again.");
+    } finally {
+      setGeneratingVoice(false);
+    }
+  };
+
+  const toggleAudio = () => {
+    const audio = document.getElementById("voice-audio");
+    if (audio) {
+      if (isPlaying) {
+        audio.pause();
+      } else {
+        audio.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  return (
+    <div className="card-thook p-4 mt-4" data-testid="media-panel">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles size={14} className="text-violet" />
+        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Media Enhancement</span>
+      </div>
+
+      {error && (
+        <div className="text-xs text-red-400 bg-red-400/10 rounded-lg p-2 mb-3">
+          {error}
+        </div>
+      )}
+
+      {/* Image Generation */}
+      <div className="mb-4">
+        <p className="text-xs text-zinc-500 mb-2">Generate Image</p>
+        
+        {generatedImage ? (
+          <div className="relative rounded-xl overflow-hidden mb-2">
+            <img 
+              src={generatedImage} 
+              alt="Generated content" 
+              className="w-full h-48 object-cover"
+            />
+            <button
+              onClick={() => setGeneratedImage(null)}
+              className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full hover:bg-black/70 transition-colors"
+            >
+              <X size={14} className="text-white" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-2 mb-2">
+              {IMAGE_STYLES.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => setSelectedStyle(style.id)}
+                  className={`flex-1 p-2 rounded-lg text-xs transition-all ${
+                    selectedStyle === style.id
+                      ? "bg-violet/20 border border-violet text-violet"
+                      : "bg-white/5 border border-transparent text-zinc-400 hover:bg-white/10"
+                  }`}
+                >
+                  {style.name}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={handleGenerateImage}
+              disabled={generating}
+              className="w-full py-2.5 bg-violet/10 hover:bg-violet/20 text-violet rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {generating ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Generating... (up to 60s)
+                </>
+              ) : (
+                <>
+                  <Image size={14} />
+                  Generate Image
+                </>
+              )}
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Voice Generation */}
+      <div>
+        <p className="text-xs text-zinc-500 mb-2">Add Voice Narration</p>
+        
+        {audioUrl ? (
+          <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+            <button
+              onClick={toggleAudio}
+              className="w-10 h-10 rounded-full bg-lime flex items-center justify-center hover:bg-lime/80 transition-colors"
+            >
+              {isPlaying ? <Pause size={16} className="text-black" /> : <Play size={16} className="text-black ml-0.5" />}
+            </button>
+            <div className="flex-1">
+              <div className="h-8 bg-white/10 rounded-full overflow-hidden flex items-center px-3">
+                <div className="flex items-center gap-0.5 w-full">
+                  {[...Array(30)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-lime/60 rounded-full"
+                      style={{ height: `${Math.random() * 20 + 8}px` }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <audio 
+                id="voice-audio" 
+                src={audioUrl} 
+                onEnded={() => setIsPlaying(false)}
+                className="hidden"
+              />
+            </div>
+            <a
+              href={audioUrl}
+              download={`narration-${job.job_id}.mp3`}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <Download size={16} className="text-zinc-400" />
+            </a>
+          </div>
+        ) : (
+          <button
+            onClick={handleGenerateVoice}
+            disabled={generatingVoice}
+            className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {generatingVoice ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Generating voice...
+              </>
+            ) : (
+              <>
+                <Mic size={14} />
+                Add Voice
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Rejection Modal
+function RejectionModal({ isOpen, onClose, onSubmit }) {
+  const [reason, setReason] = useState("");
+  
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-zinc-900 rounded-2xl p-6 max-w-md w-full border border-zinc-800"
+      >
+        <h3 className="text-lg font-display font-semibold text-white mb-2">Reject Content</h3>
+        <p className="text-sm text-zinc-500 mb-4">
+          Optionally add feedback so we can learn from this and improve.
+        </p>
+        
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="What didn't work? (optional)"
+          className="w-full h-24 bg-white/5 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700 resize-none"
+        />
+        
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-lg text-sm font-medium transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(reason)}
+            className="flex-1 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors"
+          >
+            Reject
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
   const [editing, setEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(job.final_content || "");
   const [approved, setApproved] = useState(job.status === "approved");
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
 
   const qc = job.qc_score || {};
   const scout = job.agent_outputs?.scout;
   const platform = job.platform || "linkedin";
   const isApproved = approved || job.status === "approved";
+  const version = job.version || 1;
 
   const handleApprove = async () => {
     await onApprove(editing ? editedContent : job.final_content);
@@ -134,12 +406,30 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
     setEditing(false);
   };
 
+  const handleReject = async (reason) => {
+    setShowRejectionModal(false);
+    await onDiscard(reason);
+  };
+
   const handleContentChange = (newContent) => {
     setEditedContent(newContent);
   };
 
+  const handleMediaUpdate = (media) => {
+    console.log("Media updated:", media);
+  };
+
   return (
     <div className="max-w-2xl mx-auto" data-testid="content-output">
+      {/* Version indicator */}
+      {version > 1 && (
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[10px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded">
+            Version {version}
+          </span>
+        </div>
+      )}
+
       {/* Success banner if approved */}
       {isApproved && (
         <motion.div
@@ -212,6 +502,11 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
       {/* Scout research (expandable) */}
       <ScoutResearch scout={scout} />
 
+      {/* Media Panel (for approved or reviewing content) */}
+      {(isApproved || job.status === "reviewing") && (
+        <MediaPanel job={job} onMediaUpdate={handleMediaUpdate} />
+      )}
+
       {/* Action buttons */}
       {!isApproved && (
         <div className="flex gap-2 mt-4">
@@ -238,15 +533,22 @@ export default function ContentOutput({ job, onApprove, onRegenerate, onDiscard 
             <RefreshCw size={13} />
           </button>
           <button
-            onClick={onDiscard}
+            onClick={() => setShowRejectionModal(true)}
             data-testid="discard-btn"
             className="btn-ghost text-sm px-3 text-zinc-600 hover:text-red-400"
-            title="Discard"
+            title="Reject"
           >
             <X size={14} />
           </button>
         </div>
       )}
+
+      {/* Rejection Modal */}
+      <RejectionModal
+        isOpen={showRejectionModal}
+        onClose={() => setShowRejectionModal(false)}
+        onSubmit={handleReject}
+      />
     </div>
   );
 }

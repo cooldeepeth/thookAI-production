@@ -95,13 +95,47 @@ export default function ContentStudio() {
     setJob(j => ({ ...j, status: "approved", final_content: editedContent || j.final_content }));
   };
 
-  const handleRegenerate = () => {
-    setJob(null);
-    setJobId(null);
-    handleCreate();
+  const handleRegenerate = async () => {
+    if (!job) {
+      // No existing job, just create new
+      handleCreate();
+      return;
+    }
+    
+    // Use the regeneration endpoint
+    try {
+      setCreating(true);
+      const res = await fetch(`${BACKEND_URL}/api/content/job/${job.job_id}/regenerate`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ hint: "" }),
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Regeneration failed");
+      }
+      
+      const data = await res.json();
+      setJob(null);
+      setJobId(data.job_id);
+    } catch (e) {
+      setError(e.message);
+      setCreating(false);
+    }
   };
 
-  const handleDiscard = () => {
+  const handleDiscard = async (reason) => {
+    if (job) {
+      // Mark as rejected with reason
+      await fetch(`${BACKEND_URL}/api/content/job/${job.job_id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: "rejected", notes: reason }),
+      });
+    }
     setJob(null);
     setJobId(null);
     setCreating(false);

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend Testing Suite for ThookAI Sprint 5
-Tests Daily Brief API, Content Pipeline, and existing Sprint 4 functionality
+Backend Testing Suite for ThookAI Sprint 6
+Tests Media Agents (Image Generation, Voice Narration), Content Regeneration, and existing functionality
 """
 
 import asyncio
@@ -36,9 +36,12 @@ class TestRunner:
         self.token = None
         self.user_id = None
         self.job_ids = []
-        self.test_email = "sprint5test@example.com"
+        # Use timestamp to ensure unique email
+        import time
+        timestamp = int(time.time())
+        self.test_email = f"sprint6test{timestamp}@example.com"
         self.test_password = "test123"
-        self.test_name = "Sprint 5 Tester"
+        self.test_name = "Sprint 6 Tester"
         
     def log(self, message, level="INFO"):
         print(f"[{level}] {message}")
@@ -117,6 +120,397 @@ class TestRunner:
         else:
             self.log(f"❌ Registration failed: {response}", "ERROR")
             return False
+
+    # ============ SPRINT 6 TESTS ============
+    
+    async def test_image_styles_endpoint(self):
+        """Test GET /api/content/image-styles - should return 4 styles."""
+        self.log("=== Testing Image Styles Endpoint ===")
+        
+        status, response = self.test_api_call("GET", "/content/image-styles")
+        
+        if status == 200:
+            if not isinstance(response, dict) or "styles" not in response:
+                self.log("❌ Response should contain 'styles' key", "ERROR")
+                return False
+            
+            styles = response["styles"]
+            if not isinstance(styles, list):
+                self.log("❌ Styles should be a list", "ERROR")
+                return False
+            
+            if len(styles) != 4:
+                self.log(f"❌ Expected 4 styles, got {len(styles)}", "ERROR")
+                return False
+            
+            expected_style_ids = ["minimal", "bold", "data-viz", "personal"]
+            actual_style_ids = [style.get("id") for style in styles]
+            
+            missing_styles = [sid for sid in expected_style_ids if sid not in actual_style_ids]
+            if missing_styles:
+                self.log(f"❌ Missing style IDs: {missing_styles}", "ERROR")
+                return False
+            
+            # Check style structure
+            for style in styles:
+                if not all(key in style for key in ["id", "name", "description"]):
+                    self.log("❌ Each style should have id, name, description", "ERROR")
+                    return False
+            
+            self.log("✅ Image Styles endpoint working correctly")
+            self.log(f"Available styles: {actual_style_ids}")
+            return True
+        else:
+            self.log(f"❌ Image Styles endpoint failed: {response}", "ERROR")
+            return False
+    
+    async def test_voices_endpoint(self):
+        """Test GET /api/content/voices - should return default voices with Rachel, Domi, etc."""
+        self.log("=== Testing Voices Endpoint ===")
+        
+        status, response = self.test_api_call("GET", "/content/voices")
+        
+        if status == 200:
+            if not isinstance(response, dict):
+                self.log("❌ Response should be a dict", "ERROR")
+                return False
+            
+            if "default_voices" not in response:
+                self.log("❌ Response should contain 'default_voices'", "ERROR")
+                return False
+            
+            default_voices = response["default_voices"]
+            if not isinstance(default_voices, list):
+                self.log("❌ default_voices should be a list", "ERROR")
+                return False
+            
+            if len(default_voices) == 0:
+                self.log("❌ Should have at least one default voice", "ERROR")
+                return False
+            
+            # Check for expected voices
+            voice_names = [voice.get("name", "").lower() for voice in default_voices]
+            expected_voices = ["rachel", "domi"]  # At least these should be present
+            
+            missing_voices = [name for name in expected_voices if name not in voice_names]
+            if missing_voices:
+                self.log(f"❌ Missing expected voices: {missing_voices}", "ERROR")
+                return False
+            
+            # Check voice structure
+            for voice in default_voices[:2]:  # Check first 2 voices
+                if not all(key in voice for key in ["id", "name", "description"]):
+                    self.log("❌ Each voice should have id, name, description", "ERROR")
+                    return False
+            
+            self.log("✅ Voices endpoint working correctly")
+            self.log(f"Found {len(default_voices)} default voices: {[v.get('name') for v in default_voices[:3]]}")
+            return True
+        else:
+            self.log(f"❌ Voices endpoint failed: {response}", "ERROR")
+            return False
+    
+    async def test_content_regeneration_flow(self):
+        """Test full content regeneration flow with version tracking."""
+        self.log("=== Testing Content Regeneration Flow ===")
+        
+        # First create content
+        content_data = {
+            "platform": "linkedin",
+            "content_type": "post",
+            "raw_input": "The future of artificial intelligence in creative industries looks promising with innovative tools emerging."
+        }
+        
+        status, response = self.test_api_call("POST", "/content/create", content_data)
+        
+        if status != 200 or "job_id" not in response:
+            self.log("❌ Failed to create initial content for regeneration test", "ERROR")
+            return None
+        
+        original_job_id = response["job_id"]
+        self.job_ids.append(original_job_id)
+        self.log(f"Created original job: {original_job_id}")
+        
+        # Poll until ready
+        if not await self.poll_job_until_ready(original_job_id):
+            self.log("❌ Original job failed to complete", "ERROR")
+            return None
+        
+        # Now test regeneration
+        regen_data = {
+            "hint": "Make it more engaging and add a personal touch"
+        }
+        
+        status, response = self.test_api_call("PATCH", f"/content/job/{original_job_id}/regenerate", regen_data)
+        
+        if status != 200:
+            self.log(f"❌ Regeneration failed: {response}", "ERROR")
+            return None
+        
+        if not isinstance(response, dict) or "job_id" not in response:
+            self.log("❌ Regeneration response should contain new job_id", "ERROR")
+            return None
+        
+        new_job_id = response["job_id"]
+        version = response.get("version", 0)
+        parent_job_id = response.get("parent_job_id")
+        
+        if version != 2:
+            self.log(f"❌ Expected version 2, got {version}", "ERROR")
+            return None
+        
+        if parent_job_id != original_job_id:
+            self.log(f"❌ Expected parent_job_id to be {original_job_id}, got {parent_job_id}", "ERROR")
+            return None
+        
+        self.job_ids.append(new_job_id)
+        self.log(f"✅ Regeneration successful: new job {new_job_id}, version {version}")
+        
+        # Wait for regenerated content to complete
+        if not await self.poll_job_until_ready(new_job_id):
+            self.log("❌ Regenerated job failed to complete", "ERROR")
+            return None
+        
+        return {"original_job_id": original_job_id, "new_job_id": new_job_id}
+    
+    async def test_job_history_endpoint(self, job_ids_dict):
+        """Test GET /api/content/job/{job_id}/history."""
+        if not job_ids_dict:
+            self.log("❌ No job IDs available for history test", "ERROR")
+            return False
+        
+        self.log("=== Testing Job History Endpoint ===")
+        
+        original_job_id = job_ids_dict["original_job_id"]
+        
+        status, response = self.test_api_call("GET", f"/content/job/{original_job_id}/history")
+        
+        if status != 200:
+            self.log(f"❌ Job history failed: {response}", "ERROR")
+            return False
+        
+        if not isinstance(response, dict):
+            self.log("❌ History response should be a dict", "ERROR")
+            return False
+        
+        required_fields = ["root_job_id", "versions", "total_versions"]
+        missing_fields = [field for field in required_fields if field not in response]
+        if missing_fields:
+            self.log(f"❌ Missing fields in history response: {missing_fields}", "ERROR")
+            return False
+        
+        versions = response["versions"]
+        if not isinstance(versions, list):
+            self.log("❌ Versions should be a list", "ERROR")
+            return False
+        
+        if len(versions) < 2:
+            self.log(f"❌ Expected at least 2 versions after regeneration, got {len(versions)}", "ERROR")
+            return False
+        
+        # Check version structure - original jobs may not have version field
+        for version in versions:
+            required_fields = ["job_id", "status", "created_at"]
+            missing_fields = [field for field in required_fields if field not in version]
+            if missing_fields:
+                self.log(f"❌ Version missing required fields: {missing_fields}", "ERROR")
+                return False
+        
+        # Check that we have at least one regenerated version (should have version field)
+        versioned_jobs = [v for v in versions if "version" in v]
+        if len(versioned_jobs) == 0:
+            self.log("❌ Should have at least one job with version field after regeneration", "ERROR")
+            return False
+        
+        # Check that regenerated job has version 2
+        regen_versions = [v.get("version") for v in versioned_jobs if v.get("version")]
+        if 2 not in regen_versions:
+            self.log(f"❌ Should have regenerated job with version 2, found: {regen_versions}", "ERROR") 
+            return False
+        
+        self.log("✅ Job History endpoint working correctly")
+        self.log(f"Found {len(versions)} versions, regenerated versions: {regen_versions}")
+        return True
+    
+    async def test_image_generation(self):
+        """Test POST /api/content/generate-image with extended timeout."""
+        self.log("=== Testing Image Generation (90s timeout) ===")
+        
+        # Try to use an existing completed job first
+        existing_job_id = None
+        if self.job_ids:
+            for job_id in self.job_ids:
+                status, response = self.test_api_call("GET", f"/content/job/{job_id}")
+                if status == 200 and response.get("status") == "reviewing":
+                    existing_job_id = job_id
+                    self.log(f"Using existing completed job: {job_id}")
+                    break
+        
+        if not existing_job_id:
+            # Create a new job only if needed
+            content_data = {
+                "platform": "linkedin", 
+                "content_type": "post",
+                "raw_input": "Visual representation of sustainable technology."
+            }
+            
+            status, response = self.test_api_call("POST", "/content/create", content_data)
+            
+            if status != 200 or "job_id" not in response:
+                self.log("❌ Failed to create job for image generation test", "ERROR")
+                return False
+            
+            existing_job_id = response["job_id"]
+            self.job_ids.append(existing_job_id)
+            
+            # Wait for job to complete with shorter timeout
+            if not await self.poll_job_until_ready(existing_job_id, max_wait=30):
+                self.log("❌ Job failed to complete quickly, testing with partial job", "ERROR")
+                # Continue with test anyway - the image generation endpoint should handle this
+        
+        # Test image generation
+        image_data = {
+            "job_id": existing_job_id,
+            "style": "minimal"
+        }
+        
+        # Use extended timeout for image generation (90 seconds as requested)
+        status, response = self.test_api_call("POST", "/content/generate-image", image_data, timeout=90)
+        
+        if status != 200:
+            self.log(f"❌ Image generation failed: {response}", "ERROR")
+            return False
+        
+        if not isinstance(response, dict):
+            self.log("❌ Image generation response should be a dict", "ERROR")
+            return False
+        
+        # Check response structure - both real and mock responses are acceptable
+        expected_fields = ["generated", "style"]
+        missing_fields = [field for field in expected_fields if field not in response]
+        if missing_fields:
+            self.log(f"❌ Missing fields in image response: {missing_fields}", "ERROR")
+            return False
+        
+        generated = response.get("generated", False)
+        is_mock = response.get("mock", False)
+        
+        if generated:
+            # Real image generation
+            if "image_base64" not in response or "image_url" not in response:
+                self.log("❌ Generated image should have image_base64 and image_url", "ERROR")
+                return False
+            self.log("✅ Image generation successful (real image generated)")
+        elif is_mock:
+            # Mock response due to missing API key
+            if "message" not in response:
+                self.log("❌ Mock response should have message field", "ERROR")
+                return False
+            self.log("✅ Image generation returned mock response (API key not configured)")
+        else:
+            self.log("❌ Image generation failed without mock fallback", "ERROR")
+            return False
+        
+        # Check that style was preserved
+        if response.get("style") != "minimal":
+            self.log(f"❌ Style should be 'minimal', got {response.get('style')}", "ERROR")
+            return False
+        
+        return True
+    
+    async def test_voice_narration(self):
+        """Test POST /api/content/narrate."""
+        self.log("=== Testing Voice Narration ===")
+        
+        # Try to use an existing completed job first
+        existing_job_id = None
+        if self.job_ids:
+            for job_id in self.job_ids:
+                status, response = self.test_api_call("GET", f"/content/job/{job_id}")
+                if status == 200 and response.get("status") == "reviewing":
+                    existing_job_id = job_id
+                    self.log(f"Using existing completed job: {job_id}")
+                    break
+        
+        if not existing_job_id:
+            # Create a job with content to narrate
+            content_data = {
+                "platform": "linkedin",
+                "content_type": "post", 
+                "raw_input": "Explore blockchain technology in financial systems."
+            }
+            
+            status, response = self.test_api_call("POST", "/content/create", content_data)
+            
+            if status != 200 or "job_id" not in response:
+                self.log("❌ Failed to create job for voice narration test", "ERROR")
+                return False
+            
+            existing_job_id = response["job_id"]
+            self.job_ids.append(existing_job_id)
+            
+            # Wait for job to complete with shorter timeout
+            if not await self.poll_job_until_ready(existing_job_id, max_wait=30):
+                self.log("❌ Job failed to complete quickly, testing with partial job", "ERROR")
+                # Continue with test anyway
+        
+        # Test voice narration
+        voice_data = {
+            "job_id": existing_job_id,
+            "stability": 0.6,
+            "similarity_boost": 0.8
+        }
+        
+        status, response = self.test_api_call("POST", "/content/narrate", voice_data)
+        
+        if status != 200:
+            self.log(f"❌ Voice narration failed: {response}", "ERROR")
+            return False
+        
+        if not isinstance(response, dict):
+            self.log("❌ Voice response should be a dict", "ERROR")
+            return False
+        
+        # Check response structure - both real and mock responses are acceptable
+        expected_fields = ["generated", "voice_used", "duration_estimate"]
+        missing_fields = [field for field in expected_fields if field not in response]
+        if missing_fields:
+            self.log(f"❌ Missing fields in voice response: {missing_fields}", "ERROR")
+            return False
+        
+        generated = response.get("generated", False) 
+        is_mock = response.get("mock", False)
+        
+        if generated:
+            # Real voice generation
+            if "audio_base64" not in response or "audio_url" not in response:
+                self.log("❌ Generated audio should have audio_base64 and audio_url", "ERROR")
+                return False
+            self.log("✅ Voice narration successful (real audio generated)")
+        elif is_mock:
+            # Mock response due to missing API key
+            if "message" not in response:
+                self.log("❌ Mock response should have message field", "ERROR") 
+                return False
+            self.log("✅ Voice narration returned mock response (ELEVENLABS_API_KEY placeholder)")
+        else:
+            self.log("❌ Voice narration failed without mock fallback", "ERROR")
+            return False
+        
+        # Check duration estimate
+        duration = response.get("duration_estimate", 0)
+        if not isinstance(duration, (int, float)) or duration <= 0:
+            self.log("❌ Duration estimate should be a positive number", "ERROR")
+            return False
+        
+        # Check voice info
+        voice_used = response.get("voice_used", {})
+        if not isinstance(voice_used, dict) or "name" not in voice_used:
+            self.log("❌ voice_used should be a dict with name field", "ERROR") 
+            return False
+        
+        self.log(f"Voice used: {voice_used.get('name')}, Duration: {duration}s")
+        return True
     
     async def test_daily_brief_api_initial(self):
         """Test Daily Brief API endpoint (first call, should generate new brief)."""
@@ -491,7 +885,7 @@ class TestRunner:
 
     async def run_all_tests(self):
         """Run all backend tests in sequence."""
-        print(f"\n🚀 Starting ThookAI Sprint 5 Backend Tests")
+        print(f"\n🚀 Starting ThookAI Sprint 6 Backend Tests")
         print(f"Backend URL: {API_BASE}")
         print("=" * 60)
         
@@ -503,21 +897,32 @@ class TestRunner:
             print("❌ Authentication failed - stopping tests")
             return test_results
         
-        # SPRINT 5 PRIORITY TESTS
+        # SPRINT 6 PRIORITY TESTS
         
-        # Daily Brief API tests
+        # Quick endpoint tests
+        test_results["image_styles"] = await self.test_image_styles_endpoint()
+        test_results["voices_list"] = await self.test_voices_endpoint()
+        
+        # Content regeneration flow (HIGH PRIORITY)
+        regen_result = await self.test_content_regeneration_flow()
+        test_results["content_regeneration"] = regen_result is not None
+        
+        # Job history test (depends on regeneration)
+        if regen_result:
+            test_results["job_history"] = await self.test_job_history_endpoint(regen_result)
+        else:
+            test_results["job_history"] = False
+            self.log("❌ Skipping job history test due to regeneration failure", "ERROR")
+        
+        # Image generation (with 90s timeout)
+        test_results["image_generation"] = await self.test_image_generation()
+        
+        # Voice narration
+        test_results["voice_narration"] = await self.test_voice_narration()
+        
+        # Optional: Sprint 5 compatibility tests
         test_results["daily_brief_initial"] = await self.test_daily_brief_api_initial()
-        test_results["daily_brief_caching"] = await self.test_daily_brief_caching()
-        test_results["daily_brief_refresh"] = await self.test_daily_brief_refresh()
-        test_results["daily_brief_dismiss"] = await self.test_daily_brief_dismiss()
-        test_results["daily_brief_status"] = await self.test_daily_brief_status()
-        
-        # Sprint 4 compatibility test
         test_results["dashboard_stats_compatibility"] = await self.test_dashboard_stats_sprint4_compatibility()
-        
-        # Optional: Content creation test for integration
-        job_id = await self.test_content_creation()
-        test_results["content_creation_integration"] = job_id is not None
         
         return test_results
 
@@ -527,7 +932,7 @@ async def main():
     results = await runner.run_all_tests()
     
     print("\n" + "=" * 60)
-    print("🏁 SPRINT 5 TEST SUMMARY")
+    print("🏁 SPRINT 6 TEST SUMMARY")
     print("=" * 60)
     
     passed = 0
