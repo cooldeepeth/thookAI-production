@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend Testing Suite for ThookAI Sprint 6
-Tests Media Agents (Image Generation, Voice Narration), Content Regeneration, and existing functionality
+Backend Testing Suite for ThookAI Sprint 8
+Tests Repurpose Agent, Content Series Planner, Anti-Repetition Engine V2
 """
 
 import asyncio
@@ -39,9 +39,10 @@ class TestRunner:
         # Use timestamp to ensure unique email
         import time
         timestamp = int(time.time())
-        self.test_email = f"sprint6test{timestamp}@example.com"
+        self.test_email = f"sprint8test{timestamp}@example.com"
         self.test_password = "test123"
-        self.test_name = "Sprint 6 Tester"
+        self.test_name = "Sprint 8 Tester"
+        self.approved_job_id = None  # Store for repurpose tests
         
     def log(self, message, level="INFO"):
         print(f"[{level}] {message}")
@@ -883,9 +884,564 @@ class TestRunner:
             self.log(f"❌ Content rejection failed: {response}", "ERROR")
             return False
 
+    # ============ SPRINT 8 TESTS ============
+    
+    async def test_series_templates(self):
+        """Test GET /api/content/series/templates."""
+        self.log("=== Testing Series Templates Endpoint ===")
+        
+        status, response = self.test_api_call("GET", "/content/series/templates")
+        
+        if status != 200:
+            self.log(f"❌ Series templates failed: {response}", "ERROR")
+            return False
+        
+        if not isinstance(response, dict):
+            self.log("❌ Response should be a dict", "ERROR")
+            return False
+        
+        if "templates" not in response or "total" not in response:
+            self.log("❌ Response missing templates or total", "ERROR")
+            return False
+        
+        templates = response["templates"]
+        total = response["total"]
+        
+        if not isinstance(templates, list):
+            self.log("❌ Templates should be a list", "ERROR")
+            return False
+        
+        if total != 6:
+            self.log(f"❌ Expected 6 templates, got {total}", "ERROR")
+            return False
+        
+        if len(templates) != total:
+            self.log(f"❌ Template count mismatch: {len(templates)} vs {total}", "ERROR")
+            return False
+        
+        # Check template structure
+        for template in templates:
+            required_fields = ["id", "name", "description", "suggested_length", "example"]
+            missing = [f for f in required_fields if f not in template]
+            if missing:
+                self.log(f"❌ Template missing fields: {missing}", "ERROR")
+                return False
+        
+        template_ids = [t["id"] for t in templates]
+        expected_ids = ["numbered_tips", "journey", "myth_busting", "case_study", "behind_scenes", "contrarian"]
+        
+        for exp_id in expected_ids:
+            if exp_id not in template_ids:
+                self.log(f"❌ Missing template ID: {exp_id}", "ERROR")
+                return False
+        
+        self.log("✅ Series templates endpoint working correctly")
+        self.log(f"Available templates: {template_ids}")
+        return True
+    
+    async def test_series_plan_creation(self):
+        """Test POST /api/content/series/plan."""
+        self.log("=== Testing Series Plan Creation ===")
+        
+        plan_data = {
+            "topic": "productivity tips",
+            "template_type": "numbered_tips",
+            "num_posts": 5,
+            "platform": "linkedin"
+        }
+        
+        status, response = self.test_api_call("POST", "/content/series/plan", plan_data, timeout=60)
+        
+        if status != 200:
+            self.log(f"❌ Series plan creation failed: {response}", "ERROR")
+            return False, None
+        
+        if not isinstance(response, dict):
+            self.log("❌ Response should be a dict", "ERROR")
+            return False, None
+        
+        required_fields = ["success", "topic", "template", "platform", "plan"]
+        missing = [f for f in required_fields if f not in response]
+        if missing:
+            self.log(f"❌ Response missing fields: {missing}", "ERROR")
+            return False, None
+        
+        if not response.get("success"):
+            self.log(f"❌ Series plan not successful: {response.get('error')}", "ERROR")
+            return False, None
+        
+        plan = response.get("plan", {})
+        plan_required = ["series_title", "posts", "optimal_schedule"]
+        plan_missing = [f for f in plan_required if f not in plan]
+        if plan_missing:
+            self.log(f"❌ Plan missing fields: {plan_missing}", "ERROR")
+            return False, None
+        
+        posts = plan.get("posts", [])
+        if not isinstance(posts, list) or len(posts) != 5:
+            self.log(f"❌ Expected 5 posts in plan, got {len(posts) if isinstance(posts, list) else 'invalid'}", "ERROR")
+            return False, None
+        
+        # Check post structure
+        for i, post in enumerate(posts, 1):
+            post_required = ["number", "title", "outline", "key_points", "cta"]
+            post_missing = [f for f in post_required if f not in post]
+            if post_missing:
+                self.log(f"❌ Post {i} missing fields: {post_missing}", "ERROR")
+                return False, None
+        
+        is_mock = response.get("is_mock", False)
+        if is_mock:
+            self.log("✅ Series plan creation successful (MOCK - no LLM key)")
+        else:
+            self.log("✅ Series plan creation successful (real AI generation)")
+        
+        self.log(f"Plan title: {plan.get('series_title')}")
+        return True, response
+    
+    async def test_series_save(self, plan_data):
+        """Test POST /api/content/series/save."""
+        if not plan_data:
+            self.log("❌ No plan data available for save test", "ERROR")
+            return False, None
+        
+        self.log("=== Testing Series Save ===")
+        
+        save_data = {
+            "plan": plan_data.get("plan", {}),
+            "start_date": "2026-03-20T10:00:00Z"
+        }
+        
+        status, response = self.test_api_call("POST", "/content/series/save", save_data)
+        
+        if status != 200:
+            self.log(f"❌ Series save failed: {response}", "ERROR")
+            return False, None
+        
+        required_fields = ["success", "series_id", "title", "total_posts"]
+        missing = [f for f in required_fields if f not in response]
+        if missing:
+            self.log(f"❌ Save response missing fields: {missing}", "ERROR")
+            return False, None
+        
+        if not response.get("success"):
+            self.log(f"❌ Series save not successful", "ERROR")
+            return False, None
+        
+        series_id = response.get("series_id")
+        if not series_id:
+            self.log("❌ No series_id returned", "ERROR")
+            return False, None
+        
+        self.log("✅ Series save successful")
+        self.log(f"Series ID: {series_id}")
+        return True, series_id
+    
+    async def test_series_list(self):
+        """Test GET /api/content/series."""
+        self.log("=== Testing Series List ===")
+        
+        status, response = self.test_api_call("GET", "/content/series")
+        
+        if status != 200:
+            self.log(f"❌ Series list failed: {response}", "ERROR")
+            return False
+        
+        required_fields = ["series", "total"]
+        missing = [f for f in required_fields if f not in response]
+        if missing:
+            self.log(f"❌ Response missing fields: {missing}", "ERROR")
+            return False
+        
+        series_list = response.get("series", [])
+        total = response.get("total", 0)
+        
+        if not isinstance(series_list, list):
+            self.log("❌ Series should be a list", "ERROR")
+            return False
+        
+        if len(series_list) != total:
+            self.log(f"❌ Series count mismatch: {len(series_list)} vs {total}", "ERROR")
+            return False
+        
+        # If we have series, check structure
+        if series_list:
+            for series in series_list:
+                required = ["series_id", "title", "platform", "total_posts", "status"]
+                missing = [f for f in required if f not in series]
+                if missing:
+                    self.log(f"❌ Series missing fields: {missing}", "ERROR")
+                    return False
+        
+        self.log("✅ Series list working correctly")
+        self.log(f"Found {total} series")
+        return True
+    
+    async def test_diversity_score(self):
+        """Test GET /api/content/diversity/score."""
+        self.log("=== Testing Content Diversity Score ===")
+        
+        status, response = self.test_api_call("GET", "/content/diversity/score?days=30")
+        
+        if status != 200:
+            self.log(f"❌ Diversity score failed: {response}", "ERROR")
+            return False
+        
+        if not isinstance(response, dict):
+            self.log("❌ Response should be a dict", "ERROR")
+            return False
+        
+        # Either has a score or a message explaining why not
+        if "score" not in response and "message" not in response:
+            self.log("❌ Response should have either score or message", "ERROR")
+            return False
+        
+        if "message" in response:
+            # Not enough content for analysis
+            self.log("✅ Diversity score returned informative message (not enough content)")
+            return True
+        
+        # Has score - check structure
+        if "breakdown" not in response:
+            self.log("❌ Score response should include breakdown", "ERROR")
+            return False
+        
+        breakdown = response.get("breakdown", {})
+        required_breakdown = ["hook_diversity", "topic_diversity", "platform_diversity", "content_type_diversity"]
+        missing = [f for f in required_breakdown if f not in breakdown]
+        if missing:
+            self.log(f"❌ Breakdown missing fields: {missing}", "ERROR")
+            return False
+        
+        self.log("✅ Content diversity score working correctly")
+        self.log(f"Diversity score: {response.get('score')}")
+        return True
+    
+    async def test_hook_analysis(self):
+        """Test GET /api/content/diversity/hook-analysis."""
+        self.log("=== Testing Hook Analysis ===")
+        
+        status, response = self.test_api_call("GET", "/content/diversity/hook-analysis?limit=10")
+        
+        if status != 200:
+            self.log(f"❌ Hook analysis failed: {response}", "ERROR")
+            return False
+        
+        if not isinstance(response, dict):
+            self.log("❌ Response should be a dict", "ERROR")
+            return False
+        
+        required_fields = ["has_fatigue"]
+        if response.get("has_fatigue") is not False:
+            # If has analysis, check structure
+            if "distribution" not in response or "recommendation" not in response:
+                self.log("❌ Hook analysis should include distribution and recommendation", "ERROR")
+                return False
+        else:
+            # Should have message explaining why
+            if "message" not in response:
+                self.log("❌ Should have message when no fatigue detected", "ERROR")
+                return False
+        
+        self.log("✅ Hook analysis working correctly")
+        if response.get("has_fatigue"):
+            self.log("Hook fatigue detected with recommendations")
+        else:
+            self.log("No hook fatigue - not enough content or good variety")
+        return True
+    
+    async def create_content_for_repurpose_test(self):
+        """Create and approve content for repurpose testing."""
+        self.log("=== Creating Content for Repurpose Test ===")
+        
+        content_data = {
+            "platform": "linkedin",
+            "content_type": "post",
+            "raw_input": "The future of AI in content creation is transforming how creators work. Here are the key trends I'm seeing in 2026."
+        }
+        
+        status, response = self.test_api_call("POST", "/content/create", content_data)
+        
+        if status != 200 or "job_id" not in response:
+            self.log("❌ Failed to create content for repurpose test", "ERROR")
+            return None
+        
+        job_id = response["job_id"]
+        self.job_ids.append(job_id)
+        
+        # Wait for content to be ready
+        if not await self.poll_job_until_ready(job_id, max_wait=60):
+            self.log("❌ Content creation failed for repurpose test", "ERROR")
+            return None
+        
+        # Approve the content
+        approval_data = {"status": "approved"}
+        status, response = self.test_api_call("PATCH", f"/content/job/{job_id}/status", approval_data)
+        
+        if status != 200:
+            self.log(f"❌ Failed to approve content: {response}", "ERROR")
+            return None
+        
+        self.log(f"✅ Created and approved content: {job_id}")
+        return job_id
+    
+    async def test_repurpose_suggestions(self):
+        """Test GET /api/content/repurpose/suggestions."""
+        self.log("=== Testing Repurpose Suggestions ===")
+        
+        # Ensure we have approved content
+        if not self.approved_job_id:
+            self.approved_job_id = await self.create_content_for_repurpose_test()
+            if not self.approved_job_id:
+                return False
+        
+        status, response = self.test_api_call("GET", "/content/repurpose/suggestions?limit=5")
+        
+        if status != 200:
+            self.log(f"❌ Repurpose suggestions failed: {response}", "ERROR")
+            return False
+        
+        required_fields = ["suggestions", "total"]
+        missing = [f for f in required_fields if f not in response]
+        if missing:
+            self.log(f"❌ Response missing fields: {missing}", "ERROR")
+            return False
+        
+        suggestions = response.get("suggestions", [])
+        total = response.get("total", 0)
+        
+        if not isinstance(suggestions, list):
+            self.log("❌ Suggestions should be a list", "ERROR")
+            return False
+        
+        if len(suggestions) != total:
+            self.log(f"❌ Suggestions count mismatch: {len(suggestions)} vs {total}", "ERROR")
+            return False
+        
+        # Should find our approved content
+        if total == 0:
+            self.log("❌ Should have at least one suggestion with approved content", "ERROR")
+            return False
+        
+        # Check suggestion structure
+        for suggestion in suggestions:
+            required = ["job_id", "platform", "content_preview", "available_platforms"]
+            missing = [f for f in required if f not in suggestion]
+            if missing:
+                self.log(f"❌ Suggestion missing fields: {missing}", "ERROR")
+                return False
+        
+        self.log("✅ Repurpose suggestions working correctly")
+        self.log(f"Found {total} suggestions")
+        return True
+    
+    async def test_repurpose_preview(self):
+        """Test GET /api/content/repurpose/preview/{job_id}."""
+        if not self.approved_job_id:
+            self.approved_job_id = await self.create_content_for_repurpose_test()
+            if not self.approved_job_id:
+                return False
+        
+        self.log("=== Testing Repurpose Preview ===")
+        
+        # Test preview for X and Instagram
+        status, response = self.test_api_call("GET", f"/content/repurpose/preview/{self.approved_job_id}?platforms=x,instagram", timeout=60)
+        
+        if status != 200:
+            self.log(f"❌ Repurpose preview failed: {response}", "ERROR")
+            return False
+        
+        required_fields = ["source_job_id", "source_platform", "source_preview", "repurposed_previews", "is_preview"]
+        missing = [f for f in required_fields if f not in response]
+        if missing:
+            self.log(f"❌ Preview response missing fields: {missing}", "ERROR")
+            return False
+        
+        if response.get("source_job_id") != self.approved_job_id:
+            self.log(f"❌ Source job ID mismatch", "ERROR")
+            return False
+        
+        if not response.get("is_preview"):
+            self.log(f"❌ Should be marked as preview", "ERROR")
+            return False
+        
+        repurposed = response.get("repurposed_previews", {})
+        if not isinstance(repurposed, dict):
+            self.log("❌ Repurposed previews should be a dict", "ERROR")
+            return False
+        
+        # Should have x and instagram since source is linkedin
+        expected_platforms = ["x", "instagram"]
+        for platform in expected_platforms:
+            if platform not in repurposed:
+                self.log(f"❌ Missing repurposed platform: {platform}", "ERROR")
+                return False
+            
+            platform_data = repurposed[platform]
+            required = ["content", "is_thread", "adaptation_notes"]
+            missing = [f for f in required if f not in platform_data]
+            if missing:
+                self.log(f"❌ Platform {platform} data missing fields: {missing}", "ERROR")
+                return False
+        
+        is_mock = response.get("is_mock", False)
+        if is_mock:
+            self.log("✅ Repurpose preview successful (MOCK - no LLM key)")
+        else:
+            self.log("✅ Repurpose preview successful (real AI repurposing)")
+        
+        return True
+    
+    async def test_repurpose_content(self):
+        """Test POST /api/content/repurpose (full flow)."""
+        if not self.approved_job_id:
+            self.approved_job_id = await self.create_content_for_repurpose_test()
+            if not self.approved_job_id:
+                return False
+        
+        self.log("=== Testing Repurpose Content ===")
+        
+        repurpose_data = {
+            "job_id": self.approved_job_id,
+            "target_platforms": ["x", "instagram"]
+        }
+        
+        status, response = self.test_api_call("POST", "/content/repurpose", repurpose_data, timeout=60)
+        
+        if status != 200:
+            self.log(f"❌ Repurpose content failed: {response}", "ERROR")
+            return False
+        
+        required_fields = ["success", "source_job_id", "source_platform", "created_jobs", "total_created"]
+        missing = [f for f in required_fields if f not in response]
+        if missing:
+            self.log(f"❌ Repurpose response missing fields: {missing}", "ERROR")
+            return False
+        
+        if not response.get("success"):
+            self.log(f"❌ Repurpose not successful: {response.get('error')}", "ERROR")
+            return False
+        
+        created_jobs = response.get("created_jobs", {})
+        total_created = response.get("total_created", 0)
+        
+        if len(created_jobs) != total_created:
+            self.log(f"❌ Created jobs count mismatch: {len(created_jobs)} vs {total_created}", "ERROR")
+            return False
+        
+        if total_created != 2:  # x and instagram
+            self.log(f"❌ Expected 2 created jobs, got {total_created}", "ERROR")
+            return False
+        
+        # Check created job structure
+        for platform, job_info in created_jobs.items():
+            if platform not in ["x", "instagram"]:
+                self.log(f"❌ Unexpected platform: {platform}", "ERROR")
+                return False
+            
+            required = ["job_id", "content_preview"]
+            missing = [f for f in required if f not in job_info]
+            if missing:
+                self.log(f"❌ Created job {platform} missing fields: {missing}", "ERROR")
+                return False
+            
+            # Store the created job IDs for verification
+            self.job_ids.append(job_info["job_id"])
+        
+        self.log("✅ Repurpose content successful")
+        self.log(f"Created {total_created} repurposed jobs")
+        
+        # Verify the jobs were created in the database
+        return await self.verify_repurposed_jobs_exist(created_jobs)
+    
+    async def verify_repurposed_jobs_exist(self, created_jobs):
+        """Verify that repurposed jobs were created and are visible."""
+        self.log("=== Verifying Repurposed Jobs Exist ===")
+        
+        for platform, job_info in created_jobs.items():
+            job_id = job_info["job_id"]
+            
+            status, response = self.test_api_call("GET", f"/content/job/{job_id}")
+            
+            if status != 200:
+                self.log(f"❌ Failed to retrieve repurposed job {job_id}: {response}", "ERROR")
+                return False
+            
+            if response.get("status") != "reviewing":
+                self.log(f"❌ Repurposed job should be in reviewing status, got {response.get('status')}", "ERROR")
+                return False
+            
+            if response.get("platform") != platform:
+                self.log(f"❌ Job platform mismatch: expected {platform}, got {response.get('platform')}", "ERROR")
+                return False
+            
+            if not response.get("is_repurposed"):
+                self.log(f"❌ Job should be marked as repurposed", "ERROR")
+                return False
+        
+        self.log("✅ All repurposed jobs verified successfully")
+        return True
+    
+    async def test_full_repurpose_workflow(self):
+        """Test the complete repurpose workflow."""
+        self.log("=== Testing Full Repurpose Workflow ===")
+        
+        workflow_results = {}
+        
+        # 1. Create and approve content
+        workflow_results["create_content"] = await self.create_content_for_repurpose_test() is not None
+        
+        # 2. Get suggestions
+        workflow_results["get_suggestions"] = await self.test_repurpose_suggestions()
+        
+        # 3. Preview repurpose
+        workflow_results["preview_repurpose"] = await self.test_repurpose_preview()
+        
+        # 4. Execute repurpose
+        workflow_results["repurpose_content"] = await self.test_repurpose_content()
+        
+        # 5. Verify all content appears in content list
+        workflow_results["verify_content_list"] = await self.verify_content_in_list()
+        
+        all_passed = all(workflow_results.values())
+        
+        if all_passed:
+            self.log("✅ Full repurpose workflow completed successfully")
+        else:
+            failed_steps = [step for step, passed in workflow_results.items() if not passed]
+            self.log(f"❌ Repurpose workflow failed at steps: {failed_steps}", "ERROR")
+        
+        return all_passed
+    
+    async def verify_content_in_list(self):
+        """Verify that all created content appears in the content list."""
+        self.log("=== Verifying Content in List ===")
+        
+        status, response = self.test_api_call("GET", "/content/jobs?limit=20")
+        
+        if status != 200:
+            self.log(f"❌ Failed to get content list: {response}", "ERROR")
+            return False
+        
+        jobs = response.get("jobs", [])
+        job_ids_in_list = {job.get("job_id") for job in jobs}
+        
+        # Check that our test job IDs are in the list
+        missing_jobs = []
+        for job_id in self.job_ids:
+            if job_id not in job_ids_in_list:
+                missing_jobs.append(job_id)
+        
+        if missing_jobs:
+            self.log(f"❌ Missing jobs in content list: {missing_jobs[:3]}", "ERROR")
+            return False
+        
+        self.log("✅ All created content appears in content list")
+        return True
+
     async def run_all_tests(self):
         """Run all backend tests in sequence."""
-        print(f"\n🚀 Starting ThookAI Sprint 6 Backend Tests")
+        print(f"\n🚀 Starting ThookAI Sprint 8 Backend Tests")
         print(f"Backend URL: {API_BASE}")
         print("=" * 60)
         
@@ -897,32 +1453,34 @@ class TestRunner:
             print("❌ Authentication failed - stopping tests")
             return test_results
         
-        # SPRINT 6 PRIORITY TESTS
+        # SPRINT 8 PRIORITY TESTS
         
-        # Quick endpoint tests
-        test_results["image_styles"] = await self.test_image_styles_endpoint()
-        test_results["voices_list"] = await self.test_voices_endpoint()
+        # Series endpoints
+        test_results["series_templates"] = await self.test_series_templates()
         
-        # Content regeneration flow (HIGH PRIORITY)
-        regen_result = await self.test_content_regeneration_flow()
-        test_results["content_regeneration"] = regen_result is not None
+        plan_result, plan_data = await self.test_series_plan_creation()
+        test_results["series_plan_creation"] = plan_result
         
-        # Job history test (depends on regeneration)
-        if regen_result:
-            test_results["job_history"] = await self.test_job_history_endpoint(regen_result)
+        if plan_data:
+            save_result, series_id = await self.test_series_save(plan_data)
+            test_results["series_save"] = save_result
         else:
-            test_results["job_history"] = False
-            self.log("❌ Skipping job history test due to regeneration failure", "ERROR")
+            test_results["series_save"] = False
+            self.log("❌ Skipping series save due to plan creation failure", "ERROR")
         
-        # Image generation (with 90s timeout)
-        test_results["image_generation"] = await self.test_image_generation()
+        test_results["series_list"] = await self.test_series_list()
         
-        # Voice narration
-        test_results["voice_narration"] = await self.test_voice_narration()
+        # Anti-repetition V2 endpoints
+        test_results["diversity_score"] = await self.test_diversity_score()
+        test_results["hook_analysis"] = await self.test_hook_analysis()
         
-        # Optional: Sprint 5 compatibility tests
-        test_results["daily_brief_initial"] = await self.test_daily_brief_api_initial()
-        test_results["dashboard_stats_compatibility"] = await self.test_dashboard_stats_sprint4_compatibility()
+        # Repurpose endpoints - full workflow test
+        test_results["full_repurpose_workflow"] = await self.test_full_repurpose_workflow()
+        
+        # Optional: Legacy compatibility tests
+        if len([r for r in test_results.values() if r]) >= 6:  # If most tests pass
+            test_results["content_creation_legacy"] = await self.test_content_creation() is not None
+            test_results["dashboard_stats_compatibility"] = await self.test_dashboard_stats_sprint4_compatibility()
         
         return test_results
 
@@ -932,7 +1490,7 @@ async def main():
     results = await runner.run_all_tests()
     
     print("\n" + "=" * 60)
-    print("🏁 SPRINT 6 TEST SUMMARY")
+    print("🏁 SPRINT 8 TEST SUMMARY")
     print("=" * 60)
     
     passed = 0
