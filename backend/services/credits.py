@@ -132,6 +132,12 @@ async def get_credit_balance(user_id: str) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
     
     if last_refresh:
+        # Ensure timezone awareness
+        if isinstance(last_refresh, str):
+            last_refresh = datetime.fromisoformat(last_refresh)
+        if last_refresh.tzinfo is None:
+            last_refresh = last_refresh.replace(tzinfo=timezone.utc)
+        
         days_since_refresh = (now - last_refresh).days
         if days_since_refresh >= 30:
             # Reset credits for the month

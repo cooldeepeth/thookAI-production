@@ -40,6 +40,10 @@ async def get_current_subscription(user_id: str) -> Dict[str, Any]:
     is_active = True
     
     if expires_at and tier != "free":
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
         if expires_at < datetime.now(timezone.utc):
             is_active = False
     

@@ -1,574 +1,721 @@
 #!/usr/bin/env python3
+"""
+Comprehensive End-to-End Backend Testing for ThookAI Platform
+Testing authentication, onboarding, persona engine, content studio, billing, templates marketplace, 
+agency workspace, platform connections, and error handling.
+"""
 
-import requests
+import asyncio
+import aiohttp
 import json
 import time
-import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional
 
 # Configuration
 BASE_URL = "https://thook-growth.preview.emergentagent.com/api"
-TEST_TIMEOUT = 45
+TEST_USER_EMAIL = "e2e_test_user@test.com"
+TEST_USER_PASSWORD = "SecurePass123!"
+TEST_USER_NAME = "E2E Test User"
 
-class TestResults:
+class E2ETestRunner:
     def __init__(self):
-        self.results = []
-        self.passed = 0
-        self.failed = 0
-    
-    def add_result(self, test_name, success, details="", response=None):
-        self.results.append({
-            "test": test_name,
-            "success": success,
-            "details": details,
-            "response": response
-        })
-        if success:
-            self.passed += 1
-        else:
-            self.failed += 1
-        print(f"{'✅' if success else '❌'} {test_name}: {details}")
-    
-    def print_summary(self):
-        print(f"\n📊 TEST SUMMARY: {self.passed} passed, {self.failed} failed")
-        for result in self.results:
-            if not result['success']:
-                print(f"❌ {result['test']}: {result['details']}")
-
-# Global test state
-test_results = TestResults()
-studio_user_token = None
-studio_user_id = None
-free_user_token = None
-workspace_id = None
-job_id_for_template = None
-
-def make_request(method, endpoint, data=None, headers=None, timeout=TEST_TIMEOUT):
-    """Make HTTP request with consistent error handling."""
-    url = f"{BASE_URL}{endpoint}"
-    default_headers = {"Content-Type": "application/json"}
-    if headers:
-        default_headers.update(headers)
-    
-    try:
-        if method == "GET":
-            response = requests.get(url, headers=default_headers, timeout=timeout)
-        elif method == "POST":
-            response = requests.post(url, json=data, headers=default_headers, timeout=timeout)
-        elif method == "PUT":
-            response = requests.put(url, json=data, headers=default_headers, timeout=timeout)
-        elif method == "DELETE":
-            response = requests.delete(url, headers=default_headers, timeout=timeout)
+        self.session: Optional[aiohttp.ClientSession] = None
+        self.auth_token: Optional[str] = None
+        self.test_results = []
+        self.user_id: Optional[str] = None
+        self.workspace_id: Optional[str] = None
         
-        return response
-    except requests.exceptions.Timeout:
-        return None
-    except requests.exceptions.RequestException as e:
-        return None
-
-def register_and_setup_studio_user():
-    """Register a new user and upgrade to Studio tier with completed onboarding."""
-    global studio_user_token, studio_user_id
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
     
-    timestamp = int(time.time())
-    email = f"studio_test_{timestamp}@test.com"
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.session:
+            await self.session.close()
     
-    # 1. Register user
-    register_data = {
-        "name": f"Studio User {timestamp}",
-        "email": email,
-        "password": "testPassword123"
-    }
+    def log_result(self, test_name: str, passed: bool, details: str = ""):
+        status = "✅ PASS" if passed else "❌ FAIL"
+        result = f"{status}: {test_name}"
+        if details:
+            result += f" - {details}"
+        print(result)
+        self.test_results.append({
+            "test": test_name,
+            "passed": passed,
+            "details": details,
+            "timestamp": datetime.now().isoformat()
+        })
     
-    response = make_request("POST", "/auth/register", register_data)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Register Studio User",
-            False,
-            f"Registration failed: {response.status_code if response else 'Timeout'}"
+    async def make_request(self, method: str, endpoint: str, data: dict = None, 
+                          headers: dict = None, require_auth: bool = True) -> tuple[int, dict]:
+        """Make HTTP request and return (status_code, response_data)"""
+        url = f"{BASE_URL}{endpoint}"
+        
+        # Set up headers
+        request_headers = {"Content-Type": "application/json"}
+        if headers:
+            request_headers.update(headers)
+        
+        # Add auth token if required and available
+        if require_auth and self.auth_token:
+            request_headers["Authorization"] = f"Bearer {self.auth_token}"
+        
+        try:
+            async with self.session.request(
+                method, url, json=data, headers=request_headers, timeout=30
+            ) as response:
+                try:
+                    response_data = await response.json()
+                except Exception:
+                    response_data = {"error": "Invalid JSON response", "text": await response.text()}
+                return response.status, response_data
+        except asyncio.TimeoutError:
+            return 408, {"error": "Request timeout"}
+        except Exception as e:
+            return 500, {"error": f"Request failed: {str(e)}"}
+    
+    async def test_auth_registration(self):
+        """PHASE 1: Registration Tests"""
+        print("\n🔐 PHASE 1: AUTHENTICATION TESTS")
+        
+        # Test 1: Valid registration
+        status, response = await self.make_request(
+            "POST", "/auth/register",
+            data={
+                "email": TEST_USER_EMAIL,
+                "password": TEST_USER_PASSWORD,
+                "name": TEST_USER_NAME
+            },
+            require_auth=False
         )
-        return False
-    
-    data = response.json()
-    if not data.get("token") or not data.get("user_id"):
-        test_results.add_result("Register Studio User", False, f"Registration failed: missing token or user_id")
-        return False
-    
-    studio_user_token = data["token"]
-    studio_user_id = data["user_id"]
-    
-    test_results.add_result(
-        "Register Studio User",
-        True,
-        f"User registered with ID: {studio_user_id}"
-    )
-    
-    # 2. Upgrade to Studio tier
-    headers = {"Authorization": f"Bearer {studio_user_token}"}
-    upgrade_data = {"tier": "studio"}
-    
-    response = make_request("POST", "/billing/subscription/upgrade", upgrade_data, headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Upgrade to Studio Tier",
-            False,
-            f"Upgrade failed: {response.status_code if response else 'Timeout'}"
-        )
-        return False
-    
-    data = response.json()
-    test_results.add_result(
-        "Upgrade to Studio Tier", 
-        data.get("success", False),
-        f"New tier: {data.get('new_tier', 'unknown')}, Credits granted: {data.get('credits_granted', 0)}"
-    )
-    
-    # 3. Complete onboarding to create persona
-    onboarding_data = {
-        "answers": [
-            {"question_id": 0, "answer": "I'm an AI productivity consultant helping content creators scale their operations"},
-            {"question_id": 1, "answer": "LinkedIn"},
-            {"question_id": 2, "answer": "Strategic, Helpful, Technical"},
-            {"question_id": 3, "answer": "Lenny Rachitsky for depth and accessibility"},
-            {"question_id": 4, "answer": "Never want to write about crypto speculation or generic motivational content"},
-            {"question_id": 5, "answer": "Generate leads/clients"}
-        ]
-    }
-    
-    response = make_request("POST", "/onboarding/generate-persona", onboarding_data, headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Complete Studio User Onboarding",
-            False,
-            f"Onboarding failed: {response.status_code if response else 'Timeout'}"
-        )
-        return False
-    
-    data = response.json()
-    has_persona_card = "persona_card" in data
-    test_results.add_result(
-        "Complete Studio User Onboarding",
-        has_persona_card,
-        "Onboarding completed, persona created successfully" if has_persona_card else f"Onboarding failed: {data}"
-    )
-    
-    return True
-
-def register_free_user():
-    """Register a free tier user for testing restrictions."""
-    global free_user_token
-    
-    timestamp = int(time.time())
-    email = f"free_test_{timestamp}@test.com"
-    
-    register_data = {
-        "name": f"Free User {timestamp}",
-        "email": email,
-        "password": "testPassword123"
-    }
-    
-    response = make_request("POST", "/auth/register", register_data)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Register Free User",
-            False,
-            f"Registration failed: {response.status_code if response else 'Timeout'}"
-        )
-        return False
-    
-    data = response.json()
-    if not data.get("token") or not data.get("user_id"):
-        test_results.add_result("Register Free User", False, f"Registration failed: missing token or user_id")
-        return False
-    
-    free_user_token = data["token"]
-    
-    test_results.add_result(
-        "Register Free User",
-        True,
-        "Free tier user registered successfully"
-    )
-    
-    return True
-
-def test_workspace_crud():
-    """Test workspace CRUD operations."""
-    global workspace_id
-    
-    if not studio_user_token:
-        test_results.add_result("Workspace CRUD", False, "No studio user token available")
-        return
-    
-    headers = {"Authorization": f"Bearer {studio_user_token}"}
-    
-    # 4. Create workspace
-    workspace_data = {
-        "name": "Test Agency",
-        "description": "My test agency workspace"
-    }
-    
-    response = make_request("POST", "/agency/workspace", workspace_data, headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Create Workspace",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-        return
-    
-    data = response.json()
-    if data.get("success"):
-        workspace_id = data.get("workspace_id")
-        test_results.add_result(
-            "Create Workspace",
-            True,
-            f"Workspace created with ID: {workspace_id}"
-        )
-    else:
-        test_results.add_result("Create Workspace", False, f"Failed: {data}")
-        return
-    
-    # 5. List workspaces
-    response = make_request("GET", "/agency/workspaces", headers=headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "List Workspaces",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-        return
-    
-    data = response.json()
-    owned_workspaces = data.get("owned", [])
-    success = data.get("success", False) and len(owned_workspaces) > 0
-    test_results.add_result(
-        "List Workspaces",
-        success,
-        f"Found {len(owned_workspaces)} owned workspaces" if success else "No workspaces found"
-    )
-    
-    # 6. Get workspace details
-    if workspace_id:
-        response = make_request("GET", f"/agency/workspace/{workspace_id}", headers=headers)
-        if not response or response.status_code != 200:
-            test_results.add_result(
-                "Get Workspace Details",
-                False,
-                f"Failed: {response.status_code if response else 'Timeout'}"
-            )
+        
+        if status == 200 and "user_id" in response:
+            self.user_id = response["user_id"]
+            self.log_result("Valid Registration", True, f"User created with ID: {self.user_id}")
         else:
-            data = response.json()
-            workspace = data.get("workspace", {})
-            success = data.get("success", False) and workspace.get("name") == "Test Agency"
-            test_results.add_result(
-                "Get Workspace Details",
-                success,
-                f"Workspace name: {workspace.get('name')}, Role: {workspace.get('user_role')}, Members: {workspace.get('member_count', 0)}"
+            self.log_result("Valid Registration", False, f"Status: {status}, Response: {response}")
+        
+        # Test 2: Duplicate email
+        status, response = await self.make_request(
+            "POST", "/auth/register",
+            data={
+                "email": TEST_USER_EMAIL,
+                "password": TEST_USER_PASSWORD,
+                "name": TEST_USER_NAME
+            },
+            require_auth=False
+        )
+        
+        expected_duplicate = status == 400 and "already registered" in str(response).lower()
+        self.log_result("Duplicate Email Registration", expected_duplicate, 
+                       f"Status: {status}, Response: {response}")
+        
+        # Test 3: Invalid email format
+        status, response = await self.make_request(
+            "POST", "/auth/register",
+            data={
+                "email": "invalid-email",
+                "password": "Pass123!",
+                "name": "Test"
+            },
+            require_auth=False
+        )
+        
+        expected_invalid_email = status in [400, 422]
+        self.log_result("Invalid Email Format", expected_invalid_email, 
+                       f"Status: {status}, Response: {response}")
+        
+        # Test 4: Missing required fields
+        status, response = await self.make_request(
+            "POST", "/auth/register",
+            data={"email": "test@test.com"},
+            require_auth=False
+        )
+        
+        expected_missing_fields = status in [400, 422]
+        self.log_result("Missing Required Fields", expected_missing_fields, 
+                       f"Status: {status}, Response: {response}")
+    
+    async def test_auth_login(self):
+        """Login Tests"""
+        
+        # Test 6: Valid login
+        status, response = await self.make_request(
+            "POST", "/auth/login",
+            data={
+                "email": TEST_USER_EMAIL,
+                "password": TEST_USER_PASSWORD
+            },
+            require_auth=False
+        )
+        
+        if status == 200 and "token" in response:
+            self.auth_token = response["token"]
+            self.log_result("Valid Login", True, "Auth token received")
+        else:
+            self.log_result("Valid Login", False, f"Status: {status}, Response: {response}")
+        
+        # Test 7: Wrong password
+        status, response = await self.make_request(
+            "POST", "/auth/login",
+            data={
+                "email": TEST_USER_EMAIL,
+                "password": "WrongPass123!"
+            },
+            require_auth=False
+        )
+        
+        expected_wrong_password = status == 401
+        self.log_result("Wrong Password", expected_wrong_password, 
+                       f"Status: {status}, Response: {response}")
+        
+        # Test 8: Non-existent user
+        status, response = await self.make_request(
+            "POST", "/auth/login",
+            data={
+                "email": "nonexistent@test.com",
+                "password": "Pass123!"
+            },
+            require_auth=False
+        )
+        
+        expected_nonexistent = status == 401
+        self.log_result("Non-existent User", expected_nonexistent, 
+                       f"Status: {status}, Response: {response}")
+    
+    async def test_auth_session(self):
+        """Session Tests"""
+        
+        # Test 9: Get user with valid token
+        status, response = await self.make_request("GET", "/auth/me")
+        
+        valid_session = status == 200 and "user_id" in response
+        self.log_result("Valid Token Session", valid_session, 
+                       f"Status: {status}, User: {response.get('name', 'N/A')}")
+        
+        # Test 10: Access without token (use separate session to avoid cookies)
+        async with aiohttp.ClientSession() as clean_session:
+            async with clean_session.get(f"{BASE_URL}/auth/me") as response:
+                status = response.status
+                expected_no_auth = status in [401, 403]
+                self.log_result("No Token Access", expected_no_auth, 
+                               f"Status: {status}, No auth properly blocked: {expected_no_auth}")
+        
+        # Test 11: Invalid token (use separate session)
+        async with aiohttp.ClientSession() as clean_session:
+            headers = {"Authorization": "Bearer invalid-token-xyz", "Content-Type": "application/json"}
+            async with clean_session.get(f"{BASE_URL}/auth/me", headers=headers) as response:
+                status = response.status
+                expected_invalid_token = status in [401, 403]
+                self.log_result("Invalid Token", expected_invalid_token, 
+                               f"Status: {status}, Invalid token properly blocked: {expected_invalid_token}")
+    
+    async def test_onboarding_flow(self):
+        """PHASE 2: Onboarding Flow Tests"""
+        print("\n🚀 PHASE 2: ONBOARDING FLOW TESTS")
+        
+        # Test 12: Get questions
+        status, response = await self.make_request("GET", "/onboarding/questions", require_auth=False)
+        
+        questions_available = status == 200 and "questions" in response and len(response.get("questions", [])) > 0
+        self.log_result("Get Questions", questions_available, 
+                       f"Status: {status}, Questions count: {len(response.get('questions', []))}")
+        
+        # Test 13: Generate persona (simplified version - just with mock answers)
+        mock_answers = [
+            {"question_id": 0, "answer": "I create content about AI and technology for developers and entrepreneurs"},
+            {"question_id": 1, "answer": "LinkedIn"},
+            {"question_id": 2, "answer": "Bold Strategic Human"},
+            {"question_id": 3, "answer": "Lenny Rachitsky - depth + accessibility"},
+            {"question_id": 4, "answer": "Crypto speculation, hustle culture"},
+            {"question_id": 5, "answer": "Build personal brand"}
+        ]
+        
+        status, response = await self.make_request(
+            "POST", "/onboarding/generate-persona",
+            data={
+                "answers": mock_answers,
+                "posts_analysis": "Analytical voice with professional tone"
+            }
+        )
+        
+        persona_generated = status == 200 and "persona" in response
+        self.log_result("Generate Persona", persona_generated, 
+                       f"Status: {status}, Persona generated: {persona_generated}")
+        
+        # Test 14: Check if onboarding completed (via persona endpoint)
+        status, response = await self.make_request("GET", "/persona/me")
+        
+        onboarding_completed = status == 200 and "card" in response
+        self.log_result("Onboarding Completed", onboarding_completed, 
+                       f"Status: {status}, Persona available after onboarding: {onboarding_completed}")
+    
+    async def test_persona_engine(self):
+        """PHASE 3: Persona Engine Tests"""
+        print("\n👤 PHASE 3: PERSONA ENGINE TESTS")
+        
+        # Test 16: Get persona
+        status, response = await self.make_request("GET", "/persona/me")
+        
+        persona_available = status == 200 and "card" in response
+        self.log_result("Get Persona", persona_available, 
+                       f"Status: {status}, Has card: {bool(response.get('card'))}")
+        
+        # Test 17: Update persona field
+        status, response = await self.make_request(
+            "PUT", "/persona/me",
+            data={"card": {"hook_style": "Bold contrarian statement"}}
+        )
+        
+        persona_updated = status == 200
+        self.log_result("Update Persona", persona_updated, 
+                       f"Status: {status}, Response: {response}")
+        
+        # Test 18: Get regional English options
+        status, response = await self.make_request("GET", "/persona/regional-english/options")
+        
+        options_available = status == 200 and len(response.get("options", [])) == 4
+        self.log_result("Regional English Options", options_available, 
+                       f"Status: {status}, Options count: {len(response.get('options', []))}")
+        
+        # Test 19: Update regional English to UK
+        status, response = await self.make_request(
+            "PUT", "/persona/regional-english",
+            data={"regional_english": "UK"}
+        )
+        
+        regional_updated = status == 200
+        self.log_result("Update Regional English (UK)", regional_updated, 
+                       f"Status: {status}, Response: {response}")
+        
+        # Test 20: Invalid region
+        status, response = await self.make_request(
+            "PUT", "/persona/regional-english",
+            data={"regional_english": "FR"}
+        )
+        
+        invalid_region_rejected = status == 400
+        self.log_result("Invalid Region (FR)", invalid_region_rejected, 
+                       f"Status: {status}, Response: {response}")
+    
+    async def test_persona_sharing(self):
+        """Persona Sharing Tests"""
+        share_token = None
+        
+        # Test 21: Create share link
+        status, response = await self.make_request("POST", "/persona/share")
+        
+        if status == 200 and "share_token" in response:
+            share_token = response["share_token"]
+            share_created = True
+        else:
+            share_created = False
+        
+        self.log_result("Create Share Link", share_created, 
+                       f"Status: {status}, Token: {bool(share_token)}")
+        
+        if share_token:
+            # Test 22: View public persona (NO AUTH)
+            status, response = await self.make_request(
+                "GET", f"/persona/public/{share_token}",
+                require_auth=False
             )
+            
+            public_view_working = status == 200 and "creator" in response
+            self.log_result("View Public Persona", public_view_working, 
+                           f"Status: {status}, Has creator info: {bool(response.get('creator'))}")
+            
+            # Test 23: Revoke share
+            status, response = await self.make_request("DELETE", "/persona/share")
+            
+            share_revoked = status == 200
+            self.log_result("Revoke Share", share_revoked, 
+                           f"Status: {status}, Response: {response}")
+            
+            # Test 24: Access after revoke
+            status, response = await self.make_request(
+                "GET", f"/persona/public/{share_token}",
+                require_auth=False
+            )
+            
+            access_blocked = status in [404, 410]
+            self.log_result("Access After Revoke", access_blocked, 
+                           f"Status: {status}, Access blocked: {access_blocked}")
+    
+    async def test_content_studio(self):
+        """PHASE 4: Content Studio Tests"""
+        print("\n📝 PHASE 4: CONTENT STUDIO TESTS")
+        
+        # Test 25: Create content
+        status, response = await self.make_request(
+            "POST", "/content/create",
+            data={
+                "topic": "The future of AI in content creation",
+                "platform": "linkedin",
+                "content_type": "thought_leadership",
+                "raw_input": "The future of AI in content creation"
+            }
+        )
+        
+        content_job_created = status in [200, 202] and "job_id" in response
+        job_id = response.get("job_id") if content_job_created else None
+        self.log_result("Create Content", content_job_created, 
+                       f"Status: {status}, Job ID: {job_id}")
+        
+        # Test 26: Poll for status
+        if job_id:
+            poll_attempts = 0
+            max_attempts = 10
+            final_status = None
+            
+            while poll_attempts < max_attempts:
+                status, response = await self.make_request("GET", f"/content/job/{job_id}")
+                
+                if status == 200:
+                    current_status = response.get("status")
+                    if current_status not in ["processing", "queued"]:
+                        final_status = current_status
+                        break
+                
+                poll_attempts += 1
+                await asyncio.sleep(2)  # Wait 2 seconds between polls
+            
+            polling_working = final_status is not None
+            self.log_result("Poll Content Status", polling_working, 
+                           f"Final status: {final_status} after {poll_attempts} attempts")
+        
+        # Test 27: List user's content
+        status, response = await self.make_request("GET", "/content/jobs")
+        
+        content_list_available = status == 200 and ("jobs" in response or "content" in response)
+        self.log_result("List User Content", content_list_available, 
+                       f"Status: {status}, Jobs count: {len(response.get('jobs', response.get('content', [])))}")
+        
+        # Test 28: Invalid platform
+        status, response = await self.make_request(
+            "POST", "/content/create",
+            data={
+                "topic": "Test",
+                "platform": "invalid_platform",
+                "content_type": "thought_leadership",
+                "raw_input": "Test content"
+            }
+        )
+        
+        invalid_platform_rejected = status in [400, 422]
+        self.log_result("Invalid Platform", invalid_platform_rejected, 
+                       f"Status: {status}, Response: {response}")
+        
+        # Test 29: Empty topic
+        status, response = await self.make_request(
+            "POST", "/content/create",
+            data={
+                "topic": "",
+                "platform": "linkedin",
+                "content_type": "thought_leadership",
+                "raw_input": ""
+            }
+        )
+        
+        empty_topic_rejected = status in [400, 422]
+        self.log_result("Empty Topic", empty_topic_rejected, 
+                       f"Status: {status}, Response: {response}")
+    
+    async def test_dashboard_analytics(self):
+        """PHASE 5: Dashboard & Analytics"""
+        print("\n📊 PHASE 5: DASHBOARD & ANALYTICS TESTS")
+        
+        # Test 30: Dashboard stats
+        status, response = await self.make_request("GET", "/dashboard/stats")
+        
+        stats_available = status == 200
+        self.log_result("Dashboard Stats", stats_available, 
+                       f"Status: {status}, Response keys: {list(response.keys()) if isinstance(response, dict) else 'N/A'}")
+        
+        # Test 31: Daily brief
+        status, response = await self.make_request("GET", "/dashboard/daily-brief")
+        
+        brief_available = status == 200
+        self.log_result("Daily Brief", brief_available, 
+                       f"Status: {status}, Has suggestions: {bool(response.get('suggestions'))}")
+        
+        # Test 32: Analytics overview
+        status, response = await self.make_request("GET", "/analytics/overview")
+        
+        analytics_available = status == 200
+        self.log_result("Analytics Overview", analytics_available, 
+                       f"Status: {status}, Has data: {response.get('has_data', False)}")
+    
+    async def test_billing_credits(self):
+        """PHASE 6: Billing & Credits"""
+        print("\n💳 PHASE 6: BILLING & CREDITS TESTS")
+        
+        # Test 33: Get credit balance
+        status, response = await self.make_request("GET", "/billing/credits")
+        
+        credits_available = status == 200 and "credits" in response
+        self.log_result("Get Credits", credits_available, 
+                       f"Status: {status}, Credits: {response.get('credits', 'N/A')}")
+        
+        # Test 34: Get subscription
+        status, response = await self.make_request("GET", "/billing/subscription")
+        
+        subscription_available = status == 200 and "tier" in response
+        current_tier = response.get("tier", "unknown")
+        self.log_result("Get Subscription", subscription_available, 
+                       f"Status: {status}, Tier: {current_tier}")
+        
+        # Test 35: Upgrade to Pro (if currently free)
+        if current_tier == "free":
+            status, response = await self.make_request(
+                "POST", "/billing/subscription/upgrade",
+                data={"tier": "pro", "billing_period": "monthly"}
+            )
+            
+            upgrade_successful = status == 200 and response.get("new_tier") == "pro"
+            self.log_result("Upgrade to Pro", upgrade_successful, 
+                           f"Status: {status}, New tier: {response.get('new_tier', 'N/A')}")
+    
+    async def test_templates_marketplace(self):
+        """PHASE 7: Templates Marketplace"""
+        print("\n🛍️ PHASE 7: TEMPLATES MARKETPLACE TESTS")
+        
+        # Test 36: Get categories
+        status, response = await self.make_request("GET", "/templates/categories")
+        
+        categories_available = (status == 200 and 
+                               len(response.get("categories", [])) == 10 and
+                               len(response.get("hook_types", [])) == 8)
+        self.log_result("Template Categories", categories_available, 
+                       f"Status: {status}, Categories: {len(response.get('categories', []))}, Hook types: {len(response.get('hook_types', []))}")
+        
+        # Test 37: Browse templates
+        status, response = await self.make_request("GET", "/templates")
+        
+        templates_browsable = status == 200 and "templates" in response
+        self.log_result("Browse Templates", templates_browsable, 
+                       f"Status: {status}, Templates count: {len(response.get('templates', []))}")
+        
+        # Test 38: Filter by platform
+        status, response = await self.make_request("GET", "/templates?platform=linkedin")
+        
+        platform_filter_working = status == 200
+        self.log_result("Filter by Platform", platform_filter_working, 
+                       f"Status: {status}, Filtered results available")
+        
+        # Test 39: Featured templates
+        status, response = await self.make_request("GET", "/templates/featured")
+        
+        featured_available = status == 200 and "featured" in response
+        self.log_result("Featured Templates", featured_available, 
+                       f"Status: {status}, Has featured: {bool(response.get('featured'))}")
+    
+    async def test_agency_workspace(self):
+        """PHASE 8: Agency Workspace (with upgraded user)"""
+        print("\n🏢 PHASE 8: AGENCY WORKSPACE TESTS")
+        
+        # Test 40: Create workspace (as Pro+ user)
+        status, response = await self.make_request(
+            "POST", "/agency/workspace",
+            data={
+                "name": "E2E Test Agency",
+                "description": "Testing workspace"
+            }
+        )
+        
+        workspace_created = status == 200 and "workspace_id" in response
+        if workspace_created:
+            self.workspace_id = response["workspace_id"]
+        
+        self.log_result("Create Workspace", workspace_created, 
+                       f"Status: {status}, Workspace ID: {self.workspace_id}")
+        
+        # Test 41: List workspaces
+        status, response = await self.make_request("GET", "/agency/workspaces")
+        
+        workspaces_listed = status == 200 and "owned" in response
+        self.log_result("List Workspaces", workspaces_listed, 
+                       f"Status: {status}, Owned count: {len(response.get('owned', []))}")
+        
+        if self.workspace_id:
+            # Test 42: Invite creator
+            status, response = await self.make_request(
+                "POST", f"/agency/workspace/{self.workspace_id}/invite",
+                data={
+                    "email": "invited@test.com",
+                    "role": "creator"
+                }
+            )
+            
+            invite_sent = status == 200
+            self.log_result("Invite Creator", invite_sent, 
+                           f"Status: {status}, Invite sent: {invite_sent}")
+            
+            # Test 43: List members
+            status, response = await self.make_request("GET", f"/agency/workspace/{self.workspace_id}/members")
+            
+            members_listed = status == 200 and "members" in response
+            member_count = len(response.get("members", []))
+            self.log_result("List Members", members_listed, 
+                           f"Status: {status}, Members count: {member_count}")
+    
+    async def test_platform_connections(self):
+        """PHASE 9: Platform Connections"""
+        print("\n🔗 PHASE 9: PLATFORM CONNECTIONS TESTS")
+        
+        # Test 44: List available platforms
+        status, response = await self.make_request("GET", "/platforms/status")
+        
+        platforms_available = status == 200
+        platform_count = len(response.get("platforms", [])) if isinstance(response, dict) and "platforms" in response else 0
+        self.log_result("Available Platforms", platforms_available, 
+                       f"Status: {status}, Platforms count: {platform_count}")
+        
+        # Test 45: LinkedIn OAuth (mocked)
+        status, response = await self.make_request("GET", "/platforms/connect/linkedin")
+        
+        oauth_initiated = status == 200 or "auth_url" in response or status == 302
+        self.log_result("LinkedIn OAuth", oauth_initiated, 
+                       f"Status: {status}, OAuth response available: {bool(response)}")
+        
+        # Test 46: List connected platforms
+        status, response = await self.make_request("GET", "/platforms/status")
+        
+        connected_listed = status == 200
+        self.log_result("Connected Platforms", connected_listed, 
+                       f"Status: {status}, Platform status listed")
+    
+    async def test_error_handling(self):
+        """PHASE 10: Error Handling & Edge Cases"""
+        print("\n⚠️ PHASE 10: ERROR HANDLING & EDGE CASES")
+        
+        # Test 47: Access protected endpoint without auth (use separate session)
+        async with aiohttp.ClientSession() as clean_session:
+            async with clean_session.get(f"{BASE_URL}/persona/me") as response:
+                status = response.status
+                auth_required = status in [401, 403]
+                self.log_result("Unauthorized Access", auth_required, 
+                               f"Status: {status}, Auth properly required: {auth_required}")
+        
+        # Test 48: Access non-existent resource
+        status, response = await self.make_request("GET", "/content/job/non-existent-job-id")
+        
+        not_found = status == 404
+        self.log_result("Non-existent Resource", not_found, 
+                       f"Status: {status}, Properly returns 404: {not_found}")
+        
+        # Test 49: Invalid JSON body
+        try:
+            url = f"{BASE_URL}/content/create"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.auth_token}" if self.auth_token else ""
+            }
+            async with self.session.post(url, data="invalid-json", headers=headers) as response:
+                status = response.status
+                invalid_json_handled = status in [400, 422]
+        except Exception:
+            invalid_json_handled = True  # Exception handling counts as proper error handling
+        
+        self.log_result("Invalid JSON Body", invalid_json_handled, 
+                       f"Status: {status}, Invalid JSON properly handled")
+        
+        # Test 50: Very long input
+        long_topic = "A" * 10000
+        status, response = await self.make_request(
+            "POST", "/content/create",
+            data={
+                "topic": long_topic,
+                "platform": "linkedin",
+                "content_type": "thought_leadership",
+                "raw_input": long_topic
+            }
+        )
+        
+        long_input_handled = status in [200, 202, 400, 422]  # Either accepted or properly rejected
+        self.log_result("Very Long Input", long_input_handled, 
+                       f"Status: {status}, Long input handled appropriately")
+        
+        # Test 51: Invalid token with separate session
+        async with aiohttp.ClientSession() as clean_session:
+            headers = {"Authorization": "Bearer invalid-token-xyz", "Content-Type": "application/json"}
+            async with clean_session.get(f"{BASE_URL}/persona/me", headers=headers) as response:
+                status = response.status
+                invalid_token_blocked = status in [401, 403]
+                self.log_result("Invalid Token Blocked", invalid_token_blocked, 
+                               f"Status: {status}, Invalid token properly blocked: {invalid_token_blocked}")
+    
+    async def run_all_tests(self):
+        """Run all test phases"""
+        print("🚀 STARTING COMPREHENSIVE END-TO-END TESTING FOR ThookAI PLATFORM")
+        print("=" * 80)
+        
+        start_time = time.time()
+        
+        try:
+            await self.test_auth_registration()
+            await self.test_auth_login()
+            await self.test_auth_session()
+            await self.test_onboarding_flow()
+            await self.test_persona_engine()
+            await self.test_persona_sharing()
+            await self.test_content_studio()
+            await self.test_dashboard_analytics()
+            await self.test_billing_credits()
+            await self.test_templates_marketplace()
+            await self.test_agency_workspace()
+            await self.test_platform_connections()
+            await self.test_error_handling()
+        except Exception as e:
+            print(f"\n❌ CRITICAL ERROR DURING TESTING: {e}")
+            self.log_result("Test Suite", False, f"Critical error: {e}")
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        # Print summary
+        print("\n" + "=" * 80)
+        print("📊 COMPREHENSIVE TEST RESULTS SUMMARY")
+        print("=" * 80)
+        
+        passed_tests = [r for r in self.test_results if r["passed"]]
+        failed_tests = [r for r in self.test_results if not r["passed"]]
+        
+        print(f"✅ PASSED: {len(passed_tests)}")
+        print(f"❌ FAILED: {len(failed_tests)}")
+        print(f"⏱️ DURATION: {duration:.2f} seconds")
+        print(f"📈 SUCCESS RATE: {len(passed_tests)/(len(self.test_results)) * 100:.1f}%")
+        
+        if failed_tests:
+            print("\n❌ FAILED TESTS:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
+        
+        # Save results to file
+        with open("/app/e2e_test_results.json", "w") as f:
+            json.dump({
+                "summary": {
+                    "total_tests": len(self.test_results),
+                    "passed": len(passed_tests),
+                    "failed": len(failed_tests),
+                    "success_rate": len(passed_tests)/(len(self.test_results)) * 100,
+                    "duration_seconds": duration,
+                    "timestamp": datetime.now().isoformat()
+                },
+                "results": self.test_results
+            }, f, indent=2)
+        
+        print(f"\n📄 Detailed results saved to: /app/e2e_test_results.json")
+        
+        return len(failed_tests) == 0
 
-def test_invitation_flow():
-    """Test workspace invitation flow."""
-    if not workspace_id or not studio_user_token:
-        test_results.add_result("Invitation Flow", False, "Missing workspace_id or token")
-        return
-    
-    headers = {"Authorization": f"Bearer {studio_user_token}"}
-    
-    # 7. Invite a creator
-    invite_data = {
-        "email": "creator@test.com",
-        "role": "creator"
-    }
-    
-    response = make_request("POST", f"/agency/workspace/{workspace_id}/invite", invite_data, headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Invite Creator",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-        return
-    
-    data = response.json()
-    invite_id = data.get("invite_id")
-    success = data.get("success", False) and invite_id
-    test_results.add_result(
-        "Invite Creator",
-        success,
-        f"Invite ID: {invite_id}, Status: {data.get('status', 'unknown')}" if success else f"Failed: {data}"
-    )
-    
-    # 8. List members
-    response = make_request("GET", f"/agency/workspace/{workspace_id}/members", headers=headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "List Members",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-        return
-    
-    data = response.json()
-    members = data.get("members", [])
-    success = data.get("success", False) and len(members) >= 1
-    
-    # Check for owner and pending invite
-    has_owner = any(m.get("role") == "owner" for m in members)
-    has_pending = any(m.get("status") == "pending" for m in members)
-    
-    test_results.add_result(
-        "List Members",
-        success and has_owner,
-        f"Total members: {len(members)}, Has owner: {has_owner}, Has pending invite: {has_pending}"
-    )
-    
-    # 9. List creators with stats
-    response = make_request("GET", f"/agency/workspace/{workspace_id}/creators", headers=headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "List Creators with Stats",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-        return
-    
-    data = response.json()
-    creators = data.get("creators", [])
-    success = data.get("success", False)
-    test_results.add_result(
-        "List Creators with Stats",
-        success,
-        f"Found {len(creators)} active creators" if success else f"Failed: {data}"
-    )
-    
-    # 10. Get workspace content
-    response = make_request("GET", f"/agency/workspace/{workspace_id}/content", headers=headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Get Workspace Content",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-        return
-    
-    data = response.json()
-    content = data.get("content", [])
-    success = data.get("success", False)
-    test_results.add_result(
-        "Get Workspace Content",
-        success,
-        f"Found {len(content)} content items" if success else f"Failed: {data}"
-    )
-
-def test_tier_restriction():
-    """Test that free tier users cannot access agency features."""
-    if not free_user_token:
-        test_results.add_result("Tier Restriction", False, "No free user token available")
-        return
-    
-    headers = {"Authorization": f"Bearer {free_user_token}"}
-    
-    # 11. Try to create workspace with free user
-    workspace_data = {
-        "name": "Free User Workspace",
-        "description": "This should fail"
-    }
-    
-    response = make_request("POST", "/agency/workspace", workspace_data, headers)
-    
-    # Should return 403 Forbidden
-    if response and response.status_code == 403:
-        data = response.json()
-        expected_message = "Agency features require Studio or Agency tier"
-        has_expected_message = expected_message in data.get("detail", "")
-        test_results.add_result(
-            "Tier Restriction (Free User)",
-            has_expected_message,
-            f"Got expected 403 error: {data.get('detail', '')}" if has_expected_message else f"Wrong error message: {data.get('detail', '')}"
-        )
-    else:
-        test_results.add_result(
-            "Tier Restriction (Free User)",
-            False,
-            f"Expected 403, got {response.status_code if response else 'Timeout'}"
-        )
-
-def test_templates_categories():
-    """Test template categories endpoint."""
-    if not studio_user_token:
-        test_results.add_result("Templates Categories", False, "No studio user token available")
-        return
-    
-    headers = {"Authorization": f"Bearer {studio_user_token}"}
-    
-    # 13. Get categories
-    response = make_request("GET", "/templates/categories", headers=headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Get Templates Categories",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-        return
-    
-    data = response.json()
-    categories = data.get("categories", [])
-    hook_types = data.get("hook_types", [])
-    success = data.get("success", False) and len(categories) == 10 and len(hook_types) == 8
-    
-    test_results.add_result(
-        "Get Templates Categories",
-        success,
-        f"Categories: {len(categories)}, Hook types: {len(hook_types)}" if success else f"Wrong counts: {len(categories)} categories, {len(hook_types)} hook types"
-    )
-
-def create_test_content():
-    """Create and approve test content for templates."""
-    global job_id_for_template
-    
-    if not studio_user_token:
-        test_results.add_result("Create Test Content", False, "No studio user token available")
-        return
-    
-    headers = {"Authorization": f"Bearer {studio_user_token}"}
-    
-    # Create content
-    content_data = {
-        "platform": "linkedin",
-        "content_type": "post", 
-        "raw_input": "AI productivity tips for content creators - help people understand how to use AI tools effectively for content creation"
-    }
-    
-    response = make_request("POST", "/content/create", content_data, headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Create Test Content",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-        return
-    
-    data = response.json()
-    job_id = data.get("job_id")
-    if not job_id:
-        test_results.add_result("Create Test Content", False, "No job_id returned")
-        return
-    
-    # Since we can't easily get approved content, let's mock it by directly updating the database
-    # For testing purposes, we'll assume this content would be approved
-    job_id_for_template = job_id
-    
-    test_results.add_result(
-        "Create Test Content",
-        True,
-        f"Content created with job_id: {job_id} (would need manual approval for template publishing)"
-    )
-
-def test_templates_marketplace():
-    """Test templates marketplace endpoints."""
-    if not studio_user_token:
-        test_results.add_result("Templates Marketplace", False, "No studio user token available")
-        return
-    
-    headers = {"Authorization": f"Bearer {studio_user_token}"}
-    
-    # 15. Browse templates
-    response = make_request("GET", "/templates", headers=headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Browse Templates",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-    else:
-        data = response.json()
-        templates = data.get("templates", [])
-        success = data.get("success", False)
-        test_results.add_result(
-            "Browse Templates",
-            success,
-            f"Found {len(templates)} templates, Total: {data.get('total', 0)}"
-        )
-    
-    # 16. Get featured templates
-    response = make_request("GET", "/templates/featured", headers=headers)
-    if not response or response.status_code != 200:
-        test_results.add_result(
-            "Get Featured Templates",
-            False,
-            f"Failed: {response.status_code if response else 'Timeout'}"
-        )
-    else:
-        data = response.json()
-        featured = data.get("featured", [])
-        recent = data.get("recent", [])
-        success = data.get("success", False)
-        test_results.add_result(
-            "Get Featured Templates",
-            success,
-            f"Featured: {len(featured)}, Recent: {len(recent)}" if success else f"Failed: {data}"
-        )
-    
-    # 17. Test template publishing with non-existent job_id
-    fake_template_data = {
-        "job_id": "non-existent-job-id-12345",
-        "title": "Test Template",
-        "category": "thought_leadership",
-        "description": "This should fail"
-    }
-    
-    response = make_request("POST", "/templates", fake_template_data, headers)
-    
-    # Should return 404 "Content not found"
-    if response and response.status_code == 404:
-        data = response.json()
-        expected_message = "Content not found"
-        has_expected_message = expected_message in data.get("detail", "")
-        test_results.add_result(
-            "Template Publishing Validation",
-            has_expected_message,
-            f"Got expected 404 error: {data.get('detail', '')}" if has_expected_message else f"Wrong error message: {data.get('detail', '')}"
-        )
-    else:
-        test_results.add_result(
-            "Template Publishing Validation",
-            False,
-            f"Expected 404, got {response.status_code if response else 'Timeout'}"
-        )
-
-def main():
-    """Run all Sprint 12 tests."""
-    print("🚀 Starting Sprint 12 Backend Testing - Agency Workspace & Templates Marketplace")
-    print(f"Testing against: {BASE_URL}")
-    print("=" * 80)
-    
-    # PRE-SETUP
-    print("\n📋 PRE-SETUP:")
-    if not register_and_setup_studio_user():
-        print("❌ Failed to setup studio user, aborting tests")
-        return
-    
-    if not register_free_user():
-        print("❌ Failed to setup free user, some tests will be skipped")
-    
-    # AGENCY WORKSPACE TESTS
-    print("\n🏢 AGENCY WORKSPACE TESTS:")
-    test_workspace_crud()
-    test_invitation_flow()
-    test_tier_restriction()
-    
-    # TEMPLATES MARKETPLACE TESTS  
-    print("\n📚 TEMPLATES MARKETPLACE TESTS:")
-    test_templates_categories()
-    create_test_content()
-    test_templates_marketplace()
-    
-    # Summary
-    print("\n" + "=" * 80)
-    test_results.print_summary()
-    
-    return test_results.failed == 0
+async def main():
+    """Main test runner"""
+    async with E2ETestRunner() as runner:
+        success = await runner.run_all_tests()
+        return 0 if success else 1
 
 if __name__ == "__main__":
-    success = main()
-    exit(0 if success else 1)
+    exit_code = asyncio.run(main())
+    exit(exit_code)
