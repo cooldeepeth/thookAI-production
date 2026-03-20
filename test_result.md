@@ -284,11 +284,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Auth Page - Registration Form FIX VERIFICATION FAILED"
+    - "Auth Page - Registration Form ERROR HANDLING FIX REQUIRED"
   stuck_tasks:
     - "Auth Page - Registration Form"
   test_all: false
-  test_priority: "critical_auth_bug_needs_proper_fix"
+  test_priority: "critical_auth_error_handling_body_consumed"
 
 agent_communication:
   - agent: "main"
@@ -327,6 +327,181 @@ agent_communication:
       2. Registration with duplicate email (should show "Email already registered")
       3. Login with correct credentials
       4. Login with wrong password (should show "Invalid email or password")
+  
+  - agent: "main"
+    message: |
+      Applied recommended fix: Removed res.clone(), parse JSON once, check res.ok after parsing.
+      Lines 45-56 in AuthPage.jsx now handle response properly without cloning.
+      Please verify all error scenarios work correctly.
+  
+  - agent: "testing"
+    message: |
+      ❌ CRITICAL: AUTH FIX VERIFICATION FAILED - BODY STREAM ISSUE PERSISTS
+      
+      🔴 ROOT CAUSE IDENTIFIED: Response body consumed before application code reads it
+      
+      📊 COMPREHENSIVE TEST RESULTS (5 scenarios):
+      
+      ✅ TEST 1 - REGISTRATION SUCCESS (PASSED):
+      - Unique email registration works perfectly
+      - User created and redirected to dashboard
+      - NO console errors, NO body stream errors
+      
+      ❌ TEST 2 - DUPLICATE EMAIL (FAILED):
+      - Backend returns: {"detail": "Email already registered"} (verified via network capture)
+      - Frontend shows: "Unable to process server response"
+      - Network trace confirms valid JSON response with proper Content-Type
+      - res.bodyUsed = true BEFORE res.json() call
+      
+      ✅ TEST 3 - LOGIN SUCCESS (PASSED):
+      - Login with correct credentials works perfectly
+      - Redirected to dashboard successfully
+      - NO console errors
+      
+      ❌ TEST 4 - WRONG PASSWORD (FAILED):
+      - Backend returns: {"detail": "Invalid email or password"} (verified)
+      - Frontend shows: "Unable to process server response"
+      - Same body stream consumed issue
+      
+      ❌ TEST 5 - NON-EXISTENT USER (FAILED):
+      - Shows: "Unable to process server response"
+      - Same issue as tests 2 and 4
+      
+      🔍 TECHNICAL ROOT CAUSE:
+      
+      Direct browser evaluation test revealed:
+      ```
+      {
+        "error": "json_parse_failed",
+        "jsonError": "Failed to execute 'json' on 'Response': body stream already read",
+        "status": 400,
+        "bodyUsed": true  // ← Body already consumed!
+      }
+      ```
+      
+      The response body is being consumed BEFORE our code can read it. This happens specifically for ERROR responses (400, 401) but NOT for SUCCESS responses (200).
+      
+      Likely culprits:
+      1. Cloudflare proxy logging error responses
+      2. Browser DevTools consuming error bodies for console display
+      3. Network monitoring middleware
+      
+      ✅ BACKEND STATUS: 100% WORKING
+      - POST /api/auth/register with duplicate → {"detail":"Email already registered"}
+      - POST /api/auth/login with wrong password → {"detail":"Invalid email or password"}
+      - All responses have proper Content-Type: application/json
+      
+      💡 RECOMMENDED SOLUTIONS:
+      
+      **Option 1: Clone with Fallback (Most Robust)**
+      ```javascript
+      const res = await fetch(...);
+      const resClone = res.clone();
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        try {
+          data = await resClone.json();
+        } catch {
+          // Both failed - provide status-based error
+          if (!res.ok) {
+            const errors = {
+              400: "Invalid request. Please check your information.",
+              401: "Invalid email or password",
+              409: "Email already registered",
+              500: "Server error. Please try again later."
+            };
+            throw new Error(errors[res.status] || "Something went wrong");
+          }
+          throw new Error("Unable to process server response");
+        }
+      }
+      
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Something went wrong");
+      }
+      
+      login(data);
+      navigate("/dashboard", { replace: true });
+      ```
+      
+      **Option 2: Read as Text First**
+      ```javascript
+      const res = await fetch(...);
+      
+      let text;
+      try {
+        text = await res.text();
+      } catch {
+        throw new Error("Unable to reach server");
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // Not JSON - use status-based error
+        if (!res.ok) {
+          throw new Error("Something went wrong. Please try again.");
+        }
+        throw new Error("Unable to process server response");
+      }
+      
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Something went wrong");
+      }
+      
+      login(data);
+      navigate("/dashboard", { replace: true });
+      ```
+      
+      **Option 3: Check bodyUsed Flag**
+      ```javascript
+      const res = await fetch(...);
+      
+      // If body already consumed, provide helpful status-based errors
+      if (res.bodyUsed && !res.ok) {
+        const errors = {
+          400: "Invalid request",
+          401: "Invalid email or password",
+          409: "Email already registered"
+        };
+        throw new Error(errors[res.status] || "Something went wrong");
+      }
+      
+      // Normal flow for unconsumed bodies
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        if (!res.ok) {
+          throw new Error("Something went wrong");
+        }
+        throw new Error("Unable to process server response");
+      }
+      
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Something went wrong");
+      }
+      
+      login(data);
+      navigate("/dashboard", { replace: true });
+      ```
+      
+      🎯 RECOMMENDATION: Option 1 (Clone with Fallback) is most robust and maintains backend error message fidelity when possible.
+      
+      📸 SCREENSHOTS:
+      - verify_01_reg_success.png - ✅ Registration success
+      - verify_02_duplicate_error.png - ❌ Shows "Unable to process server response"
+      - verify_04_wrong_pwd_error.png - ❌ Shows "Unable to process server response"
+      - clean_test_02_duplicate.png - Duplicate email error state
+      - clean_test_04_wrong_pwd.png - Wrong password error state
+      
+      🚨 SEVERITY: HIGH - Poor UX for error scenarios (common user mistakes)
+      
+      ACTION REQUIRED: Main agent must implement one of the recommended solutions above to properly handle consumed response bodies.
   
   - agent: "testing"
     message: |
@@ -919,7 +1094,7 @@ agent_communication:
     implemented: true
     working: false
     file: "pages/AuthPage.jsx"
-    stuck_count: 2
+    stuck_count: 3
     priority: "critical"
     needs_retesting: false
     status_history:
@@ -935,6 +1110,12 @@ agent_communication:
       - working: false
         agent: "testing"
         comment: "❌ FIX INTRODUCED NEW BUG: The res.clone() approach fails on error responses. Test Results: (1) ✅ Registration SUCCESS works - new user created and redirected to dashboard, NO console errors. (2) ❌ Registration DUPLICATE EMAIL fails - shows JavaScript error 'Failed to execute clone on Response: Response body is already used' instead of 'Email already registered'. (3) ✅ Login SUCCESS works - user logged in and redirected. (4) ❌ Login WRONG PASSWORD fails - shows same JavaScript cloning error instead of 'Invalid email or password'. ROOT CAUSE: res.clone() throws error when response body is already consumed or in error scenarios (400/401). The fix prevents the original error for success cases but breaks error handling. BACKEND VERIFIED: curl tests confirm backend returns correct error messages: {detail: 'Email already registered'} for duplicate, {detail: 'Invalid email or password'} for wrong password."
+      - working: false
+        agent: "main"
+        comment: "Applied recommended fix: Parse JSON once, check res.ok after parsing. Removed res.clone() completely."
+      - working: false
+        agent: "testing"
+        comment: "❌ FIX STILL NOT WORKING: Comprehensive testing reveals response body is being consumed BEFORE application code can read it. TEST RESULTS: (1) ✅ Registration SUCCESS - works perfectly. (2) ❌ Duplicate Email - shows 'Unable to process server response' instead of 'Email already registered'. (3) ✅ Login SUCCESS - works perfectly. (4) ❌ Wrong Password - shows 'Unable to process server response' instead of 'Invalid email or password'. (5) ❌ Non-existent User - shows 'Unable to process server response'. ROOT CAUSE IDENTIFIED: Network monitoring shows backend returns valid JSON: {detail: 'Email already registered'} with Content-Type: application/json, BUT direct browser test confirms res.bodyUsed=true BEFORE res.json() is called, causing 'Failed to execute json on Response: body stream already read' error. This is likely caused by Cloudflare proxy, browser DevTools, or other middleware consuming error response bodies for logging. SUCCESS responses (200) work fine because body not consumed. ERROR responses (400/401) fail because body already read. RECOMMENDED FIX: Use res.clone() WITH proper fallback handling, OR read as text first and parse manually, OR provide status-based error messages when body is already consumed."
 
 frontend:
   - task: "Settings Page"

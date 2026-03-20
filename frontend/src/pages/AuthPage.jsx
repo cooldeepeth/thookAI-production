@@ -41,23 +41,21 @@ export default function AuthPage() {
         credentials: "include",
         body: JSON.stringify(body),
       });
-      
-      // Clone response before reading to avoid "body already read" error
-      const resClone = res.clone();
-      
+
+      // Parse JSON response once - works for both success and error responses
       let data;
       try {
         data = await res.json();
       } catch {
-        // If JSON parsing fails, try to get text from clone
-        const text = await resClone.text();
-        throw new Error(text || "Something went wrong");
+        throw new Error("Unable to process server response");
       }
-      
+
+      // Check response status after parsing
       if (!res.ok) {
         throw new Error(data.detail || data.message || "Something went wrong");
       }
-      
+
+      // Success - log user in
       login(data);
       navigate("/dashboard", { replace: true });
     } catch (err) {
