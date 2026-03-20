@@ -18,9 +18,9 @@ const quickActions = [
 ];
 
 const upcomingFeatures = [
-  { sprint: 6, title: "Media Agents", desc: "AI-powered images and videos", icon: PenLine, ready: false },
-  { sprint: 7, title: "Platform Publishing", desc: "Auto-publish to LinkedIn, X, Instagram", icon: Zap, ready: false },
-  { sprint: 9, title: "Analytics", desc: "Track your content performance", icon: BarChart2, ready: false },
+  { title: "API Webhooks", desc: "Real-time notifications for content events", icon: Zap, status: "coming" },
+  { title: "Team Analytics", desc: "Cross-creator performance insights", icon: BarChart2, status: "coming" },
+  { title: "AI Voice Cloning", desc: "Generate audio content in your voice", icon: Brain, status: "coming" },
 ];
 
 const platformIcons = {
@@ -315,7 +315,7 @@ export default function DashboardHome() {
 
       {/* Coming Soon Features */}
       <div>
-        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Platform Roadmap</h3>
+        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Coming Soon</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {upcomingFeatures.map((f, i) => (
             <motion.div
@@ -325,13 +325,13 @@ export default function DashboardHome() {
               transition={{ delay: 0.3 + i * 0.05 }}
               className="card-thook p-4 flex items-start gap-3"
             >
-              <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
-                <f.icon size={18} className="text-zinc-500" />
+              <div className="w-9 h-9 rounded-xl bg-violet/10 flex items-center justify-center flex-shrink-0">
+                <f.icon size={18} className="text-violet" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-sm font-medium text-white">{f.title}</p>
-                  <span className="text-[10px] font-mono text-zinc-600 bg-white/5 px-1.5 py-0.5 rounded">S{f.sprint}</span>
+                  <span className="text-[10px] font-mono text-violet bg-violet/10 px-1.5 py-0.5 rounded">Soon</span>
                 </div>
                 <p className="text-xs text-zinc-500">{f.desc}</p>
               </div>
