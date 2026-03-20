@@ -1,0 +1,99 @@
+[
+  {
+    "test": "User Registration",
+    "status": "PASS",
+    "message": "User registered: Sprint11 Tester 1774009778",
+    "timestamp": "2026-03-20T12:29:38.465211",
+    "data": {
+      "user_id": "user_fe38b27329f1",
+      "email": "test_sprint11_1774009778@example.com",
+      "name": "Sprint11 Tester 1774009778",
+      "picture": null,
+      "auth_method": "email",
+      "plan": "free",
+      "credits": 100,
+      "onboarding_completed": false,
+      "platforms_connected": [],
+      "created_at": "2026-03-20T12:29:38.441874+00:00",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyX2ZlMzhiMjczMjlmMSIsImVtYWlsIjoidGVzdF9zcHJpbnQxMV8xNzc0MDA5Nzc4QGV4YW1wbGUuY29tIiwiZXhwIjoxNzc0NjE0NTc4fQ.e1Gm_5sRTRPtdTicg9Q5z8MeIO0xd-tHoYS2Oh5WpV4"
+    }
+  },
+  {
+    "test": "Get Onboarding Questions",
+    "status": "PASS",
+    "message": "Retrieved 7 questions",
+    "timestamp": "2026-03-20T12:29:38.614593"
+  },
+  {
+    "test": "Onboarding Complete",
+    "status": "PASS",
+    "message": "Persona created: Educator",
+    "timestamp": "2026-03-20T12:29:44.725285"
+  },
+  {
+    "test": "Create Share Link",
+    "status": "PASS",
+    "message": "Share created: ZV30lMq2... expires: 2026-04-19T12:29:44.851075+00:00",
+    "timestamp": "2026-03-20T12:29:44.869489"
+  },
+  {
+    "test": "Check Share Status",
+    "status": "PASS",
+    "message": "Share status confirmed: is_shared=True",
+    "timestamp": "2026-03-20T12:29:45.009580"
+  },
+  {
+    "test": "Fetch Public Persona",
+    "status": "PASS",
+    "message": "Public persona retrieved, view_count: 1",
+    "timestamp": "2026-03-20T12:29:45.128513"
+  },
+  {
+    "test": "View Count Increment",
+    "status": "PASS",
+    "message": "View count incremented: 2",
+    "timestamp": "2026-03-20T12:29:46.242172"
+  },
+  {
+    "test": "Revoke Share Link",
+    "status": "PASS",
+    "message": "Share link revoked successfully",
+    "timestamp": "2026-03-20T12:29:46.368183"
+  },
+  {
+    "test": "Verify Revoked Link 404",
+    "status": "FAIL",
+    "message": "Expected 404, got No response",
+    "timestamp": "2026-03-20T12:29:47.471790"
+  },
+  {
+    "test": "Get Regional Options",
+    "status": "PASS",
+    "message": "Retrieved 4 regional options",
+    "timestamp": "2026-03-20T12:29:47.574263"
+  },
+  {
+    "test": "Update to UK English",
+    "status": "PASS",
+    "message": "Successfully updated to UK English",
+    "timestamp": "2026-03-20T12:29:47.688925"
+  },
+  {
+    "test": "Verify UK in Card",
+    "status": "PASS",
+    "message": "Persona card contains regional_english: UK",
+    "timestamp": "2026-03-20T12:29:47.813668"
+  },
+  {
+    "test": "Update to AU English",
+    "status": "PASS",
+    "message": "Successfully updated to AU English",
+    "timestamp": "2026-03-20T12:29:47.905254"
+  },
+  {
+    "test": "Test Invalid Regional Code",
+    "status": "FAIL",
+    "message": "Expected 400, got No response",
+    "timestamp": "2026-03-20T12:29:48.009680"
+  }
+]

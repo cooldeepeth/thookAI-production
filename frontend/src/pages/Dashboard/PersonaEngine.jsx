@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Zap, RefreshCw, Edit2, Check, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Zap, RefreshCw, Edit2, Check, X, Share2, Download, Copy, Globe, ExternalLink } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 
@@ -19,6 +19,13 @@ const UOM_LABELS = {
   focus_preference: { label: "Focus Mode", values: { "single-platform": "text-cyan-400", "multi-platform": "text-violet" } },
   risk_tolerance: { label: "Risk Tolerance", values: { conservative: "text-blue-400", balanced: "text-zinc-300", bold: "text-orange-400" } },
 };
+
+const REGIONAL_ENGLISH_OPTIONS = [
+  { code: "US", name: "American English", flag: "🇺🇸" },
+  { code: "UK", name: "British English", flag: "🇬🇧" },
+  { code: "AU", name: "Australian English", flag: "🇦🇺" },
+  { code: "IN", name: "Indian English", flag: "🇮🇳" },
+];
 
 function VoiceFingerprintBars({ fingerprint = {} }) {
   const dist = fingerprint.sentence_length_distribution || {};
@@ -86,6 +93,14 @@ function EditableField({ label, value, onSave }) {
 export default function PersonaEngine() {
   const [persona, setPersona] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [shareStatus, setShareStatus] = useState(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [downloadingImage, setDownloadingImage] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState("US");
+  const [showRegionDropdown, setShowRegionDropdown] = useState(false);
+  const personaCardRef = useRef(null);
   const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
 
@@ -93,7 +108,16 @@ export default function PersonaEngine() {
     (async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/persona/me`, { credentials: "include" });
-        if (res.ok) setPersona(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setPersona(data);
+          setSelectedRegion(data?.card?.regional_english || "US");
+        }
+        // Also fetch share status
+        const shareRes = await fetch(`${BACKEND_URL}/api/persona/share/status`, { credentials: "include" });
+        if (shareRes.ok) {
+          setShareStatus(await shareRes.json());
+        }
       } catch {}
       setLoading(false);
     })();
@@ -117,6 +141,93 @@ export default function PersonaEngine() {
     await fetch(`${BACKEND_URL}/api/persona/me`, { method: "DELETE", credentials: "include" });
     await checkAuth(); // refresh user state so onboarding_completed=false
     navigate("/onboarding");
+  };
+
+  // Share functionality
+  const handleShare = async () => {
+    setShareLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/persona/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ expiry_days: 30 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setShareStatus({
+          is_shared: true,
+          share_token: data.share_token,
+          share_url: data.share_url,
+          expires_at: data.expires_at,
+          is_permanent: data.is_permanent,
+          view_count: 0,
+        });
+        setShowShareModal(true);
+      }
+    } catch (err) {
+      console.error("Failed to create share link:", err);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleRevokeShare = async () => {
+    if (!window.confirm("Revoke your persona share link? Anyone with the link will no longer be able to view it.")) return;
+    try {
+      await fetch(`${BACKEND_URL}/api/persona/share`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      setShareStatus({ is_shared: false });
+      setShowShareModal(false);
+    } catch {}
+  };
+
+  const copyShareLink = () => {
+    const fullUrl = `${window.location.origin}/creator/${shareStatus?.share_token}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  // Download as image functionality
+  const handleDownloadImage = async () => {
+    if (!personaCardRef.current) return;
+    setDownloadingImage(true);
+    try {
+      // Dynamically import html2canvas
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(personaCardRef.current, {
+        backgroundColor: "#0A0A0A",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      link.download = `${user?.name || "creator"}-persona-card.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (err) {
+      console.error("Failed to download image:", err);
+    } finally {
+      setDownloadingImage(false);
+    }
+  };
+
+  // Regional English update
+  const handleRegionalEnglishChange = async (code) => {
+    setSelectedRegion(code);
+    setShowRegionDropdown(false);
+    try {
+      await fetch(`${BACKEND_URL}/api/persona/regional-english`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ regional_english: code }),
+      });
+      setPersona(p => ({ ...p, card: { ...p.card, regional_english: code } }));
+    } catch {}
   };
 
   if (loading) return (
@@ -144,9 +255,85 @@ export default function PersonaEngine() {
   const archetype = card.personality_archetype || "Educator";
   const colors = ARCHETYPE_COLORS[archetype] || ARCHETYPE_COLORS.Educator;
   const uom = persona.uom || {};
+  const currentRegion = REGIONAL_ENGLISH_OPTIONS.find(r => r.code === selectedRegion) || REGIONAL_ENGLISH_OPTIONS[0];
 
   return (
     <main className="p-6 space-y-6 max-w-5xl" data-testid="persona-engine-page">
+      {/* Share Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowShareModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0F0F0F] border border-white/10 rounded-2xl p-6 max-w-md w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-lime/10 rounded-xl flex items-center justify-center">
+                  <Share2 size={20} className="text-lime" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-white">Share Your Persona Card</h3>
+                  <p className="text-zinc-500 text-xs">Anyone with this link can view your card</p>
+                </div>
+              </div>
+              
+              <div className="bg-white/5 rounded-lg p-3 flex items-center gap-2 mb-4">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}/creator/${shareStatus?.share_token}`}
+                  className="flex-1 bg-transparent text-white text-sm outline-none truncate"
+                />
+                <button
+                  onClick={copyShareLink}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    copiedLink 
+                      ? "bg-lime text-black" 
+                      : "bg-white/10 text-white hover:bg-white/20"
+                  }`}
+                >
+                  {copiedLink ? "Copied!" : "Copy"}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-zinc-500 mb-4">
+                <span>
+                  {shareStatus?.is_permanent 
+                    ? "Permanent link (Pro+)" 
+                    : `Expires ${new Date(shareStatus?.expires_at).toLocaleDateString()}`
+                  }
+                </span>
+                <span>{shareStatus?.view_count || 0} views</span>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.open(`/creator/${shareStatus?.share_token}`, "_blank")}
+                  className="flex-1 btn-ghost text-sm py-2 flex items-center justify-center gap-2"
+                >
+                  <ExternalLink size={14} /> Preview
+                </button>
+                <button
+                  onClick={handleRevokeShare}
+                  className="flex-1 btn-ghost text-sm py-2 text-red-400 hover:bg-red-400/10"
+                >
+                  Revoke Link
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -157,19 +344,50 @@ export default function PersonaEngine() {
           <h2 className="font-display font-bold text-2xl text-white">Your Persona Engine</h2>
           <p className="text-zinc-500 text-sm">Your AI voice clone. Edit any field to fine-tune your identity.</p>
         </div>
-        <button
-          onClick={handleReset}
-          data-testid="reset-persona-btn"
-          className="flex items-center gap-2 btn-ghost text-xs px-4 py-2 text-zinc-500"
-        >
-          <RefreshCw size={13} /> Re-interview
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Share button */}
+          <button
+            onClick={shareStatus?.is_shared ? () => setShowShareModal(true) : handleShare}
+            disabled={shareLoading}
+            data-testid="share-persona-btn"
+            className="flex items-center gap-2 btn-ghost text-xs px-4 py-2 text-lime border border-lime/30 hover:bg-lime/10"
+          >
+            {shareLoading ? (
+              <div className="w-4 h-4 border-2 border-lime border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Share2 size={13} />
+            )}
+            {shareStatus?.is_shared ? "View Share Link" : "Share Card"}
+          </button>
+          {/* Download button */}
+          <button
+            onClick={handleDownloadImage}
+            disabled={downloadingImage}
+            data-testid="download-persona-btn"
+            className="flex items-center gap-2 btn-ghost text-xs px-4 py-2 text-zinc-400 hover:text-white"
+          >
+            {downloadingImage ? (
+              <div className="w-4 h-4 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Download size={13} />
+            )}
+            Download
+          </button>
+          {/* Re-interview button */}
+          <button
+            onClick={handleReset}
+            data-testid="reset-persona-btn"
+            className="flex items-center gap-2 btn-ghost text-xs px-4 py-2 text-zinc-500"
+          >
+            <RefreshCw size={13} /> Re-interview
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Persona Card */}
         <div className="lg:col-span-2 space-y-4">
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card-thook p-6" data-testid="persona-card-full">
+          <motion.div ref={personaCardRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card-thook p-6" data-testid="persona-card-full">
             {/* Avatar + archetype */}
             <div className="flex items-center gap-3 mb-5">
               <div className="w-11 h-11 rounded-xl bg-violet/20 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -177,9 +395,51 @@ export default function PersonaEngine() {
                   <span className="font-bold text-violet text-lg">{user?.name?.[0]?.toUpperCase() || "C"}</span>
                 )}
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-semibold text-white">{user?.name}</p>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}>{archetype}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}>{archetype}</span>
+                </div>
+              </div>
+              {/* Regional English Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowRegionDropdown(!showRegionDropdown)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
+                >
+                  <Globe size={14} className="text-zinc-400" />
+                  <span className="text-sm">{currentRegion.flag}</span>
+                  <span className="text-xs text-zinc-400">{currentRegion.code}</span>
+                </button>
+                <AnimatePresence>
+                  {showRegionDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 top-full mt-1 bg-[#18181B] border border-white/10 rounded-lg overflow-hidden z-10 min-w-[180px]"
+                    >
+                      {REGIONAL_ENGLISH_OPTIONS.map(option => (
+                        <button
+                          key={option.code}
+                          onClick={() => handleRegionalEnglishChange(option.code)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors ${
+                            selectedRegion === option.code ? "bg-lime/10" : ""
+                          }`}
+                        >
+                          <span className="text-lg">{option.flag}</span>
+                          <div>
+                            <p className="text-sm text-white">{option.name}</p>
+                            <p className="text-xs text-zinc-500">{option.code}</p>
+                          </div>
+                          {selectedRegion === option.code && (
+                            <Check size={14} className="text-lime ml-auto" />
+                          )}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 

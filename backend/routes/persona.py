@@ -1,15 +1,57 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
-from datetime import datetime, timezone
+from typing import Optional, Dict, Any, List
+from datetime import datetime, timezone, timedelta
 from database import db
 from auth_utils import get_current_user
+import uuid
+import secrets
 
 router = APIRouter(prefix="/persona", tags=["persona"])
+
+# Regional English configurations
+REGIONAL_ENGLISH_CONFIG = {
+    "US": {
+        "name": "American English",
+        "spelling_rules": ["-ize spellings (optimize, analyze)", "color (not colour)", "theater (not theatre)"],
+        "date_format": "MM/DD/YYYY",
+        "number_format": "1,000,000",
+        "colloquialisms": "Standard American expressions",
+    },
+    "UK": {
+        "name": "British English",
+        "spelling_rules": ["-ise spellings (optimise, analyse)", "colour (not color)", "theatre (not theater)"],
+        "date_format": "DD/MM/YYYY",
+        "number_format": "1,000,000",
+        "colloquialisms": "whilst, amongst, towards",
+    },
+    "AU": {
+        "name": "Australian English",
+        "spelling_rules": ["-ise spellings (similar to UK)", "colour, favour"],
+        "date_format": "DD/MM/YYYY",
+        "number_format": "1,000,000",
+        "colloquialisms": "arvo (afternoon), servo (service station), brekkie (breakfast)",
+    },
+    "IN": {
+        "name": "Indian English",
+        "spelling_rules": ["British spelling conventions", "formal register"],
+        "date_format": "DD/MM/YYYY",
+        "number_format": "lakh (1,00,000), crore (1,00,00,000)",
+        "colloquialisms": "Formal register, avoid casual contractions",
+    },
+}
 
 
 class PersonaCardUpdate(BaseModel):
     card: Optional[Dict[str, Any]] = None
+
+
+class SharePersonaRequest(BaseModel):
+    expiry_days: Optional[int] = 30  # Default 30 days, -1 for permanent (Pro+)
+
+
+class RegionalEnglishUpdate(BaseModel):
+    regional_english: str  # US, UK, AU, IN
 
 
 @router.get("/me")
@@ -37,3 +79,249 @@ async def reset_persona(current_user: dict = Depends(get_current_user)):
         {"$set": {"onboarding_completed": False}}
     )
     return {"message": "Persona reset. Complete onboarding to create a new one."}
+
+
+# ============ SHAREABLE PERSONA CARDS ============
+
+@router.post("/share")
+async def share_persona(data: SharePersonaRequest, current_user: dict = Depends(get_current_user)):
+    """Generate a public share token for the user's persona card."""
+    persona = await db.persona_engines.find_one({"user_id": current_user["user_id"]})
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona not found. Complete onboarding first.")
+    
+    # Check if user already has an active share token
+    existing_share = await db.persona_shares.find_one({
+        "user_id": current_user["user_id"],
+        "is_active": True,  # Only find active shares
+        "$or": [
+            {"expires_at": {"$gt": datetime.now(timezone.utc)}},
+            {"expires_at": None}  # Permanent shares
+        ]
+    })
+    
+    if existing_share:
+        return {
+            "success": True,
+            "share_token": existing_share["share_token"],
+            "share_url": f"/creator/{existing_share['share_token']}",
+            "expires_at": existing_share.get("expires_at"),
+            "is_permanent": existing_share.get("expires_at") is None,
+            "created_at": existing_share["created_at"],
+            "message": "Existing share link retrieved"
+        }
+    
+    # Get user subscription tier for permanent share eligibility
+    user = await db.users.find_one({"user_id": current_user["user_id"]})
+    tier = user.get("subscription_tier", "free")
+    
+    # Pro+ users can have permanent shares
+    is_pro_plus = tier in ["pro", "studio", "agency"]
+    
+    # Generate new share token
+    share_token = secrets.token_urlsafe(16)
+    
+    # Calculate expiry
+    if data.expiry_days == -1 and is_pro_plus:
+        expires_at = None  # Permanent
+    else:
+        expiry_days = data.expiry_days if data.expiry_days > 0 else 30
+        if not is_pro_plus:
+            expiry_days = min(expiry_days, 30)  # Free tier max 30 days
+        expires_at = datetime.now(timezone.utc) + timedelta(days=expiry_days)
+    
+    share_doc = {
+        "share_id": str(uuid.uuid4()),
+        "share_token": share_token,
+        "user_id": current_user["user_id"],
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc),
+        "view_count": 0,
+        "is_active": True
+    }
+    
+    await db.persona_shares.insert_one(share_doc)
+    
+    return {
+        "success": True,
+        "share_token": share_token,
+        "share_url": f"/creator/{share_token}",
+        "expires_at": expires_at,
+        "is_permanent": expires_at is None,
+        "created_at": share_doc["created_at"],
+        "message": "Share link created successfully"
+    }
+
+
+@router.get("/share/status")
+async def get_share_status(current_user: dict = Depends(get_current_user)):
+    """Get the current share status for the user's persona."""
+    share = await db.persona_shares.find_one({
+        "user_id": current_user["user_id"],
+        "is_active": True,
+        "$or": [
+            {"expires_at": {"$gt": datetime.now(timezone.utc)}},
+            {"expires_at": None}
+        ]
+    })
+    
+    if not share:
+        return {
+            "success": True,
+            "is_shared": False,
+            "share_token": None,
+            "share_url": None
+        }
+    
+    return {
+        "success": True,
+        "is_shared": True,
+        "share_token": share["share_token"],
+        "share_url": f"/creator/{share['share_token']}",
+        "expires_at": share.get("expires_at"),
+        "is_permanent": share.get("expires_at") is None,
+        "view_count": share.get("view_count", 0),
+        "created_at": share["created_at"]
+    }
+
+
+@router.delete("/share")
+async def revoke_share(current_user: dict = Depends(get_current_user)):
+    """Revoke the current share link."""
+    result = await db.persona_shares.update_many(
+        {"user_id": current_user["user_id"]},
+        {"$set": {"is_active": False, "revoked_at": datetime.now(timezone.utc)}}
+    )
+    
+    return {
+        "success": True,
+        "message": "Share link revoked successfully",
+        "revoked_count": result.modified_count
+    }
+
+
+@router.get("/public/{share_token}")
+async def get_public_persona(share_token: str):
+    """
+    Public endpoint (no auth) to view a shared persona card.
+    Only exposes safe data - excludes UOM internals and sensitive info.
+    """
+    # Find the share record
+    share = await db.persona_shares.find_one({
+        "share_token": share_token,
+        "is_active": True
+    })
+    
+    if not share:
+        raise HTTPException(status_code=404, detail="Share link not found or has been revoked")
+    
+    # Check expiry
+    expires_at = share.get("expires_at")
+    if expires_at:
+        # Ensure both datetimes have timezone info for comparison
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < datetime.now(timezone.utc):
+            raise HTTPException(status_code=410, detail="Share link has expired")
+    
+    # Increment view count
+    await db.persona_shares.update_one(
+        {"share_token": share_token},
+        {"$inc": {"view_count": 1}}
+    )
+    
+    # Get the persona
+    persona = await db.persona_engines.find_one({"user_id": share["user_id"]})
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no longer exists")
+    
+    # Get user info for display
+    user = await db.users.find_one({"user_id": share["user_id"]})
+    
+    # Extract only safe, shareable data
+    card = persona.get("card", {})
+    voice_fingerprint = persona.get("voice_fingerprint", {})
+    
+    # Build public persona response
+    public_persona = {
+        "success": True,
+        "creator": {
+            "name": user.get("name", "Creator") if user else "Creator",
+            "picture": user.get("picture") if user else None,
+        },
+        "card": {
+            "personality_archetype": card.get("personality_archetype", "Creator"),
+            "writing_voice_descriptor": card.get("writing_voice_descriptor"),
+            "content_niche_signature": card.get("content_niche_signature"),
+            "inferred_audience_profile": card.get("inferred_audience_profile"),
+            "top_content_format": card.get("top_content_format"),
+            "hook_style": card.get("hook_style"),
+            "content_pillars": card.get("content_pillars", []),
+            "focus_platforms": card.get("focus_platforms", []),
+            "regional_english": card.get("regional_english", "US"),
+        },
+        "voice_metrics": {
+            "vocabulary_complexity": voice_fingerprint.get("vocabulary_complexity", 0.65),
+            "emoji_frequency": voice_fingerprint.get("emoji_frequency", 0.05),
+            "hook_style_preferences": voice_fingerprint.get("hook_style_preferences", []),
+        },
+        "share_info": {
+            "view_count": share.get("view_count", 0) + 1,
+            "shared_since": share["created_at"],
+        }
+    }
+    
+    return public_persona
+
+
+# ============ REGIONAL ENGLISH ============
+
+@router.get("/regional-english/options")
+async def get_regional_english_options():
+    """Get available regional English format options."""
+    return {
+        "success": True,
+        "options": [
+            {
+                "code": code,
+                "name": config["name"],
+                "spelling_rules": config["spelling_rules"],
+                "date_format": config["date_format"],
+                "number_format": config["number_format"],
+                "colloquialisms": config["colloquialisms"],
+            }
+            for code, config in REGIONAL_ENGLISH_CONFIG.items()
+        ]
+    }
+
+
+@router.put("/regional-english")
+async def update_regional_english(data: RegionalEnglishUpdate, current_user: dict = Depends(get_current_user)):
+    """Update the user's regional English preference."""
+    if data.regional_english not in REGIONAL_ENGLISH_CONFIG:
+        raise HTTPException(status_code=400, detail=f"Invalid regional English code. Valid options: {list(REGIONAL_ENGLISH_CONFIG.keys())}")
+    
+    # Update persona card with regional english setting
+    persona = await db.persona_engines.find_one({"user_id": current_user["user_id"]})
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona not found. Complete onboarding first.")
+    
+    card = persona.get("card", {})
+    card["regional_english"] = data.regional_english
+    
+    await db.persona_engines.update_one(
+        {"user_id": current_user["user_id"]},
+        {
+            "$set": {
+                "card": card,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "regional_english": data.regional_english,
+        "config": REGIONAL_ENGLISH_CONFIG[data.regional_english],
+        "message": f"Regional English updated to {REGIONAL_ENGLISH_CONFIG[data.regional_english]['name']}"
+    }
