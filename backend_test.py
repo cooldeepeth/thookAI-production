@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 # Production configuration - DO NOT CHANGE
-BASE_URL = "https://social-scheduler-87.preview.emergentagent.com/api"
+BASE_URL = "https://thook-growth.preview.emergentagent.com/api"
 session = requests.Session()
 
 def log_test(test_name: str, success: bool, details: str = ""):
