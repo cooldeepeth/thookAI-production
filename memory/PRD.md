@@ -196,7 +196,7 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | **Sprint 11** | Shareable Persona Cards + Growth Features + Regional English Format | ✅ COMPLETE |
-| Sprint 12 | B2B Agency Workspace + Templates Marketplace + 3rd Party API | 🔜 Next |
+| **Sprint 12** | B2B Agency Workspace + Templates Marketplace + 3rd Party API | ✅ COMPLETE |
 
 ---
 
@@ -911,3 +911,157 @@ See `/app/backend/.env` for all API key placeholders:
 
 ### New Routes Added:
 - `/creator/:shareToken` — Public persona card page (no auth)
+
+
+
+---
+
+## 24. Sprint 12 Implementation Details — July 2025
+
+### Agency Workspace:
+
+**Backend (`routes/agency.py`):**
+- `POST /api/agency/workspace` — Create workspace (requires Studio+ tier)
+  - Enforces tier limits: Studio (3 workspaces), Agency (10 workspaces)
+  - Returns workspace_id, success message
+
+- `GET /api/agency/workspaces` — List user's workspaces
+  - Returns owned workspaces and member_of workspaces
+  - Each workspace includes role (owner/admin/manager/creator)
+
+- `GET /api/agency/workspace/{id}` — Get workspace details
+  - Includes member_count, content_count, settings
+
+- `PUT /api/agency/workspace/{id}` — Update workspace (owner/admin only)
+
+- `DELETE /api/agency/workspace/{id}` — Delete workspace (owner only)
+
+- `POST /api/agency/workspace/{id}/invite` — Invite creator
+  - Enforces member limits: Studio (10), Agency (50)
+  - Creates pending invitation by email
+  - Role options: creator, manager, admin
+
+- `GET /api/agency/workspace/{id}/members` — List all members
+  - Returns owner plus all invited/active members
+  - Enriched with user data (name, picture)
+
+- `GET /api/agency/workspace/{id}/creators` — List managed creators
+  - Returns persona summary (archetype, niche, platforms) — NO UOM data
+  - Includes content stats (total_content, last_content_date)
+
+- `GET /api/agency/workspace/{id}/content` — Aggregated content feed
+  - Combines content from all workspace members
+  - Enriched with creator info
+
+- `GET /api/agency/invitations` — User's pending invitations
+- `POST /api/agency/invitations/{id}/accept` — Accept invitation
+- `POST /api/agency/invitations/{id}/decline` — Decline invitation
+
+**Frontend (`pages/Dashboard/AgencyWorkspace/index.jsx`):**
+- Workspace list with selection
+- Create workspace modal
+- Invite creator modal with role selection
+- Team members list with stats
+- Upgrade prompt for non-Studio users
+- Crown icon for Pro tier indication
+
+### Templates Marketplace:
+
+**Backend (`routes/templates.py`):**
+- `GET /api/templates` — Browse templates
+  - Filters: platform, category, hook_type
+  - Sort: popular (upvotes), recent, most_used
+  - Pagination: limit, offset
+  - Returns user_upvoted status per template
+
+- `GET /api/templates/categories` — Get metadata
+  - 10 categories: thought_leadership, storytelling, how_to, listicle, contrarian, case_study, personal_journey, industry_insights, tips_and_tricks, behind_the_scenes
+  - 8 hook types: question, bold_claim, story_opener, statistic, contrarian, curiosity_gap, direct_address, number_list
+
+- `GET /api/templates/featured` — Trending templates
+  - Calculated by score = upvotes + (uses_count * 2)
+  - Returns featured (top 10) and recent (last 5)
+
+- `GET /api/templates/{id}` — Single template details
+
+- `POST /api/templates` — Publish template
+  - Requires approved content (job_id)
+  - Auto-detects hook_type from content
+  - Anonymizes author (only archetype visible)
+  - Creates preview from first lines
+
+- `POST /api/templates/{id}/use` — Import template
+  - Returns prefill data for Content Studio
+  - Increments uses_count
+
+- `POST /api/templates/{id}/upvote` — Toggle upvote
+  - Tracked per user to prevent double voting
+
+- `GET /api/templates/my/published` — User's published templates
+- `GET /api/templates/my/used` — Templates user has used
+- `DELETE /api/templates/{id}` — Soft delete (author only)
+
+**Frontend (`pages/Dashboard/Templates.jsx`):**
+- Template card grid with hover effects
+- Search bar with instant filter
+- Sort dropdown (Popular/Recent/Most Used)
+- Collapsible filter panel (platform, category)
+- Featured/trending section
+- Template detail modal
+- "Use Template" button navigates to Content Studio with prefill
+- Upvote toggle with optimistic UI update
+- Empty state for no templates
+
+### Database Schema Additions:
+
+**workspaces collection:**
+- workspace_id, owner_id, name, description
+- member_count, content_count
+- settings (allow_member_publish, require_approval, default_platforms)
+- created_at, updated_at
+
+**workspace_members collection:**
+- invite_id, workspace_id, user_id, email
+- role (creator/manager/admin)
+- status (pending/active/inactive)
+- invited_by, invited_at, joined_at
+
+**templates collection:**
+- template_id, title, description, category, platform
+- hook_type, tags, hook, structure_preview, word_count
+- author_archetype, author_id (hidden), source_job_id
+- upvotes, uses_count, views_count
+- is_active, created_at, updated_at
+
+**template_upvotes collection:**
+- upvote_id, template_id, user_id, created_at
+
+**template_usage collection:**
+- usage_id, template_id, user_id, used_at
+
+### New Routes Added:
+- `/dashboard/agency` — Agency Workspace page
+- `/dashboard/templates` — Templates Marketplace page
+
+### Sidebar Updates:
+- Added "Templates" with "New" badge
+- Added "Agency Workspace" with "Pro" badge
+
+---
+
+## 🎉 ALL 12 SPRINTS COMPLETE
+
+ThookAI is now feature-complete with:
+- Multi-agent AI content generation (Commander, Scout, Thinker, Writer, QC)
+- Persona Engine with voice fingerprinting
+- Platform-native content creation (LinkedIn, X, Instagram)
+- Multi-provider creative AI (images, video, voice)
+- Content calendar and scheduling
+- Analytics and performance tracking
+- Monetization (credits, subscriptions)
+- Shareable persona cards
+- Regional English formatting
+- Agency workspace for teams
+- Templates marketplace
+
+The platform is ready for production deployment and user testing.
