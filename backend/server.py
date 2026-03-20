@@ -14,6 +14,8 @@ from routes.repurpose import router as repurpose_router
 from routes.analytics import router as analytics_router
 from routes.billing import router as billing_router
 from routes.viral import router as viral_router
+from routes.agency import router as agency_router
+from routes.templates import router as templates_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -32,6 +34,8 @@ api_router.include_router(repurpose_router)
 api_router.include_router(analytics_router)
 api_router.include_router(billing_router)
 api_router.include_router(viral_router)
+api_router.include_router(agency_router)
+api_router.include_router(templates_router)
 
 
 @api_router.get("/")

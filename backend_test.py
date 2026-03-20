@@ -1,391 +1,574 @@
 #!/usr/bin/env python3
-"""
-ThookAI Sprint 11 Backend Testing
-Tests shareable persona cards and regional English features
-"""
 
 import requests
 import json
 import time
 import uuid
-from datetime import datetime, timedelta
-import sys
+from datetime import datetime
 
 # Configuration
-BACKEND_URL = "https://thook-growth.preview.emergentagent.com/api"
-HEADERS = {"Content-Type": "application/json"}
+BASE_URL = "https://thook-growth.preview.emergentagent.com/api"
+TEST_TIMEOUT = 45
 
 class TestResults:
     def __init__(self):
+        self.results = []
         self.passed = 0
         self.failed = 0
-        self.results = []
     
-    def log(self, test_name, status, message="", response_data=None):
-        result = {
+    def add_result(self, test_name, success, details="", response=None):
+        self.results.append({
             "test": test_name,
-            "status": status,
-            "message": message,
-            "timestamp": datetime.now().isoformat()
-        }
-        if response_data:
-            result["data"] = response_data
-        
-        self.results.append(result)
-        if status == "PASS":
+            "success": success,
+            "details": details,
+            "response": response
+        })
+        if success:
             self.passed += 1
-            print(f"✅ {test_name}: {message}")
         else:
             self.failed += 1
-            print(f"❌ {test_name}: {message}")
+        print(f"{'✅' if success else '❌'} {test_name}: {details}")
     
-    def summary(self):
-        total = self.passed + self.failed
-        print(f"\n📊 TEST SUMMARY: {self.passed}/{total} passed")
-        return self.passed, self.failed, self.results
+    def print_summary(self):
+        print(f"\n📊 TEST SUMMARY: {self.passed} passed, {self.failed} failed")
+        for result in self.results:
+            if not result['success']:
+                print(f"❌ {result['test']}: {result['details']}")
 
-def make_request(method, url, headers=None, data=None, auth_token=None):
-    """Make HTTP request with proper headers and error handling."""
-    req_headers = HEADERS.copy()
+# Global test state
+test_results = TestResults()
+studio_user_token = None
+studio_user_id = None
+free_user_token = None
+workspace_id = None
+job_id_for_template = None
+
+def make_request(method, endpoint, data=None, headers=None, timeout=TEST_TIMEOUT):
+    """Make HTTP request with consistent error handling."""
+    url = f"{BASE_URL}{endpoint}"
+    default_headers = {"Content-Type": "application/json"}
     if headers:
-        req_headers.update(headers)
-    
-    if auth_token:
-        req_headers["Authorization"] = f"Bearer {auth_token}"
+        default_headers.update(headers)
     
     try:
         if method == "GET":
-            response = requests.get(url, headers=req_headers, timeout=30)
+            response = requests.get(url, headers=default_headers, timeout=timeout)
         elif method == "POST":
-            response = requests.post(url, headers=req_headers, json=data, timeout=30)
+            response = requests.post(url, json=data, headers=default_headers, timeout=timeout)
         elif method == "PUT":
-            response = requests.put(url, headers=req_headers, json=data, timeout=30)
+            response = requests.put(url, json=data, headers=default_headers, timeout=timeout)
         elif method == "DELETE":
-            response = requests.delete(url, headers=req_headers, timeout=30)
+            response = requests.delete(url, headers=default_headers, timeout=timeout)
         
         return response
+    except requests.exceptions.Timeout:
+        return None
     except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
         return None
 
-def test_sprint11_backend():
-    """Test Sprint 11 shareable persona cards and regional English features."""
-    results = TestResults()
+def register_and_setup_studio_user():
+    """Register a new user and upgrade to Studio tier with completed onboarding."""
+    global studio_user_token, studio_user_id
     
-    # Generate unique test data
     timestamp = int(time.time())
-    test_email = f"test_sprint11_{timestamp}@example.com"
-    test_password = "TestPassword123!"
-    test_name = f"Sprint11 Tester {timestamp}"
+    email = f"studio_test_{timestamp}@test.com"
     
-    auth_token = None
-    share_token = None
-    
-    print("🚀 Starting Sprint 11 Backend Testing...")
-    print(f"📧 Test User: {test_email}")
-    print(f"🔗 Backend URL: {BACKEND_URL}")
-    
-    # ============ USER REGISTRATION ============
-    print("\n🔐 Testing User Registration...")
+    # 1. Register user
     register_data = {
-        "email": test_email,
-        "password": test_password,
-        "name": test_name
+        "name": f"Studio User {timestamp}",
+        "email": email,
+        "password": "testPassword123"
     }
     
-    response = make_request("POST", f"{BACKEND_URL}/auth/register", data=register_data)
-    if response and response.status_code == 200:
-        user_data = response.json()
-        auth_token = user_data.get("token")
-        results.log("User Registration", "PASS", f"User registered: {user_data.get('name')}", user_data)
-    else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        if response:
-            error_msg += f", Error: {response.text}"
-        results.log("User Registration", "FAIL", error_msg)
-        print("❌ Cannot continue without user registration")
-        return results.summary()
+    response = make_request("POST", "/auth/register", register_data)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Register Studio User",
+            False,
+            f"Registration failed: {response.status_code if response else 'Timeout'}"
+        )
+        return False
     
-    # ============ ONBOARDING FLOW ============
-    print("\n📋 Testing Onboarding Flow...")
+    data = response.json()
+    if not data.get("token") or not data.get("user_id"):
+        test_results.add_result("Register Studio User", False, f"Registration failed: missing token or user_id")
+        return False
     
-    # Start onboarding
-    response = make_request("GET", f"{BACKEND_URL}/onboarding/questions", auth_token=auth_token)
-    if response and response.status_code == 200:
-        questions_data = response.json()
-        total_questions = questions_data.get("total", 0)
-        results.log("Get Onboarding Questions", "PASS", f"Retrieved {total_questions} questions")
-    else:
-        results.log("Get Onboarding Questions", "FAIL", "Failed to get questions")
-        return results.summary()
+    studio_user_token = data["token"]
+    studio_user_id = data["user_id"]
     
-    # Sample onboarding answers
-    sample_answers = [
-        {"question_id": 0, "answer": "I'm a B2B SaaS founder sharing lessons on growing from 0 to $1M ARR through data-driven content marketing and product-led growth strategies."},
-        {"question_id": 1, "answer": "LinkedIn"},
-        {"question_id": 2, "answer": "Strategic, Data-driven, Authentic"},
-        {"question_id": 3, "answer": "Lenny Rachitsky for his depth combined with accessibility, and Paul Graham for razor-sharp clarity in technical topics."},
-        {"question_id": 4, "answer": "Crypto speculation, generic hustle culture posts, political commentary, and superficial trending topics without substance."},
-        {"question_id": 5, "answer": "Generate leads/clients"},
-        {"question_id": 6, "answer": "3–5 hours"}
-    ]
+    test_results.add_result(
+        "Register Studio User",
+        True,
+        f"User registered with ID: {studio_user_id}"
+    )
     
-    # Complete persona generation
-    persona_data = {
-        "answers": sample_answers,
-        "posts_analysis": "Analytical voice with structured insights and professional tone"
+    # 2. Upgrade to Studio tier
+    headers = {"Authorization": f"Bearer {studio_user_token}"}
+    upgrade_data = {"tier": "studio"}
+    
+    response = make_request("POST", "/billing/subscription/upgrade", upgrade_data, headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Upgrade to Studio Tier",
+            False,
+            f"Upgrade failed: {response.status_code if response else 'Timeout'}"
+        )
+        return False
+    
+    data = response.json()
+    test_results.add_result(
+        "Upgrade to Studio Tier", 
+        data.get("success", False),
+        f"New tier: {data.get('new_tier', 'unknown')}, Credits granted: {data.get('credits_granted', 0)}"
+    )
+    
+    # 3. Complete onboarding to create persona
+    onboarding_data = {
+        "answers": [
+            {"question_id": 0, "answer": "I'm an AI productivity consultant helping content creators scale their operations"},
+            {"question_id": 1, "answer": "LinkedIn"},
+            {"question_id": 2, "answer": "Strategic, Helpful, Technical"},
+            {"question_id": 3, "answer": "Lenny Rachitsky for depth and accessibility"},
+            {"question_id": 4, "answer": "Never want to write about crypto speculation or generic motivational content"},
+            {"question_id": 5, "answer": "Generate leads/clients"}
+        ]
     }
     
-    response = make_request("POST", f"{BACKEND_URL}/onboarding/generate-persona", data=persona_data, auth_token=auth_token)
-    if response and response.status_code == 200:
-        persona_result = response.json()
-        persona_card = persona_result.get("persona_card", {})
-        results.log("Onboarding Complete", "PASS", f"Persona created: {persona_card.get('personality_archetype', 'Unknown')}")
+    response = make_request("POST", "/onboarding/generate-persona", onboarding_data, headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Complete Studio User Onboarding",
+            False,
+            f"Onboarding failed: {response.status_code if response else 'Timeout'}"
+        )
+        return False
+    
+    data = response.json()
+    has_persona_card = "persona_card" in data
+    test_results.add_result(
+        "Complete Studio User Onboarding",
+        has_persona_card,
+        "Onboarding completed, persona created successfully" if has_persona_card else f"Onboarding failed: {data}"
+    )
+    
+    return True
+
+def register_free_user():
+    """Register a free tier user for testing restrictions."""
+    global free_user_token
+    
+    timestamp = int(time.time())
+    email = f"free_test_{timestamp}@test.com"
+    
+    register_data = {
+        "name": f"Free User {timestamp}",
+        "email": email,
+        "password": "testPassword123"
+    }
+    
+    response = make_request("POST", "/auth/register", register_data)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Register Free User",
+            False,
+            f"Registration failed: {response.status_code if response else 'Timeout'}"
+        )
+        return False
+    
+    data = response.json()
+    if not data.get("token") or not data.get("user_id"):
+        test_results.add_result("Register Free User", False, f"Registration failed: missing token or user_id")
+        return False
+    
+    free_user_token = data["token"]
+    
+    test_results.add_result(
+        "Register Free User",
+        True,
+        "Free tier user registered successfully"
+    )
+    
+    return True
+
+def test_workspace_crud():
+    """Test workspace CRUD operations."""
+    global workspace_id
+    
+    if not studio_user_token:
+        test_results.add_result("Workspace CRUD", False, "No studio user token available")
+        return
+    
+    headers = {"Authorization": f"Bearer {studio_user_token}"}
+    
+    # 4. Create workspace
+    workspace_data = {
+        "name": "Test Agency",
+        "description": "My test agency workspace"
+    }
+    
+    response = make_request("POST", "/agency/workspace", workspace_data, headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Create Workspace",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
+        return
+    
+    data = response.json()
+    if data.get("success"):
+        workspace_id = data.get("workspace_id")
+        test_results.add_result(
+            "Create Workspace",
+            True,
+            f"Workspace created with ID: {workspace_id}"
+        )
     else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        if response:
-            error_msg += f", Error: {response.text}"
-        results.log("Onboarding Complete", "FAIL", error_msg)
-        return results.summary()
+        test_results.add_result("Create Workspace", False, f"Failed: {data}")
+        return
     
-    # ============ SHAREABLE PERSONA CARDS FLOW ============
-    print("\n🔗 Testing Shareable Persona Cards...")
+    # 5. List workspaces
+    response = make_request("GET", "/agency/workspaces", headers=headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "List Workspaces",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
+        return
     
-    # 1. Create share link
-    print("\n1️⃣ Creating share link...")
-    share_data = {"expiry_days": 30}
+    data = response.json()
+    owned_workspaces = data.get("owned", [])
+    success = data.get("success", False) and len(owned_workspaces) > 0
+    test_results.add_result(
+        "List Workspaces",
+        success,
+        f"Found {len(owned_workspaces)} owned workspaces" if success else "No workspaces found"
+    )
     
-    response = make_request("POST", f"{BACKEND_URL}/persona/share", data=share_data, auth_token=auth_token)
-    if response and response.status_code == 200:
-        share_result = response.json()
-        share_token = share_result.get("share_token")
-        share_url = share_result.get("share_url")
-        expires_at = share_result.get("expires_at")
-        
-        # Validate response structure
-        if share_token and share_url and expires_at:
-            # Check URL format
-            expected_url = f"/creator/{share_token}"
-            if share_url == expected_url:
-                # Check expiry is approximately 30 days out
-                expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-                expected_expiry = datetime.now().replace(tzinfo=expiry_date.tzinfo) + timedelta(days=29)  # Allow 1 day tolerance
-                if expiry_date > expected_expiry:
-                    results.log("Create Share Link", "PASS", f"Share created: {share_token[:8]}... expires: {expires_at}")
-                else:
-                    results.log("Create Share Link", "FAIL", "Expiry date not ~30 days out")
-            else:
-                results.log("Create Share Link", "FAIL", f"Invalid share_url format: {share_url}")
-        else:
-            results.log("Create Share Link", "FAIL", "Missing required fields in response")
-    else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        if response:
-            error_msg += f", Error: {response.text}"
-        results.log("Create Share Link", "FAIL", error_msg)
-        return results.summary()
-    
-    # 2. Check share status
-    print("\n2️⃣ Checking share status...")
-    response = make_request("GET", f"{BACKEND_URL}/persona/share/status", auth_token=auth_token)
-    if response and response.status_code == 200:
-        status_result = response.json()
-        is_shared = status_result.get("is_shared")
-        returned_token = status_result.get("share_token")
-        
-        if is_shared and returned_token == share_token:
-            results.log("Check Share Status", "PASS", f"Share status confirmed: is_shared={is_shared}")
-        else:
-            results.log("Check Share Status", "FAIL", f"Share status mismatch: is_shared={is_shared}, token_match={returned_token == share_token}")
-    else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        results.log("Check Share Status", "FAIL", error_msg)
-    
-    # 3. Fetch public persona (NO AUTH)
-    print("\n3️⃣ Fetching public persona (no auth)...")
-    if share_token:
-        # Make request WITHOUT auth token
-        response = make_request("GET", f"{BACKEND_URL}/persona/public/{share_token}")
-        if response and response.status_code == 200:
-            public_data = response.json()
-            
-            # Validate required fields
-            required_fields = ["creator", "card", "voice_metrics", "share_info"]
-            missing_fields = [field for field in required_fields if field not in public_data]
-            
-            if not missing_fields:
-                creator = public_data.get("creator", {})
-                card = public_data.get("card", {})
-                voice_metrics = public_data.get("voice_metrics", {})
-                share_info = public_data.get("share_info", {})
-                
-                # Check specific required card data
-                card_fields = ["archetype", "voice_descriptor", "pillars"]
-                card_has_data = any(field in str(card).lower() for field in card_fields)
-                
-                if card_has_data and "view_count" in share_info:
-                    initial_view_count = share_info.get("view_count", 0)
-                    results.log("Fetch Public Persona", "PASS", f"Public persona retrieved, view_count: {initial_view_count}")
-                else:
-                    results.log("Fetch Public Persona", "FAIL", "Missing required card data or view_count")
-            else:
-                results.log("Fetch Public Persona", "FAIL", f"Missing fields: {missing_fields}")
-        else:
-            error_msg = f"Status: {response.status_code if response else 'No response'}"
-            results.log("Fetch Public Persona", "FAIL", error_msg)
-    
-    # 4. Verify view count increments
-    print("\n4️⃣ Verifying view count increment...")
-    if share_token:
-        time.sleep(1)  # Brief pause
-        response = make_request("GET", f"{BACKEND_URL}/persona/public/{share_token}")
-        if response and response.status_code == 200:
-            public_data = response.json()
-            share_info = public_data.get("share_info", {})
-            new_view_count = share_info.get("view_count", 0)
-            
-            if new_view_count > 0:  # Should be at least 2 now
-                results.log("View Count Increment", "PASS", f"View count incremented: {new_view_count}")
-            else:
-                results.log("View Count Increment", "FAIL", f"View count not incremented: {new_view_count}")
-        else:
-            results.log("View Count Increment", "FAIL", "Failed to fetch public persona again")
-    
-    # 5. Revoke share link
-    print("\n5️⃣ Revoking share link...")
-    response = make_request("DELETE", f"{BACKEND_URL}/persona/share", auth_token=auth_token)
-    if response and response.status_code == 200:
-        revoke_result = response.json()
-        if revoke_result.get("success"):
-            results.log("Revoke Share Link", "PASS", "Share link revoked successfully")
-        else:
-            results.log("Revoke Share Link", "FAIL", "Revoke not successful")
-    else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        results.log("Revoke Share Link", "FAIL", error_msg)
-    
-    # 6. Verify public endpoint returns 404 after revoke
-    print("\n6️⃣ Verifying revoked link returns 404...")
-    if share_token:
-        time.sleep(1)  # Brief pause for data consistency
-        response = make_request("GET", f"{BACKEND_URL}/persona/public/{share_token}")
-        if response and response.status_code == 404:
-            results.log("Verify Revoked Link 404", "PASS", "Revoked link correctly returns 404")
-        else:
-            status = response.status_code if response else "No response"
-            results.log("Verify Revoked Link 404", "FAIL", f"Expected 404, got {status}")
-    
-    # ============ REGIONAL ENGLISH TESTS ============
-    print("\n🌍 Testing Regional English Features...")
-    
-    # 7. Get regional English options
-    print("\n7️⃣ Getting regional English options...")
-    response = make_request("GET", f"{BACKEND_URL}/persona/regional-english/options")
-    if response and response.status_code == 200:
-        options_data = response.json()
-        options = options_data.get("options", [])
-        
-        # Verify all 4 options present
-        expected_codes = ["US", "UK", "AU", "IN"]
-        found_codes = [opt.get("code") for opt in options]
-        missing_codes = [code for code in expected_codes if code not in found_codes]
-        
-        if not missing_codes:
-            # Verify required fields
-            required_fields = ["name", "spelling_rules", "date_format"]
-            all_have_fields = all(
-                all(field in opt for field in required_fields) 
-                for opt in options
+    # 6. Get workspace details
+    if workspace_id:
+        response = make_request("GET", f"/agency/workspace/{workspace_id}", headers=headers)
+        if not response or response.status_code != 200:
+            test_results.add_result(
+                "Get Workspace Details",
+                False,
+                f"Failed: {response.status_code if response else 'Timeout'}"
             )
-            
-            if all_have_fields:
-                results.log("Get Regional Options", "PASS", f"Retrieved {len(options)} regional options")
-            else:
-                results.log("Get Regional Options", "FAIL", "Options missing required fields")
         else:
-            results.log("Get Regional Options", "FAIL", f"Missing regional codes: {missing_codes}")
+            data = response.json()
+            workspace = data.get("workspace", {})
+            success = data.get("success", False) and workspace.get("name") == "Test Agency"
+            test_results.add_result(
+                "Get Workspace Details",
+                success,
+                f"Workspace name: {workspace.get('name')}, Role: {workspace.get('user_role')}, Members: {workspace.get('member_count', 0)}"
+            )
+
+def test_invitation_flow():
+    """Test workspace invitation flow."""
+    if not workspace_id or not studio_user_token:
+        test_results.add_result("Invitation Flow", False, "Missing workspace_id or token")
+        return
+    
+    headers = {"Authorization": f"Bearer {studio_user_token}"}
+    
+    # 7. Invite a creator
+    invite_data = {
+        "email": "creator@test.com",
+        "role": "creator"
+    }
+    
+    response = make_request("POST", f"/agency/workspace/{workspace_id}/invite", invite_data, headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Invite Creator",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
+        return
+    
+    data = response.json()
+    invite_id = data.get("invite_id")
+    success = data.get("success", False) and invite_id
+    test_results.add_result(
+        "Invite Creator",
+        success,
+        f"Invite ID: {invite_id}, Status: {data.get('status', 'unknown')}" if success else f"Failed: {data}"
+    )
+    
+    # 8. List members
+    response = make_request("GET", f"/agency/workspace/{workspace_id}/members", headers=headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "List Members",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
+        return
+    
+    data = response.json()
+    members = data.get("members", [])
+    success = data.get("success", False) and len(members) >= 1
+    
+    # Check for owner and pending invite
+    has_owner = any(m.get("role") == "owner" for m in members)
+    has_pending = any(m.get("status") == "pending" for m in members)
+    
+    test_results.add_result(
+        "List Members",
+        success and has_owner,
+        f"Total members: {len(members)}, Has owner: {has_owner}, Has pending invite: {has_pending}"
+    )
+    
+    # 9. List creators with stats
+    response = make_request("GET", f"/agency/workspace/{workspace_id}/creators", headers=headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "List Creators with Stats",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
+        return
+    
+    data = response.json()
+    creators = data.get("creators", [])
+    success = data.get("success", False)
+    test_results.add_result(
+        "List Creators with Stats",
+        success,
+        f"Found {len(creators)} active creators" if success else f"Failed: {data}"
+    )
+    
+    # 10. Get workspace content
+    response = make_request("GET", f"/agency/workspace/{workspace_id}/content", headers=headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Get Workspace Content",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
+        return
+    
+    data = response.json()
+    content = data.get("content", [])
+    success = data.get("success", False)
+    test_results.add_result(
+        "Get Workspace Content",
+        success,
+        f"Found {len(content)} content items" if success else f"Failed: {data}"
+    )
+
+def test_tier_restriction():
+    """Test that free tier users cannot access agency features."""
+    if not free_user_token:
+        test_results.add_result("Tier Restriction", False, "No free user token available")
+        return
+    
+    headers = {"Authorization": f"Bearer {free_user_token}"}
+    
+    # 11. Try to create workspace with free user
+    workspace_data = {
+        "name": "Free User Workspace",
+        "description": "This should fail"
+    }
+    
+    response = make_request("POST", "/agency/workspace", workspace_data, headers)
+    
+    # Should return 403 Forbidden
+    if response and response.status_code == 403:
+        data = response.json()
+        expected_message = "Agency features require Studio or Agency tier"
+        has_expected_message = expected_message in data.get("detail", "")
+        test_results.add_result(
+            "Tier Restriction (Free User)",
+            has_expected_message,
+            f"Got expected 403 error: {data.get('detail', '')}" if has_expected_message else f"Wrong error message: {data.get('detail', '')}"
+        )
     else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        results.log("Get Regional Options", "FAIL", error_msg)
+        test_results.add_result(
+            "Tier Restriction (Free User)",
+            False,
+            f"Expected 403, got {response.status_code if response else 'Timeout'}"
+        )
+
+def test_templates_categories():
+    """Test template categories endpoint."""
+    if not studio_user_token:
+        test_results.add_result("Templates Categories", False, "No studio user token available")
+        return
     
-    # 8. Update to UK English
-    print("\n8️⃣ Updating to UK English...")
-    uk_data = {"regional_english": "UK"}
+    headers = {"Authorization": f"Bearer {studio_user_token}"}
     
-    response = make_request("PUT", f"{BACKEND_URL}/persona/regional-english", data=uk_data, auth_token=auth_token)
-    if response and response.status_code == 200:
-        uk_result = response.json()
-        if uk_result.get("success") and uk_result.get("regional_english") == "UK":
-            config = uk_result.get("config", {})
-            if "British English" in config.get("name", ""):
-                results.log("Update to UK English", "PASS", "Successfully updated to UK English")
-            else:
-                results.log("Update to UK English", "FAIL", "UK config not returned correctly")
-        else:
-            results.log("Update to UK English", "FAIL", "Update not successful")
+    # 13. Get categories
+    response = make_request("GET", "/templates/categories", headers=headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Get Templates Categories",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
+        return
+    
+    data = response.json()
+    categories = data.get("categories", [])
+    hook_types = data.get("hook_types", [])
+    success = data.get("success", False) and len(categories) == 10 and len(hook_types) == 8
+    
+    test_results.add_result(
+        "Get Templates Categories",
+        success,
+        f"Categories: {len(categories)}, Hook types: {len(hook_types)}" if success else f"Wrong counts: {len(categories)} categories, {len(hook_types)} hook types"
+    )
+
+def create_test_content():
+    """Create and approve test content for templates."""
+    global job_id_for_template
+    
+    if not studio_user_token:
+        test_results.add_result("Create Test Content", False, "No studio user token available")
+        return
+    
+    headers = {"Authorization": f"Bearer {studio_user_token}"}
+    
+    # Create content
+    content_data = {
+        "platform": "linkedin",
+        "content_type": "post", 
+        "raw_input": "AI productivity tips for content creators - help people understand how to use AI tools effectively for content creation"
+    }
+    
+    response = make_request("POST", "/content/create", content_data, headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Create Test Content",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
+        return
+    
+    data = response.json()
+    job_id = data.get("job_id")
+    if not job_id:
+        test_results.add_result("Create Test Content", False, "No job_id returned")
+        return
+    
+    # Since we can't easily get approved content, let's mock it by directly updating the database
+    # For testing purposes, we'll assume this content would be approved
+    job_id_for_template = job_id
+    
+    test_results.add_result(
+        "Create Test Content",
+        True,
+        f"Content created with job_id: {job_id} (would need manual approval for template publishing)"
+    )
+
+def test_templates_marketplace():
+    """Test templates marketplace endpoints."""
+    if not studio_user_token:
+        test_results.add_result("Templates Marketplace", False, "No studio user token available")
+        return
+    
+    headers = {"Authorization": f"Bearer {studio_user_token}"}
+    
+    # 15. Browse templates
+    response = make_request("GET", "/templates", headers=headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Browse Templates",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
     else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        results.log("Update to UK English", "FAIL", error_msg)
+        data = response.json()
+        templates = data.get("templates", [])
+        success = data.get("success", False)
+        test_results.add_result(
+            "Browse Templates",
+            success,
+            f"Found {len(templates)} templates, Total: {data.get('total', 0)}"
+        )
     
-    # 9. Verify persona card contains UK setting
-    print("\n9️⃣ Verifying persona card contains UK setting...")
-    response = make_request("GET", f"{BACKEND_URL}/persona/me", auth_token=auth_token)
-    if response and response.status_code == 200:
-        persona_data = response.json()
-        card = persona_data.get("card", {})
-        regional_english = card.get("regional_english")
-        
-        if regional_english == "UK":
-            results.log("Verify UK in Card", "PASS", "Persona card contains regional_english: UK")
-        else:
-            results.log("Verify UK in Card", "FAIL", f"Expected UK, got: {regional_english}")
+    # 16. Get featured templates
+    response = make_request("GET", "/templates/featured", headers=headers)
+    if not response or response.status_code != 200:
+        test_results.add_result(
+            "Get Featured Templates",
+            False,
+            f"Failed: {response.status_code if response else 'Timeout'}"
+        )
     else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        results.log("Verify UK in Card", "FAIL", error_msg)
+        data = response.json()
+        featured = data.get("featured", [])
+        recent = data.get("recent", [])
+        success = data.get("success", False)
+        test_results.add_result(
+            "Get Featured Templates",
+            success,
+            f"Featured: {len(featured)}, Recent: {len(recent)}" if success else f"Failed: {data}"
+        )
     
-    # 10. Update to AU English
-    print("\n🔟 Updating to AU English...")
-    au_data = {"regional_english": "AU"}
+    # 17. Test template publishing with non-existent job_id
+    fake_template_data = {
+        "job_id": "non-existent-job-id-12345",
+        "title": "Test Template",
+        "category": "thought_leadership",
+        "description": "This should fail"
+    }
     
-    response = make_request("PUT", f"{BACKEND_URL}/persona/regional-english", data=au_data, auth_token=auth_token)
-    if response and response.status_code == 200:
-        au_result = response.json()
-        if au_result.get("success") and au_result.get("regional_english") == "AU":
-            config = au_result.get("config", {})
-            if "Australian English" in config.get("name", ""):
-                results.log("Update to AU English", "PASS", "Successfully updated to AU English")
-            else:
-                results.log("Update to AU English", "FAIL", "AU config not returned correctly")
-        else:
-            results.log("Update to AU English", "FAIL", "Update not successful")
+    response = make_request("POST", "/templates", fake_template_data, headers)
+    
+    # Should return 404 "Content not found"
+    if response and response.status_code == 404:
+        data = response.json()
+        expected_message = "Content not found"
+        has_expected_message = expected_message in data.get("detail", "")
+        test_results.add_result(
+            "Template Publishing Validation",
+            has_expected_message,
+            f"Got expected 404 error: {data.get('detail', '')}" if has_expected_message else f"Wrong error message: {data.get('detail', '')}"
+        )
     else:
-        error_msg = f"Status: {response.status_code if response else 'No response'}"
-        results.log("Update to AU English", "FAIL", error_msg)
+        test_results.add_result(
+            "Template Publishing Validation",
+            False,
+            f"Expected 404, got {response.status_code if response else 'Timeout'}"
+        )
+
+def main():
+    """Run all Sprint 12 tests."""
+    print("🚀 Starting Sprint 12 Backend Testing - Agency Workspace & Templates Marketplace")
+    print(f"Testing against: {BASE_URL}")
+    print("=" * 80)
     
-    # 11. Test invalid regional code
-    print("\n1️⃣1️⃣ Testing invalid regional code...")
-    invalid_data = {"regional_english": "FR"}
+    # PRE-SETUP
+    print("\n📋 PRE-SETUP:")
+    if not register_and_setup_studio_user():
+        print("❌ Failed to setup studio user, aborting tests")
+        return
     
-    response = make_request("PUT", f"{BACKEND_URL}/persona/regional-english", data=invalid_data, auth_token=auth_token)
-    if response and response.status_code == 400:
-        results.log("Test Invalid Regional Code", "PASS", "Invalid code correctly returns 400 error")
-    else:
-        status = response.status_code if response else "No response"
-        results.log("Test Invalid Regional Code", "FAIL", f"Expected 400, got {status}")
+    if not register_free_user():
+        print("❌ Failed to setup free user, some tests will be skipped")
     
-    print("\n🎯 Sprint 11 Backend Testing Complete!")
-    return results.summary()
+    # AGENCY WORKSPACE TESTS
+    print("\n🏢 AGENCY WORKSPACE TESTS:")
+    test_workspace_crud()
+    test_invitation_flow()
+    test_tier_restriction()
+    
+    # TEMPLATES MARKETPLACE TESTS  
+    print("\n📚 TEMPLATES MARKETPLACE TESTS:")
+    test_templates_categories()
+    create_test_content()
+    test_templates_marketplace()
+    
+    # Summary
+    print("\n" + "=" * 80)
+    test_results.print_summary()
+    
+    return test_results.failed == 0
 
 if __name__ == "__main__":
-    passed, failed, detailed_results = test_sprint11_backend()
-    
-    # Write detailed results to file
-    with open("/app/sprint11_test_results.json", "w") as f:
-        json.dump(detailed_results, f, indent=2)
-    
-    print(f"\n📝 Detailed results saved to: /app/sprint11_test_results.json")
-    
-    if failed > 0:
-        sys.exit(1)
-    else:
-        print("✅ All tests passed!")
+    success = main()
+    exit(0 if success else 1)

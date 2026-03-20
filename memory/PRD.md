@@ -195,8 +195,8 @@ Raw Input → SCOUT → VISUAL → THINKER → PERSONA → WRITER/DESIGNER/DIREC
 ### PHASE 6: SCALE
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 11 | Shareable Persona Cards + Growth Features + Regional English Format | 🔜 Next |
-| Sprint 12 | B2B Agency Workspace + Templates Marketplace + 3rd Party API | Planned |
+| **Sprint 11** | Shareable Persona Cards + Growth Features + Regional English Format | ✅ COMPLETE |
+| Sprint 12 | B2B Agency Workspace + Templates Marketplace + 3rd Party API | 🔜 Next |
 
 ---
 
@@ -831,3 +831,83 @@ See `/app/backend/.env` for all API key placeholders:
 - `users.credits_last_refresh` — Last monthly credit refresh
 - `credit_transactions` collection — Transaction history
 - `subscription_history` collection — Tier change history
+
+
+
+---
+
+## 23. Sprint 11 Implementation Details — July 2025
+
+### Shareable Persona Cards:
+
+**Backend (`routes/persona.py`):**
+- `POST /api/persona/share` — Generate public share token
+  - Creates 16-byte URL-safe token
+  - Default 30-day expiry (free tier), permanent for Pro+
+  - Tracks view count
+  - Returns share_url format: `/creator/{share_token}`
+
+- `GET /api/persona/share/status` — Current share status
+  - Returns is_shared, share_token, expires_at, view_count
+
+- `DELETE /api/persona/share` — Revoke share link
+  - Sets is_active=False on all user shares
+
+- `GET /api/persona/public/{share_token}` — **NO AUTH REQUIRED**
+  - Returns safe persona data (excludes UOM internals)
+  - Includes: creator info, card, voice_metrics, share_info
+  - Increments view_count on each access
+  - Handles timezone-aware expiry checking
+
+**Frontend (`pages/Public/PersonaCardPublic.jsx`):**
+- Standalone public page (no sidebar, no auth)
+- Beautiful gradient card design per archetype
+- Displays: creator name, avatar, archetype, voice descriptor, content pillars, platforms
+- Voice fingerprint visualization bars
+- "Powered by ThookAI" watermark
+- "Create Your Persona Card" CTA with UTM tracking
+- Error states for expired/revoked/not-found links
+
+**Frontend (`pages/Dashboard/PersonaEngine.jsx`):**
+- "Share Card" button — Opens modal with share link
+- Copy button with clipboard fallback for cross-browser support
+- "Download" button — Uses html2canvas to export as PNG
+- Share modal shows: URL input, Copy/Preview/Revoke buttons
+
+### Regional English Formatter:
+
+**Backend (`routes/persona.py`):**
+- `GET /api/persona/regional-english/options` — Returns 4 options:
+  - **US**: American spellings (-ize), MM/DD dates, standard expressions
+  - **UK**: British spellings (-ise), DD/MM dates, whilst/amongst usage
+  - **AU**: Australian spellings, DD/MM dates, colloquialisms (arvo, brekkie)
+  - **IN**: British spellings, DD/MM dates, lakh/crore numbers, formal register
+
+- `PUT /api/persona/regional-english` — Update preference
+  - Validates code (US/UK/AU/IN only)
+  - Updates persona card with regional_english field
+
+**Backend (`agents/writer.py`):**
+- `REGIONAL_ENGLISH_RULES` dict with detailed rules per region
+- `_get_regional_rules()` — Returns formatted rules for writer prompt
+- Writer system prompt now includes: "STRICTLY FOLLOW the regional English rules provided"
+- Regional rules cover: spellings, date formats, number formats, colloquialisms
+
+**Frontend (`pages/Dashboard/PersonaEngine.jsx`):**
+- Globe icon dropdown in persona card header
+- Shows flags (🇺🇸 🇬🇧 🇦🇺 🇮🇳) with region names
+- Selection updates persona via API call
+- Animated dropdown with checkmark for current selection
+
+### Database Schema Additions:
+- `persona_shares` collection:
+  - `share_id`, `share_token`, `user_id`
+  - `expires_at` — Expiry timestamp (null for permanent)
+  - `created_at`, `revoked_at`
+  - `view_count` — Public access counter
+  - `is_active` — Active/revoked status
+
+- `persona_engines.card.regional_english` — User's regional preference (US/UK/AU/IN)
+
+### New Routes Added:
+- `/creator/:shareToken` — Public persona card page (no auth)

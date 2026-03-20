@@ -10,6 +10,8 @@ import RepurposeAgent from "./RepurposeAgent";
 import ContentLibrary from "./ContentLibrary";
 import Analytics from "./Analytics";
 import Settings from "./Settings";
+import AgencyWorkspace from "./AgencyWorkspace";
+import Templates from "./Templates";
 import ComingSoon from "./ComingSoon";
 
 export default function Dashboard() {
@@ -26,6 +28,8 @@ export default function Dashboard() {
           <Route path="/analytics" element={<><TopBar title="Analytics" /><Analytics /></>} />
           <Route path="/library" element={<><TopBar title="Content Library" /><ContentLibrary /></>} />
           <Route path="/connections" element={<><TopBar title="Platform Connections" /><Connections /></>} />
+          <Route path="/agency" element={<><TopBar title="Agency Workspace" /><AgencyWorkspace /></>} />
+          <Route path="/templates" element={<><TopBar title="Templates Marketplace" /><Templates /></>} />
           <Route path="/settings" element={<><TopBar title="Settings" /><Settings /></>} />
         </Routes>
       </div>

@@ -2,7 +2,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, PenLine, Brain, Calendar, BarChart2,
-  RefreshCw, Link2, BookOpen, Settings, Zap, LogOut, ChevronRight
+  RefreshCw, Link2, BookOpen, Settings, Zap, LogOut, ChevronRight,
+  Building2, LayoutTemplate
 } from "lucide-react";
 
 const navItems = [
@@ -13,7 +14,9 @@ const navItems = [
   { to: "/dashboard/calendar", label: "Content Calendar", icon: Calendar },
   { to: "/dashboard/analytics", label: "Analytics", icon: BarChart2 },
   { to: "/dashboard/library", label: "Content Library", icon: BookOpen },
+  { to: "/dashboard/templates", label: "Templates", icon: LayoutTemplate, badge: "New" },
   { to: "/dashboard/connections", label: "Connections", icon: Link2 },
+  { to: "/dashboard/agency", label: "Agency Workspace", icon: Building2, badge: "Pro" },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
@@ -41,7 +44,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
-        {navItems.map(({ to, label, icon: Icon, end }) => (
+        {navItems.map(({ to, label, icon: Icon, end, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -53,8 +56,12 @@ export default function Sidebar() {
           >
             <Icon size={17} />
             <span>{label}</span>
-            {label === "Content Studio" && (
-              <span className="ml-auto text-[10px] bg-lime/15 text-lime rounded-full px-1.5 py-0.5">New</span>
+            {badge && (
+              <span className={`ml-auto text-[10px] rounded-full px-1.5 py-0.5 ${
+                badge === "Pro" 
+                  ? "bg-violet/15 text-violet" 
+                  : "bg-lime/15 text-lime"
+              }`}>{badge}</span>
             )}
           </NavLink>
         ))}
