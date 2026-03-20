@@ -184,11 +184,30 @@ export default function PersonaEngine() {
     } catch {}
   };
 
-  const copyShareLink = () => {
+  const copyShareLink = async () => {
     const fullUrl = `${window.location.origin}/creator/${shareStatus?.share_token}`;
-    navigator.clipboard.writeText(fullUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      // Fallback: create temporary textarea for copying
+      const textarea = document.createElement('textarea');
+      textarea.value = fullUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr);
+      }
+      document.body.removeChild(textarea);
+    }
   };
 
   // Download as image functionality
