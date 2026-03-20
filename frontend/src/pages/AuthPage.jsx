@@ -41,8 +41,23 @@ export default function AuthPage() {
         credentials: "include",
         body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Something went wrong");
+      
+      // Clone response before reading to avoid "body already read" error
+      const resClone = res.clone();
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        // If JSON parsing fails, try to get text from clone
+        const text = await resClone.text();
+        throw new Error(text || "Something went wrong");
+      }
+      
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Something went wrong");
+      }
+      
       login(data);
       navigate("/dashboard", { replace: true });
     } catch (err) {

@@ -284,11 +284,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Comprehensive E2E Frontend Testing Complete - 1 Critical Bug Found"
+    - "Auth Page - Registration Form FIX VERIFICATION FAILED"
   stuck_tasks:
     - "Auth Page - Registration Form"
-  test_all: true
-  test_priority: "critical_fix_needed"
+  test_all: false
+  test_priority: "critical_auth_bug_needs_proper_fix"
 
 agent_communication:
   - agent: "main"
@@ -318,6 +318,129 @@ agent_communication:
       - Pro+ users can create permanent shares
       - Public persona endpoint doesn't require authentication
       - Regional English affects Writer agent output (spellings, date format, colloquialisms)
+  
+  - agent: "main"
+    message: |
+      URGENT: Registration bug fix applied. Used res.clone() to prevent body stream errors.
+      Please test all 4 scenarios:
+      1. Registration success with unique email
+      2. Registration with duplicate email (should show "Email already registered")
+      3. Login with correct credentials
+      4. Login with wrong password (should show "Invalid email or password")
+  
+  - agent: "testing"
+    message: |
+      ❌ CRITICAL: AUTH FIX VERIFICATION FAILED - NEW BUG INTRODUCED
+      
+      🔴 REGRESSION DETECTED: The res.clone() fix has broken error handling!
+      
+      📊 TEST RESULTS (4 scenarios tested):
+      
+      ✅ TEST 1 - REGISTRATION SUCCESS (PASSED):
+      - Filled form with unique email: bugfix_test_1774014952199@test.com
+      - Successfully submitted registration
+      - ✅ NO "body stream already read" errors
+      - ✅ NO console errors
+      - ✅ Redirected to dashboard correctly
+      - ✅ User created in database (verified via dashboard login)
+      
+      ❌ TEST 2 - DUPLICATE EMAIL (FAILED - NEW BUG):
+      - Tried registering with same email again
+      - ❌ Shows JavaScript error to user: "Failed to execute 'clone' on 'Response': Response body is already used"
+      - ❌ Backend returns correct error: {"detail": "Email already registered"} (verified via curl)
+      - ❌ Frontend displays internal JavaScript error instead of user-friendly message
+      
+      ✅ TEST 3 - LOGIN SUCCESS (PASSED):
+      - Logged in with registered credentials
+      - ✅ Successfully authenticated and redirected to dashboard
+      - ✅ No JavaScript errors
+      
+      ❌ TEST 4 - WRONG PASSWORD (FAILED - SAME NEW BUG):
+      - Tried login with wrong password: "WrongPassword999!"
+      - ❌ Shows JavaScript error to user: "Failed to execute 'clone' on 'Response': Response body is already used"
+      - ❌ Backend returns correct error: {"detail": "Invalid email or password"} (verified via curl)
+      - ❌ Frontend displays internal JavaScript error instead of user-friendly message
+      
+      🔍 ROOT CAUSE ANALYSIS:
+      
+      The fix at /app/frontend/src/pages/AuthPage.jsx lines 45-55 uses:
+      ```javascript
+      const resClone = res.clone();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await resClone.text();
+        throw new Error(text || "Something went wrong");
+      }
+      ```
+      
+      PROBLEM: res.clone() itself throws "Response body is already used" error when:
+      - Backend returns error responses (400, 401)
+      - Response body may have been consumed by browser internals before clone
+      - Response object cannot be cloned in certain error scenarios
+      
+      This error is caught by the outer catch block (line 63) and displayed to users as a technical error message instead of the backend's user-friendly error.
+      
+      ✅ BACKEND VERIFICATION (via curl):
+      - POST /api/auth/register with duplicate email → {"detail": "Email already registered"}
+      - POST /api/auth/login with wrong password → {"detail": "Invalid email or password"}
+      - Backend is working 100% correctly
+      
+      🎯 IMPACT:
+      - SUCCESS FLOW: ✅ Works perfectly (registration + login)
+      - ERROR FLOW: ❌ Broken - users see JavaScript errors instead of helpful messages
+      - SEVERITY: HIGH - Poor user experience for common error scenarios
+      
+      💡 RECOMMENDED FIX:
+      
+      DO NOT use res.clone(). Instead, restructure error handling:
+      
+      ```javascript
+      const res = await fetch(`${BACKEND_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      
+      // Parse JSON response ONCE (works for both success and error responses)
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        // If JSON parsing fails, show generic error
+        throw new Error("Unable to process server response");
+      }
+      
+      // Check response status AFTER parsing JSON
+      if (!res.ok) {
+        // Backend always returns {detail: "error message"} for errors
+        throw new Error(data.detail || data.message || "Something went wrong");
+      }
+      
+      // Success: proceed with login
+      login(data);
+      navigate("/dashboard", { replace: true });
+      ```
+      
+      KEY CHANGES:
+      1. ❌ Remove res.clone() completely
+      2. ✅ Parse JSON once (works for both 200 and 4xx responses)
+      3. ✅ Check res.ok AFTER parsing to determine success/error
+      4. ✅ Backend always returns JSON with {detail: "message"} for errors
+      5. ✅ No need to read body multiple times
+      
+      📸 SCREENSHOTS CAPTURED:
+      - test_01_registration_form_filled.png - Registration form ready to submit
+      - test_01_registration_success_dashboard.png - ✅ Success case working
+      - test_02_duplicate_email_error.png - ❌ Shows JavaScript clone error
+      - test_03_login_success.png - ✅ Login success working
+      - test_04_wrong_password_error_fresh.png - ❌ Shows JavaScript clone error
+      
+      🚨 ACTION REQUIRED:
+      Main agent must apply the recommended fix to properly handle error responses without using res.clone().
+      The current fix has improved the success flow but broken error handling.
       - working: "NA"
         agent: "main"
         comment: "GET /api/billing/credits - Returns balance, monthly allowance"
@@ -791,6 +914,27 @@ agent_communication:
       - working: true
         agent: "testing"
         comment: "✅ TESTED - GET /api/viral/patterns working correctly. Returns positive_patterns (6 patterns: curiosity_gap, contrarian, number_hook, etc.), negative_patterns (3 patterns: generic_opener, weak_language, clickbait_overload), tips (5 actionable tips). Complete viral hook education system with pattern analysis and actionable guidance."
+
+  - task: "Auth Page - Registration Form"
+    implemented: true
+    working: false
+    file: "pages/AuthPage.jsx"
+    stuck_count: 2
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Initial implementation of registration and login forms"
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL BUG: 'Failed to execute json on Response: body stream already read' error prevents registration and login. Backend works correctly (verified via curl)."
+      - working: false
+        agent: "main"
+        comment: "Applied fix using res.clone() to prevent body stream already read error"
+      - working: false
+        agent: "testing"
+        comment: "❌ FIX INTRODUCED NEW BUG: The res.clone() approach fails on error responses. Test Results: (1) ✅ Registration SUCCESS works - new user created and redirected to dashboard, NO console errors. (2) ❌ Registration DUPLICATE EMAIL fails - shows JavaScript error 'Failed to execute clone on Response: Response body is already used' instead of 'Email already registered'. (3) ✅ Login SUCCESS works - user logged in and redirected. (4) ❌ Login WRONG PASSWORD fails - shows same JavaScript cloning error instead of 'Invalid email or password'. ROOT CAUSE: res.clone() throws error when response body is already consumed or in error scenarios (400/401). The fix prevents the original error for success cases but breaks error handling. BACKEND VERIFIED: curl tests confirm backend returns correct error messages: {detail: 'Email already registered'} for duplicate, {detail: 'Invalid email or password'} for wrong password."
 
 frontend:
   - task: "Settings Page"
