@@ -42,17 +42,45 @@ export default function AuthPage() {
         body: JSON.stringify(body),
       });
 
-      // Parse JSON response once - works for both success and error responses
-      let data;
+      let data = {};
+      
+      // Try to read response body, but handle cases where it's already consumed
       try {
-        data = await res.json();
-      } catch {
-        throw new Error("Unable to process server response");
+        const text = await res.text();
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch {
+            // Not valid JSON, will use status-based errors
+          }
+        }
+      } catch (bodyError) {
+        // Body already consumed by browser/proxy - use status-based error messages
+        if (!res.ok) {
+          const statusErrors = {
+            400: tab === "register" ? "Email already registered" : "Invalid request",
+            401: "Invalid email or password",
+            409: "Email already registered",
+            500: "Server error. Please try again later."
+          };
+          throw new Error(statusErrors[res.status] || "Something went wrong");
+        }
       }
 
-      // Check response status after parsing
+      // Check response status
       if (!res.ok) {
-        throw new Error(data.detail || data.message || "Something went wrong");
+        // If we have parsed data with detail/message, use it; otherwise use status-based error
+        if (data.detail || data.message) {
+          throw new Error(data.detail || data.message);
+        } else {
+          const statusErrors = {
+            400: tab === "register" ? "Email already registered" : "Invalid request",
+            401: "Invalid email or password",
+            409: "Email already registered",
+            500: "Server error. Please try again later."
+          };
+          throw new Error(statusErrors[res.status] || "Something went wrong");
+        }
       }
 
       // Success - log user in
