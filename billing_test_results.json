@@ -1,0 +1,114 @@
+{
+  "summary": {
+    "total_tests": 17,
+    "passed": 17,
+    "failed": 0,
+    "success_rate": 100.0,
+    "duration_seconds": 1.1631336212158203,
+    "timestamp": "2026-03-21T11:17:17.865061"
+  },
+  "results": [
+    {
+      "test": "User Registration",
+      "passed": true,
+      "details": "User created with ID: user_7f11f53de746",
+      "timestamp": "2026-03-21T11:17:17.033274"
+    },
+    {
+      "test": "User Login",
+      "passed": true,
+      "details": "Auth token received",
+      "timestamp": "2026-03-21T11:17:17.306359"
+    },
+    {
+      "test": "Billing Config Structure",
+      "passed": true,
+      "details": "configured=False, publishable_key=None",
+      "timestamp": "2026-03-21T11:17:17.352931"
+    },
+    {
+      "test": "Early Bird Pricing",
+      "passed": true,
+      "details": "pro: $19 \u2713; studio: $49 \u2713; agency: $129 \u2713",
+      "timestamp": "2026-03-21T11:17:17.352941"
+    },
+    {
+      "test": "Credit Costs Count",
+      "passed": true,
+      "details": "Found 10 operations (expected 10+)",
+      "timestamp": "2026-03-21T11:17:17.394798"
+    },
+    {
+      "test": "Credit Costs Values",
+      "passed": true,
+      "details": "content_create: 10 \u2713; content_regenerate: 4 \u2713; image_generate: 8 \u2713; carousel_generate: 15 \u2713; voice_narration: 12 \u2713; video_generate: 50 \u2713; repurpose: 3 \u2713; series_plan: 6 \u2713; ai_insights: 2 \u2713; viral_predict: 1 \u2713",
+      "timestamp": "2026-03-21T11:17:17.394817"
+    },
+    {
+      "test": "Credit Costs Uniqueness",
+      "passed": true,
+      "details": "All values unique: True",
+      "timestamp": "2026-03-21T11:17:17.394828"
+    },
+    {
+      "test": "Current Subscription",
+      "passed": true,
+      "details": "Status: 200, Tier: free",
+      "timestamp": "2026-03-21T11:17:17.444805"
+    },
+    {
+      "test": "Available Tiers",
+      "passed": true,
+      "details": "Found 4 tiers: free, pro, studio, agency",
+      "timestamp": "2026-03-21T11:17:17.486891"
+    },
+    {
+      "test": "Feature Limits",
+      "passed": true,
+      "details": "Status: 200, Has limits structure: True",
+      "timestamp": "2026-03-21T11:17:17.534016"
+    },
+    {
+      "test": "Daily Content Limit",
+      "passed": true,
+      "details": "Status: 200, Response available: True",
+      "timestamp": "2026-03-21T11:17:17.580575"
+    },
+    {
+      "test": "Subscription Checkout",
+      "passed": true,
+      "details": "Status: 200, Simulated checkout (Stripe not configured)",
+      "timestamp": "2026-03-21T11:17:17.628276"
+    },
+    {
+      "test": "Credit Checkout",
+      "passed": true,
+      "details": "Status: 200, Simulated: 100 credits",
+      "timestamp": "2026-03-21T11:17:17.671865"
+    },
+    {
+      "test": "Simulate Upgrade",
+      "passed": true,
+      "details": "Upgraded to pro, Credits: 500",
+      "timestamp": "2026-03-21T11:17:17.728544"
+    },
+    {
+      "test": "Health Check",
+      "passed": true,
+      "details": "Status: 200, Health: healthy",
+      "timestamp": "2026-03-21T11:17:17.771975"
+    },
+    {
+      "test": "Template Categories",
+      "passed": true,
+      "details": "Status: 200, Categories: 10",
+      "timestamp": "2026-03-21T11:17:17.818127"
+    },
+    {
+      "test": "Current Credits",
+      "passed": true,
+      "details": "Credits: 500, Tier: pro",
+      "timestamp": "2026-03-21T11:17:17.864913"
+    }
+  ]
+}

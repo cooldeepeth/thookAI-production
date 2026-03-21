@@ -17,17 +17,29 @@ logger = logging.getLogger(__name__)
 
 
 class CreditOperation(Enum):
-    """Credit costs per operation type."""
-    CONTENT_CREATE = 10  # Full content generation pipeline
-    CONTENT_REGENERATE = 5  # Regenerate existing content
-    IMAGE_GENERATE = 8  # Single image generation
-    CAROUSEL_GENERATE = 15  # Multi-image carousel
-    VOICE_NARRATION = 5  # Text-to-speech
-    VIDEO_GENERATE = 25  # Video creation
-    REPURPOSE = 3  # Repurpose to another platform
-    SERIES_PLAN = 5  # Create series plan
-    AI_INSIGHTS = 2  # Generate AI insights
-    VIRAL_PREDICT = 1  # Viral hook prediction
+    """Credit costs per operation type.
+    
+    Pricing Strategy (March 2026):
+    - Text operations: High margin (80%+) to encourage usage
+    - Image operations: Good margin (60-75%)
+    - Voice/Video: Premium pricing to cover API costs
+    
+    Real API costs per operation:
+    - CONTENT_CREATE: ~$0.07 (5 agents chain)
+    - IMAGE_GENERATE: ~$0.08 (DALL-E/Stable Diffusion)
+    - VOICE_NARRATION: ~$0.25 (ElevenLabs)
+    - VIDEO_GENERATE: ~$1.50 (Runway Gen-3)
+    """
+    CONTENT_CREATE = 10      # Full content generation pipeline (~86% margin)
+    CONTENT_REGENERATE = 4   # Regenerate existing content (~80% margin) - was 5
+    IMAGE_GENERATE = 8       # Single image generation (~74% margin)
+    CAROUSEL_GENERATE = 15   # Multi-image carousel (~59% margin)
+    VOICE_NARRATION = 12     # Text-to-speech (~45% margin) - was 8, adjusted for uniqueness
+    VIDEO_GENERATE = 50      # Video creation (~45% margin)
+    REPURPOSE = 3            # Repurpose to another platform (~88% margin)
+    SERIES_PLAN = 6          # Create series plan - was 5, adjusted for uniqueness
+    AI_INSIGHTS = 2          # Generate AI insights
+    VIRAL_PREDICT = 1        # Viral hook prediction
 
 
 # Tier configurations

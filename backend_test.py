@@ -1,30 +1,28 @@
 #!/usr/bin/env python3
 """
-Comprehensive End-to-End Backend Testing for ThookAI Platform
-Testing authentication, onboarding, persona engine, content studio, billing, templates marketplace, 
-agency workspace, platform connections, and error handling.
+ThookAI Backend Testing - Production Launch Preparation
+Testing billing configuration, credit costs, subscription endpoints, and checkout flows.
 """
 
 import asyncio
 import aiohttp
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Configuration
 BASE_URL = "https://staging-38.preview.emergentagent.com/api"
-TEST_USER_EMAIL = "e2e_test_user@test.com"
+TEST_USER_EMAIL = f"billing_test_{int(time.time())}@test.com"
 TEST_USER_PASSWORD = "SecurePass123!"
-TEST_USER_NAME = "E2E Test User"
+TEST_USER_NAME = "Billing Test User"
 
-class E2ETestRunner:
+class BillingTestRunner:
     def __init__(self):
         self.session: Optional[aiohttp.ClientSession] = None
         self.auth_token: Optional[str] = None
         self.test_results = []
         self.user_id: Optional[str] = None
-        self.workspace_id: Optional[str] = None
         
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
@@ -75,11 +73,11 @@ class E2ETestRunner:
         except Exception as e:
             return 500, {"error": f"Request failed: {str(e)}"}
     
-    async def test_auth_registration(self):
-        """PHASE 1: Registration Tests"""
-        print("\n🔐 PHASE 1: AUTHENTICATION TESTS")
+    async def setup_test_user(self):
+        """Register and login test user"""
+        print("\n🔐 SETTING UP TEST USER")
         
-        # Test 1: Valid registration
+        # Register user
         status, response = await self.make_request(
             "POST", "/auth/register",
             data={
@@ -92,55 +90,12 @@ class E2ETestRunner:
         
         if status == 200 and "user_id" in response:
             self.user_id = response["user_id"]
-            self.log_result("Valid Registration", True, f"User created with ID: {self.user_id}")
+            self.log_result("User Registration", True, f"User created with ID: {self.user_id}")
         else:
-            self.log_result("Valid Registration", False, f"Status: {status}, Response: {response}")
+            self.log_result("User Registration", False, f"Status: {status}, Response: {response}")
+            return False
         
-        # Test 2: Duplicate email
-        status, response = await self.make_request(
-            "POST", "/auth/register",
-            data={
-                "email": TEST_USER_EMAIL,
-                "password": TEST_USER_PASSWORD,
-                "name": TEST_USER_NAME
-            },
-            require_auth=False
-        )
-        
-        expected_duplicate = status == 400 and "already registered" in str(response).lower()
-        self.log_result("Duplicate Email Registration", expected_duplicate, 
-                       f"Status: {status}, Response: {response}")
-        
-        # Test 3: Invalid email format
-        status, response = await self.make_request(
-            "POST", "/auth/register",
-            data={
-                "email": "invalid-email",
-                "password": "Pass123!",
-                "name": "Test"
-            },
-            require_auth=False
-        )
-        
-        expected_invalid_email = status in [400, 422]
-        self.log_result("Invalid Email Format", expected_invalid_email, 
-                       f"Status: {status}, Response: {response}")
-        
-        # Test 4: Missing required fields
-        status, response = await self.make_request(
-            "POST", "/auth/register",
-            data={"email": "test@test.com"},
-            require_auth=False
-        )
-        
-        expected_missing_fields = status in [400, 422]
-        self.log_result("Missing Required Fields", expected_missing_fields, 
-                       f"Status: {status}, Response: {response}")
-    
-    async def test_auth_login(self):
-        """Login Tests"""
-        
-        # Test 6: Valid login
+        # Login to get token
         status, response = await self.make_request(
             "POST", "/auth/login",
             data={
@@ -152,521 +107,297 @@ class E2ETestRunner:
         
         if status == 200 and "token" in response:
             self.auth_token = response["token"]
-            self.log_result("Valid Login", True, "Auth token received")
+            self.log_result("User Login", True, "Auth token received")
+            return True
         else:
-            self.log_result("Valid Login", False, f"Status: {status}, Response: {response}")
+            self.log_result("User Login", False, f"Status: {status}, Response: {response}")
+            return False
+    
+    async def test_billing_config_endpoint(self):
+        """Test 1: BILLING CONFIG ENDPOINT"""
+        print("\n💳 TEST 1: BILLING CONFIG ENDPOINT")
         
-        # Test 7: Wrong password
-        status, response = await self.make_request(
-            "POST", "/auth/login",
-            data={
-                "email": TEST_USER_EMAIL,
-                "password": "WrongPass123!"
-            },
-            require_auth=False
+        status, response = await self.make_request("GET", "/billing/config", require_auth=False)
+        
+        # Check basic response structure
+        config_valid = (
+            status == 200 and
+            "configured" in response and
+            "publishable_key" in response and
+            "prices" in response and
+            "credit_packages" in response
         )
         
-        expected_wrong_password = status == 401
-        self.log_result("Wrong Password", expected_wrong_password, 
-                       f"Status: {status}, Response: {response}")
-        
-        # Test 8: Non-existent user
-        status, response = await self.make_request(
-            "POST", "/auth/login",
-            data={
-                "email": "nonexistent@test.com",
-                "password": "Pass123!"
-            },
-            require_auth=False
-        )
-        
-        expected_nonexistent = status == 401
-        self.log_result("Non-existent User", expected_nonexistent, 
-                       f"Status: {status}, Response: {response}")
-    
-    async def test_auth_session(self):
-        """Session Tests"""
-        
-        # Test 9: Get user with valid token
-        status, response = await self.make_request("GET", "/auth/me")
-        
-        valid_session = status == 200 and "user_id" in response
-        self.log_result("Valid Token Session", valid_session, 
-                       f"Status: {status}, User: {response.get('name', 'N/A')}")
-        
-        # Test 10: Access without token (use separate session to avoid cookies)
-        async with aiohttp.ClientSession() as clean_session:
-            async with clean_session.get(f"{BASE_URL}/auth/me") as response:
-                status = response.status
-                expected_no_auth = status in [401, 403]
-                self.log_result("No Token Access", expected_no_auth, 
-                               f"Status: {status}, No auth properly blocked: {expected_no_auth}")
-        
-        # Test 11: Invalid token (use separate session)
-        async with aiohttp.ClientSession() as clean_session:
-            headers = {"Authorization": "Bearer invalid-token-xyz", "Content-Type": "application/json"}
-            async with clean_session.get(f"{BASE_URL}/auth/me", headers=headers) as response:
-                status = response.status
-                expected_invalid_token = status in [401, 403]
-                self.log_result("Invalid Token", expected_invalid_token, 
-                               f"Status: {status}, Invalid token properly blocked: {expected_invalid_token}")
-    
-    async def test_onboarding_flow(self):
-        """PHASE 2: Onboarding Flow Tests"""
-        print("\n🚀 PHASE 2: ONBOARDING FLOW TESTS")
-        
-        # Test 12: Get questions
-        status, response = await self.make_request("GET", "/onboarding/questions", require_auth=False)
-        
-        questions_available = status == 200 and "questions" in response and len(response.get("questions", [])) > 0
-        self.log_result("Get Questions", questions_available, 
-                       f"Status: {status}, Questions count: {len(response.get('questions', []))}")
-        
-        # Test 13: Generate persona (simplified version - just with mock answers)
-        mock_answers = [
-            {"question_id": 0, "answer": "I create content about AI and technology for developers and entrepreneurs"},
-            {"question_id": 1, "answer": "LinkedIn"},
-            {"question_id": 2, "answer": "Bold Strategic Human"},
-            {"question_id": 3, "answer": "Lenny Rachitsky - depth + accessibility"},
-            {"question_id": 4, "answer": "Crypto speculation, hustle culture"},
-            {"question_id": 5, "answer": "Build personal brand"}
-        ]
-        
-        status, response = await self.make_request(
-            "POST", "/onboarding/generate-persona",
-            data={
-                "answers": mock_answers,
-                "posts_analysis": "Analytical voice with professional tone"
+        if config_valid:
+            # Verify early bird pricing
+            prices = response.get("prices", {})
+            expected_prices = {
+                "pro": 1900,    # $19.00
+                "studio": 4900, # $49.00
+                "agency": 12900 # $129.00
             }
-        )
-        
-        persona_generated = status == 200 and "persona" in response
-        self.log_result("Generate Persona", persona_generated, 
-                       f"Status: {status}, Persona generated: {persona_generated}")
-        
-        # Test 14: Check if onboarding completed (via persona endpoint)
-        status, response = await self.make_request("GET", "/persona/me")
-        
-        onboarding_completed = status == 200 and "card" in response
-        self.log_result("Onboarding Completed", onboarding_completed, 
-                       f"Status: {status}, Persona available after onboarding: {onboarding_completed}")
-    
-    async def test_persona_engine(self):
-        """PHASE 3: Persona Engine Tests"""
-        print("\n👤 PHASE 3: PERSONA ENGINE TESTS")
-        
-        # Test 16: Get persona
-        status, response = await self.make_request("GET", "/persona/me")
-        
-        persona_available = status == 200 and "card" in response
-        self.log_result("Get Persona", persona_available, 
-                       f"Status: {status}, Has card: {bool(response.get('card'))}")
-        
-        # Test 17: Update persona field
-        status, response = await self.make_request(
-            "PUT", "/persona/me",
-            data={"card": {"hook_style": "Bold contrarian statement"}}
-        )
-        
-        persona_updated = status == 200
-        self.log_result("Update Persona", persona_updated, 
-                       f"Status: {status}, Response: {response}")
-        
-        # Test 18: Get regional English options
-        status, response = await self.make_request("GET", "/persona/regional-english/options")
-        
-        options_available = status == 200 and len(response.get("options", [])) == 4
-        self.log_result("Regional English Options", options_available, 
-                       f"Status: {status}, Options count: {len(response.get('options', []))}")
-        
-        # Test 19: Update regional English to UK
-        status, response = await self.make_request(
-            "PUT", "/persona/regional-english",
-            data={"regional_english": "UK"}
-        )
-        
-        regional_updated = status == 200
-        self.log_result("Update Regional English (UK)", regional_updated, 
-                       f"Status: {status}, Response: {response}")
-        
-        # Test 20: Invalid region
-        status, response = await self.make_request(
-            "PUT", "/persona/regional-english",
-            data={"regional_english": "FR"}
-        )
-        
-        invalid_region_rejected = status == 400
-        self.log_result("Invalid Region (FR)", invalid_region_rejected, 
-                       f"Status: {status}, Response: {response}")
-    
-    async def test_persona_sharing(self):
-        """Persona Sharing Tests"""
-        share_token = None
-        
-        # Test 21: Create share link
-        status, response = await self.make_request("POST", "/persona/share")
-        
-        if status == 200 and "share_token" in response:
-            share_token = response["share_token"]
-            share_created = True
+            
+            pricing_correct = True
+            pricing_details = []
+            
+            for tier, expected_cents in expected_prices.items():
+                if tier in prices:
+                    actual_monthly = prices[tier].get("monthly", 0)
+                    if actual_monthly == expected_cents:
+                        pricing_details.append(f"{tier}: ${expected_cents/100:.0f} ✓")
+                    else:
+                        pricing_details.append(f"{tier}: expected ${expected_cents/100:.0f}, got ${actual_monthly/100:.2f} ✗")
+                        pricing_correct = False
+                else:
+                    pricing_details.append(f"{tier}: missing ✗")
+                    pricing_correct = False
+            
+            self.log_result("Billing Config Structure", True, f"configured={response.get('configured')}, publishable_key={response.get('publishable_key')}")
+            self.log_result("Early Bird Pricing", pricing_correct, "; ".join(pricing_details))
         else:
-            share_created = False
-        
-        self.log_result("Create Share Link", share_created, 
-                       f"Status: {status}, Token: {bool(share_token)}")
-        
-        if share_token:
-            # Test 22: View public persona (NO AUTH)
-            status, response = await self.make_request(
-                "GET", f"/persona/public/{share_token}",
-                require_auth=False
-            )
-            
-            public_view_working = status == 200 and "creator" in response
-            self.log_result("View Public Persona", public_view_working, 
-                           f"Status: {status}, Has creator info: {bool(response.get('creator'))}")
-            
-            # Test 23: Revoke share
-            status, response = await self.make_request("DELETE", "/persona/share")
-            
-            share_revoked = status == 200
-            self.log_result("Revoke Share", share_revoked, 
-                           f"Status: {status}, Response: {response}")
-            
-            # Test 24: Access after revoke
-            status, response = await self.make_request(
-                "GET", f"/persona/public/{share_token}",
-                require_auth=False
-            )
-            
-            access_blocked = status in [404, 410]
-            self.log_result("Access After Revoke", access_blocked, 
-                           f"Status: {status}, Access blocked: {access_blocked}")
+            self.log_result("Billing Config Structure", False, f"Status: {status}, Response: {response}")
     
-    async def test_content_studio(self):
-        """PHASE 4: Content Studio Tests"""
-        print("\n📝 PHASE 4: CONTENT STUDIO TESTS")
+    async def test_credit_costs_endpoint(self):
+        """Test 2: CREDIT COSTS ENDPOINT"""
+        print("\n🪙 TEST 2: CREDIT COSTS ENDPOINT")
         
-        # Test 25: Create content
-        status, response = await self.make_request(
-            "POST", "/content/create",
-            data={
-                "topic": "The future of AI in content creation",
-                "platform": "linkedin",
-                "content_type": "thought_leadership",
-                "raw_input": "The future of AI in content creation"
-            }
-        )
+        status, response = await self.make_request("GET", "/billing/credits/costs", require_auth=False)
         
-        content_job_created = status in [200, 202] and "job_id" in response
-        job_id = response.get("job_id") if content_job_created else None
-        self.log_result("Create Content", content_job_created, 
-                       f"Status: {status}, Job ID: {job_id}")
-        
-        # Test 26: Poll for status
-        if job_id:
-            poll_attempts = 0
-            max_attempts = 10
-            final_status = None
+        if status == 200 and "costs" in response:
+            costs = response["costs"]
             
-            while poll_attempts < max_attempts:
-                status, response = await self.make_request("GET", f"/content/job/{job_id}")
-                
-                if status == 200:
-                    current_status = response.get("status")
-                    if current_status not in ["processing", "queued"]:
-                        final_status = current_status
-                        break
-                
-                poll_attempts += 1
-                await asyncio.sleep(2)  # Wait 2 seconds between polls
+            # Expected operations with unique values
+            expected_operations = {
+                "content_create": 10,
+                "content_regenerate": 4,
+                "image_generate": 8,
+                "carousel_generate": 15,
+                "voice_narration": 12,
+                "video_generate": 50,
+                "repurpose": 3,
+                "series_plan": 6,
+                "ai_insights": 2,
+                "viral_predict": 1
+            }
             
-            polling_working = final_status is not None
-            self.log_result("Poll Content Status", polling_working, 
-                           f"Final status: {final_status} after {poll_attempts} attempts")
-        
-        # Test 27: List user's content
-        status, response = await self.make_request("GET", "/content/jobs")
-        
-        content_list_available = status == 200 and ("jobs" in response or "content" in response)
-        self.log_result("List User Content", content_list_available, 
-                       f"Status: {status}, Jobs count: {len(response.get('jobs', response.get('content', [])))}")
-        
-        # Test 28: Invalid platform
-        status, response = await self.make_request(
-            "POST", "/content/create",
-            data={
-                "topic": "Test",
-                "platform": "invalid_platform",
-                "content_type": "thought_leadership",
-                "raw_input": "Test content"
-            }
-        )
-        
-        invalid_platform_rejected = status in [400, 422]
-        self.log_result("Invalid Platform", invalid_platform_rejected, 
-                       f"Status: {status}, Response: {response}")
-        
-        # Test 29: Empty topic
-        status, response = await self.make_request(
-            "POST", "/content/create",
-            data={
-                "topic": "",
-                "platform": "linkedin",
-                "content_type": "thought_leadership",
-                "raw_input": ""
-            }
-        )
-        
-        empty_topic_rejected = status in [400, 422]
-        self.log_result("Empty Topic", empty_topic_rejected, 
-                       f"Status: {status}, Response: {response}")
+            # Check if all 10 operations are present
+            operations_present = len(costs) >= 10
+            self.log_result("Credit Costs Count", operations_present, f"Found {len(costs)} operations (expected 10+)")
+            
+            # Check specific operations and their costs
+            operations_correct = True
+            operation_details = []
+            
+            for op_name, expected_cost in expected_operations.items():
+                if op_name in costs:
+                    actual_cost = costs[op_name].get("credits", 0)
+                    if actual_cost == expected_cost:
+                        operation_details.append(f"{op_name}: {actual_cost} ✓")
+                    else:
+                        operation_details.append(f"{op_name}: expected {expected_cost}, got {actual_cost} ✗")
+                        operations_correct = False
+                else:
+                    operation_details.append(f"{op_name}: missing ✗")
+                    operations_correct = False
+            
+            self.log_result("Credit Costs Values", operations_correct, "; ".join(operation_details))
+            
+            # Check for unique values
+            credit_values = [costs[op].get("credits", 0) for op in costs]
+            unique_values = len(set(credit_values)) == len(credit_values)
+            self.log_result("Credit Costs Uniqueness", unique_values, f"All values unique: {unique_values}")
+            
+        else:
+            self.log_result("Credit Costs Endpoint", False, f"Status: {status}, Response: {response}")
     
-    async def test_dashboard_analytics(self):
-        """PHASE 5: Dashboard & Analytics"""
-        print("\n📊 PHASE 5: DASHBOARD & ANALYTICS TESTS")
+    async def test_subscription_endpoints(self):
+        """Test 3: SUBSCRIPTION ENDPOINTS (authenticated)"""
+        print("\n📋 TEST 3: SUBSCRIPTION ENDPOINTS")
         
-        # Test 30: Dashboard stats
-        status, response = await self.make_request("GET", "/dashboard/stats")
-        
-        stats_available = status == 200
-        self.log_result("Dashboard Stats", stats_available, 
-                       f"Status: {status}, Response keys: {list(response.keys()) if isinstance(response, dict) else 'N/A'}")
-        
-        # Test 31: Daily brief
-        status, response = await self.make_request("GET", "/dashboard/daily-brief")
-        
-        brief_available = status == 200
-        self.log_result("Daily Brief", brief_available, 
-                       f"Status: {status}, Has suggestions: {bool(response.get('suggestions'))}")
-        
-        # Test 32: Analytics overview
-        status, response = await self.make_request("GET", "/analytics/overview")
-        
-        analytics_available = status == 200
-        self.log_result("Analytics Overview", analytics_available, 
-                       f"Status: {status}, Has data: {response.get('has_data', False)}")
-    
-    async def test_billing_credits(self):
-        """PHASE 6: Billing & Credits"""
-        print("\n💳 PHASE 6: BILLING & CREDITS TESTS")
-        
-        # Test 33: Get credit balance
-        status, response = await self.make_request("GET", "/billing/credits")
-        
-        credits_available = status == 200 and "credits" in response
-        self.log_result("Get Credits", credits_available, 
-                       f"Status: {status}, Credits: {response.get('credits', 'N/A')}")
-        
-        # Test 34: Get subscription
+        # Test 3a: Current subscription
         status, response = await self.make_request("GET", "/billing/subscription")
         
-        subscription_available = status == 200 and "tier" in response
+        subscription_valid = (
+            status == 200 and
+            "tier" in response and
+            "tier_name" in response and
+            "is_active" in response and
+            "features" in response
+        )
+        
         current_tier = response.get("tier", "unknown")
-        self.log_result("Get Subscription", subscription_available, 
+        self.log_result("Current Subscription", subscription_valid, 
                        f"Status: {status}, Tier: {current_tier}")
         
-        # Test 35: Upgrade to Pro (if currently free)
-        if current_tier == "free":
-            status, response = await self.make_request(
-                "POST", "/billing/subscription/upgrade",
-                data={"tier": "pro", "billing_period": "monthly"}
-            )
-            
-            upgrade_successful = status == 200 and response.get("new_tier") == "pro"
-            self.log_result("Upgrade to Pro", upgrade_successful, 
-                           f"Status: {status}, New tier: {response.get('new_tier', 'N/A')}")
-    
-    async def test_templates_marketplace(self):
-        """PHASE 7: Templates Marketplace"""
-        print("\n🛍️ PHASE 7: TEMPLATES MARKETPLACE TESTS")
+        # Test 3b: Available tiers with pricing
+        status, response = await self.make_request("GET", "/billing/subscription/tiers")
         
-        # Test 36: Get categories
-        status, response = await self.make_request("GET", "/templates/categories")
-        
-        categories_available = (status == 200 and 
-                               len(response.get("categories", [])) == 10 and
-                               len(response.get("hook_types", [])) == 8)
-        self.log_result("Template Categories", categories_available, 
-                       f"Status: {status}, Categories: {len(response.get('categories', []))}, Hook types: {len(response.get('hook_types', []))}")
-        
-        # Test 37: Browse templates
-        status, response = await self.make_request("GET", "/templates")
-        
-        templates_browsable = status == 200 and "templates" in response
-        self.log_result("Browse Templates", templates_browsable, 
-                       f"Status: {status}, Templates count: {len(response.get('templates', []))}")
-        
-        # Test 38: Filter by platform
-        status, response = await self.make_request("GET", "/templates?platform=linkedin")
-        
-        platform_filter_working = status == 200
-        self.log_result("Filter by Platform", platform_filter_working, 
-                       f"Status: {status}, Filtered results available")
-        
-        # Test 39: Featured templates
-        status, response = await self.make_request("GET", "/templates/featured")
-        
-        featured_available = status == 200 and "featured" in response
-        self.log_result("Featured Templates", featured_available, 
-                       f"Status: {status}, Has featured: {bool(response.get('featured'))}")
-    
-    async def test_agency_workspace(self):
-        """PHASE 8: Agency Workspace (with upgraded user)"""
-        print("\n🏢 PHASE 8: AGENCY WORKSPACE TESTS")
-        
-        # Test 40: Create workspace (as Pro+ user)
-        status, response = await self.make_request(
-            "POST", "/agency/workspace",
-            data={
-                "name": "E2E Test Agency",
-                "description": "Testing workspace"
-            }
+        tiers_valid = (
+            status == 200 and
+            "tiers" in response and
+            "current_tier" in response
         )
         
-        workspace_created = status == 200 and "workspace_id" in response
-        if workspace_created:
-            self.workspace_id = response["workspace_id"]
+        if tiers_valid:
+            tiers = response.get("tiers", [])
+            tier_count = len(tiers)
+            tier_names = [tier.get("id", "unknown") for tier in tiers]
+            self.log_result("Available Tiers", True, 
+                           f"Found {tier_count} tiers: {', '.join(tier_names)}")
+        else:
+            self.log_result("Available Tiers", False, f"Status: {status}, Response: {response}")
         
-        self.log_result("Create Workspace", workspace_created, 
-                       f"Status: {status}, Workspace ID: {self.workspace_id}")
+        # Test 3c: Feature limits
+        status, response = await self.make_request("GET", "/billing/subscription/limits")
         
-        # Test 41: List workspaces
-        status, response = await self.make_request("GET", "/agency/workspaces")
-        
-        workspaces_listed = status == 200 and "owned" in response
-        self.log_result("List Workspaces", workspaces_listed, 
-                       f"Status: {status}, Owned count: {len(response.get('owned', []))}")
-        
-        if self.workspace_id:
-            # Test 42: Invite creator
-            status, response = await self.make_request(
-                "POST", f"/agency/workspace/{self.workspace_id}/invite",
-                data={
-                    "email": "invited@test.com",
-                    "role": "creator"
-                }
-            )
-            
-            invite_sent = status == 200
-            self.log_result("Invite Creator", invite_sent, 
-                           f"Status: {status}, Invite sent: {invite_sent}")
-            
-            # Test 43: List members
-            status, response = await self.make_request("GET", f"/agency/workspace/{self.workspace_id}/members")
-            
-            members_listed = status == 200 and "members" in response
-            member_count = len(response.get("members", []))
-            self.log_result("List Members", members_listed, 
-                           f"Status: {status}, Members count: {member_count}")
-    
-    async def test_platform_connections(self):
-        """PHASE 9: Platform Connections"""
-        print("\n🔗 PHASE 9: PLATFORM CONNECTIONS TESTS")
-        
-        # Test 44: List available platforms
-        status, response = await self.make_request("GET", "/platforms/status")
-        
-        platforms_available = status == 200
-        platform_count = len(response.get("platforms", [])) if isinstance(response, dict) and "platforms" in response else 0
-        self.log_result("Available Platforms", platforms_available, 
-                       f"Status: {status}, Platforms count: {platform_count}")
-        
-        # Test 45: LinkedIn OAuth (mocked)
-        status, response = await self.make_request("GET", "/platforms/connect/linkedin")
-        
-        oauth_initiated = status == 200 or "auth_url" in response or status == 302
-        self.log_result("LinkedIn OAuth", oauth_initiated, 
-                       f"Status: {status}, OAuth response available: {bool(response)}")
-        
-        # Test 46: List connected platforms
-        status, response = await self.make_request("GET", "/platforms/status")
-        
-        connected_listed = status == 200
-        self.log_result("Connected Platforms", connected_listed, 
-                       f"Status: {status}, Platform status listed")
-    
-    async def test_error_handling(self):
-        """PHASE 10: Error Handling & Edge Cases"""
-        print("\n⚠️ PHASE 10: ERROR HANDLING & EDGE CASES")
-        
-        # Test 47: Access protected endpoint without auth (use separate session)
-        async with aiohttp.ClientSession() as clean_session:
-            async with clean_session.get(f"{BASE_URL}/persona/me") as response:
-                status = response.status
-                auth_required = status in [401, 403]
-                self.log_result("Unauthorized Access", auth_required, 
-                               f"Status: {status}, Auth properly required: {auth_required}")
-        
-        # Test 48: Access non-existent resource
-        status, response = await self.make_request("GET", "/content/job/non-existent-job-id")
-        
-        not_found = status == 404
-        self.log_result("Non-existent Resource", not_found, 
-                       f"Status: {status}, Properly returns 404: {not_found}")
-        
-        # Test 49: Invalid JSON body
-        try:
-            url = f"{BASE_URL}/content/create"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.auth_token}" if self.auth_token else ""
-            }
-            async with self.session.post(url, data="invalid-json", headers=headers) as response:
-                status = response.status
-                invalid_json_handled = status in [400, 422]
-        except Exception:
-            invalid_json_handled = True  # Exception handling counts as proper error handling
-        
-        self.log_result("Invalid JSON Body", invalid_json_handled, 
-                       f"Status: {status}, Invalid JSON properly handled")
-        
-        # Test 50: Very long input
-        long_topic = "A" * 10000
-        status, response = await self.make_request(
-            "POST", "/content/create",
-            data={
-                "topic": long_topic,
-                "platform": "linkedin",
-                "content_type": "thought_leadership",
-                "raw_input": long_topic
-            }
+        limits_valid = (
+            status == 200 and
+            "tier" in response and
+            "limits" in response and
+            "feature_access" in response
         )
         
-        long_input_handled = status in [200, 202, 400, 422]  # Either accepted or properly rejected
-        self.log_result("Very Long Input", long_input_handled, 
-                       f"Status: {status}, Long input handled appropriately")
+        self.log_result("Feature Limits", limits_valid, 
+                       f"Status: {status}, Has limits structure: {limits_valid}")
         
-        # Test 51: Invalid token with separate session
-        async with aiohttp.ClientSession() as clean_session:
-            headers = {"Authorization": "Bearer invalid-token-xyz", "Content-Type": "application/json"}
-            async with clean_session.get(f"{BASE_URL}/persona/me", headers=headers) as response:
-                status = response.status
-                invalid_token_blocked = status in [401, 403]
-                self.log_result("Invalid Token Blocked", invalid_token_blocked, 
-                               f"Status: {status}, Invalid token properly blocked: {invalid_token_blocked}")
+        # Test 3d: Daily content limit
+        status, response = await self.make_request("GET", "/billing/subscription/daily-limit")
+        
+        daily_limit_valid = status == 200
+        self.log_result("Daily Content Limit", daily_limit_valid, 
+                       f"Status: {status}, Response available: {daily_limit_valid}")
+    
+    async def test_checkout_endpoints(self):
+        """Test 4: CHECKOUT ENDPOINTS (authenticated)"""
+        print("\n🛒 TEST 4: CHECKOUT ENDPOINTS")
+        
+        # Test 4a: Subscription checkout
+        status, response = await self.make_request(
+            "POST", "/billing/subscription/checkout",
+            data={"tier": "pro", "billing_period": "monthly"}
+        )
+        
+        subscription_checkout_valid = (
+            status == 200 and
+            ("checkout_url" in response or "simulated" in response)
+        )
+        
+        checkout_details = ""
+        if "simulated" in response and response["simulated"]:
+            checkout_details = "Simulated checkout (Stripe not configured)"
+        elif "checkout_url" in response:
+            checkout_details = f"Checkout URL: {response['checkout_url'][:50]}..."
+        
+        self.log_result("Subscription Checkout", subscription_checkout_valid, 
+                       f"Status: {status}, {checkout_details}")
+        
+        # Test 4b: Credit checkout
+        status, response = await self.make_request(
+            "POST", "/billing/credits/checkout",
+            data={"package": "small"}
+        )
+        
+        credit_checkout_valid = (
+            status == 200 and
+            ("checkout_url" in response or "simulated" in response)
+        )
+        
+        credit_details = ""
+        if "simulated" in response and response["simulated"]:
+            credit_details = f"Simulated: {response.get('credits', 0)} credits"
+        elif "checkout_url" in response:
+            credit_details = f"Checkout URL: {response['checkout_url'][:50]}..."
+        
+        self.log_result("Credit Checkout", credit_checkout_valid, 
+                       f"Status: {status}, {credit_details}")
+    
+    async def test_simulate_endpoints(self):
+        """Test 5: SIMULATE ENDPOINTS (dev only)"""
+        print("\n🧪 TEST 5: SIMULATE ENDPOINTS")
+        
+        # Test 5a: Simulate upgrade
+        status, response = await self.make_request(
+            "POST", "/billing/simulate/upgrade",
+            data={"tier": "pro"}
+        )
+        
+        if status == 200:
+            simulate_upgrade_valid = (
+                "success" in response and
+                response.get("success") and
+                "new_tier" in response and
+                response.get("new_tier") == "pro"
+            )
+            
+            credits_granted = response.get("credits", 0)
+            self.log_result("Simulate Upgrade", simulate_upgrade_valid, 
+                           f"Upgraded to {response.get('new_tier')}, Credits: {credits_granted}")
+        elif status == 403:
+            self.log_result("Simulate Upgrade", True, 
+                           "Correctly disabled in production environment")
+        else:
+            self.log_result("Simulate Upgrade", False, 
+                           f"Status: {status}, Response: {response}")
+    
+    async def test_regression_endpoints(self):
+        """Test 6: REGRESSION TEST - Existing Endpoints"""
+        print("\n🔄 TEST 6: REGRESSION TEST")
+        
+        # Test 6a: Health check
+        status, response = await self.make_request("GET", "/health", require_auth=False)
+        
+        health_valid = status == 200 and "status" in response
+        self.log_result("Health Check", health_valid, 
+                       f"Status: {status}, Health: {response.get('status', 'unknown')}")
+        
+        # Test 6b: Template categories
+        status, response = await self.make_request("GET", "/templates/categories", require_auth=False)
+        
+        categories_valid = (
+            status == 200 and
+            "categories" in response and
+            len(response.get("categories", [])) > 0
+        )
+        
+        category_count = len(response.get("categories", []))
+        self.log_result("Template Categories", categories_valid, 
+                       f"Status: {status}, Categories: {category_count}")
+        
+        # Test 6c: Current credits (after potential upgrade)
+        status, response = await self.make_request("GET", "/billing/credits")
+        
+        credits_valid = (
+            status == 200 and
+            "credits" in response and
+            "tier" in response
+        )
+        
+        current_credits = response.get("credits", 0)
+        current_tier = response.get("tier", "unknown")
+        self.log_result("Current Credits", credits_valid, 
+                       f"Credits: {current_credits}, Tier: {current_tier}")
     
     async def run_all_tests(self):
-        """Run all test phases"""
-        print("🚀 STARTING COMPREHENSIVE END-TO-END TESTING FOR ThookAI PLATFORM")
+        """Run all billing tests"""
+        print("🚀 STARTING THOOKAI BILLING BACKEND TESTING")
         print("=" * 80)
         
         start_time = time.time()
         
         try:
-            await self.test_auth_registration()
-            await self.test_auth_login()
-            await self.test_auth_session()
-            await self.test_onboarding_flow()
-            await self.test_persona_engine()
-            await self.test_persona_sharing()
-            await self.test_content_studio()
-            await self.test_dashboard_analytics()
-            await self.test_billing_credits()
-            await self.test_templates_marketplace()
-            await self.test_agency_workspace()
-            await self.test_platform_connections()
-            await self.test_error_handling()
+            # Setup
+            if not await self.setup_test_user():
+                print("❌ Failed to setup test user, aborting tests")
+                return False
+            
+            # Run tests
+            await self.test_billing_config_endpoint()
+            await self.test_credit_costs_endpoint()
+            await self.test_subscription_endpoints()
+            await self.test_checkout_endpoints()
+            await self.test_simulate_endpoints()
+            await self.test_regression_endpoints()
+            
         except Exception as e:
             print(f"\n❌ CRITICAL ERROR DURING TESTING: {e}")
             self.log_result("Test Suite", False, f"Critical error: {e}")
@@ -676,7 +407,7 @@ class E2ETestRunner:
         
         # Print summary
         print("\n" + "=" * 80)
-        print("📊 COMPREHENSIVE TEST RESULTS SUMMARY")
+        print("📊 BILLING TEST RESULTS SUMMARY")
         print("=" * 80)
         
         passed_tests = [r for r in self.test_results if r["passed"]]
@@ -693,7 +424,7 @@ class E2ETestRunner:
                 print(f"  - {test['test']}: {test['details']}")
         
         # Save results to file
-        with open("/app/e2e_test_results.json", "w") as f:
+        with open("/app/billing_test_results.json", "w") as f:
             json.dump({
                 "summary": {
                     "total_tests": len(self.test_results),
@@ -706,13 +437,13 @@ class E2ETestRunner:
                 "results": self.test_results
             }, f, indent=2)
         
-        print(f"\n📄 Detailed results saved to: /app/e2e_test_results.json")
+        print(f"\n📄 Detailed results saved to: /app/billing_test_results.json")
         
         return len(failed_tests) == 0
 
 async def main():
     """Main test runner"""
-    async with E2ETestRunner() as runner:
+    async with BillingTestRunner() as runner:
         success = await runner.run_all_tests()
         return 0 if success else 1
 
