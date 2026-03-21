@@ -1,23 +1,148 @@
+"""
+ThookAI Authentication Utilities
+
+Features:
+- JWT token management
+- Password hashing with bcrypt
+- Session validation
+- Password policy enforcement
+"""
+
 from fastapi import HTTPException, Request
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timezone
-import os
+import re
+import logging
+from config import settings
+
+logger = logging.getLogger(__name__)
+
+# ==================== PASSWORD HASHING ====================
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'thook-dev-secret')
-ALGORITHM = "HS256"
 
 
 def hash_password(password: str) -> str:
+    """Hash a password using bcrypt"""
     return pwd_context.hash(password)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    """Verify a password against its hash"""
     return pwd_context.verify(plain, hashed)
 
 
+# ==================== PASSWORD POLICY ====================
+
+class PasswordPolicy:
+    """
+    Password strength validation.
+    Enforces security requirements for user passwords.
+    """
+    
+    MIN_LENGTH = 8
+    MAX_LENGTH = 128
+    
+    @classmethod
+    def validate(cls, password: str) -> tuple[bool, list[str]]:
+        """
+        Validate password against policy.
+        Returns (is_valid, list_of_errors)
+        """
+        errors = []
+        
+        # Length check
+        if len(password) < cls.MIN_LENGTH:
+            errors.append(f"Password must be at least {cls.MIN_LENGTH} characters")
+        
+        if len(password) > cls.MAX_LENGTH:
+            errors.append(f"Password must be at most {cls.MAX_LENGTH} characters")
+        
+        # Complexity checks
+        if not re.search(r'[A-Z]', password):
+            errors.append("Password must contain at least one uppercase letter")
+        
+        if not re.search(r'[a-z]', password):
+            errors.append("Password must contain at least one lowercase letter")
+        
+        if not re.search(r'\d', password):
+            errors.append("Password must contain at least one number")
+        
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            errors.append("Password must contain at least one special character")
+        
+        # Common password check (basic list, expand as needed)
+        common_passwords = {
+            'password', 'password123', '123456', '12345678', 'qwerty',
+            'abc123', 'letmein', 'welcome', 'admin', 'login'
+        }
+        if password.lower() in common_passwords:
+            errors.append("Password is too common. Please choose a stronger password")
+        
+        return len(errors) == 0, errors
+
+
+def validate_password_strength(password: str) -> None:
+    """
+    Validate password and raise HTTPException if invalid.
+    Use in registration endpoints.
+    """
+    is_valid, errors = PasswordPolicy.validate(password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Password does not meet requirements", "errors": errors}
+        )
+
+
+# ==================== JWT HANDLING ====================
+
+def create_access_token(user_id: str, expires_days: int = None) -> str:
+    """Create a JWT access token for a user"""
+    from datetime import timedelta
+    
+    if expires_days is None:
+        expires_days = settings.security.jwt_expire_days
+    
+    expire = datetime.now(timezone.utc) + timedelta(days=expires_days)
+    
+    to_encode = {
+        "sub": user_id,
+        "exp": expire,
+        "iat": datetime.now(timezone.utc)
+    }
+    
+    return jwt.encode(
+        to_encode,
+        settings.security.jwt_secret_key,
+        algorithm=settings.security.jwt_algorithm
+    )
+
+
+def decode_token(token: str) -> dict:
+    """
+    Decode and validate a JWT token.
+    Raises JWTError if invalid.
+    """
+    return jwt.decode(
+        token,
+        settings.security.jwt_secret_key,
+        algorithms=[settings.security.jwt_algorithm]
+    )
+
+
+# ==================== USER AUTHENTICATION ====================
+
 async def get_current_user(request: Request):
+    """
+    Get the current authenticated user from request.
+    Supports both JWT tokens and session tokens (Google OAuth).
+    
+    Token can be provided via:
+    - Cookie: session_token
+    - Header: Authorization: Bearer <token>
+    """
     from database import db
 
     token = request.cookies.get("session_token")
@@ -31,7 +156,7 @@ async def get_current_user(request: Request):
 
     # Try JWT first (email/password auth)
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = decode_token(token)
         user_id = payload.get("sub")
         if user_id:
             user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
@@ -40,9 +165,9 @@ async def get_current_user(request: Request):
     except JWTError:
         pass
 
-    # Try Google OAuth session token - only if token looks like a session token (not JWT)
-    # JWT tokens are much longer and have dots, session tokens are shorter
-    if '.' not in token or len(token) < 100:  # Session tokens are typically shorter than JWT tokens
+    # Try Google OAuth session token
+    # JWT tokens are longer and have dots, session tokens are shorter
+    if '.' not in token or len(token) < 100:
         session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
         if session:
             expires_at = session["expires_at"]
@@ -57,5 +182,46 @@ async def get_current_user(request: Request):
             if user:
                 return user
 
-    # If we get here, neither JWT nor session token validation worked
+    # Neither JWT nor session token validation worked
     raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def get_optional_user(request: Request):
+    """
+    Get current user if authenticated, otherwise return None.
+    Use for endpoints that work both authenticated and anonymously.
+    """
+    try:
+        return await get_current_user(request)
+    except HTTPException:
+        return None
+
+
+# ==================== TOKEN ENCRYPTION (for OAuth tokens) ====================
+
+def get_fernet():
+    """Get Fernet instance for encrypting OAuth tokens"""
+    from cryptography.fernet import Fernet
+    
+    key = settings.security.fernet_key
+    if not key:
+        # Generate a key if not configured (development only)
+        if settings.app.is_production:
+            logger.error("FERNET_KEY not configured in production!")
+            raise ValueError("FERNET_KEY must be configured in production")
+        key = Fernet.generate_key().decode()
+        logger.warning("Using auto-generated Fernet key - set FERNET_KEY in production!")
+    
+    return Fernet(key.encode() if isinstance(key, str) else key)
+
+
+def encrypt_token(token: str) -> str:
+    """Encrypt a token (e.g., OAuth access token) for storage"""
+    fernet = get_fernet()
+    return fernet.encrypt(token.encode()).decode()
+
+
+def decrypt_token(encrypted: str) -> str:
+    """Decrypt a stored token"""
+    fernet = get_fernet()
+    return fernet.decrypt(encrypted.encode()).decode()
