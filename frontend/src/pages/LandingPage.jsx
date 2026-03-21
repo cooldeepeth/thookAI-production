@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, ArrowRight, Check, ChevronRight } from "lucide-react";
+import { Zap, ArrowRight, Check, ChevronRight, Play } from "lucide-react";
 
 // ─── Navbar ──────────────────────────────────────────────
 function Navbar() {
@@ -88,12 +88,19 @@ function Hero() {
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <button onClick={() => navigate("/auth")} data-testid="hero-cta-primary" className="btn-primary text-base px-8 py-3.5 flex items-center gap-2">
-            Start for free
+            Get Started
             <ArrowRight size={16} />
           </button>
-          <button data-testid="hero-cta-secondary" className="btn-ghost text-base flex items-center gap-2">
+          <a 
+            href="https://www.youtube.com/watch?v=YOUR_DEMO_VIDEO_ID" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            data-testid="hero-cta-secondary" 
+            className="btn-ghost text-base flex items-center gap-2"
+          >
+            <Play size={16} className="text-lime" />
             <span>Watch 2-min demo</span>
-          </button>
+          </a>
         </motion.div>
 
         <motion.p
@@ -102,7 +109,7 @@ function Hero() {
           transition={{ delay: 0.5 }}
           className="text-zinc-600 text-sm mt-6"
         >
-          No credit card required · 100 free credits on signup
+          50 free credits on signup · No credit card for Free tier
         </motion.p>
       </div>
 
