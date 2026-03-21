@@ -7,7 +7,7 @@ import json
 import time
 import uuid
 
-BACKEND_URL = "https://thook-growth.preview.emergentagent.com/api"
+BACKEND_URL = "https://staging-38.preview.emergentagent.com/api"
 HEADERS = {"Content-Type": "application/json"}
 
 def test_fresh_user_public_persona():

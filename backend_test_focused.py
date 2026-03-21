@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv("/app/frontend/.env")
 
 # Configuration - Use external URL from frontend .env
-BASE_URL = os.getenv('REACT_APP_BACKEND_URL', 'https://thook-growth.preview.emergentagent.com')
+BASE_URL = os.getenv('REACT_APP_BACKEND_URL', 'https://staging-38.preview.emergentagent.com')
 API_BASE = f"{BASE_URL}/api"
 
 # Test configuration

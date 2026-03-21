@@ -229,7 +229,7 @@ frontend:
         comment: "Share button in PersonaEngine.jsx creates share link and shows modal"
       - working: true
         agent: "testing"
-        comment: "✅ TESTED - Share button working correctly. Creates share link (https://thook-growth.preview.emergentagent.com/creator/{token}), opens modal with Share URL input, Copy button, Preview button, and Revoke Link button. Copy button shows 'Copied!' feedback. FIXED: Added try-catch error handling for clipboard API to handle permission issues in different browser contexts."
+        comment: "✅ TESTED - Share button working correctly. Creates share link (https://staging-38.preview.emergentagent.com/creator/{token}), opens modal with Share URL input, Copy button, Preview button, and Revoke Link button. Copy button shows 'Copied!' feedback. FIXED: Added try-catch error handling for clipboard API to handle permission issues in different browser contexts."
 
   - task: "PersonaEngine Download Button"
     implemented: true

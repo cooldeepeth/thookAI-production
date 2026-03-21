@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 
 # Configuration  
-BASE_URL = "https://thook-growth.preview.emergentagent.com/api"
+BASE_URL = "https://staging-38.preview.emergentagent.com/api"
 TEST_USER_EMAIL = f"targeted_test_{int(time.time())}@test.com"
 TEST_USER_PASSWORD = "SecurePass123!"
 TEST_USER_NAME = "Targeted Test User"

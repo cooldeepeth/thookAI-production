@@ -6,7 +6,7 @@ Test authentication isolation - ensure no cookies are interfering
 import asyncio
 import aiohttp
 
-BASE_URL = "https://thook-growth.preview.emergentagent.com/api"
+BASE_URL = "https://staging-38.preview.emergentagent.com/api"
 
 async def test_auth_isolation():
     # Create completely separate session for auth testing
