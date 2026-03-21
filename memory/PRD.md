@@ -1167,6 +1167,96 @@ python db_indexes.py drop --confirm-drop  # Drop all
 
 ---
 
+## 26. Production Launch Preparation — July 2025
+
+### Credit Pricing Adjustments:
+Updated credit costs for profitability while maintaining competitive pricing:
+
+| Operation | Old Credits | New Credits | Margin |
+|-----------|-------------|-------------|--------|
+| CONTENT_CREATE | 10 | 10 | ~86% ✓ |
+| CONTENT_REGENERATE | 5 | 4 | ~80% ✓ |
+| IMAGE_GENERATE | 8 | 8 | ~74% ✓ |
+| CAROUSEL_GENERATE | 15 | 15 | ~59% ✓ |
+| VOICE_NARRATION | 5 | 12 | ~45% ✓ |
+| VIDEO_GENERATE | 25 | 50 | ~45% ✓ |
+| REPURPOSE | 3 | 3 | ~88% ✓ |
+| SERIES_PLAN | 5 | 6 | ~75% ✓ |
+| AI_INSIGHTS | 2 | 2 | ~95% ✓ |
+| VIRAL_PREDICT | 1 | 1 | ~95% ✓ |
+
+### Stripe Payment Integration:
+Full Stripe integration implemented with:
+- Subscription checkout sessions
+- Credit package purchases (100, 500, 1000 credits)
+- Customer portal for self-service billing
+- Webhook handling for payment events
+- Simulated mode for development/testing
+
+**New Files:**
+- `/app/backend/services/stripe_service.py` — Complete Stripe integration
+
+**New Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/billing/config` | GET | Stripe config and pricing |
+| `/api/billing/subscription/checkout` | POST | Create checkout session |
+| `/api/billing/credits/checkout` | POST | Credit package checkout |
+| `/api/billing/portal` | POST | Customer portal session |
+| `/api/billing/webhook/stripe` | POST | Stripe webhook handler |
+| `/api/billing/simulate/upgrade` | POST | Dev-only simulated upgrade |
+
+### Celery Task Queue:
+Async job processing for heavy operations:
+- Video generation (Runway, Pika, etc.)
+- Image generation batch processing
+- Voice synthesis
+- Scheduled post processing
+- Daily limit resets
+- Analytics aggregation
+
+**New Files:**
+- `/app/backend/tasks/__init__.py` — Celery configuration
+- `/app/backend/tasks/media_tasks.py` — Media generation tasks
+- `/app/backend/tasks/content_tasks.py` — Content processing tasks
+
+### Early Bird Pricing:
+| Tier | Early Bird | Regular | Credits |
+|------|------------|---------|---------|
+| Free | $0 | $0 | 50 |
+| Pro | $19/mo | $29/mo | 500 |
+| Studio | $49/mo | $79/mo | 2,000 |
+| Agency | $129/mo | $199/mo | 10,000 |
+
+### Environment Variables Added:
+```env
+# Stripe
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_PRO_MONTHLY=
+STRIPE_PRICE_PRO_ANNUAL=
+STRIPE_PRICE_STUDIO_MONTHLY=
+STRIPE_PRICE_STUDIO_ANNUAL=
+STRIPE_PRICE_AGENCY_MONTHLY=
+STRIPE_PRICE_AGENCY_ANNUAL=
+
+# Celery
+CELERY_BROKER_URL=
+CELERY_RESULT_BACKEND=
+REDIS_URL=
+
+# Frontend
+FRONTEND_URL=
+```
+
+### Dependencies Added:
+- `stripe>=8.0.0` — Payment processing
+- `celery>=5.3.0` — Task queue
+- `redis>=5.0.0` — Message broker
+
+---
+
 ## 🚀 PRODUCTION READY
 
 ThookAI is now fully production-ready with:
@@ -1174,5 +1264,19 @@ ThookAI is now fully production-ready with:
 - Optimized performance (compression, caching, connection pooling)
 - Comprehensive database indexing (80+ indexes)
 - Configuration validation at startup
+- Full Stripe payment integration (simulated mode for dev)
+- Async task queue for heavy operations
 - Detailed deployment documentation
+- Early bird pricing strategy implemented
+
+### Pre-Launch Checklist:
+- [ ] Set production JWT_SECRET_KEY (64+ chars)
+- [ ] Set production FERNET_KEY
+- [ ] Configure CORS_ORIGINS (no wildcards)
+- [ ] Set ENVIRONMENT=production
+- [ ] Add Stripe API keys
+- [ ] Add Stripe Price IDs
+- [ ] Configure Stripe webhook endpoint
+- [ ] Set up Redis for Celery
+- [ ] Add real API keys for AI providers
 
