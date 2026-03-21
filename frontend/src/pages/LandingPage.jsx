@@ -327,28 +327,42 @@ const plans = [
     price: "$0",
     period: "/month",
     desc: "Start building your Persona Engine",
-    features: ["100 credits/month", "1 platform", "Basic persona setup", "Text posts only"],
+    features: ["50 credits/month", "1 platform", "Basic persona setup", "Text posts only"],
     cta: "Start free",
     highlight: false,
   },
   {
     name: "Pro",
-    price: "$29",
+    price: "$19",
+    originalPrice: "$29",
     period: "/month",
     desc: "Full AI agency for serious creators",
-    features: ["1,000 credits/month", "All 3 platforms", "Full Persona Engine", "All content formats", "Video & carousel", "Analytics & insights"],
-    cta: "Start Pro free",
+    features: ["500 credits/month", "All 3 platforms", "Full Persona Engine", "All content formats", "Voice narration", "Analytics & insights"],
+    cta: "Get Early Bird Pricing",
     highlight: true,
-    badge: "Most Popular",
+    badge: "35% OFF",
   },
   {
     name: "Studio",
-    price: "$99",
+    price: "$49",
+    originalPrice: "$79",
     period: "/month",
-    desc: "For agencies managing multiple creators",
-    features: ["5,000 credits/month", "Up to 10 creator accounts", "Agency dashboard", "Client reporting", "Priority support", "API access"],
-    cta: "Contact sales",
+    desc: "For professional creators & teams",
+    features: ["2,000 credits/month", "Video generation", "Priority support", "Team collaboration", "Advanced analytics", "API access"],
+    cta: "Get Early Bird Pricing",
     highlight: false,
+    badge: "38% OFF",
+  },
+  {
+    name: "Agency",
+    price: "$129",
+    originalPrice: "$199",
+    period: "/month",
+    desc: "For agencies managing creators",
+    features: ["10,000 credits/month", "Unlimited personas", "White-label options", "Client workspaces", "Dedicated support", "Custom integrations"],
+    cta: "Contact Sales",
+    highlight: false,
+    badge: "35% OFF",
   },
 ];
 
@@ -356,19 +370,23 @@ function Pricing() {
   const navigate = useNavigate();
   return (
     <section id="pricing" className="px-6 md:px-12 py-24">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="text-center mb-12"
         >
+          <div className="inline-flex items-center gap-2 bg-lime/10 border border-lime/20 rounded-full px-4 py-1.5 mb-4 text-sm">
+            <span className="w-2 h-2 bg-lime rounded-full animate-pulse" />
+            <span className="text-lime font-medium">Early Bird Pricing — Limited Time</span>
+          </div>
           <p className="text-lime text-sm font-semibold uppercase tracking-wider mb-3">Pricing</p>
           <h2 className="font-display font-bold text-4xl md:text-5xl text-white">Simple, credit-based.</h2>
-          <p className="text-zinc-500 mt-3 text-sm">Pay for what you create. Unused credits roll over.</p>
+          <p className="text-zinc-500 mt-3 text-sm">Pay for what you create. Credits refresh monthly.</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.name}
@@ -376,17 +394,22 @@ function Pricing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className={`card-thook p-6 relative ${plan.highlight ? "border-lime/30 bg-lime/3" : ""}`}
+              className={`card-thook p-6 relative ${plan.highlight ? "border-lime/30 bg-lime/3 ring-2 ring-lime/20" : ""}`}
               data-testid={`pricing-${plan.name.toLowerCase()}`}
             >
               {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime text-black text-xs font-bold rounded-full px-3 py-1">
+                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold rounded-full px-3 py-1 ${
+                  plan.highlight ? "bg-lime text-black" : "bg-violet text-white"
+                }`}>
                   {plan.badge}
                 </div>
               )}
               <p className="text-sm font-semibold text-zinc-400 mb-1">{plan.name}</p>
-              <div className="flex items-end gap-1 mb-1">
+              <div className="flex items-end gap-2 mb-1">
                 <span className="font-display font-bold text-4xl text-white">{plan.price}</span>
+                {plan.originalPrice && (
+                  <span className="text-zinc-500 text-lg line-through mb-1">{plan.originalPrice}</span>
+                )}
                 <span className="text-zinc-500 text-sm mb-1">{plan.period}</span>
               </div>
               <p className="text-xs text-zinc-500 mb-5">{plan.desc}</p>

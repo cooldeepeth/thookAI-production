@@ -1,10 +1,13 @@
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, PenLine, Brain, Calendar, BarChart2,
   RefreshCw, Link2, BookOpen, Settings, Zap, LogOut, ChevronRight,
-  Building2, LayoutTemplate
+  Building2, LayoutTemplate, CreditCard
 } from "lucide-react";
+
+const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -23,11 +26,42 @@ const navItems = [
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [credits, setCredits] = useState(null);
+
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const token = localStorage.getItem("thook_token");
+        if (!token) return;
+        
+        const res = await fetch(`${BACKEND_URL}/api/billing/credits`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setCredits(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch credits:", err);
+      }
+    };
+
+    fetchCredits();
+    // Refresh credits every 60 seconds
+    const interval = setInterval(fetchCredits, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
     navigate("/", { replace: true });
   };
+
+  const currentCredits = credits?.credits ?? user?.credits ?? 50;
+  const maxCredits = credits?.monthly_allowance ?? 50;
+  const tierName = user?.subscription_tier || user?.plan || "free";
+  const isLowBalance = credits?.is_low_balance || currentCredits < maxCredits * 0.2;
 
   return (
     <aside className="w-64 bg-[#050505] border-r border-white/5 flex flex-col h-screen fixed left-0 top-0 z-50" data-testid="sidebar">
@@ -69,19 +103,33 @@ export default function Sidebar() {
 
       {/* Credits banner */}
       <div className="px-3 py-2">
-        <div className="bg-surface-2 rounded-xl p-3 border border-white/5">
+        <NavLink 
+          to="/dashboard/settings"
+          className="block bg-surface-2 rounded-xl p-3 border border-white/5 hover:border-lime/20 transition-colors"
+        >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">Credits</span>
-            <span className="text-xs font-mono text-lime">{user?.credits ?? 100}</span>
+            <span className="text-xs text-zinc-400 flex items-center gap-1">
+              <Zap size={12} className={isLowBalance ? "text-orange-400" : "text-lime"} />
+              Credits
+            </span>
+            <span className={`text-xs font-mono ${isLowBalance ? "text-orange-400" : "text-lime"}`}>
+              {currentCredits.toLocaleString()}
+            </span>
           </div>
           <div className="w-full bg-white/5 rounded-full h-1.5">
             <div
-              className="bg-lime h-1.5 rounded-full transition-all"
-              style={{ width: `${Math.min(100, ((user?.credits ?? 100) / 200) * 100)}%` }}
+              className={`h-1.5 rounded-full transition-all ${isLowBalance ? "bg-orange-400" : "bg-lime"}`}
+              style={{ width: `${Math.min(100, (currentCredits / maxCredits) * 100)}%` }}
             />
           </div>
-          <p className="text-[11px] text-zinc-600 mt-1.5">of 200 free credits</p>
-        </div>
+          <div className="flex items-center justify-between mt-1.5">
+            <p className="text-[10px] text-zinc-600">of {maxCredits.toLocaleString()} monthly</p>
+            <span className="text-[10px] text-zinc-500 flex items-center gap-0.5">
+              <CreditCard size={10} />
+              {tierName.charAt(0).toUpperCase() + tierName.slice(1)}
+            </span>
+          </div>
+        </NavLink>
       </div>
 
       {/* User profile */}
@@ -96,7 +144,7 @@ export default function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{user?.name || "Creator"}</p>
-            <p className="text-xs text-zinc-500 truncate capitalize">{user?.plan || "free"} plan</p>
+            <p className="text-xs text-zinc-500 truncate capitalize">{tierName} plan</p>
           </div>
           <button
             onClick={handleLogout}
