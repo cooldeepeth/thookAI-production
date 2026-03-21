@@ -54,10 +54,10 @@ function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-8 text-sm">
+          <div className="inline-flex items-center gap-2 bg-lime/10 border border-lime/20 rounded-full px-4 py-1.5 mb-8 text-sm">
             <span className="w-2 h-2 bg-lime rounded-full animate-pulse" />
-            <span className="text-zinc-300">Now in Beta — First 100 creators get Pro free</span>
-            <ChevronRight size={14} className="text-zinc-500" />
+            <span className="text-lime font-medium">Early Bird Launch — Save up to 38% for a limited time</span>
+            <ChevronRight size={14} className="text-lime/60" />
           </div>
         </motion.div>
 
