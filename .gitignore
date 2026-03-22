@@ -94,3 +94,7 @@ memory/
 .emergent/
 *token.json*
 *credentials.json*
+-e 
+# Environment files
+*.env
+*.env.*
