@@ -145,6 +145,46 @@ async def get_featured_templates(current_user: dict = Depends(get_current_user))
     }
 
 
+# ============ MY TEMPLATES (must be before wildcard routes) ============
+
+@router.get("/my/published")
+async def get_my_published_templates(current_user: dict = Depends(get_current_user)):
+    """Get templates published by current user."""
+    templates = await db.templates.find(
+        {"author_id": current_user["user_id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    return {
+        "success": True,
+        "templates": templates,
+        "total": len(templates)
+    }
+
+
+@router.get("/my/used")
+async def get_my_used_templates(current_user: dict = Depends(get_current_user)):
+    """Get templates the current user has used."""
+    usages = await db.template_usage.find(
+        {"user_id": current_user["user_id"]}
+    ).sort("used_at", -1).to_list(50)
+    
+    template_ids = list(set(u["template_id"] for u in usages))
+    
+    templates = await db.templates.find(
+        {"template_id": {"$in": template_ids}},
+        {"_id": 0}
+    ).to_list(50)
+    
+    return {
+        "success": True,
+        "templates": templates,
+        "total": len(templates)
+    }
+
+
+# ============ SINGLE TEMPLATE (wildcard - must be after specific routes) ============
+
 @router.get("/{template_id}")
 async def get_template(template_id: str, current_user: dict = Depends(get_current_user)):
     """Get a single template with full details."""
@@ -364,43 +404,7 @@ async def upvote_template(template_id: str, current_user: dict = Depends(get_cur
         return {"success": True, "action": "added", "upvoted": True}
 
 
-# ============ MY TEMPLATES ============
-
-@router.get("/my/published")
-async def get_my_published_templates(current_user: dict = Depends(get_current_user)):
-    """Get templates published by current user."""
-    templates = await db.templates.find(
-        {"author_id": current_user["user_id"]},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(50)
-    
-    return {
-        "success": True,
-        "templates": templates,
-        "total": len(templates)
-    }
-
-
-@router.get("/my/used")
-async def get_my_used_templates(current_user: dict = Depends(get_current_user)):
-    """Get templates the current user has used."""
-    usages = await db.template_usage.find(
-        {"user_id": current_user["user_id"]}
-    ).sort("used_at", -1).to_list(50)
-    
-    template_ids = list(set(u["template_id"] for u in usages))
-    
-    templates = await db.templates.find(
-        {"template_id": {"$in": template_ids}},
-        {"_id": 0}
-    ).to_list(50)
-    
-    return {
-        "success": True,
-        "templates": templates,
-        "total": len(templates)
-    }
-
+# ============ DELETE TEMPLATE ============
 
 @router.delete("/{template_id}")
 async def delete_template(template_id: str, current_user: dict = Depends(get_current_user)):

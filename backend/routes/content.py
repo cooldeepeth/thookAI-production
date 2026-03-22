@@ -9,6 +9,12 @@ from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
 from agents.learning import capture_learning_signal
 
+# Celery task imports
+from tasks import is_redis_configured, get_task_status as celery_get_task_status
+from tasks.media_tasks import generate_image as celery_generate_image
+from tasks.media_tasks import generate_voice as celery_generate_voice
+from tasks.media_tasks import generate_video as celery_generate_video
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/content", tags=["content"])
@@ -187,6 +193,41 @@ async def list_jobs(current_user: dict = Depends(get_current_user), limit: int =
         {"_id": 0, "agent_outputs": 0}
     ).sort("created_at", -1).limit(limit).to_list(limit)
     return {"jobs": jobs}
+
+
+@router.get("/jobs/{job_id}/task-status")
+async def get_job_task_status(
+    job_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get the status of a Celery task associated with a content job."""
+    job = await db.content_jobs.find_one({
+        "job_id": job_id,
+        "user_id": current_user["user_id"]
+    })
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    celery_task_id = job.get("celery_task_id")
+    
+    if not celery_task_id:
+        # No Celery task - either sync mode or task not started
+        return {
+            "mode": "sync",
+            "status": "completed" if job.get("status") in ["completed", "approved"] else job.get("status", "unknown"),
+            "job_status": job.get("status")
+        }
+    
+    # Get task status from Celery
+    task_status = await celery_get_task_status(celery_task_id)
+    
+    return {
+        "mode": "async",
+        "task_id": celery_task_id,
+        "job_status": job.get("status"),
+        **task_status
+    }
 
 
 @router.get("/platform-types")

@@ -42,6 +42,11 @@ class CreditOperation(Enum):
     VIRAL_PREDICT = 1        # Viral hook prediction
 
 
+# NOTE: price_monthly below reflects DEFAULT (post-early-bird) display prices in USD.
+# ACTUAL prices charged via Stripe are defined in services/stripe_service.py TIER_PRICING.
+# During the early-bird period, stripe_service.py prices take precedence for all billing.
+# Update price_monthly here once early-bird period ends to keep the display prices in sync.
+
 # Tier configurations
 TIER_CONFIGS = {
     "free": {

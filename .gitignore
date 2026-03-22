@@ -28,12 +28,14 @@ next-env.d.ts
 # Production builds
 /build
 dist/
-dist
+frontend/build/
 
-# Environment files (comprehensive coverage)
-
-*token.json*
-*credentials.json*
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+frontend/.env.local
 
 # Logs and debug files
 npm-debug.log*
@@ -48,9 +50,17 @@ dump.rdb
 
 # Python
 __pycache__/
-*pyc*
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+**/*.pyc
 venv/
 .venv/
+*.egg-info/
+
+# Backend ghost files from malformed pip install
+backend/=*
 
 # Development tools
 chainlit.md
@@ -77,47 +87,10 @@ agenthub/agents/youtube/db
 .cache/
 
 # Mobile development
-android-sdk/ -e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+android-sdk/
+
+# ThookAI specific
+memory/
+.emergent/
+*token.json*
+*credentials.json*

@@ -9,6 +9,7 @@ Production-ready FastAPI application with:
 """
 
 from fastapi import FastAPI, APIRouter
+from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
@@ -36,6 +37,7 @@ from routes.billing import router as billing_router
 from routes.viral import router as viral_router
 from routes.agency import router as agency_router
 from routes.templates import router as templates_router
+from routes.media import router as media_router
 
 # Setup logging
 logging.basicConfig(
@@ -124,6 +126,7 @@ api_router.include_router(billing_router)
 api_router.include_router(viral_router)
 api_router.include_router(agency_router)
 api_router.include_router(templates_router)
+api_router.include_router(media_router)
 
 
 @api_router.get("/")
@@ -216,6 +219,6 @@ async def global_exception_handler(request, exc):
     
     # In production, don't expose internal error details
     if settings.app.is_production:
-        return {"detail": "An internal error occurred"}
+        return JSONResponse(status_code=500, content={"detail": "An internal error occurred"})
     
-    return {"detail": str(exc), "type": type(exc).__name__}
+    return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__})

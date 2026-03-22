@@ -68,6 +68,8 @@ class LLMConfig:
     anthropic_key: Optional[str] = field(default_factory=lambda: os.environ.get('ANTHROPIC_API_KEY'))
     gemini_key: Optional[str] = field(default_factory=lambda: os.environ.get('GEMINI_API_KEY'))
     perplexity_key: Optional[str] = field(default_factory=lambda: os.environ.get('PERPLEXITY_API_KEY'))
+    elevenlabs_key: Optional[str] = field(default_factory=lambda: os.environ.get('ELEVENLABS_API_KEY'))
+    pinecone_key: Optional[str] = field(default_factory=lambda: os.environ.get('PINECONE_API_KEY'))
     
     def has_llm_provider(self) -> bool:
         """Check if at least one LLM provider is configured"""
@@ -81,7 +83,29 @@ class LLMConfig:
             'anthropic': bool(self.anthropic_key and self.anthropic_key.startswith('sk-ant-') and 'placeholder' not in self.anthropic_key),
             'gemini': bool(self.gemini_key and 'placeholder' not in self.gemini_key),
             'perplexity': bool(self.perplexity_key and self.perplexity_key.startswith('pplx-') and 'placeholder' not in self.perplexity_key),
+            'elevenlabs': bool(self.elevenlabs_key and 'placeholder' not in self.elevenlabs_key),
+            'pinecone': bool(self.pinecone_key and 'placeholder' not in self.pinecone_key),
         }
+
+
+@dataclass
+class R2Config:
+    """Cloudflare R2 media storage configuration"""
+    r2_account_id: Optional[str] = field(default_factory=lambda: os.environ.get('R2_ACCOUNT_ID'))
+    r2_access_key_id: Optional[str] = field(default_factory=lambda: os.environ.get('R2_ACCESS_KEY_ID'))
+    r2_secret_access_key: Optional[str] = field(default_factory=lambda: os.environ.get('R2_SECRET_ACCESS_KEY'))
+    r2_bucket_name: Optional[str] = field(default_factory=lambda: os.environ.get('R2_BUCKET_NAME', 'thookai-media'))
+    r2_public_url: Optional[str] = field(default_factory=lambda: os.environ.get('R2_PUBLIC_URL'))
+    
+    def has_r2(self) -> bool:
+        """Check if all required R2 config values are set"""
+        return all([
+            self.r2_account_id,
+            self.r2_access_key_id,
+            self.r2_secret_access_key,
+            self.r2_bucket_name,
+            self.r2_public_url
+        ])
 
 
 @dataclass
@@ -109,6 +133,7 @@ class Settings:
     security: SecurityConfig = field(default_factory=SecurityConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
     app: AppConfig = field(default_factory=AppConfig)
+    r2: R2Config = field(default_factory=R2Config)
     
     def validate(self) -> dict:
         """
@@ -119,7 +144,8 @@ class Settings:
             'environment': self.app.environment,
             'warnings': [],
             'errors': [],
-            'providers': self.llm.get_status()
+            'providers': self.llm.get_status(),
+            'r2_storage': self.r2.has_r2()
         }
         
         # Security validation
