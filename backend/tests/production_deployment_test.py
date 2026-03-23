@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://staging-38.preview.emergentagent.com/api"
+BASE_URL = "https://celery-dispatch-fix.preview.emergentagent.com/api"
 TEST_USER_EMAIL = "prod_test_user@test.com"
 TEST_USER_PASSWORD = "SecurePass123!"
 TEST_USER_NAME = "Production Test User"

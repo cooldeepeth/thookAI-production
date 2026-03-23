@@ -266,6 +266,38 @@ async def generate_image(
         primary_angle = commander.get("primary_angle", "")
         prompt = f"Visual for: {primary_angle or content[:200]}"
     
+    # Try async dispatch via Celery if Redis is available
+    if is_redis_configured():
+        try:
+            task = celery_generate_image.apply_async(
+                args=[
+                    data.job_id,
+                    current_user["user_id"],
+                    prompt,
+                    data.provider or "openai",
+                    data.style,
+                    "1024x1024"
+                ]
+            )
+            # Store celery task ID in job for status tracking
+            await db.content_jobs.update_one(
+                {"job_id": data.job_id},
+                {"$set": {
+                    "celery_task_id": task.id,
+                    "image_status": "queued",
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
+            logger.info(f"Image generation queued: task_id={task.id}, job_id={data.job_id}")
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=202,
+                content={"task_id": task.id, "status": "queued", "job_id": data.job_id}
+            )
+        except Exception as e:
+            logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
+    
+    # Fallback: synchronous direct agent call
     result = await designer_generate(
         prompt=prompt,
         style=data.style,
@@ -366,6 +398,37 @@ async def narrate_content(
     if not content:
         raise HTTPException(status_code=400, detail="No content to narrate. Generate content first.")
     
+    # Try async dispatch via Celery if Redis is available
+    if is_redis_configured():
+        try:
+            task = celery_generate_voice.apply_async(
+                args=[
+                    data.job_id,
+                    current_user["user_id"],
+                    content,
+                    data.provider or "elevenlabs",
+                    data.voice_id
+                ]
+            )
+            # Store celery task ID in job for status tracking
+            await db.content_jobs.update_one(
+                {"job_id": data.job_id},
+                {"$set": {
+                    "celery_task_id": task.id,
+                    "voice_status": "queued",
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
+            logger.info(f"Voice narration queued: task_id={task.id}, job_id={data.job_id}")
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=202,
+                content={"task_id": task.id, "status": "queued", "job_id": data.job_id}
+            )
+        except Exception as e:
+            logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
+    
+    # Fallback: synchronous direct agent call
     result = await generate_voice_narration(
         text=content,
         voice_id=data.voice_id,
@@ -479,6 +542,38 @@ async def generate_video(
         primary_angle = commander.get("primary_angle", "")
         prompt = f"Video visualizing: {primary_angle or content[:200]}"
     
+    # Try async dispatch via Celery if Redis is available
+    if is_redis_configured():
+        try:
+            task = celery_generate_video.apply_async(
+                args=[
+                    data.job_id,
+                    current_user["user_id"],
+                    prompt,
+                    data.provider or "runway",
+                    "realistic",
+                    data.duration
+                ]
+            )
+            # Store celery task ID in job for status tracking
+            await db.content_jobs.update_one(
+                {"job_id": data.job_id},
+                {"$set": {
+                    "celery_task_id": task.id,
+                    "video_status": "queued",
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
+            logger.info(f"Video generation queued: task_id={task.id}, job_id={data.job_id}")
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=202,
+                content={"task_id": task.id, "status": "queued", "job_id": data.job_id}
+            )
+        except Exception as e:
+            logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
+    
+    # Fallback: synchronous direct agent call
     result = await video_generate(
         prompt=prompt,
         duration=data.duration,

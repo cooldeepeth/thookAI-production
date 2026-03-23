@@ -6,7 +6,7 @@ import requests
 import json
 import time
 
-BACKEND_URL = "https://staging-38.preview.emergentagent.com/api"
+BACKEND_URL = "https://celery-dispatch-fix.preview.emergentagent.com/api"
 HEADERS = {"Content-Type": "application/json"}
 
 # Test with existing user from previous test
