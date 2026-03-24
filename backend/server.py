@@ -231,7 +231,7 @@ app.add_middleware(TimingMiddleware, slow_request_threshold_ms=2000)
 
 # OAuth (Authlib) requires server-side session for authorize state / PKCE
 _session_secret = settings.security.jwt_secret_key or "dev-oauth-session-secret-not-for-production"
-app.add_middleware(SessionMiddleware, secret_key=_session_secret, same_site="lax")
+app.add_middleware(SessionMiddleware, secret_key=_session_secret, same_site="none", https_only=True)
 
 
 # ==================== ERROR HANDLERS ====================
