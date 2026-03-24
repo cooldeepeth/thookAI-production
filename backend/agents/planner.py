@@ -6,7 +6,6 @@ Suggests optimal posting times based on:
 - User's UOM (burnout risk)
 - Content type
 """
-import os
 import json
 import asyncio
 import uuid
@@ -14,9 +13,9 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 
-logger = logging.getLogger(__name__)
+from services.llm_keys import chat_constructor_key, openai_available
 
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+logger = logging.getLogger(__name__)
 
 # Platform-specific peak times (hours in user's timezone, simplified to UTC)
 PLATFORM_PEAKS = {
@@ -36,13 +35,6 @@ PLATFORM_PEAKS = {
         "best_days": ["Wednesday", "Friday", "Saturday"]
     }
 }
-
-
-def _valid_key(key: str) -> bool:
-    if not key:
-        return False
-    placeholders = ['placeholder', 'sk-placeholder']
-    return not any(key.lower().startswith(p) for p in placeholders)
 
 
 def _clean_json(raw: str) -> str:
@@ -167,14 +159,14 @@ async def _get_ai_reasoning(
     burnout_risk: str
 ) -> str:
     """Get AI-generated reasoning for the suggestions."""
-    if not _valid_key(LLM_KEY):
+    if not openai_available():
         return f"Based on {platform} engagement patterns, these times typically see higher audience activity."
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"planner-{uuid.uuid4().hex[:8]}",
             system_message="You are a social media strategist. Give brief, actionable posting advice."
         ).with_model("openai", "gpt-4.1-mini")

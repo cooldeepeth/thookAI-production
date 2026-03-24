@@ -9,8 +9,9 @@ Production-ready FastAPI application with:
 """
 
 from fastapi import FastAPI, APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 import os
 import logging
 import asyncio
@@ -26,6 +27,8 @@ from middleware.performance import CompressionMiddleware, CacheMiddleware, Timin
 
 # Import routes
 from routes.auth import router as auth_router
+from routes.password_reset import router as password_reset_router
+from routes.auth_google import router as google_auth_router
 from routes.onboarding import router as onboarding_router
 from routes.persona import router as persona_router
 from routes.content import router as content_router
@@ -38,6 +41,7 @@ from routes.viral import router as viral_router
 from routes.agency import router as agency_router
 from routes.templates import router as templates_router
 from routes.media import router as media_router
+from routes.uploads import router as uploads_router
 
 # Setup logging
 logging.basicConfig(
@@ -110,11 +114,20 @@ app = FastAPI(
     redoc_url="/api/redoc" if not settings.app.is_production else None,
 )
 
+
+@app.get("/health")
+async def health_redirect():
+    """Alias for load balancers that probe /health instead of /api/health."""
+    return RedirectResponse(url="/api/health")
+
+
 api_router = APIRouter(prefix="/api")
 
 # ==================== ROUTES ====================
 
 api_router.include_router(auth_router)
+api_router.include_router(password_reset_router)
+api_router.include_router(google_auth_router)
 api_router.include_router(onboarding_router)
 api_router.include_router(persona_router)
 api_router.include_router(content_router)
@@ -127,6 +140,7 @@ api_router.include_router(viral_router)
 api_router.include_router(agency_router)
 api_router.include_router(templates_router)
 api_router.include_router(media_router)
+api_router.include_router(uploads_router)
 
 
 @api_router.get("/")
@@ -178,11 +192,17 @@ app.include_router(api_router)
 # ==================== MIDDLEWARE STACK ====================
 # Order matters! Middleware is executed in reverse order (bottom to top)
 
+allowed_origins = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 # 1. CORS - must be first (closest to response)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=settings.security.cors_origins,
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -208,6 +228,10 @@ app.add_middleware(CacheMiddleware, max_entries=1000)
 
 # 7. Request timing (first middleware, closest to request)
 app.add_middleware(TimingMiddleware, slow_request_threshold_ms=2000)
+
+# OAuth (Authlib) requires server-side session for authorize state / PKCE
+_session_secret = settings.security.jwt_secret_key or "dev-oauth-session-secret-not-for-production"
+app.add_middleware(SessionMiddleware, secret_key=_session_secret, same_site="lax")
 
 
 # ==================== ERROR HANDLERS ====================

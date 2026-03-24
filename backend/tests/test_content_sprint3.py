@@ -97,17 +97,19 @@ class TestGetJob:
         assert r.status_code == 200
         data = r.json()
         assert data["job_id"] == self.JOB_ID
-        assert data["status"] == "reviewing"
+        assert data["status"] in ("completed", "reviewing")
         assert data["platform"] == "linkedin"
-        print(f"PASS: Reference job {self.JOB_ID} has status=reviewing")
+        print(f"PASS: Reference job {self.JOB_ID} has status={data['status']}")
 
     def test_reference_job_has_final_content(self):
         r = requests.get(f"{BASE_URL}/api/content/job/{self.JOB_ID}", headers=auth_headers())
         assert r.status_code == 200
         data = r.json()
-        assert data.get("final_content") is not None
-        assert len(data["final_content"]) > 0
-        print(f"PASS: final_content present, length={len(data['final_content'])}")
+        fc = data.get("final_content")
+        assert fc is not None
+        text = fc.get("post", fc) if isinstance(fc, dict) else fc
+        assert len(str(text or "")) > 0
+        print(f"PASS: final_content present, length={len(str(text))}")
 
     def test_reference_job_has_qc_scores(self):
         r = requests.get(f"{BASE_URL}/api/content/job/{self.JOB_ID}", headers=auth_headers())
@@ -161,7 +163,11 @@ class TestPatchJobStatus:
         r2 = requests.get(f"{BASE_URL}/api/content/job/job_307f39714a52", headers=auth_headers())
         assert r2.status_code == 200
         data = r2.json()
-        assert data["final_content"] == "My edited content for testing purposes"
+        fc = data["final_content"]
+        if isinstance(fc, dict):
+            assert fc.get("post") == "My edited content for testing purposes"
+        else:
+            assert fc == "My edited content for testing purposes"
         assert data["status"] == "approved"
         print("PASS: Verified edited_content persisted")
 
@@ -214,13 +220,15 @@ class TestFullPipeline:
             if r2.status_code == 200:
                 job = r2.json()
                 print(f"  [{int(time.time()-start)}s] status={job.get('status')}, agent={job.get('current_agent')}")
-                if job["status"] in ("reviewing", "error", "approved"):
+                if job["status"] in ("completed", "reviewing", "error", "approved"):
                     final_job = job
                     break
 
         assert final_job is not None, "Pipeline did not complete within 90 seconds"
-        assert final_job["status"] == "reviewing", f"Pipeline ended with status={final_job['status']}, error={final_job.get('error')}"
-        assert final_job.get("final_content") and len(final_job["final_content"]) > 0
+        assert final_job["status"] in ("completed", "reviewing"), f"Pipeline ended with status={final_job['status']}, error={final_job.get('error')}"
+        fc = final_job.get("final_content")
+        text = fc.get("post", fc) if isinstance(fc, dict) else fc
+        assert text and len(str(text)) > 0
         qc = final_job.get("qc_score", {})
         assert "personaMatch" in qc
         assert "aiRisk" in qc

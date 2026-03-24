@@ -6,7 +6,6 @@ Captures learning signals from user interactions:
 - Rejection patterns (what users reject)
 - UOM (User Operating Model) updates
 """
-import os
 import json
 import asyncio
 import uuid
@@ -15,13 +14,9 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 from database import db
 
+from services.llm_keys import anthropic_available, chat_constructor_key
+
 logger = logging.getLogger(__name__)
-
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
-
-def _valid_key(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder'])
 
 
 def _clean_json(raw: str) -> str:
@@ -80,14 +75,14 @@ async def analyze_edit_delta(
             "structure_preference": "No significant structure changes"
         }
     
-    if not _valid_key(LLM_KEY):
+    if not anthropic_available():
         return _mock_analysis(original_content, edited_content)
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"learn-{uuid.uuid4().hex[:8]}",
             system_message=LEARNING_SYSTEM
         ).with_model("anthropic", "claude-sonnet-4-20250514")

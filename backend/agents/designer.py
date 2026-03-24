@@ -75,27 +75,32 @@ def _valid_key(key: str) -> bool:
 
 async def _generate_openai(prompt: str, model: str = "gpt-image-1") -> Dict[str, Any]:
     """Generate image using OpenAI GPT Image."""
-    api_key = os.environ.get('EMERGENT_LLM_KEY', '')
+    api_key = os.environ.get("OPENAI_API_KEY", "")
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "openai"}
-    
+
     try:
-        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-        
-        image_gen = OpenAIImageGeneration(api_key=api_key)
-        images = await asyncio.wait_for(
-            image_gen.generate_images(prompt=prompt, model=model, number_of_images=1),
-            timeout=90.0
+        from openai import AsyncOpenAI
+
+        client = AsyncOpenAI(api_key=api_key)
+        resp = await asyncio.wait_for(
+            client.images.generate(
+                model=model,
+                prompt=prompt,
+                n=1,
+                size="1024x1024",
+                response_format="b64_json",
+            ),
+            timeout=90.0,
         )
-        
-        if images and len(images) > 0:
-            image_base64 = base64.b64encode(images[0]).decode('utf-8')
+        if resp.data and len(resp.data) > 0 and resp.data[0].b64_json:
+            image_base64 = resp.data[0].b64_json
             return {
                 "image_base64": image_base64,
                 "image_url": f"data:image/png;base64,{image_base64}",
                 "generated": True,
                 "provider": "openai",
-                "model": model
+                "model": model,
             }
         return {"generated": False, "error": "no_image", "provider": "openai"}
     except Exception as e:
@@ -144,50 +149,42 @@ async def _generate_stability(prompt: str, model: str = "sd3-large") -> Dict[str
         return {"generated": False, "error": str(e), "provider": "stability"}
 
 
-async def _generate_fal(prompt: str, model: str = "flux-pro") -> Dict[str, Any]:
-    """Generate image using FAL AI (FLUX, SDXL Lightning)."""
-    api_key = os.environ.get('FAL_API_KEY', '')
+async def _generate_fal(prompt: str, model: str = "flux-pro-1.1") -> Dict[str, Any]:
+    """Generate image using fal.ai Flux Pro 1.1 (FAL_KEY / FAL_API_KEY in env)."""
+    api_key = os.environ.get("FAL_KEY") or os.environ.get("FAL_API_KEY", "")
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "fal"}
-    
+
     try:
-        async with httpx.AsyncClient() as client:
-            # FAL AI endpoint for FLUX
-            model_endpoint = {
-                "flux-pro": "fal-ai/flux-pro",
-                "flux-dev": "fal-ai/flux/dev",
-                "sdxl-lightning": "fal-ai/fast-sdxl"
-            }.get(model, "fal-ai/flux-pro")
-            
-            response = await client.post(
-                f"https://fal.run/{model_endpoint}",
-                headers={
-                    "Authorization": f"Key {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "prompt": prompt,
-                    "image_size": "square",
-                    "num_images": 1
-                },
-                timeout=60.0
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                image_url = data.get("images", [{}])[0].get("url", "")
-                if image_url:
-                    # Download the image
-                    img_response = await client.get(image_url, timeout=30.0)
-                    image_base64 = base64.b64encode(img_response.content).decode('utf-8')
-                    return {
-                        "image_base64": image_base64,
-                        "image_url": f"data:image/png;base64,{image_base64}",
-                        "generated": True,
-                        "provider": "fal",
-                        "model": model
-                    }
+        import fal_client
+
+        handler = await fal_client.submit_async(
+            "fal-ai/flux-pro/v1.1",
+            arguments={
+                "prompt": prompt,
+                "image_size": {"width": 1024, "height": 1024},
+                "num_images": 1,
+                "output_format": "jpeg",
+                "safety_tolerance": 2,
+            },
+        )
+        result = await handler.get()
+        image_url = result.get("images", [{}])[0].get("url", "")
+        if not image_url:
             return {"generated": False, "error": "no_image", "provider": "fal"}
+
+        async with httpx.AsyncClient() as client:
+            img_response = await client.get(image_url, timeout=60.0)
+            img_response.raise_for_status()
+            image_base64 = base64.b64encode(img_response.content).decode("utf-8")
+
+        return {
+            "image_base64": image_base64,
+            "image_url": f"data:image/jpeg;base64,{image_base64}",
+            "generated": True,
+            "provider": "fal",
+            "model": "flux-pro-1.1",
+        }
     except Exception as e:
         logger.error(f"FAL AI error: {e}")
         return {"generated": False, "error": str(e), "provider": "fal"}

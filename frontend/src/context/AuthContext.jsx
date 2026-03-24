@@ -9,8 +9,19 @@ export function AuthProvider({ children }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/me`, { credentials: "include" });
-      if (!res.ok) { setUser(null); return; }
+      const token = localStorage.getItem("thook_token");
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+        credentials: "include",
+        headers,
+      });
+      if (!res.ok) {
+        setUser(null);
+        return;
+      }
       const data = await res.json();
       setUser(data);
     } catch {
@@ -21,10 +32,27 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, skip the /me check.
-    // AuthCallback will exchange the session_id and establish the session first.
-    if (window.location.hash?.includes('session_id=')) {
-      setLoading(false);
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      localStorage.setItem("thook_token", token);
+      (async () => {
+        try {
+          const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include",
+          });
+          if (!res.ok) throw new Error("Invalid token");
+          const userData = await res.json();
+          setUser({ ...userData, token });
+          window.history.replaceState({}, "", "/dashboard");
+        } catch {
+          localStorage.removeItem("thook_token");
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
+      })();
       return;
     }
     checkAuth();
@@ -34,6 +62,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await fetch(`${BACKEND_URL}/api/auth/logout`, { method: "POST", credentials: "include" });
+    localStorage.removeItem("thook_token");
     setUser(null);
   };
 

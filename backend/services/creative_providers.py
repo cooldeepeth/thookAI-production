@@ -23,6 +23,15 @@ def _valid_key(key: str) -> bool:
     return not any(key.lower().startswith(p) or key.lower() == p for p in placeholders)
 
 
+def _env_value_for_config(env_key: str) -> str:
+    """Resolve env value; OpenAI image/TTS accept OPENAI_API_KEY or legacy EMERGENT_LLM_KEY."""
+    if env_key == "EMERGENT_LLM_KEY":
+        return os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY") or ""
+    if env_key == "FAL_API_KEY":
+        return os.environ.get("FAL_KEY") or os.environ.get("FAL_API_KEY") or ""
+    return os.environ.get(env_key, "") or ""
+
+
 # ============ PROVIDER CONFIGURATIONS ============
 
 class ImageProvider(str, Enum):
@@ -59,7 +68,7 @@ IMAGE_PROVIDERS_INFO = {
         "name": "OpenAI GPT Image",
         "description": "High quality, creative images with excellent prompt understanding",
         "models": ["gpt-image-1", "dall-e-3"],
-        "env_key": "EMERGENT_LLM_KEY",  # Uses Emergent key
+        "env_key": "EMERGENT_LLM_KEY",  # Resolved: OPENAI_API_KEY or EMERGENT_LLM_KEY
         "speed": "medium",
         "quality": "high"
     },
@@ -73,8 +82,8 @@ IMAGE_PROVIDERS_INFO = {
     },
     "fal": {
         "name": "FAL AI",
-        "description": "Ultra-fast inference - FLUX, SDXL Lightning",
-        "models": ["flux-pro", "flux-dev", "sdxl-lightning"],
+        "description": "Ultra-fast inference - FLUX Pro 1.1, SDXL Lightning",
+        "models": ["flux-pro-1.1", "flux-dev", "sdxl-lightning"],
         "env_key": "FAL_API_KEY",
         "speed": "very_fast",
         "quality": "high"
@@ -177,7 +186,7 @@ VOICE_PROVIDERS_INFO = {
         "name": "OpenAI TTS",
         "description": "Fast and natural sounding voices",
         "models": ["tts-1", "tts-1-hd"],
-        "env_key": "EMERGENT_LLM_KEY",  # Uses Emergent key
+        "env_key": "EMERGENT_LLM_KEY",  # Resolved: OPENAI_API_KEY or EMERGENT_LLM_KEY
         "languages": 50,
         "quality": "high"
     },
@@ -221,7 +230,7 @@ def get_available_image_providers() -> List[Dict[str, Any]]:
     available = []
     for provider_id, info in IMAGE_PROVIDERS_INFO.items():
         env_key = info["env_key"]
-        api_key = os.environ.get(env_key, "")
+        api_key = _env_value_for_config(env_key)
         is_configured = _valid_key(api_key)
         
         available.append({
@@ -243,7 +252,7 @@ def get_available_video_providers() -> List[Dict[str, Any]]:
     available = []
     for provider_id, info in VIDEO_PROVIDERS_INFO.items():
         env_key = info["env_key"]
-        api_key = os.environ.get(env_key, "")
+        api_key = _env_value_for_config(env_key)
         is_configured = _valid_key(api_key)
         
         available.append({
@@ -265,7 +274,7 @@ def get_available_voice_providers() -> List[Dict[str, Any]]:
     available = []
     for provider_id, info in VOICE_PROVIDERS_INFO.items():
         env_key = info["env_key"]
-        api_key = os.environ.get(env_key, "")
+        api_key = _env_value_for_config(env_key)
         is_configured = _valid_key(api_key)
         
         available.append({
@@ -297,7 +306,7 @@ def get_best_available_provider(
     # Check preferred provider first
     if preferred_provider and preferred_provider in providers:
         env_key = providers[preferred_provider]["env_key"]
-        if _valid_key(os.environ.get(env_key, "")):
+        if _valid_key(_env_value_for_config(env_key)):
             return preferred_provider
     
     # Fallback priority order
@@ -310,7 +319,7 @@ def get_best_available_provider(
     for provider_id in priority_order.get(provider_type, []):
         if provider_id in providers:
             env_key = providers[provider_id]["env_key"]
-            if _valid_key(os.environ.get(env_key, "")):
+            if _valid_key(_env_value_for_config(env_key)):
                 return provider_id
     
     return None

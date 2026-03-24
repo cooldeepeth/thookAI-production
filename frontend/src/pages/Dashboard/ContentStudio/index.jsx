@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import InputPanel from "./InputPanel";
+import MediaUploader from "@/components/MediaUploader";
 import AgentPipeline from "./AgentPipeline";
 import ContentOutput from "./ContentOutput";
 
@@ -16,6 +17,7 @@ export default function ContentStudio() {
   const [job, setJob] = useState(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [uploadedItems, setUploadedItems] = useState([]);
   const pollRef = useRef(null);
   const navigate = useNavigate();
 
@@ -38,11 +40,13 @@ export default function ContentStudio() {
   // Poll job status
   const pollJob = useCallback(async (id) => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/content/job/${id}`, { credentials: "include" });
+      const token = localStorage.getItem("thook_token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${BACKEND_URL}/api/content/job/${id}`, { credentials: "include", headers });
       if (!res.ok) return;
       const data = await res.json();
       setJob(data);
-      if (data.status === "reviewing" || data.status === "error" || data.status === "approved") {
+      if (data.status === "completed" || data.status === "reviewing" || data.status === "error" || data.status === "approved") {
         clearInterval(pollRef.current);
         pollRef.current = null;
         setCreating(false);
@@ -66,11 +70,19 @@ export default function ContentStudio() {
     setJob(null);
     setJobId(null);
     try {
+      const token = localStorage.getItem("thook_token");
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch(`${BACKEND_URL}/api/content/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
-        body: JSON.stringify({ platform, content_type: contentType, raw_input: rawInput }),
+        body: JSON.stringify({
+          platform,
+          content_type: contentType,
+          raw_input: rawInput,
+          upload_ids: uploadedItems.map((u) => u.upload_id),
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -142,7 +154,7 @@ export default function ContentStudio() {
   };
 
   const isRunning = creating || (job && job.status === "running");
-  const isDone = job && (job.status === "reviewing" || job.status === "approved");
+  const isDone = job && (job.status === "completed" || job.status === "reviewing" || job.status === "approved");
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden" data-testid="content-studio">
@@ -158,6 +170,15 @@ export default function ContentStudio() {
           onGenerate={handleCreate}
           isRunning={isRunning}
           error={error}
+          mediaSection={
+            <div className="mb-4">
+              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1 font-mono">Add context (optional)</p>
+              <p className="text-[11px] text-zinc-600 mb-2 leading-relaxed">
+                Upload images, videos, or paste URLs — AI will use these to inform your content
+              </p>
+              <MediaUploader items={uploadedItems} onItemsChange={setUploadedItems} />
+            </div>
+          }
         />
       </div>
 

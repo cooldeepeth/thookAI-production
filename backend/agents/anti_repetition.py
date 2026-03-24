@@ -15,10 +15,9 @@ import re
 from typing import Dict, Any, List, Tuple
 from collections import Counter
 from services.vector_store import get_recent_patterns, check_repetition_risk, query_similar_content
+from services.llm_keys import chat_constructor_key, openai_available
 
 logger = logging.getLogger(__name__)
-
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 # Hook pattern categories
 HOOK_PATTERNS = {
@@ -38,13 +37,6 @@ STRUCTURE_PATTERNS = {
     "opinion": ["hot take", "controversial", "perspective"],
     "cta_heavy": ["call to action", "engage", "follow"]
 }
-
-
-def _valid_key(key: str) -> bool:
-    if not key:
-        return False
-    placeholders = ['placeholder', 'sk-placeholder']
-    return not any(key.lower().startswith(p) for p in placeholders)
 
 
 def _clean_json(raw: str) -> str:
@@ -440,11 +432,11 @@ async def get_variation_suggestions(
     Returns:
         Specific suggestions for variation
     """
-    if not _valid_key(LLM_KEY):
+    if not openai_available():
         return _mock_variation_suggestions(draft_content)
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         import uuid
         
         # Get recent patterns
@@ -452,7 +444,7 @@ async def get_variation_suggestions(
         hook_fatigue = await analyze_hook_fatigue(user_id, limit=5)
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"variation-{uuid.uuid4().hex[:8]}",
             system_message="You are a content optimization expert. Provide specific, actionable suggestions. Return JSON only."
         ).with_model("openai", "gpt-4.1-mini")

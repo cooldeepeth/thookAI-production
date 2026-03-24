@@ -6,7 +6,6 @@ Evolves user persona based on:
 - Style drift analysis
 - AI-powered voice evolution recommendations
 """
-import os
 import json
 import asyncio
 import uuid
@@ -14,13 +13,13 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 
+from services.llm_keys import (
+    anthropic_available,
+    chat_constructor_key,
+    openai_available,
+)
+
 logger = logging.getLogger(__name__)
-
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
-
-def _valid_key(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder'])
 
 
 def _clean_json(raw: str) -> str:
@@ -73,14 +72,14 @@ async def analyze_voice_evolution(user_id: str) -> Dict[str, Any]:
     early_samples = [c.get("final_content", "")[:500] for c in early_content[:3]]
     recent_samples = [c.get("final_content", "")[:500] for c in recent_content[-3:]]
     
-    if not _valid_key(LLM_KEY):
+    if not anthropic_available():
         return _mock_evolution_analysis(early_samples, recent_samples, len(all_content))
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"evolution-{uuid.uuid4().hex[:8]}",
             system_message="You are a writing style analyst. Compare content samples to identify voice evolution. Return JSON only."
         ).with_model("anthropic", "claude-sonnet-4-20250514")
@@ -207,14 +206,14 @@ async def suggest_persona_updates(user_id: str) -> Dict[str, Any]:
     # Get voice evolution
     evolution = await analyze_voice_evolution(user_id)
     
-    if not _valid_key(LLM_KEY):
+    if not openai_available():
         return _mock_persona_suggestions(current_card, learning, analytics, evolution)
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"refine-{uuid.uuid4().hex[:8]}",
             system_message="You are a personal branding expert. Suggest persona refinements based on data. Return JSON only."
         ).with_model("openai", "gpt-4.1-mini")

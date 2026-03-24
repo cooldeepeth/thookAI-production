@@ -12,7 +12,7 @@ import logging
 import asyncio
 from datetime import datetime, timezone, timedelta
 from celery import shared_task
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,8 @@ def run_content_pipeline(
     user_id: str,
     platform: str,
     content_type: str,
-    raw_input: str
+    raw_input: str,
+    upload_ids: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Run the full content generation pipeline asynchronously.
@@ -54,7 +55,8 @@ def run_content_pipeline(
                 user_id=user_id,
                 platform=platform,
                 content_type=content_type,
-                raw_input=raw_input
+                raw_input=raw_input,
+                upload_ids=upload_ids or [],
             )
             return {"success": True, "job_id": job_id}
         except Exception as e:

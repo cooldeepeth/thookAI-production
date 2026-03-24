@@ -3,10 +3,10 @@ import json
 import asyncio
 import uuid
 import logging
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from services.llm_client import LlmChat, UserMessage
+from services.llm_keys import chat_constructor_key, openai_available
 
 logger = logging.getLogger(__name__)
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 QC_SYSTEM = """You are the QC Agent for ThookAI. Score content against creator persona. Return only valid JSON."""
 
@@ -38,10 +38,6 @@ platformFit 0-10: Platform-appropriate length, format, style? (7+ = good)
 overall_pass: true if personaMatch>=7 AND aiRisk<=35 AND platformFit>=7"""
 
 
-def _valid(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder'])
-
-
 def _clean_json(raw: str) -> str:
     s = raw.strip()
     if "```" in s:
@@ -66,12 +62,12 @@ async def run_qc(draft: str, persona_card: dict, platform: str, content_type: st
         QC scores and feedback
     """
     # Start with base QC
-    if not _valid(LLM_KEY):
+    if not openai_available():
         result = _mock_qc(draft)
     else:
         try:
             chat = LlmChat(
-                api_key=LLM_KEY,
+                api_key=chat_constructor_key(),
                 session_id=f"qc-{uuid.uuid4().hex[:8]}",
                 system_message=QC_SYSTEM
             ).with_model("openai", "gpt-4.1-mini")

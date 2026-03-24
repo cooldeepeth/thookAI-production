@@ -8,7 +8,7 @@ ThookAI is a sophisticated AI platform that helps creators generate, schedule, a
 |-----------|------------|
 | **Backend** | FastAPI, MongoDB (motor async), Celery + Redis |
 | **Frontend** | React 18, react-router-dom v6, Tailwind CSS |
-| **AI** | emergentintegrations (multi-LLM), Claude, GPT-4o, Perplexity |
+| **AI** | OpenAI, Anthropic, Google (Gemini) SDKs via `services/llm_client.py`, Perplexity |
 | **Media Storage** | Cloudflare R2 (S3-compatible) |
 | **Creative AI** | DALL-E, Stable Diffusion, ElevenLabs, Runway |
 | **Payments** | Stripe (subscriptions + one-time credits) |

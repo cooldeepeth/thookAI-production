@@ -348,7 +348,7 @@ class Sprint7TestRunner:
                 job_status = response.get("status", "unknown")
                 current_agent = response.get("current_agent", "unknown")
                 
-                if job_status == "reviewing":
+                if job_status in ("reviewing", "completed"):
                     self.log("✅ Job ready for review")
                     return True
                 elif job_status == "error":

@@ -64,43 +64,44 @@ def _valid_key(key: str) -> bool:
 # ============ PROVIDER-SPECIFIC IMPLEMENTATIONS ============
 
 async def _generate_elevenlabs(text: str, voice_id: str, stability: float, similarity_boost: float) -> Dict[str, Any]:
-    """Generate voice using ElevenLabs."""
-    api_key = os.environ.get('ELEVENLABS_API_KEY', '')
+    """Generate voice using ElevenLabs (async SDK)."""
+    api_key = os.environ.get("ELEVENLABS_API_KEY", "")
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "elevenlabs"}
-    
+
     try:
-        from elevenlabs import ElevenLabs
-        from elevenlabs.types import VoiceSettings
-        
-        client = ElevenLabs(api_key=api_key)
-        
+        from elevenlabs.client import AsyncElevenLabs
+        from elevenlabs.types.voice_settings import VoiceSettings
+
+        client = AsyncElevenLabs(api_key=api_key)
+        vid = voice_id or DEFAULT_VOICES["elevenlabs"][0]["id"]
+        model_id = "eleven_multilingual_v2"
         voice_settings = VoiceSettings(
             stability=stability,
             similarity_boost=similarity_boost,
             style=0.0,
-            use_speaker_boost=True
+            use_speaker_boost=True,
         )
-        
-        audio_generator = client.text_to_speech.convert(
+
+        stream = client.text_to_speech.convert(
+            vid,
             text=text,
-            voice_id=voice_id or DEFAULT_VOICES["elevenlabs"][0]["id"],
-            model_id="eleven_multilingual_v2",
-            voice_settings=voice_settings
+            model_id=model_id,
+            output_format="mp3_44100_128",
+            voice_settings=voice_settings,
         )
-        
         audio_data = b""
-        for chunk in audio_generator:
+        async for chunk in stream:
             audio_data += chunk
-        
-        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-        
+
+        audio_base64 = base64.b64encode(audio_data).decode("utf-8")
+
         return {
             "audio_base64": audio_base64,
             "audio_url": f"data:audio/mpeg;base64,{audio_base64}",
             "generated": True,
             "provider": "elevenlabs",
-            "model": "eleven_multilingual_v2"
+            "model": model_id,
         }
     except Exception as e:
         logger.error(f"ElevenLabs error: {e}")
@@ -109,7 +110,9 @@ async def _generate_elevenlabs(text: str, voice_id: str, stability: float, simil
 
 async def _generate_openai_tts(text: str, voice_id: str, model: str = "tts-1-hd") -> Dict[str, Any]:
     """Generate voice using OpenAI TTS."""
-    api_key = os.environ.get('EMERGENT_LLM_KEY', '')
+    from services.llm_keys import openai_api_key_for_rest
+
+    api_key = openai_api_key_for_rest()
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "openai_tts"}
     

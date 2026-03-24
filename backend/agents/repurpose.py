@@ -7,7 +7,6 @@ Transforms content from one platform format to multiple platform-native variants
 
 Uses the Writer agent with platform-specific adaptations.
 """
-import os
 import json
 import asyncio
 import uuid
@@ -15,9 +14,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
-logger = logging.getLogger(__name__)
+from services.llm_keys import anthropic_available, chat_constructor_key
 
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+logger = logging.getLogger(__name__)
 
 # Platform format specifications
 PLATFORM_SPECS = {
@@ -40,13 +39,6 @@ PLATFORM_SPECS = {
         "optimal_structure": "Hook → Story → Value → CTA → Hashtags (15-30)"
     }
 }
-
-
-def _valid_key(key: str) -> bool:
-    if not key:
-        return False
-    placeholders = ['placeholder', 'sk-placeholder']
-    return not any(key.lower().startswith(p) for p in placeholders)
 
 
 def _clean_json(raw: str) -> str:
@@ -78,12 +70,12 @@ async def repurpose_content(
     Returns:
         Dict with repurposed content for each platform
     """
-    if not _valid_key(LLM_KEY):
+    if not anthropic_available():
         # Return mock repurposed content
         return _mock_repurpose(source_content, source_platform, target_platforms)
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         results = {}
         
@@ -95,7 +87,7 @@ async def repurpose_content(
             source_spec = PLATFORM_SPECS.get(source_platform, PLATFORM_SPECS["linkedin"])
             
             chat = LlmChat(
-                api_key=LLM_KEY,
+                api_key=chat_constructor_key(),
                 session_id=f"repurpose-{uuid.uuid4().hex[:8]}",
                 system_message="""You are an expert content adapter. Your job is to transform content 
 between social media platforms while preserving the core message and the creator's voice.

@@ -179,6 +179,20 @@ INDEXES = {
         IndexModel([('user_id', ASCENDING)], name='idx_user_id'),
         IndexModel([('created_at', ASCENDING)], expireAfterSeconds=86400, name='idx_created_ttl'),  # 24hr TTL
     ],
+
+    # ========== PASSWORD RESETS ==========
+    'password_resets': [
+        IndexModel([('token_hash', ASCENDING)], unique=True, name='idx_token_hash'),
+        IndexModel([('user_id', ASCENDING)], name='idx_user_id'),
+        IndexModel([('expires_at', ASCENDING)], name='idx_expires_at'),
+    ],
+
+    # ========== CONTEXT UPLOADS (content creation) ==========
+    'uploads': [
+        IndexModel([('upload_id', ASCENDING)], unique=True, name='idx_upload_id'),
+        IndexModel([('user_id', ASCENDING)], name='idx_user_id'),
+        IndexModel([('user_id', ASCENDING), ('created_at', DESCENDING)], name='idx_user_created'),
+    ],
 }
 
 

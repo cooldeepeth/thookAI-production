@@ -13,11 +13,11 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from database import db
 from auth_utils import get_current_user
+from services.llm_keys import chat_constructor_key, openai_available
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 PERPLEXITY_API_KEY = os.environ.get('PERPLEXITY_API_KEY', '')
 DAILY_BRIEF_CACHE_HOURS = 6
 
@@ -140,7 +140,7 @@ async def get_activity_feed(current_user: dict = Depends(get_current_user), limi
             activity_type = "approved"
         elif job.get("status") == "rejected":
             activity_type = "rejected"
-        elif job.get("status") == "reviewing":
+        elif job.get("status") in ("reviewing", "completed"):
             activity_type = "ready_for_review"
         
         activities.append({
@@ -232,7 +232,7 @@ async def _generate_content_ideas(
     burnout_risk: str
 ) -> List[Dict[str, str]]:
     """Use Commander (GPT-4o) to generate content ideas."""
-    if not _valid_key(EMERGENT_LLM_KEY):
+    if not openai_available():
         # Return mock ideas
         return [
             {
@@ -253,13 +253,13 @@ async def _generate_content_ideas(
         ]
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         # Adjust number of ideas based on burnout risk
         num_ideas = 1 if burnout_risk == "high" else 3
         
         chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"brief-{uuid.uuid4().hex[:8]}",
             system_message="You are a content strategist. Return only valid JSON."
         ).with_model("openai", "gpt-4o")

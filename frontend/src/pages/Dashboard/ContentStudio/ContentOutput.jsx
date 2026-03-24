@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp, AlertTriangle,
@@ -389,11 +389,23 @@ function RejectionModal({ isOpen, onClose, onSubmit }) {
   );
 }
 
+function finalContentToText(fc) {
+  if (fc == null) return "";
+  if (typeof fc === "string") return fc;
+  if (typeof fc === "object" && fc.post != null) return String(fc.post);
+  return "";
+}
+
 function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
+  const bodyText = finalContentToText(job.final_content);
   const [editing, setEditing] = useState(false);
-  const [editedContent, setEditedContent] = useState(job.final_content || "");
+  const [editedContent, setEditedContent] = useState(bodyText);
   const [approved, setApproved] = useState(job.status === "approved");
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+
+  useEffect(() => {
+    setEditedContent(finalContentToText(job.final_content));
+  }, [job.final_content, job.job_id]);
 
   const qc = job.qc_score || {};
   const scout = job.agent_outputs?.scout;
@@ -402,7 +414,7 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
   const version = job.version || 1;
 
   const handleApprove = async () => {
-    await onApprove(editing ? editedContent : job.final_content);
+    await onApprove(editing ? editedContent : bodyText);
     setApproved(true);
     setEditing(false);
   };
@@ -468,7 +480,7 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
       <div className="mb-4" data-testid="platform-shell">
         <PlatformShell
           platform={platform}
-          content={editing ? editedContent : job.final_content}
+          content={editing ? editedContent : bodyText}
           onContentChange={handleContentChange}
           isEditing={editing}
           readOnly={isApproved}
@@ -504,7 +516,7 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
       <ScoutResearch scout={scout} />
 
       {/* Media Panel (for approved or reviewing content) */}
-      {(isApproved || job.status === "reviewing") && (
+      {(isApproved || job.status === "reviewing" || job.status === "completed") && (
         <MediaPanel job={job} onMediaUpdate={handleMediaUpdate} />
       )}
 

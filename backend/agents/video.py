@@ -8,7 +8,9 @@ import base64
 import asyncio
 import logging
 import httpx
+import fal_client
 from typing import Dict, Any, Optional, List
+from lumaai import AsyncLumaAI
 from services.creative_providers import (
     get_best_available_provider,
     get_available_video_providers,
@@ -142,54 +144,46 @@ async def _generate_kling(prompt: str, model: str = "kling-v1.5", duration: int 
 
 
 async def _generate_luma(prompt: str, model: str = "dream-machine") -> Dict[str, Any]:
-    """Generate video using Luma Dream Machine."""
-    api_key = os.environ.get('LUMA_API_KEY', '')
+    """Generate video using Luma Dream Machine (official async SDK)."""
+    api_key = os.environ.get("LUMA_API_KEY", "")
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "luma"}
-    
+
+    luma_model = "ray-flash-2" if model and "flash" in model.lower() else "ray-2"
+
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.lumalabs.ai/dream-machine/v1/generations",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "prompt": prompt,
-                    "aspect_ratio": "16:9"
-                },
-                timeout=30.0
-            )
-            
-            if response.status_code in [200, 201]:
-                data = response.json()
-                generation_id = data.get("id")
-                
-                if generation_id:
-                    for _ in range(60):
-                        await asyncio.sleep(5)
-                        status_response = await client.get(
-                            f"https://api.lumalabs.ai/dream-machine/v1/generations/{generation_id}",
-                            headers={"Authorization": f"Bearer {api_key}"},
-                            timeout=10.0
-                        )
-                        status_data = status_response.json()
-                        
-                        if status_data.get("state") == "completed":
-                            video = status_data.get("assets", {}).get("video")
-                            if video:
-                                return {
-                                    "video_url": video,
-                                    "generated": True,
-                                    "provider": "luma",
-                                    "model": model,
-                                    "duration": 5
-                                }
-                        elif status_data.get("state") == "failed":
-                            return {"generated": False, "error": status_data.get("failure_reason", "failed"), "provider": "luma"}
-            
-            return {"generated": False, "error": "generation_failed", "provider": "luma"}
+        client = AsyncLumaAI(auth_token=api_key)
+        generation = await client.generations.create(
+            model=luma_model,
+            prompt=prompt,
+            aspect_ratio="16:9",
+            loop=False,
+        )
+        gid = generation.id
+
+        for _ in range(60):
+            await asyncio.sleep(5)
+            gen = await client.generations.get(gid)
+            if gen.state == "completed":
+                video_url = gen.assets.video if gen.assets else None
+                if video_url:
+                    return {
+                        "video_url": video_url,
+                        "generated": True,
+                        "provider": "luma",
+                        "model": model,
+                        "duration": 5,
+                        "generation_id": gid,
+                    }
+                return {"generated": False, "error": "no_video_asset", "provider": "luma"}
+            if gen.state == "failed":
+                return {
+                    "generated": False,
+                    "error": gen.failure_reason or "failed",
+                    "provider": "luma",
+                }
+
+        return {"generated": False, "error": "timeout", "provider": "luma"}
     except Exception as e:
         logger.error(f"Luma error: {e}")
         return {"generated": False, "error": str(e), "provider": "luma"}
@@ -376,6 +370,39 @@ async def _generate_did_avatar(script: str, source_url: str = None) -> Dict[str,
     except Exception as e:
         logger.error(f"D-ID error: {e}")
         return {"generated": False, "error": str(e), "provider": "did"}
+
+
+async def generate_motion_video(prompt: str, image_url: Optional[str] = None) -> Dict[str, Any]:
+    """Motion / dance-style video via fal.ai Seadance (uses FAL_KEY)."""
+    api_key = os.environ.get("FAL_KEY") or os.environ.get("FAL_API_KEY", "")
+    if not _valid_key(api_key):
+        return {"generated": False, "error": "no_key", "provider": "fal-seadance"}
+
+    try:
+        arguments: Dict[str, Any] = {
+            "prompt": prompt,
+            "duration": 5,
+            "aspect_ratio": "16:9",
+        }
+        if image_url:
+            arguments["image_url"] = image_url
+
+        handler = await fal_client.submit_async("fal-ai/seadance", arguments=arguments)
+        result = await handler.get()
+        video = result.get("video")
+        vurl = video.get("url") if isinstance(video, dict) else None
+        if not vurl:
+            return {"generated": False, "error": "no_video", "provider": "fal-seadance"}
+
+        return {
+            "video_url": vurl,
+            "generated": True,
+            "provider": "fal-seadance",
+            "generation_id": None,
+        }
+    except Exception as e:
+        logger.error(f"fal Seadance error: {e}")
+        return {"generated": False, "error": str(e), "provider": "fal-seadance"}
 
 
 # ============ MAIN GENERATION FUNCTIONS ============

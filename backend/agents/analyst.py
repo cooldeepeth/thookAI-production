@@ -7,7 +7,6 @@ Analyzes content performance and provides actionable insights:
 - Cross-platform comparisons
 - AI-powered recommendations
 """
-import os
 import json
 import asyncio
 import uuid
@@ -16,13 +15,9 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 from collections import defaultdict
 
+from services.llm_keys import chat_constructor_key, openai_available
+
 logger = logging.getLogger(__name__)
-
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
-
-def _valid_key(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder'])
 
 
 def _clean_json(raw: str) -> str:
@@ -436,14 +431,14 @@ async def generate_insights(
     diversity = await get_content_diversity_score(user_id, days)
     hook_fatigue = await analyze_hook_fatigue(user_id, limit=10)
     
-    if not _valid_key(LLM_KEY):
+    if not openai_available():
         return _mock_insights(overview, trends, diversity, hook_fatigue)
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"insights-{uuid.uuid4().hex[:8]}",
             system_message="You are a social media strategist. Analyze data and provide actionable insights. Return JSON only."
         ).with_model("openai", "gpt-4.1-mini")

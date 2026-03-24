@@ -3,11 +3,11 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import json
-import os
 import uuid
 from database import db
 from auth_utils import get_current_user
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from services.llm_client import LlmChat, UserMessage
+from services.llm_keys import anthropic_available, chat_constructor_key
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -56,8 +56,6 @@ INTERVIEW_QUESTIONS = [
     }
 ]
 
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
 PERSONA_PROMPT = """You are the Persona Agent for ThookAI. Analyze a content creator's interview answers and generate their precise Persona Card.
 
 Creator Interview Answers:
@@ -97,10 +95,6 @@ class GeneratePersonaRequest(BaseModel):
     posts_analysis: Optional[str] = None
 
 
-def _is_placeholder_key(key: str) -> bool:
-    return not key or key.startswith('placeholder') or key.startswith('sk-ant-placeholder') or key.startswith('sk-placeholder')
-
-
 @router.get("/questions")
 async def get_questions():
     return {"questions": INTERVIEW_QUESTIONS, "total": len(INTERVIEW_QUESTIONS)}
@@ -108,7 +102,7 @@ async def get_questions():
 
 @router.post("/analyze-posts")
 async def analyze_posts(data: AnalyzePostsRequest, current_user: dict = Depends(get_current_user)):
-    if _is_placeholder_key(LLM_KEY):
+    if not anthropic_available():
         return {
             "analysis": "We analyzed your posts and detected a clear pattern: data-driven narratives, professional tone, and an insights-heavy format that resonates well with professional audiences.",
             "detected_patterns": ["Strong analytical voice", "Long-form preference", "Education-focused approach"],
@@ -116,7 +110,7 @@ async def analyze_posts(data: AnalyzePostsRequest, current_user: dict = Depends(
         }
     try:
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"analyze-{current_user['user_id']}-{uuid.uuid4().hex[:8]}",
             system_message="You are an expert content analyst. Analyze writing samples and extract key voice patterns."
         ).with_model("anthropic", "claude-4-sonnet-20250514")
@@ -155,10 +149,10 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
 
     persona_card = None
 
-    if not _is_placeholder_key(LLM_KEY):
+    if anthropic_available():
         try:
             chat = LlmChat(
-                api_key=LLM_KEY,
+                api_key=chat_constructor_key(),
                 session_id=f"persona-{user_id}-{uuid.uuid4().hex[:8]}",
                 system_message="You are the Persona Agent for ThookAI. Return only valid JSON with no additional text."
             ).with_model("anthropic", "claude-4-sonnet-20250514")

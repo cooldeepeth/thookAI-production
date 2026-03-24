@@ -6,7 +6,6 @@ Predicts virality potential of hooks and provides improvement suggestions:
 - Specific improvement suggestions
 - A/B test suggestions
 """
-import os
 import json
 import asyncio
 import uuid
@@ -14,9 +13,9 @@ import logging
 import re
 from typing import Dict, Any, List, Optional
 
-logger = logging.getLogger(__name__)
+from services.llm_keys import anthropic_available, chat_constructor_key, openai_available
 
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+logger = logging.getLogger(__name__)
 
 # High-performing hook patterns based on research
 VIRAL_PATTERNS = {
@@ -105,10 +104,6 @@ WEAK_PATTERNS = {
         "reason": "Feels spammy and inauthentic"
     }
 }
-
-
-def _valid_key(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder'])
 
 
 def _clean_json(raw: str) -> str:
@@ -233,7 +228,7 @@ async def predict_virality(
     rule_score = pattern_analysis["final_score"]
     
     # AI analysis for deeper insights
-    if _valid_key(LLM_KEY):
+    if openai_available():
         ai_analysis = await _ai_analyze_hook(hook, platform, pattern_analysis)
     else:
         ai_analysis = _mock_ai_analysis(hook, pattern_analysis)
@@ -275,11 +270,13 @@ async def predict_virality(
 
 async def _ai_analyze_hook(hook: str, platform: str, pattern_analysis: Dict) -> Dict[str, Any]:
     """Get AI analysis of hook virality."""
+    if not openai_available():
+        return _mock_ai_analysis(hook, pattern_analysis)
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"viral-{uuid.uuid4().hex[:8]}",
             system_message="You are a viral content expert who analyzes hooks for social media. Return JSON only."
         ).with_model("openai", "gpt-4.1-mini")
@@ -398,14 +395,14 @@ async def improve_hook(
     Returns:
         Improved hook versions
     """
-    if not _valid_key(LLM_KEY):
+    if not anthropic_available():
         return _mock_improve_hook(hook, style)
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"improve-{uuid.uuid4().hex[:8]}",
             system_message="You are a viral copywriter. Generate scroll-stopping hooks. Return JSON only."
         ).with_model("anthropic", "claude-sonnet-4-20250514")

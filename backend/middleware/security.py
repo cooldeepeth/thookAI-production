@@ -130,6 +130,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.endpoint_limits = {
             '/api/auth/login': auth_limit,
             '/api/auth/register': auth_limit,
+            '/api/auth/forgot-password': auth_limit,
+            '/api/auth/reset-password': auth_limit,
             '/api/content/create': 20,
             '/api/viral/predict': 30,
             '/api/viral/improve': 20,

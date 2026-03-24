@@ -14,12 +14,6 @@ from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
-
-def _valid_key(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder'])
-
 
 def _clean_json(raw: str) -> str:
     s = raw.strip()
@@ -70,11 +64,13 @@ async def run_visual(
     Returns:
         Visual analysis with subject, tone, key_message, caption_angles, is_safe
     """
-    if not _valid_key(LLM_KEY):
+    from services.llm_keys import chat_constructor_key, openai_available
+
+    if not openai_available():
         return _mock_visual(platform)
     
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from services.llm_client import LlmChat, UserMessage
         
         # Prepare image content - will be passed via the images parameter
         if image_url_or_base64.startswith('data:') or not image_url_or_base64.startswith('http'):
@@ -83,7 +79,7 @@ async def run_visual(
                 image_url_or_base64 = f"data:image/jpeg;base64,{image_url_or_base64}"
         
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"visual-{uuid.uuid4().hex[:8]}",
             system_message=VISUAL_SYSTEM
         ).with_model("openai", "gpt-4o")

@@ -1,9 +1,8 @@
 import os
 import asyncio
 import uuid
-from emergentintegrations.llm.chat import LlmChat, UserMessage
-
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+from services.llm_client import LlmChat, UserMessage
+from services.llm_keys import anthropic_available, chat_constructor_key
 
 PLATFORM_RULES = {
     "linkedin": "LinkedIn post (max 3000 chars). Use line breaks generously. No hashtag spam — max 3-5 relevant hashtags at the end.",
@@ -89,19 +88,22 @@ Target: ~{word_count} words
 Write the content now. Only output the content itself."""
 
 
-def _valid(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder', 'sk-ant-placeholder'])
-
-
 def _get_regional_rules(regional_english: str) -> str:
     """Get the regional English rules for the writer prompt."""
     config = REGIONAL_ENGLISH_RULES.get(regional_english, REGIONAL_ENGLISH_RULES["US"])
     return config["rules"]
 
 
-async def run_writer(platform: str, content_type: str, commander_output: dict,
-                     scout_output: dict, thinker_output: dict, persona_card: dict) -> dict:
-    if not _valid(LLM_KEY):
+async def run_writer(
+    platform: str,
+    content_type: str,
+    commander_output: dict,
+    scout_output: dict,
+    thinker_output: dict,
+    persona_card: dict,
+    media_system_suffix: str = "",
+) -> dict:
+    if not anthropic_available():
         return _mock_writer(platform, content_type, persona_card)
     try:
         style_notes = "\n".join(f"- {n}" for n in (persona_card.get("writing_style_notes") or ["Write with authenticity and directness"]))
@@ -114,10 +116,14 @@ async def run_writer(platform: str, content_type: str, commander_output: dict,
         regional_english = persona_card.get("regional_english", "US")
         regional_rules = _get_regional_rules(regional_english)
 
+        system_msg = WRITER_SYSTEM
+        if media_system_suffix:
+            system_msg = f"{WRITER_SYSTEM}\n\n{media_system_suffix}"
+
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"writer-{uuid.uuid4().hex[:8]}",
-            system_message=WRITER_SYSTEM
+            system_message=system_msg,
         ).with_model("anthropic", "claude-4-sonnet-20250514")
 
         prompt = WRITER_PROMPT.format(

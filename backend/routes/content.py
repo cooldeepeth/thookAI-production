@@ -31,6 +31,7 @@ class ContentCreateRequest(BaseModel):
     content_type: str
     raw_input: str
     attachment_url: Optional[str] = None  # For Visual Agent
+    upload_ids: Optional[List[str]] = None
 
 
 class ContentStatusUpdate(BaseModel):
@@ -104,6 +105,7 @@ async def create_content(
         "platform": data.platform.lower(),
         "content_type": data.content_type,
         "raw_input": data.raw_input,
+        "upload_ids": data.upload_ids or [],
         "status": "running",
         "current_agent": "commander",
         "agent_outputs": {},
@@ -117,8 +119,13 @@ async def create_content(
     await db.content_jobs.insert_one(job)
 
     background_tasks.add_task(
-        run_agent_pipeline, job_id, current_user["user_id"],
-        data.platform.lower(), data.content_type, data.raw_input
+        run_agent_pipeline,
+        job_id,
+        current_user["user_id"],
+        data.platform.lower(),
+        data.content_type,
+        data.raw_input,
+        data.upload_ids or [],
     )
     return {"job_id": job_id, "status": "running"}
 
@@ -130,6 +137,8 @@ async def get_job(job_id: str, current_user: dict = Depends(get_current_user)):
     )
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    if isinstance(job.get("final_content"), str):
+        job["final_content"] = {"post": job["final_content"]}
     return job
 
 
@@ -686,6 +695,7 @@ async def regenerate_content(
         "platform": original_job.get("platform"),
         "content_type": original_job.get("content_type"),
         "raw_input": raw_input,
+        "upload_ids": original_job.get("upload_ids") or [],
         "status": "running",
         "current_agent": "commander",
         "agent_outputs": {},
@@ -709,8 +719,13 @@ async def regenerate_content(
     
     # Run pipeline
     background_tasks.add_task(
-        run_agent_pipeline, new_job_id, current_user["user_id"],
-        new_job["platform"], new_job["content_type"], raw_input
+        run_agent_pipeline,
+        new_job_id,
+        current_user["user_id"],
+        new_job["platform"],
+        new_job["content_type"],
+        raw_input,
+        new_job.get("upload_ids") or [],
     )
     
     return {

@@ -73,7 +73,9 @@ class LLMConfig:
     
     def has_llm_provider(self) -> bool:
         """Check if at least one LLM provider is configured"""
-        return bool(self.emergent_key or self.openai_key or self.anthropic_key)
+        return bool(
+            self.emergent_key or self.openai_key or self.anthropic_key or self.gemini_key
+        )
     
     def get_status(self) -> dict:
         """Get configuration status for all providers"""

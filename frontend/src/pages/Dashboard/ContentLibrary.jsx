@@ -23,6 +23,7 @@ const STATUS_CONFIG = {
   draft: { label: "Draft", color: "bg-zinc-500/20 text-zinc-400" },
   processing: { label: "Processing", color: "bg-yellow-500/20 text-yellow-400" },
   reviewing: { label: "Ready for Review", color: "bg-blue-500/20 text-blue-400" },
+  completed: { label: "Ready for Review", color: "bg-blue-500/20 text-blue-400" },
   approved: { label: "Approved", color: "bg-lime/20 text-lime" },
   scheduled: { label: "Scheduled", color: "bg-violet/20 text-violet" },
   published: { label: "Published", color: "bg-green-500/20 text-green-400" },

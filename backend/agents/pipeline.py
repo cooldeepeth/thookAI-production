@@ -1,6 +1,17 @@
+from __future__ import annotations
+
 import asyncio
+import base64
 import logging
+import mimetypes
+import re
 from datetime import datetime, timezone
+from html import unescape
+from pathlib import Path
+from typing import List, Optional
+
+import httpx
+
 from database import db
 from agents.commander import run_commander
 from agents.scout import run_scout
@@ -10,6 +21,90 @@ from agents.qc import run_qc
 from agents.anti_repetition import get_anti_repetition_context, build_anti_repetition_prompt
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_title_and_text(html: str) -> tuple[str, str]:
+    m = re.search(
+        r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']*)["\']',
+        html,
+        re.I,
+    )
+    if m:
+        title = unescape(m.group(1).strip())
+    else:
+        m2 = re.search(r"<title[^>]*>([^<]+)</title>", html, re.I)
+        title = unescape(m2.group(1).strip()) if m2 else ""
+    text = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", html)
+    text = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()[:500]
+    return title, text
+
+
+async def _read_local_image_data_url(path: str, content_type: str) -> str:
+    def read_bytes():
+        return Path(path).read_bytes()
+
+    raw = await asyncio.to_thread(read_bytes)
+    b64 = base64.b64encode(raw).decode("ascii")
+    ct = (content_type or "").split(";")[0].strip() or mimetypes.guess_type(path)[0] or "image/jpeg"
+    return f"data:{ct};base64,{b64}"
+
+
+async def _build_upload_media_context(upload_ids: List[str], user_id: str) -> tuple[str, list]:
+    """Returns (system suffix for commander/writer, image refs for commander vision)."""
+    if not upload_ids:
+        return "", []
+    lines: list[str] = []
+    image_urls: list[str] = []
+
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+        for uid in upload_ids:
+            doc = await db.uploads.find_one({"upload_id": uid, "user_id": user_id})
+            if not doc:
+                continue
+            ct = doc.get("context_type") or ""
+            if ct == "image":
+                url = doc.get("url") or ""
+                if url.startswith("/"):
+                    try:
+                        data_url = await _read_local_image_data_url(url, doc.get("content_type", ""))
+                        image_urls.append(data_url)
+                    except OSError:
+                        logger.warning("Could not read local image %s", url)
+                else:
+                    image_urls.append(url)
+            elif ct == "video":
+                u = doc.get("url", "")
+                lines.append(
+                    f"User has provided a video at {u}. Describe its likely content "
+                    "and incorporate it into the post."
+                )
+            elif ct == "document":
+                fn = doc.get("filename", "document")
+                u = doc.get("url", "")
+                lines.append(
+                    f"User uploaded a document ({fn}) at {u}. Use it as reference for the post where relevant."
+                )
+            elif ct == "link":
+                url = doc.get("url", "")
+                title = doc.get("title") or url
+                excerpt = ""
+                try:
+                    r = await client.get(url)
+                    r.raise_for_status()
+                    _, excerpt = _extract_title_and_text(r.text[:200_000])
+                except Exception as e:
+                    logger.debug("Link fetch for pipeline failed %s: %s", url, e)
+                lines.append(
+                    f"User shared a link: {url}\nPage title: {title}\nContent excerpt: {excerpt}"
+                )
+
+    suffix = ""
+    if lines:
+        suffix = "Additional context from user-provided media:\n" + "\n".join(lines)
+    return suffix, image_urls
+
 
 DEFAULT_PERSONA = {
     "writing_voice_descriptor": "Professional thought leader",
@@ -29,7 +124,14 @@ async def update_job(job_id: str, data: dict):
     await db.content_jobs.update_one({"job_id": job_id}, {"$set": data})
 
 
-async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_type: str, raw_input: str):
+async def run_agent_pipeline(
+    job_id: str,
+    user_id: str,
+    platform: str,
+    content_type: str,
+    raw_input: str,
+    upload_ids: Optional[List[str]] = None,
+):
     """Main pipeline orchestrator. Runs all 5 agents sequentially, updates DB at each step."""
     try:
         # Load persona (fallback to default if not onboarded)
@@ -44,10 +146,22 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
         anti_rep_context = await get_anti_repetition_context(user_id)
         anti_rep_prompt = build_anti_repetition_prompt(anti_rep_context) if anti_rep_context.get("has_patterns") else ""
 
+        uids = upload_ids or []
+        media_suffix, commander_images = await _build_upload_media_context(uids, user_id)
+
         # COMMANDER — strategy (with anti-repetition context)
         await update_job(job_id, {"current_agent": "commander", "status": "running"})
         commander_output = await asyncio.wait_for(
-            run_commander(raw_input, platform, content_type, persona_card, anti_rep_prompt), timeout=25.0
+            run_commander(
+                raw_input,
+                platform,
+                content_type,
+                persona_card,
+                anti_rep_prompt,
+                media_system_suffix=media_suffix,
+                image_urls=commander_images or None,
+            ),
+            timeout=25.0,
         )
         await update_job(job_id, {
             "agent_outputs.commander": commander_output,
@@ -81,7 +195,16 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
         # WRITER — voice-matched copy
         await update_job(job_id, {"current_agent": "writer"})
         writer_output = await asyncio.wait_for(
-            run_writer(platform, content_type, commander_output, scout_output, thinker_output, persona_card), timeout=40.0
+            run_writer(
+                platform,
+                content_type,
+                commander_output,
+                scout_output,
+                thinker_output,
+                persona_card,
+                media_system_suffix=media_suffix,
+            ),
+            timeout=40.0,
         )
         draft = writer_output.get("draft", "") if isinstance(writer_output, dict) else writer_output
         await update_job(job_id, {
@@ -100,10 +223,20 @@ async def run_agent_pipeline(job_id: str, user_id: str, platform: str, content_t
         await update_job(job_id, {
             "agent_outputs.qc": qc_output,
             "qc_score": qc_output,
-            "current_agent": "done",
-            "status": "reviewing",
             "agent_summaries.qc": f"Persona {qc_output.get('personaMatch', 0)}/10 · AI Risk {qc_output.get('aiRisk', 0)}/100 · Rep: {rep_level} · {pass_fail}"
         })
+        doc = await db.content_jobs.find_one({"job_id": job_id}, {"final_content": 1})
+        if doc is not None and doc.get("final_content") is not None:
+            now = datetime.now(timezone.utc)
+            await db.content_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {
+                    "status": "completed",
+                    "current_agent": "done",
+                    "completed_at": now,
+                    "updated_at": now,
+                }},
+            )
 
     except asyncio.CancelledError:
         await update_job(job_id, {"status": "error", "current_agent": "error", "error": "Pipeline was cancelled"})

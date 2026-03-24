@@ -67,16 +67,16 @@ def get_pinecone_client():
 
 
 def generate_embedding(text: str) -> List[float]:
-    """Generate embedding for text using OpenAI API via Emergent."""
-    from emergentintegrations.llm.chat import LlmChat
-    
-    llm_key = os.environ.get('EMERGENT_LLM_KEY', '')
+    """Generate embedding for text using OpenAI embeddings API."""
+    from services.llm_keys import openai_api_key_for_rest
+
+    llm_key = openai_api_key_for_rest()
     if not _is_valid_key(llm_key):
         # Return mock embedding for testing
         return _mock_embedding(text)
     
     try:
-        # Use OpenAI embeddings via Emergent
+        # Direct OpenAI embeddings API
         import httpx
         response = httpx.post(
             "https://api.openai.com/v1/embeddings",

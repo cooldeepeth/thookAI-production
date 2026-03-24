@@ -17,7 +17,7 @@ function getAgentStatus(agentKey, currentAgent, jobStatus) {
   const agentIdx = AGENT_ORDER.indexOf(agentKey);
   if (agentIdx < currentIdx) return "done";
   if (agentKey === currentAgent) return "running";
-  if (currentAgent === "done" || jobStatus === "reviewing") return "done";
+  if (currentAgent === "done" || jobStatus === "reviewing" || jobStatus === "completed") return "done";
   return "waiting";
 }
 

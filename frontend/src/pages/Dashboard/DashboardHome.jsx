@@ -33,6 +33,7 @@ const statusIcons = {
   approved: { icon: CheckCircle2, color: "text-green-500" },
   rejected: { icon: XCircle, color: "text-red-500" },
   reviewing: { icon: AlertCircle, color: "text-yellow-500" },
+  completed: { icon: AlertCircle, color: "text-yellow-500" },
   running: { icon: Clock, color: "text-blue-500" },
   error: { icon: XCircle, color: "text-red-500" }
 };

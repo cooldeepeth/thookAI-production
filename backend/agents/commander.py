@@ -1,14 +1,10 @@
-import os
 import json
 import asyncio
 import uuid
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from typing import List, Optional
 
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
-
-def _valid(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder', 'sk-ant-placeholder'])
+from services.llm_client import LlmChat, UserMessage
+from services.llm_keys import chat_constructor_key, openai_available
 
 
 def _clean_json(raw: str) -> str:
@@ -52,7 +48,15 @@ Return JSON:
 }}"""
 
 
-async def run_commander(raw_input: str, platform: str, content_type: str, persona_card: dict, anti_rep_prompt: str = "") -> dict:
+async def run_commander(
+    raw_input: str,
+    platform: str,
+    content_type: str,
+    persona_card: dict,
+    anti_rep_prompt: str = "",
+    media_system_suffix: str = "",
+    image_urls: Optional[List[str]] = None,
+) -> dict:
     """Run Commander agent to generate content strategy.
     
     Args:
@@ -65,13 +69,17 @@ async def run_commander(raw_input: str, platform: str, content_type: str, person
     Returns:
         Content strategy dictionary
     """
-    if not _valid(LLM_KEY):
+    if not openai_available():
         return _mock_commander(raw_input, platform, content_type)
     try:
+        system_msg = COMMANDER_SYSTEM
+        if media_system_suffix:
+            system_msg = f"{COMMANDER_SYSTEM}\n\n{media_system_suffix}"
+
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"cmd-{uuid.uuid4().hex[:8]}",
-            system_message=COMMANDER_SYSTEM
+            system_message=system_msg,
         ).with_model("openai", "gpt-4o")
 
         prompt = COMMANDER_PROMPT.format(
@@ -87,7 +95,11 @@ async def run_commander(raw_input: str, platform: str, content_type: str, person
         if anti_rep_prompt:
             prompt += anti_rep_prompt
         
-        response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=20.0)
+        imgs = image_urls if image_urls else None
+        response = await asyncio.wait_for(
+            chat.send_message(UserMessage(text=prompt, images=imgs)),
+            timeout=20.0,
+        )
         return json.loads(_clean_json(response))
     except Exception:
         return _mock_commander(raw_input, platform, content_type)

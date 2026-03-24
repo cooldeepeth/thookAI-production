@@ -89,7 +89,7 @@ async def preview_repurpose(
     job = await db.content_jobs.find_one({
         "job_id": job_id,
         "user_id": user_id,
-        "status": {"$in": ["approved", "published", "reviewing"]}
+        "status": {"$in": ["approved", "published", "reviewing", "completed"]}
     })
     
     if not job:

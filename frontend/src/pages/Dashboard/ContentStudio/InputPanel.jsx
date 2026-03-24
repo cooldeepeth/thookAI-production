@@ -15,7 +15,18 @@ const PLACEHOLDERS = {
   instagram: "Caption idea or topic?\n\ne.g. 'Behind-the-scenes of our product launch' or 'My morning routine for peak productivity'",
 };
 
-export default function InputPanel({ platform, contentType, rawInput, onPlatformChange, onContentTypeChange, onInputChange, onGenerate, isRunning, error }) {
+export default function InputPanel({
+  platform,
+  contentType,
+  rawInput,
+  onPlatformChange,
+  onContentTypeChange,
+  onInputChange,
+  onGenerate,
+  isRunning,
+  error,
+  mediaSection,
+}) {
   const cfg = PLATFORMS.find(p => p.id === platform) || PLATFORMS[0];
   const Icon = cfg.icon;
 
@@ -73,6 +84,8 @@ export default function InputPanel({ platform, contentType, rawInput, onPlatform
 
       {/* Platform-native composer look */}
       <div className="flex-1 flex flex-col">
+        {mediaSection}
+
         <div
           className="flex-1 rounded-xl border overflow-hidden"
           style={{ borderColor: `${cfg.color}20` }}

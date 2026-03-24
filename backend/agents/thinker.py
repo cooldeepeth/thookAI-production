@@ -1,14 +1,8 @@
-import os
 import json
 import asyncio
 import uuid
-from emergentintegrations.llm.chat import LlmChat, UserMessage
-
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
-
-def _valid(key: str) -> bool:
-    return bool(key) and not any(key.startswith(p) for p in ['placeholder', 'sk-placeholder'])
+from services.llm_client import LlmChat, UserMessage
+from services.llm_keys import chat_constructor_key, openai_available
 
 
 def _clean_json(raw: str) -> str:
@@ -48,11 +42,11 @@ Build the optimal content strategy. Return JSON only:
 
 
 async def run_thinker(raw_input: str, commander_output: dict, scout_output: dict, persona_card: dict) -> dict:
-    if not _valid(LLM_KEY):
+    if not openai_available():
         return _mock_thinker(raw_input, commander_output)
     try:
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"thinker-{uuid.uuid4().hex[:8]}",
             system_message="You are the Thinker Agent for ThookAI. Return only valid JSON, no markdown."
         ).with_model("openai", "o4-mini")

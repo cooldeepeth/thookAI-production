@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from pydantic import BaseModel, EmailStr
 from jose import jwt
 from datetime import datetime, timezone, timedelta
+from pymongo import WriteConcern
 import uuid
-import httpx
 import os
 from database import db
 from auth_utils import hash_password, verify_password, get_current_user
@@ -24,10 +24,6 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-
-
-class GoogleSessionRequest(BaseModel):
-    session_id: str
 
 
 def create_jwt_token(user_id: str, email: str) -> str:
@@ -61,7 +57,8 @@ async def register(data: RegisterRequest, response: Response):
         "onboarding_completed": False, "platforms_connected": [],
         "created_at": datetime.now(timezone.utc)
     }
-    await db.users.insert_one(user)
+    users_wmajority = db.users.with_options(write_concern=WriteConcern("majority"))
+    await users_wmajority.insert_one(user)
     token = create_jwt_token(user_id, data.email)
     set_auth_cookie(response, token)
     return {**safe_user(user), "token": token}
@@ -82,45 +79,6 @@ async def login(data: LoginRequest, response: Response):
 @router.get("/me")
 async def get_me(current_user: dict = Depends(get_current_user)):
     return safe_user(current_user)
-
-
-@router.post("/google/session")
-async def google_session(data: GoogleSessionRequest, response: Response):
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": data.session_id}
-        )
-    if resp.status_code != 200:
-        raise HTTPException(status_code=400, detail="Invalid Google session")
-
-    auth_data = resp.json()
-    email, name = auth_data["email"], auth_data["name"]
-    picture = auth_data.get("picture", "")
-    session_token = auth_data["session_token"]
-
-    existing = await db.users.find_one({"email": email}, {"_id": 0})
-    if existing:
-        user_id = existing["user_id"]
-        await db.users.update_one({"user_id": user_id}, {"$set": {"name": name, "picture": picture}})
-    else:
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        await db.users.insert_one({
-            "user_id": user_id, "email": email, "name": name, "picture": picture,
-            "auth_method": "google", "plan": "free", "credits": 100,
-            "onboarding_completed": False, "platforms_connected": [],
-            "created_at": datetime.now(timezone.utc)
-        })
-
-    expires_at = datetime.now(timezone.utc) + timedelta(days=EXPIRE_DAYS)
-    await db.user_sessions.insert_one({
-        "user_id": user_id, "session_token": session_token,
-        "expires_at": expires_at, "created_at": datetime.now(timezone.utc)
-    })
-    set_auth_cookie(response, session_token)
-
-    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    return {**safe_user(user), "token": session_token}
 
 
 @router.post("/logout")
