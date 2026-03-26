@@ -3,11 +3,14 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import json
-import os
+import logging
 import uuid
 from database import db
 from auth_utils import get_current_user
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from services.llm_client import LlmChat, UserMessage
+from services.llm_keys import anthropic_available, chat_constructor_key
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -56,8 +59,6 @@ INTERVIEW_QUESTIONS = [
     }
 ]
 
-LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
 PERSONA_PROMPT = """You are the Persona Agent for ThookAI. Analyze a content creator's interview answers and generate their precise Persona Card.
 
 Creator Interview Answers:
@@ -97,10 +98,6 @@ class GeneratePersonaRequest(BaseModel):
     posts_analysis: Optional[str] = None
 
 
-def _is_placeholder_key(key: str) -> bool:
-    return not key or key.startswith('placeholder') or key.startswith('sk-ant-placeholder') or key.startswith('sk-placeholder')
-
-
 @router.get("/questions")
 async def get_questions():
     return {"questions": INTERVIEW_QUESTIONS, "total": len(INTERVIEW_QUESTIONS)}
@@ -108,7 +105,7 @@ async def get_questions():
 
 @router.post("/analyze-posts")
 async def analyze_posts(data: AnalyzePostsRequest, current_user: dict = Depends(get_current_user)):
-    if _is_placeholder_key(LLM_KEY):
+    if not anthropic_available():
         return {
             "analysis": "We analyzed your posts and detected a clear pattern: data-driven narratives, professional tone, and an insights-heavy format that resonates well with professional audiences.",
             "detected_patterns": ["Strong analytical voice", "Long-form preference", "Education-focused approach"],
@@ -116,10 +113,10 @@ async def analyze_posts(data: AnalyzePostsRequest, current_user: dict = Depends(
         }
     try:
         chat = LlmChat(
-            api_key=LLM_KEY,
+            api_key=chat_constructor_key(),
             session_id=f"analyze-{current_user['user_id']}-{uuid.uuid4().hex[:8]}",
             system_message="You are an expert content analyst. Analyze writing samples and extract key voice patterns."
-        ).with_model("anthropic", "claude-4-sonnet-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
 
         prompt = f"""Analyze these {data.platform} posts and extract writing patterns:
 
@@ -134,7 +131,8 @@ Be specific and actionable."""
         import asyncio
         response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=25.0)
         return {"analysis": response, "demo_mode": False}
-    except Exception:
+    except Exception as e:
+        logger.error("[ONBOARDING] Post analysis LLM call failed (model=claude-sonnet-4-20250514): %s", e)
         return {
             "analysis": "We analyzed your posts. Your writing has a distinctive analytical voice with a preference for structured insights.",
             "demo_mode": True
@@ -155,13 +153,13 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
 
     persona_card = None
 
-    if not _is_placeholder_key(LLM_KEY):
+    if anthropic_available():
         try:
             chat = LlmChat(
-                api_key=LLM_KEY,
+                api_key=chat_constructor_key(),
                 session_id=f"persona-{user_id}-{uuid.uuid4().hex[:8]}",
                 system_message="You are the Persona Agent for ThookAI. Return only valid JSON with no additional text."
-            ).with_model("anthropic", "claude-4-sonnet-20250514")
+            ).with_model("anthropic", "claude-sonnet-4-20250514")
 
             import asyncio
             prompt = PERSONA_PROMPT.format(answers_text=answers_text, posts_context=posts_context)
@@ -178,10 +176,12 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
                 if clean.startswith("json"):
                     clean = clean[4:]
             persona_card = json.loads(clean.strip())
-        except Exception:
+        except Exception as e:
+            logger.error("[ONBOARDING] Persona generation LLM call failed (model=claude-sonnet-4-20250514): %s", e)
             persona_card = None
 
     if not persona_card:
+        logger.warning("[ONBOARDING FALLBACK] Using mock persona - LLM unavailable")
         persona_card = _generate_smart_persona(data.answers)
 
     now = datetime.now(timezone.utc)

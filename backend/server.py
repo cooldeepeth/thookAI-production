@@ -81,8 +81,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not check/create indexes: {e}")
     
+    # Log LLM configuration
+    if settings.llm.anthropic_api_key:
+        logger.info("LLM model configured: claude-sonnet-4-20250514")
+    else:
+        logger.warning("ANTHROPIC_API_KEY not set — LLM features will use fallback/mock responses")
+
     logger.info("ThookAI API started successfully!")
-    
+
     yield
     
     # ==================== SHUTDOWN ====================
