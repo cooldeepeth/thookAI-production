@@ -116,12 +116,11 @@ def process_scheduled_posts() -> Dict[str, Any]:
                     failed += 1
                     continue
                 
-                # Attempt to publish (placeholder - implement actual API calls)
-                # In production, this would call platform-specific publishing APIs
                 success = await _publish_to_platform(
                     platform=platform,
                     content=post.get("content"),
-                    token=token
+                    user_id=user_id,
+                    media_urls=post.get("media_urls"),
                 )
                 
                 if success:
@@ -155,28 +154,29 @@ def process_scheduled_posts() -> Dict[str, Any]:
     return run_async(_process())
 
 
-async def _publish_to_platform(platform: str, content: str, token: dict) -> bool:
-    """
-    Publish content to a social platform.
-    
-    NOTE: This is a placeholder. Implement actual API calls for each platform.
-    """
-    # Check if token is valid/not expired
-    if token.get("expires_at"):
-        expires = token["expires_at"]
-        if isinstance(expires, str):
-            expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
-        if expires < datetime.now(timezone.utc):
-            logger.warning(f"Token expired for platform {platform}")
+async def _publish_to_platform(platform: str, content: str, user_id: str, media_urls: list = None) -> bool:
+    """Publish content to a social platform via agents/publisher.py."""
+    from agents.publisher import publish_to_linkedin, publish_to_x, publish_to_instagram
+
+    try:
+        if platform == "linkedin":
+            media_assets = [{"type": "image", "image_url": u} for u in (media_urls or [])]
+            result = await publish_to_linkedin(user_id, content, media_assets or None)
+        elif platform in ("x", "twitter"):
+            result = await publish_to_x(user_id, content)
+        elif platform == "instagram":
+            image_url = media_urls[0] if media_urls else None
+            result = await publish_to_instagram(user_id, content, image_url)
+        else:
+            logger.error(f"Unknown platform: {platform}")
             return False
-    
-    # Placeholder: In production, implement actual publishing
-    # Example for LinkedIn:
-    # if platform == "linkedin":
-    #     return await publish_to_linkedin(content, token["access_token"])
-    
-    logger.info(f"[SIMULATED] Publishing to {platform}: {content[:50]}...")
-    return True
+
+        if not result.get("success"):
+            logger.error(f"Publisher returned failure for {platform}: {result.get('error')}")
+        return result.get("success", False)
+    except Exception as e:
+        logger.error(f"Publishing to {platform} failed for user {user_id}: {e}", exc_info=True)
+        raise
 
 
 # ============ DAILY LIMITS ============
