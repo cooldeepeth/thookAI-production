@@ -12,6 +12,7 @@ from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from config import settings
 from database import db
 from routes.auth import create_jwt_token, set_auth_cookie
 
@@ -27,24 +28,17 @@ def _register_google_client() -> bool:
     global _google_registered
     if _google_registered:
         return True
-    client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
-    client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
-    if not client_id or not client_secret:
+    if not settings.google.is_configured():
         return False
     _oauth.register(
         name="google",
-        client_id=client_id,
-        client_secret=client_secret,
+        client_id=settings.google.client_id,
+        client_secret=settings.google.client_secret,
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
         client_kwargs={"scope": "openid email profile"},
     )
     _google_registered = True
     return True
-
-
-def _backend_redirect_uri() -> str:
-    base = os.environ.get("BACKEND_URL", "http://localhost:8001").rstrip("/")
-    return f"{base}/api/auth/google/callback"
 
 
 def _frontend_url() -> str:
@@ -53,19 +47,44 @@ def _frontend_url() -> str:
 
 @router.get("/google")
 async def google_login(request: Request):
+    if not settings.google.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "google_auth_unavailable",
+                "message": "Google sign-in is not configured on this server."
+            }
+        )
     if not _register_google_client():
         raise HTTPException(
             status_code=503,
-            detail="Google OAuth is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).",
+            detail={
+                "error": "google_auth_unavailable",
+                "message": "Google sign-in is not configured on this server."
+            }
         )
-    redirect_uri = _backend_redirect_uri()
+    redirect_uri = settings.google.redirect_uri
     return await _oauth.google.authorize_redirect(request, redirect_uri)
 
 
 @router.get("/google/callback")
 async def google_callback(request: Request):
+    if not settings.google.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "google_auth_unavailable",
+                "message": "Google sign-in is not configured on this server."
+            }
+        )
     if not _register_google_client():
-        raise HTTPException(status_code=503, detail="Google OAuth is not configured.")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "google_auth_unavailable",
+                "message": "Google sign-in is not configured on this server."
+            }
+        )
     frontend = _frontend_url()
     err_redirect = f"{frontend}/auth?error=oauth_failed"
 
