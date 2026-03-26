@@ -85,8 +85,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not check/create indexes: {e}")
     
+    # Check media storage
+    if not settings.r2.has_r2():
+        if settings.app.is_production:
+            logger.error(
+                "CRITICAL: R2 media storage not configured in production! "
+                "File uploads will fail. Set R2_* environment variables."
+            )
+        else:
+            logger.warning(
+                "R2 media storage not configured — uploads use /tmp fallback in dev mode."
+            )
+
     logger.info("ThookAI API started successfully!")
-    
+
     yield
     
     # ==================== SHUTDOWN ====================
@@ -174,7 +186,10 @@ async def health():
     
     # Check LLM provider availability
     health_status["checks"]["llm_configured"] = settings.llm.has_llm_provider()
-    
+
+    # Check media storage
+    health_status["checks"]["media_storage"] = "r2_configured" if settings.r2.has_r2() else "not_configured"
+
     return health_status
 
 
