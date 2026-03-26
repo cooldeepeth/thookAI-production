@@ -111,6 +111,18 @@ class R2Config:
 
 
 @dataclass
+class EmailConfig:
+    """Email (Resend) configuration"""
+    resend_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('RESEND_API_KEY'))
+    from_email: str = field(default_factory=lambda: os.environ.get('FROM_EMAIL', 'noreply@thookai.com'))
+    frontend_url: str = field(default_factory=lambda: os.environ.get('FRONTEND_URL', 'http://localhost:3000'))
+
+    def is_configured(self) -> bool:
+        """Check if Resend API key is set"""
+        return bool(self.resend_api_key)
+
+
+@dataclass
 class AppConfig:
     """Application configuration"""
     environment: str = field(default_factory=lambda: os.environ.get('ENVIRONMENT', 'development'))
@@ -136,6 +148,7 @@ class Settings:
     llm: LLMConfig = field(default_factory=LLMConfig)
     app: AppConfig = field(default_factory=AppConfig)
     r2: R2Config = field(default_factory=R2Config)
+    email: EmailConfig = field(default_factory=EmailConfig)
     
     def validate(self) -> dict:
         """
@@ -147,7 +160,8 @@ class Settings:
             'warnings': [],
             'errors': [],
             'providers': self.llm.get_status(),
-            'r2_storage': self.r2.has_r2()
+            'r2_storage': self.r2.has_r2(),
+            'email': self.email.is_configured()
         }
         
         # Security validation
