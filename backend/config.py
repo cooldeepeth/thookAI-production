@@ -111,6 +111,21 @@ class R2Config:
 
 
 @dataclass
+class GoogleConfig:
+    """Google OAuth configuration"""
+    client_id: Optional[str] = field(default_factory=lambda: os.environ.get('GOOGLE_CLIENT_ID'))
+    client_secret: Optional[str] = field(default_factory=lambda: os.environ.get('GOOGLE_CLIENT_SECRET'))
+    backend_url: str = field(default_factory=lambda: os.environ.get('BACKEND_URL', 'http://localhost:8001'))
+
+    def is_configured(self) -> bool:
+        return bool(self.client_id and self.client_secret)
+
+    @property
+    def redirect_uri(self) -> str:
+        return f"{self.backend_url}/api/auth/google/callback"
+
+
+@dataclass
 class AppConfig:
     """Application configuration"""
     environment: str = field(default_factory=lambda: os.environ.get('ENVIRONMENT', 'development'))
@@ -136,6 +151,7 @@ class Settings:
     llm: LLMConfig = field(default_factory=LLMConfig)
     app: AppConfig = field(default_factory=AppConfig)
     r2: R2Config = field(default_factory=R2Config)
+    google: GoogleConfig = field(default_factory=GoogleConfig)
     
     def validate(self) -> dict:
         """
