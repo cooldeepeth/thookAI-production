@@ -192,6 +192,20 @@ async def update_job_status(
         )
         logger.info(f"Scheduled learning signal capture for rejected job {job_id}")
     
+    # Fire outbound webhook for job.approved
+    if data.status == "approved":
+        try:
+            import asyncio
+            from services.webhook_service import fire_webhook
+            asyncio.create_task(fire_webhook(user_id, "job.approved", {
+                "job_id": job_id,
+                "platform": job.get("platform"),
+                "content_type": job.get("content_type"),
+                "was_edited": bool(data.edited_content),
+            }))
+        except Exception:
+            logger.warning("Failed to fire job.approved webhook for job %s", job_id)
+
     return {"message": f"Content {data.status}", "status": data.status}
 
 
