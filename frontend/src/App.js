@@ -29,6 +29,7 @@ function AppRouter() {
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/creator/:shareToken" element={<PersonaCardPublic />} />
+      <Route path="/p/:shareToken" element={<PersonaCardPublic />} />
       <Route path="/onboarding" element={<ProtectedRoute><OnboardingWizard /></ProtectedRoute>} />
       <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
