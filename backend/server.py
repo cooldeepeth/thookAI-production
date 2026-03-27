@@ -45,6 +45,8 @@ from routes.uploads import router as uploads_router
 from routes.notifications import router as notifications_router
 from routes.webhooks import router as webhooks_router
 from routes.campaigns import router as campaigns_router
+from routes.webhooks import router as webhooks_router
+
 
 # Setup logging
 logging.basicConfig(
@@ -187,7 +189,7 @@ api_router.include_router(uploads_router)
 api_router.include_router(notifications_router)
 api_router.include_router(webhooks_router)
 api_router.include_router(campaigns_router)
-
+api_router.include_router(webhooks_router)
 
 @api_router.get("/")
 async def root():

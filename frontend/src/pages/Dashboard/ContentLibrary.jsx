@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   BookOpen, Linkedin, Twitter, Instagram, Filter, Search,
   RefreshCw, Eye, Clock, Check, X, Send, Trash2, MoreVertical,
-  Layers, Plus, ChevronRight
+  Layers, Plus, ChevronRight, Download, Copy, ClipboardCheck, ChevronDown
 } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
@@ -38,6 +38,8 @@ export default function ContentLibrary() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPlatform, setFilterPlatform] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [copiedJobId, setCopiedJobId] = useState(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -91,6 +93,52 @@ export default function ContentLibrary() {
     return true;
   });
 
+  const handleBulkExport = async (format) => {
+    setShowExportMenu(false);
+    try {
+      const token = localStorage.getItem("thook_token");
+      const params = new URLSearchParams({ format });
+      if (filterPlatform !== "all") params.set("platform", filterPlatform);
+      if (filterStatus !== "all") params.set("status", filterStatus);
+
+      const res = await fetch(`${BACKEND_URL}/api/content/export/bulk?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const ext = format === "csv" ? "csv" : "txt";
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `thookai-export.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast({ title: "Export complete", description: `Content exported as ${format.toUpperCase()}` });
+    } catch (err) {
+      console.error("Export error:", err);
+      toast({ title: "Export failed", description: "Could not export content. Please try again.", variant: "destructive" });
+    }
+  };
+
+  const handleCopyContent = async (item) => {
+    const text = typeof item.final_content === "object"
+      ? item.final_content?.post || ""
+      : item.final_content || item.raw_input || "";
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedJobId(item.job_id);
+      setTimeout(() => setCopiedJobId(null), 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
   if (loading) {
     return (
       <main className="p-6">
@@ -124,6 +172,42 @@ export default function ContentLibrary() {
               <RefreshCw size={14} />
               Refresh
             </Button>
+
+            {/* Export dropdown */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="gap-2"
+                disabled={contents.length === 0}
+              >
+                <Download size={14} />
+                Export
+                <ChevronDown size={12} />
+              </Button>
+              {showExportMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-zinc-900 border border-white/10 rounded-lg shadow-xl py-1 min-w-[160px]">
+                    <button
+                      onClick={() => handleBulkExport("csv")}
+                      className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-white/5 transition-colors flex items-center gap-2"
+                    >
+                      <Download size={13} />
+                      Export as CSV
+                    </button>
+                    <button
+                      onClick={() => handleBulkExport("text")}
+                      className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-white/5 transition-colors flex items-center gap-2"
+                    >
+                      <Download size={13} />
+                      Export as Text
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <Button onClick={() => navigate("/dashboard/studio")} className="bg-lime text-black hover:bg-lime/90 gap-2">
               <Plus size={14} />
               Create
@@ -253,6 +337,19 @@ export default function ContentLibrary() {
                               {item.created_at ? new Date(item.created_at).toLocaleDateString() : ""}
                             </span>
                             <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopyContent(item)}
+                                className="h-7 px-2 text-zinc-400 hover:text-white"
+                                title={copiedJobId === item.job_id ? "Copied!" : "Copy content"}
+                              >
+                                {copiedJobId === item.job_id ? (
+                                  <ClipboardCheck size={14} className="text-lime" />
+                                ) : (
+                                  <Copy size={14} />
+                                )}
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
