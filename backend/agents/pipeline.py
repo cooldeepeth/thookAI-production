@@ -249,6 +249,24 @@ async def run_agent_pipeline(
                 }},
             )
 
+            # Notify user that content generation is complete
+            try:
+                from services.notification_service import create_notification
+
+                await create_notification(
+                    user_id=user_id,
+                    type="job_completed",
+                    title=f"Your {platform} content is ready",
+                    body=f"Your {content_type} has been generated and is ready for review.",
+                    metadata={
+                        "job_id": job_id,
+                        "platform": platform,
+                        "content_type": content_type,
+                    },
+                )
+            except Exception as notif_err:
+                logger.warning("Failed to create job completion notification: %s", notif_err)
+
     except asyncio.CancelledError:
         await update_job(job_id, {"status": "error", "current_agent": "error", "error": "Pipeline was cancelled"})
     except Exception as e:

@@ -137,6 +137,31 @@ def process_scheduled_posts() -> Dict[str, Any]:
                     )
                     published += 1
 
+                    # Fire notification to user — never crash the publishing flow
+                    try:
+                        from services.notification_service import create_notification
+
+                        content_preview = (post.get("content") or "")[:100]
+                        if len(post.get("content") or "") > 100:
+                            content_preview += "..."
+                        await create_notification(
+                            user_id=user_id,
+                            type="post_published",
+                            title=f"Your {platform} post was published",
+                            body=content_preview,
+                            metadata={
+                                "platform": platform,
+                                "schedule_id": post.get("schedule_id"),
+                                "job_id": post.get("job_id"),
+                            },
+                        )
+                    except Exception as notif_err:
+                        logger.warning(
+                            "Failed to create publish notification for schedule %s: %s",
+                            post.get("schedule_id"),
+                            notif_err,
+                        )
+
                     # Schedule follow-up analytics polling
                     job_id = post.get("job_id", post.get("schedule_id"))
                     if job_id:
