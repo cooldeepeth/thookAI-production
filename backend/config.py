@@ -111,6 +111,7 @@ class R2Config:
 
 
 @dataclass
+
 class EmailConfig:
     """Email (Resend) configuration"""
     resend_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('RESEND_API_KEY'))
@@ -120,6 +121,20 @@ class EmailConfig:
     def is_configured(self) -> bool:
         """Check if Resend API key is set"""
         return bool(self.resend_api_key)
+
+class GoogleConfig:
+    """Google OAuth configuration"""
+    client_id: Optional[str] = field(default_factory=lambda: os.environ.get('GOOGLE_CLIENT_ID'))
+    client_secret: Optional[str] = field(default_factory=lambda: os.environ.get('GOOGLE_CLIENT_SECRET'))
+    backend_url: str = field(default_factory=lambda: os.environ.get('BACKEND_URL', 'http://localhost:8001'))
+
+    def is_configured(self) -> bool:
+        return bool(self.client_id and self.client_secret)
+
+    @property
+    def redirect_uri(self) -> str:
+        return f"{self.backend_url}/api/auth/google/callback"
+
 
 
 @dataclass
@@ -149,7 +164,8 @@ class Settings:
     app: AppConfig = field(default_factory=AppConfig)
     r2: R2Config = field(default_factory=R2Config)
     email: EmailConfig = field(default_factory=EmailConfig)
-    
+    google: GoogleConfig = field(default_factory=GoogleConfig)
+
     def validate(self) -> dict:
         """
         Validate all configuration and return status report
