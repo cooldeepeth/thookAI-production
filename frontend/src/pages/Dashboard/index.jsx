@@ -12,6 +12,7 @@ import Analytics from "./Analytics";
 import Settings from "./Settings";
 import AgencyWorkspace from "./AgencyWorkspace";
 import Templates from "./Templates";
+import TemplateDetail from "./TemplateDetail";
 import ComingSoon from "./ComingSoon";
 
 export default function Dashboard() {
@@ -30,6 +31,7 @@ export default function Dashboard() {
           <Route path="/connections" element={<><TopBar title="Platform Connections" /><Connections /></>} />
           <Route path="/agency" element={<><TopBar title="Agency Workspace" /><AgencyWorkspace /></>} />
           <Route path="/templates" element={<><TopBar title="Templates Marketplace" /><Templates /></>} />
+          <Route path="/templates/:templateId" element={<><TopBar title="Template Detail" /><TemplateDetail /></>} />
           <Route path="/settings" element={<><TopBar title="Settings" /><Settings /></>} />
         </Routes>
       </div>
