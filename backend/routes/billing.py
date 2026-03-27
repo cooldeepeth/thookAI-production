@@ -347,17 +347,26 @@ async def stripe_webhook(
 ) -> Dict[str, Any]:
     """
     Handle Stripe webhook events.
-    
+
     Configure webhook URL in Stripe Dashboard:
     https://yourdomain.com/api/billing/webhook/stripe
     """
+    from config import settings
     from services.stripe_service import handle_webhook_event
-    
+
     if not stripe_signature:
         raise HTTPException(status_code=400, detail="Missing Stripe-Signature header")
-    
+
+    # Guard: webhook secret must be configured in production
+    if not settings.stripe.webhook_secret:
+        if settings.app.is_production:
+            logger.error("Stripe webhook secret not configured in production — rejecting webhook")
+            raise HTTPException(status_code=500, detail="Webhook secret not configured")
+        else:
+            logger.warning("Stripe webhook secret not configured — skipping signature verification in dev mode")
+
     payload = await request.body()
-    
+
     result = await handle_webhook_event(payload, stripe_signature)
     
     if not result.get("success"):
@@ -384,9 +393,9 @@ async def simulate_upgrade(
     from services.subscriptions import upgrade_subscription as do_upgrade
     from services.stripe_service import TIER_PRICING
     
-    if settings.app.is_production:
-        raise HTTPException(status_code=403, detail="Simulated upgrades disabled in production")
-    
+    if settings.app.environment not in ("development", "test"):
+        raise HTTPException(status_code=403, detail="Simulation endpoints disabled outside development")
+
     valid_tiers = ["free", "pro", "studio", "agency"]
     if request.tier not in valid_tiers:
         raise HTTPException(status_code=400, detail=f"Invalid tier. Choose from: {valid_tiers}")
@@ -428,9 +437,9 @@ async def simulate_add_credits(
     from config import settings
     from services.credits import add_credits
     
-    if settings.app.is_production:
-        raise HTTPException(status_code=403, detail="Simulated credits disabled in production")
-    
+    if settings.app.environment not in ("development", "test"):
+        raise HTTPException(status_code=403, detail="Simulation endpoints disabled outside development")
+
     result = await add_credits(
         user_id=current_user["user_id"],
         amount=amount,

@@ -138,6 +138,35 @@ class GoogleConfig:
 
 
 @dataclass
+class StripeConfig:
+    """Stripe billing configuration"""
+    secret_key: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_SECRET_KEY'))
+    publishable_key: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PUBLISHABLE_KEY'))
+    webhook_secret: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_WEBHOOK_SECRET'))
+    price_pro_monthly: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_PRO_MONTHLY'))
+    price_pro_annual: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_PRO_ANNUAL'))
+    price_studio_monthly: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_STUDIO_MONTHLY'))
+    price_studio_annual: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_STUDIO_ANNUAL'))
+    price_agency_monthly: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_AGENCY_MONTHLY'))
+    price_agency_annual: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_AGENCY_ANNUAL'))
+    price_credits_100: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_CREDITS_100'))
+    price_credits_500: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_CREDITS_500'))
+    price_credits_1000: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_CREDITS_1000'))
+
+    def all_price_ids_configured(self) -> bool:
+        """Check if all required subscription price IDs are set."""
+        return all([
+            self.price_pro_monthly, self.price_pro_annual,
+            self.price_studio_monthly, self.price_studio_annual,
+            self.price_agency_monthly, self.price_agency_annual
+        ])
+
+    def is_fully_configured(self) -> bool:
+        """Check if Stripe is fully configured for production billing."""
+        return bool(self.secret_key and self.webhook_secret and self.all_price_ids_configured())
+
+
+@dataclass
 class AppConfig:
     """Application configuration"""
     environment: str = field(default_factory=lambda: os.environ.get('ENVIRONMENT', 'development'))
@@ -165,6 +194,7 @@ class Settings:
     r2: R2Config = field(default_factory=R2Config)
     email: EmailConfig = field(default_factory=EmailConfig)
     google: GoogleConfig = field(default_factory=GoogleConfig)
+    stripe: StripeConfig = field(default_factory=StripeConfig)
 
     def validate(self) -> dict:
         """
@@ -177,7 +207,8 @@ class Settings:
             'errors': [],
             'providers': self.llm.get_status(),
             'r2_storage': self.r2.has_r2(),
-            'email': self.email.is_configured()
+            'email': self.email.is_configured(),
+            'stripe': self.stripe.is_fully_configured()
         }
         
         # Security validation

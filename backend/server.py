@@ -105,6 +105,19 @@ async def lifespan(app: FastAPI):
             "Google sign-in will return 503."
         )
 
+    # Check Stripe billing
+    if settings.app.is_production:
+        if not settings.stripe.is_fully_configured():
+            logger.error(
+                "CRITICAL: Stripe is not fully configured for production! "
+                "Billing features will fail. Check STRIPE_SECRET_KEY, "
+                "STRIPE_WEBHOOK_SECRET, and all STRIPE_PRICE_* env vars."
+            )
+    else:
+        if not settings.stripe.secret_key:
+            logger.warning(
+                "Stripe secret key not configured — billing features will run in simulated mode."
+            )
 
     logger.info("ThookAI API started successfully!")
 
@@ -205,6 +218,9 @@ async def health():
 
     # Check vector store (Pinecone) configuration
     health_status["checks"]["vector_store"] = "configured" if settings.llm.pinecone_key else "not_configured"
+
+    # Check Stripe billing configuration
+    health_status["checks"]["billing"] = "configured" if settings.stripe.is_fully_configured() else "not_configured"
 
     return health_status
 
