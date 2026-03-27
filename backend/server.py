@@ -85,6 +85,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not check/create indexes: {e}")
     
+
     # Check media storage
     if not settings.r2.has_r2():
         if settings.app.is_production:
@@ -96,6 +97,14 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 "R2 media storage not configured — uploads use /tmp fallback in dev mode."
             )
+
+    # Check Google OAuth
+    if not settings.google.is_configured():
+        logger.warning(
+            "Google OAuth not configured — GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing. "
+            "Google sign-in will return 503."
+        )
+
 
     logger.info("ThookAI API started successfully!")
 
@@ -187,8 +196,13 @@ async def health():
     # Check LLM provider availability
     health_status["checks"]["llm_configured"] = settings.llm.has_llm_provider()
 
+
     # Check media storage
     health_status["checks"]["media_storage"] = "r2_configured" if settings.r2.has_r2() else "not_configured"
+
+    # Check Google OAuth configuration
+    health_status["checks"]["google_auth"] = "configured" if settings.google.is_configured() else "not_configured"
+
 
     return health_status
 
@@ -246,7 +260,12 @@ app.add_middleware(TimingMiddleware, slow_request_threshold_ms=2000)
 
 # OAuth (Authlib) requires server-side session for authorize state / PKCE
 _session_secret = settings.security.jwt_secret_key or "dev-oauth-session-secret-not-for-production"
-app.add_middleware(SessionMiddleware, secret_key=_session_secret, same_site="none", https_only=True)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=_session_secret,
+    same_site="none" if settings.app.is_production else "lax",
+    https_only=settings.app.is_production,
+)
 
 
 # ==================== ERROR HANDLERS ====================
