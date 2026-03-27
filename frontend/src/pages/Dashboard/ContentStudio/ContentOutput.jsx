@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import {
   Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp, AlertTriangle,
   Image, Mic, Download, Play, Pause, Loader2, Sparkles,
-  Calendar, Send, Clock, Linkedin, ExternalLink
+  Calendar, Send, Clock, Linkedin, ExternalLink, Copy, ClipboardCheck
 } from "lucide-react";
 import { LinkedInShell, XShell, InstagramShell } from "./Shells";
 
@@ -402,6 +402,7 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
   const [editedContent, setEditedContent] = useState(bodyText);
   const [approved, setApproved] = useState(job.status === "approved");
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setEditedContent(finalContentToText(job.final_content));
@@ -430,6 +431,18 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
 
   const handleMediaUpdate = (media) => {
     console.log("Media updated:", media);
+  };
+
+  const handleCopy = async () => {
+    const textToCopy = editing ? editedContent : bodyText;
+    if (!textToCopy) return;
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
   };
 
   return (
@@ -558,9 +571,33 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
         </motion.div>
       )}
 
+      {/* Copy button (always visible when content exists) */}
+      {bodyText && (
+        <div className="flex justify-end mt-4">
+          <button
+            onClick={handleCopy}
+            data-testid="copy-btn"
+            className="btn-ghost text-sm px-4 flex items-center gap-2 transition-colors"
+            title={copied ? "Copied!" : "Copy to clipboard"}
+          >
+            {copied ? (
+              <>
+                <ClipboardCheck size={14} className="text-lime" />
+                <span className="text-lime">Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy size={14} />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Action buttons */}
       {!isApproved && (
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2 mt-2">
           <button
             onClick={handleApprove}
             data-testid="approve-btn"
