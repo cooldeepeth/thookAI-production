@@ -1,8 +1,12 @@
 import json
 import asyncio
+import logging
 import uuid
+from typing import Optional
 from services.llm_client import LlmChat, UserMessage
 from services.llm_keys import chat_constructor_key, openai_available
+
+logger = logging.getLogger(__name__)
 
 
 def _clean_json(raw: str) -> str:
@@ -41,7 +45,54 @@ Build the optimal content strategy. Return JSON only:
 }}"""
 
 
-async def run_thinker(raw_input: str, commander_output: dict, scout_output: dict, persona_card: dict) -> dict:
+def _build_fatigue_prompt_section(fatigue_context: Optional[dict]) -> str:
+    """Build a prompt section from fatigue shield data to inject into the Thinker prompt.
+
+    Returns an empty string when there is nothing to constrain.
+    """
+    if not fatigue_context:
+        return ""
+
+    # The fatigue shield uses "shield_status" to indicate severity.
+    # Only inject constraints when there is a real signal.
+    status = fatigue_context.get("shield_status", "healthy")
+    if status == "healthy":
+        return ""
+
+    risk_factors = fatigue_context.get("risk_factors", [])
+    recommendations = fatigue_context.get("recommendations", [])
+
+    overused_patterns = []
+    for factor in risk_factors:
+        detail = factor.get("detail", "")
+        if detail:
+            overused_patterns.append(detail)
+
+    if not overused_patterns and not recommendations:
+        return ""
+
+    lines = [
+        "\nCONTENT DIVERSITY CONSTRAINTS (do not ignore these):",
+        "The following patterns have been overused recently and MUST be avoided:",
+    ]
+    for pattern in overused_patterns:
+        lines.append(f"- {pattern}")
+
+    if recommendations:
+        lines.append("\nPrioritise fresh angles and underused formats instead:")
+        for rec in recommendations:
+            lines.append(f"- {rec}")
+
+    return "\n".join(lines)
+
+
+async def run_thinker(
+    raw_input: str,
+    commander_output: dict,
+    scout_output: dict,
+    persona_card: dict,
+    fatigue_context: Optional[dict] = None,
+) -> dict:
     if not openai_available():
         return _mock_thinker(raw_input, commander_output)
     try:
@@ -58,6 +109,13 @@ async def run_thinker(raw_input: str, commander_output: dict, scout_output: dict
             content_niche=persona_card.get("content_niche_signature", "Thought leadership"),
             platform=commander_output.get("content_type", "post")
         )
+
+        # Inject fatigue shield constraints when fatigue is detected
+        fatigue_section = _build_fatigue_prompt_section(fatigue_context)
+        if fatigue_section:
+            prompt = prompt + "\n" + fatigue_section
+            logger.info("Fatigue shield constraints injected into Thinker prompt")
+
         response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=25.0)
         return json.loads(_clean_json(response))
     except Exception:

@@ -19,6 +19,7 @@ from agents.thinker import run_thinker
 from agents.writer import run_writer
 from agents.qc import run_qc
 from agents.anti_repetition import get_anti_repetition_context, build_anti_repetition_prompt
+from services.persona_refinement import get_pattern_fatigue_shield
 
 logger = logging.getLogger(__name__)
 
@@ -182,10 +183,19 @@ async def run_agent_pipeline(
             "agent_summaries.scout": f"{scout_output.get('sources_found', 0)} sources · research complete"
         })
 
+        # FATIGUE SHIELD — gather pattern fatigue data before Thinker
+        fatigue_data = {}
+        try:
+            fatigue_data = await get_pattern_fatigue_shield(user_id)
+            if fatigue_data.get("fatigue_detected"):
+                logger.info(f"Fatigue shield active for {user_id}: {fatigue_data.get('overused_patterns', [])}")
+        except Exception as e:
+            logger.warning(f"Fatigue shield check failed (non-fatal): {e}")
+
         # THINKER — strategy + structure
         await update_job(job_id, {"current_agent": "thinker"})
         thinker_output = await asyncio.wait_for(
-            run_thinker(raw_input, commander_output, scout_output, persona_card), timeout=30.0
+            run_thinker(raw_input, commander_output, scout_output, persona_card, fatigue_context=fatigue_data), timeout=30.0
         )
         await update_job(job_id, {
             "agent_outputs.thinker": thinker_output,

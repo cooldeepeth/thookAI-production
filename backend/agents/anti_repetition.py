@@ -1,11 +1,23 @@
+# NOTE: Pattern fatigue detection has been consolidated into
+# services/persona_refinement.py (get_pattern_fatigue_shield).
+# This module now handles only exact-content deduplication.
+# Pattern diversity is handled in the pipeline via the fatigue shield.
+#
+# Functions like analyze_hook_fatigue, get_content_diversity_score, and
+# detect_hook_type are retained here because they are consumed by
+# services/persona_refinement.py, routes/repurpose.py, and agents/analyst.py.
+# Do NOT delete this file — other code imports from it.
 """Anti-Repetition Engine V2 for ThookAI.
 
-Enhanced features:
-- Pattern tracking (topics, hooks, structures)
-- Hook fatigue detection
-- Topic clustering to prevent oversaturation
-- Content diversity scoring
-- Smart variation suggestions
+Retained capabilities (exact-content deduplication):
+- score_repetition_risk: TF-IDF / cosine similarity for near-duplicate detection
+- calculate_phrase_overlap: n-gram overlap between two texts
+- get_anti_repetition_context / build_anti_repetition_prompt: Commander-level dedup hints
+
+Hook fatigue & diversity scoring functions are still exported from this module
+for backward compatibility but the authoritative pattern-fatigue analysis now
+lives in services/persona_refinement.get_pattern_fatigue_shield(), which is
+called in the generation pipeline (pipeline.py) before the Thinker step.
 """
 import os
 import json
