@@ -1,10 +1,16 @@
+import logging
+import uuid
+from datetime import datetime, timezone
+from typing import Optional, List, Dict, Any
+
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List, Dict, Any
-from datetime import datetime, timezone
-from database import db
+
 from auth_utils import get_current_user
-import uuid
+from database import db
+from services.email_service import send_workspace_invite_email
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agency", tags=["agency"])
 
@@ -273,7 +279,15 @@ async def invite_creator(
     }
     
     await db.workspace_members.insert_one(member_doc)
-    
+
+    # Send invitation email
+    send_workspace_invite_email(
+        to_email=data.email.lower(),
+        workspace_name=workspace["name"],
+        invite_token=invite_id,
+        inviter_name=current_user.get("name", "A team member"),
+    )
+
     return {
         "success": True,
         "invite_id": invite_id,

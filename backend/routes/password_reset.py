@@ -4,16 +4,15 @@ Password reset via email (Resend) and token stored in MongoDB.
 
 import hashlib
 import logging
-import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
-import resend
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from auth_utils import hash_password
 from database import db
+from services.email_service import send_password_reset_email
 
 logger = logging.getLogger(__name__)
 
@@ -53,30 +52,9 @@ async def forgot_password(data: ForgotPasswordRequest):
                 "created_at": now,
             }
         )
-        api_key = os.environ.get("RESEND_API_KEY", "").strip()
-        from_email = os.environ.get("FROM_EMAIL", "noreply@thookai.com").strip()
-        frontend = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
-        link = f"{frontend}/reset-password?token={token}"
-        body = (
-            "Reset your ThookAI password by visiting this link (valid for 1 hour):\n\n"
-            f"{link}\n\n"
-            "If you did not request this, you can ignore this email."
-        )
-        if api_key:
-            try:
-                resend.api_key = api_key
-                resend.Emails.send(
-                    {
-                        "from": from_email,
-                        "to": [data.email],
-                        "subject": "Reset your ThookAI password",
-                        "text": body,
-                    }
-                )
-            except Exception as e:
-                logger.warning("Resend send failed: %s", e)
-        else:
-            logger.warning("RESEND_API_KEY not set; skip email send (dev)")
+        email_sent = send_password_reset_email(data.email, token)
+        if not email_sent:
+            logger.warning(f"Password reset email failed to send for {data.email}")
 
     return FORGOT_RESPONSE
 
