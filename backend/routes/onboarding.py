@@ -85,6 +85,11 @@ Return ONLY valid JSON — no markdown, no explanation, no code blocks. Use this
 Be specific and authentic based on their actual answers. No generic templates."""
 
 
+class ImportHistoryRequest(BaseModel):
+    posts: List[Dict[str, Any]]  # [{content, platform, date}, ...]
+    source: str = "manual_paste"  # manual_paste | linkedin_export | twitter_archive
+
+
 class AnalyzePostsRequest(BaseModel):
     posts_text: str
     platform: Optional[str] = "general"
@@ -219,6 +224,52 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
     await db.persona_engines.update_one({"user_id": user_id}, {"$set": persona_doc}, upsert=True)
     await db.users.update_one({"user_id": user_id}, {"$set": {"onboarding_completed": True}})
     return {"persona_card": persona_card, "message": "Persona Engine activated"}
+
+
+@router.post("/import-history")
+async def import_post_history(data: ImportHistoryRequest, current_user: dict = Depends(get_current_user)):
+    """Import past posts to enrich persona training.
+
+    Accepts up to 100 posts (each max 5000 chars). Posts are deduplicated,
+    stored as learning signals, and optionally indexed in the vector store.
+    """
+    user_id = current_user["user_id"]
+
+    # Validate limits
+    if len(data.posts) > 100:
+        raise HTTPException(status_code=400, detail="Maximum 100 posts per import")
+
+    # Filter and validate individual posts
+    valid_posts = []
+    for post in data.posts:
+        content = (post.get("content") or "").strip()
+        if not content:
+            continue
+        if len(content) > 5000:
+            content = content[:5000]
+        valid_posts.append({
+            "content": content,
+            "platform": post.get("platform", "general"),
+            "date": post.get("date"),
+        })
+
+    if not valid_posts:
+        raise HTTPException(status_code=400, detail="No valid posts found in request")
+
+    # Ensure persona engine exists for this user
+    persona = await db.persona_engines.find_one({"user_id": user_id})
+    if not persona:
+        raise HTTPException(status_code=400, detail="Complete onboarding first to create your Persona Engine")
+
+    from agents.learning import process_bulk_import
+    result = await process_bulk_import(user_id, valid_posts, source=data.source)
+
+    return {
+        "imported": result.get("imported", 0),
+        "skipped": result.get("skipped", 0),
+        "persona_updated": result.get("persona_updated", False),
+        "message": f"Successfully imported {result.get('imported', 0)} posts for persona training",
+    }
 
 
 def _generate_smart_persona(answers: list) -> dict:
