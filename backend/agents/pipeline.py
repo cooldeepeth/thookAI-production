@@ -203,6 +203,7 @@ async def run_agent_pipeline(
                 thinker_output,
                 persona_card,
                 media_system_suffix=media_suffix,
+                user_id=user_id,
             ),
             timeout=40.0,
         )

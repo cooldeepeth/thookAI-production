@@ -1,8 +1,11 @@
 import os
 import asyncio
 import uuid
+import logging
 from services.llm_client import LlmChat, UserMessage
 from services.llm_keys import anthropic_available, chat_constructor_key
+
+logger = logging.getLogger(__name__)
 
 PLATFORM_RULES = {
     "linkedin": "LinkedIn post (max 3000 chars). Use line breaks generously. No hashtag spam — max 3-5 relevant hashtags at the end.",
@@ -70,7 +73,7 @@ Style Notes:
 {style_notes}
 
 {regional_english_rules}
-
+{style_examples_section}
 CONTENT STRATEGY (follow this precisely):
 Angle: {angle}
 Hook to Use: {hook}
@@ -94,6 +97,51 @@ def _get_regional_rules(regional_english: str) -> str:
     return config["rules"]
 
 
+async def _fetch_style_examples(user_id: str, raw_input: str, platform: str) -> str:
+    """Retrieve similar past approved content from the vector store to use as style reference.
+
+    Returns a formatted string block ready to inject into the writer prompt.
+    If the vector store is unavailable or no results are found, returns an empty string.
+    """
+    if not user_id:
+        return ""
+
+    try:
+        from services.vector_store import query_similar_content
+
+        results = await query_similar_content(
+            user_id=user_id,
+            query_text=raw_input,
+            top_k=3,
+            similarity_threshold=0.65,
+        )
+
+        if not results:
+            return ""
+
+        # Filter to same platform when possible, but keep cross-platform as fallback
+        platform_matches = [r for r in results if r.get("metadata", {}).get("platform") == platform]
+        chosen = platform_matches or results
+
+        example_lines = []
+        for i, item in enumerate(chosen[:3], 1):
+            preview = item.get("metadata", {}).get("content_preview", "")
+            if preview:
+                example_lines.append(f"Example {i}:\n{preview}")
+
+        if not example_lines:
+            return ""
+
+        return (
+            "PREVIOUSLY APPROVED CONTENT IN THIS VOICE (match this style closely):\n"
+            + "\n---\n".join(example_lines)
+            + "\n"
+        )
+    except Exception as e:
+        logger.warning(f"Vector store retrieval failed (non-fatal): {e}")
+        return ""
+
+
 async def run_writer(
     platform: str,
     content_type: str,
@@ -102,6 +150,7 @@ async def run_writer(
     thinker_output: dict,
     persona_card: dict,
     media_system_suffix: str = "",
+    user_id: str = "",
 ) -> dict:
     if not anthropic_available():
         return _mock_writer(platform, content_type, persona_card)
@@ -111,10 +160,14 @@ async def run_writer(
             f"• {s['section']}: {s['guidance']}"
             for s in (thinker_output.get("content_structure") or [])
         )
-        
+
         # Get regional English setting from persona card
         regional_english = persona_card.get("regional_english", "US")
         regional_rules = _get_regional_rules(regional_english)
+
+        # Retrieve similar past approved content from vector store for style reference
+        raw_input = commander_output.get("raw_input", commander_output.get("primary_angle", ""))
+        style_examples_section = await _fetch_style_examples(user_id, raw_input, platform)
 
         system_msg = WRITER_SYSTEM
         if media_system_suffix:
@@ -132,6 +185,7 @@ async def run_writer(
             tone=persona_card.get("tone", "Professional yet conversational"),
             hook_style=persona_card.get("hook_style", "Bold statement"),
             regional_english_rules=regional_rules,
+            style_examples_section=style_examples_section,
             style_notes=style_notes,
             angle=thinker_output.get("angle", commander_output.get("primary_angle", "")),
             hook=thinker_output.get("hook_options", [""])[0],

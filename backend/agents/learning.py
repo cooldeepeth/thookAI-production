@@ -184,18 +184,32 @@ async def capture_learning_signal(
         
         # If approved, also store embedding reference
         if action == "approved":
-            # Store approved embedding in vector store
-            from services.vector_store import upsert_approved_embedding
-            await upsert_approved_embedding(
-                user_id=user_id,
-                content_text=final_content,
-                content_id=job_id,
-                metadata={
-                    "action": "approved",
-                    "patterns_to_adopt": edit_analysis.get("patterns_to_adopt", []) if edit_analysis else []
-                }
+            # Fetch job metadata for richer vector store context
+            job_doc = await db.content_jobs.find_one(
+                {"job_id": job_id},
+                {"_id": 0, "platform": 1, "content_type": 1, "was_edited": 1}
             )
-            
+            job_meta = job_doc or {}
+
+            # Store approved embedding in vector store (non-fatal on failure)
+            try:
+                from services.vector_store import upsert_approved_embedding
+                await upsert_approved_embedding(
+                    user_id=user_id,
+                    content_text=final_content,
+                    content_id=job_id,
+                    metadata={
+                        "action": "approved",
+                        "platform": job_meta.get("platform", "unknown"),
+                        "content_type": job_meta.get("content_type", "post"),
+                        "was_edited": job_meta.get("was_edited", False),
+                        "job_id": job_id,
+                        "patterns_to_adopt": edit_analysis.get("patterns_to_adopt", []) if edit_analysis else []
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Vector store embedding failed (non-fatal): {e}")
+
             # Increment approved count
             update_ops["$inc"] = {"learning_signals.approved_count": 1}
         

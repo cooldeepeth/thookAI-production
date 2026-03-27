@@ -11,11 +11,12 @@ import hashlib
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
-PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY', '')
 PINECONE_ENVIRONMENT = os.environ.get('PINECONE_ENVIRONMENT', 'us-east-1')
-INDEX_NAME = 'thook-persona-embeddings'
+INDEX_NAME = os.environ.get('PINECONE_INDEX_NAME', 'thookai-personas')
 EMBEDDING_DIMENSION = 1536  # OpenAI text-embedding-3-small dimension
 
 # Global references
@@ -30,22 +31,39 @@ def _is_valid_key(key: str) -> bool:
     )
 
 
+def get_vector_store_client():
+    """Returns Pinecone index client if configured, None otherwise."""
+    if not settings.llm.pinecone_key:
+        logger.warning("PINECONE_API_KEY not set — vector store disabled, using MongoDB fallback")
+        return None
+    try:
+        from pinecone import Pinecone
+        pc = Pinecone(api_key=settings.llm.pinecone_key)
+        index_name = os.environ.get('PINECONE_INDEX_NAME', 'thookai-personas')
+        return pc.Index(index_name)
+    except Exception as e:
+        logger.error(f"Pinecone initialisation failed: {e}")
+        return None
+
+
 def get_pinecone_client():
     """Get or create Pinecone client singleton."""
     global _pinecone_client, _pinecone_index
-    
-    if not _is_valid_key(PINECONE_API_KEY):
-        logger.warning("Pinecone API key not configured - using mock mode")
+
+    pinecone_key = settings.llm.pinecone_key or ''
+
+    if not _is_valid_key(pinecone_key):
+        logger.warning("PINECONE_API_KEY not set — vector store disabled, using MongoDB fallback")
         return None
-    
+
     if _pinecone_client is None:
         try:
             from pinecone import Pinecone, ServerlessSpec
-            _pinecone_client = Pinecone(api_key=PINECONE_API_KEY)
-            
+            _pinecone_client = Pinecone(api_key=pinecone_key)
+
             # Check if index exists, create if not
             existing_indexes = [idx.name for idx in _pinecone_client.list_indexes()]
-            
+
             if INDEX_NAME not in existing_indexes:
                 logger.info(f"Creating Pinecone index: {INDEX_NAME}")
                 _pinecone_client.create_index(
@@ -54,15 +72,15 @@ def get_pinecone_client():
                     metric='cosine',
                     spec=ServerlessSpec(cloud='aws', region=PINECONE_ENVIRONMENT)
                 )
-            
+
             _pinecone_index = _pinecone_client.Index(INDEX_NAME)
             logger.info(f"Connected to Pinecone index: {INDEX_NAME}")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize Pinecone: {e}")
             _pinecone_client = None
             _pinecone_index = None
-    
+
     return _pinecone_index
 
 

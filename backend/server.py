@@ -203,6 +203,8 @@ async def health():
     # Check Google OAuth configuration
     health_status["checks"]["google_auth"] = "configured" if settings.google.is_configured() else "not_configured"
 
+    # Check vector store (Pinecone) configuration
+    health_status["checks"]["vector_store"] = "configured" if settings.llm.pinecone_key else "not_configured"
 
     return health_status
 
