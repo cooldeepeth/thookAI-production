@@ -118,7 +118,7 @@ async def analyze_posts(data: AnalyzePostsRequest, current_user: dict = Depends(
             api_key=chat_constructor_key(),
             session_id=f"analyze-{current_user['user_id']}-{uuid.uuid4().hex[:8]}",
             system_message="You are an expert content analyst. Analyze writing samples and extract key voice patterns."
-        ).with_model("anthropic", "claude-4-sonnet-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
 
         prompt = f"""Analyze these {data.platform} posts and extract writing patterns:
 
@@ -160,7 +160,7 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
                 api_key=chat_constructor_key(),
                 session_id=f"persona-{user_id}-{uuid.uuid4().hex[:8]}",
                 system_message="You are the Persona Agent for ThookAI. Return only valid JSON with no additional text."
-            ).with_model("anthropic", "claude-4-sonnet-20250514")
+            ).with_model("anthropic", "claude-sonnet-4-20250514")
 
             import asyncio
             prompt = PERSONA_PROMPT.format(answers_text=answers_text, posts_context=posts_context)

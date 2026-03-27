@@ -94,15 +94,6 @@ memory/
 .emergent/
 *token.json*
 *credentials.json*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+
+# Claude Code
+.claude/worktrees/
