@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, PenLine, Brain, Calendar, BarChart2,
   RefreshCw, Link2, BookOpen, Settings, Zap, LogOut, ChevronRight,
-  Building2, LayoutTemplate, CreditCard
+  Building2, LayoutTemplate, CreditCard, FolderOpen
 } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
@@ -17,7 +17,8 @@ const navItems = [
   { to: "/dashboard/calendar", label: "Content Calendar", icon: Calendar },
   { to: "/dashboard/analytics", label: "Analytics", icon: BarChart2 },
   { to: "/dashboard/library", label: "Content Library", icon: BookOpen },
-  { to: "/dashboard/templates", label: "Templates", icon: LayoutTemplate, badge: "New" },
+  { to: "/dashboard/campaigns", label: "Campaigns", icon: FolderOpen, badge: "New" },
+  { to: "/dashboard/templates", label: "Templates", icon: LayoutTemplate },
   { to: "/dashboard/connections", label: "Connections", icon: Link2 },
   { to: "/dashboard/agency", label: "Agency Workspace", icon: Building2, badge: "Pro" },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },

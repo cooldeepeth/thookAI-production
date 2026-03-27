@@ -32,6 +32,7 @@ class ContentCreateRequest(BaseModel):
     raw_input: str
     attachment_url: Optional[str] = None  # For Visual Agent
     upload_ids: Optional[List[str]] = None
+    campaign_id: Optional[str] = None  # Link job to a campaign/project
 
 
 class ContentStatusUpdate(BaseModel):
@@ -116,7 +117,25 @@ async def create_content(
         "created_at": now,
         "updated_at": now,
     }
+
+    # Optionally link to a campaign
+    if data.campaign_id:
+        campaign = await db.campaigns.find_one(
+            {"campaign_id": data.campaign_id, "user_id": current_user["user_id"], "status": {"$ne": "archived"}}
+        )
+        if campaign:
+            job["campaign_id"] = data.campaign_id
+        else:
+            logger.warning(f"Campaign {data.campaign_id} not found or archived; job created without campaign link")
+
     await db.content_jobs.insert_one(job)
+
+    # Increment campaign content count if linked
+    if job.get("campaign_id"):
+        await db.campaigns.update_one(
+            {"campaign_id": job["campaign_id"]},
+            {"$inc": {"content_count": 1}, "$set": {"updated_at": now}},
+        )
 
     background_tasks.add_task(
         run_agent_pipeline,
@@ -192,6 +211,20 @@ async def update_job_status(
         )
         logger.info(f"Scheduled learning signal capture for rejected job {job_id}")
     
+    # Fire outbound webhook for job.approved
+    if data.status == "approved":
+        try:
+            import asyncio
+            from services.webhook_service import fire_webhook
+            asyncio.create_task(fire_webhook(user_id, "job.approved", {
+                "job_id": job_id,
+                "platform": job.get("platform"),
+                "content_type": job.get("content_type"),
+                "was_edited": bool(data.edited_content),
+            }))
+        except Exception:
+            logger.warning("Failed to fire job.approved webhook for job %s", job_id)
+
     return {"message": f"Content {data.status}", "status": data.status}
 
 

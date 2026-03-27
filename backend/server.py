@@ -42,6 +42,9 @@ from routes.agency import router as agency_router
 from routes.templates import router as templates_router
 from routes.media import router as media_router
 from routes.uploads import router as uploads_router
+from routes.notifications import router as notifications_router
+from routes.webhooks import router as webhooks_router
+from routes.campaigns import router as campaigns_router
 
 # Setup logging
 logging.basicConfig(
@@ -119,6 +122,12 @@ async def lifespan(app: FastAPI):
                 "Stripe secret key not configured — billing features will run in simulated mode."
             )
 
+    # Log LLM configuration
+    if settings.llm.anthropic_api_key:
+        logger.info("LLM model configured: claude-sonnet-4-20250514")
+    else:
+        logger.warning("ANTHROPIC_API_KEY not set — LLM features will use fallback/mock responses")
+
     logger.info("ThookAI API started successfully!")
 
     yield
@@ -175,6 +184,9 @@ api_router.include_router(agency_router)
 api_router.include_router(templates_router)
 api_router.include_router(media_router)
 api_router.include_router(uploads_router)
+api_router.include_router(notifications_router)
+api_router.include_router(webhooks_router)
+api_router.include_router(campaigns_router)
 
 
 @api_router.get("/")
