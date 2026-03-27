@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, RefreshCw, Edit2, Check, X, Share2, Download, Copy, Globe, ExternalLink } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import PersonaShareModal from "@/components/PersonaShareModal";
 
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -94,9 +95,7 @@ export default function PersonaEngine() {
   const [persona, setPersona] = useState(null);
   const [loading, setLoading] = useState(true);
   const [shareStatus, setShareStatus] = useState(null);
-  const [shareLoading, setShareLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [downloadingImage, setDownloadingImage] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState("US");
   const [showRegionDropdown, setShowRegionDropdown] = useState(false);
@@ -143,70 +142,15 @@ export default function PersonaEngine() {
     navigate("/onboarding");
   };
 
-  // Share functionality
-  const handleShare = async () => {
-    setShareLoading(true);
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/persona/share`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ expiry_days: 30 }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setShareStatus({
-          is_shared: true,
-          share_token: data.share_token,
-          share_url: data.share_url,
-          expires_at: data.expires_at,
-          is_permanent: data.is_permanent,
-          view_count: 0,
-        });
-        setShowShareModal(true);
-      }
-    } catch (err) {
-      console.error("Failed to create share link:", err);
-    } finally {
-      setShareLoading(false);
-    }
+  // Share functionality — handled by PersonaShareModal
+  const handleOpenShareModal = () => {
+    setShowShareModal(true);
   };
 
-  const handleRevokeShare = async () => {
-    if (!window.confirm("Revoke your persona share link? Anyone with the link will no longer be able to view it.")) return;
-    try {
-      await fetch(`${BACKEND_URL}/api/persona/share`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      setShareStatus({ is_shared: false });
+  const handleShareStatusChange = (newStatus) => {
+    setShareStatus(newStatus);
+    if (!newStatus.is_shared) {
       setShowShareModal(false);
-    } catch {}
-  };
-
-  const copyShareLink = async () => {
-    const fullUrl = `${window.location.origin}/creator/${shareStatus?.share_token}`;
-    try {
-      await navigator.clipboard.writeText(fullUrl);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
-      // Fallback: create temporary textarea for copying
-      const textarea = document.createElement('textarea');
-      textarea.value = fullUrl;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        document.execCommand('copy');
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
-      } catch (fallbackErr) {
-        console.error('Fallback copy failed:', fallbackErr);
-      }
-      document.body.removeChild(textarea);
     }
   };
 
@@ -279,79 +223,12 @@ export default function PersonaEngine() {
   return (
     <main className="p-6 space-y-6 max-w-5xl" data-testid="persona-engine-page">
       {/* Share Modal */}
-      <AnimatePresence>
-        {showShareModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-            onClick={() => setShowShareModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0F0F0F] border border-white/10 rounded-2xl p-6 max-w-md w-full"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-lime/10 rounded-xl flex items-center justify-center">
-                  <Share2 size={20} className="text-lime" />
-                </div>
-                <div>
-                  <h3 className="font-display font-bold text-white">Share Your Persona Card</h3>
-                  <p className="text-zinc-500 text-xs">Anyone with this link can view your card</p>
-                </div>
-              </div>
-              
-              <div className="bg-white/5 rounded-lg p-3 flex items-center gap-2 mb-4">
-                <input
-                  type="text"
-                  readOnly
-                  value={`${window.location.origin}/creator/${shareStatus?.share_token}`}
-                  className="flex-1 bg-transparent text-white text-sm outline-none truncate"
-                />
-                <button
-                  onClick={copyShareLink}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    copiedLink 
-                      ? "bg-lime text-black" 
-                      : "bg-white/10 text-white hover:bg-white/20"
-                  }`}
-                >
-                  {copiedLink ? "Copied!" : "Copy"}
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-zinc-500 mb-4">
-                <span>
-                  {shareStatus?.is_permanent 
-                    ? "Permanent link (Pro+)" 
-                    : `Expires ${new Date(shareStatus?.expires_at).toLocaleDateString()}`
-                  }
-                </span>
-                <span>{shareStatus?.view_count || 0} views</span>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => window.open(`/creator/${shareStatus?.share_token}`, "_blank")}
-                  className="flex-1 btn-ghost text-sm py-2 flex items-center justify-center gap-2"
-                >
-                  <ExternalLink size={14} /> Preview
-                </button>
-                <button
-                  onClick={handleRevokeShare}
-                  className="flex-1 btn-ghost text-sm py-2 text-red-400 hover:bg-red-400/10"
-                >
-                  Revoke Link
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <PersonaShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareStatus={shareStatus}
+        onShareStatusChange={handleShareStatusChange}
+      />
 
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -366,16 +243,11 @@ export default function PersonaEngine() {
         <div className="flex items-center gap-2">
           {/* Share button */}
           <button
-            onClick={shareStatus?.is_shared ? () => setShowShareModal(true) : handleShare}
-            disabled={shareLoading}
+            onClick={handleOpenShareModal}
             data-testid="share-persona-btn"
             className="flex items-center gap-2 btn-ghost text-xs px-4 py-2 text-lime border border-lime/30 hover:bg-lime/10"
           >
-            {shareLoading ? (
-              <div className="w-4 h-4 border-2 border-lime border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Share2 size={13} />
-            )}
+            <Share2 size={13} />
             {shareStatus?.is_shared ? "View Share Link" : "Share Card"}
           </button>
           {/* Download button */}
