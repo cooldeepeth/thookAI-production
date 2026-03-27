@@ -47,6 +47,32 @@ class UseTemplateRequest(BaseModel):
     platform: Optional[str] = None  # Override platform
 
 
+# ============ ADMIN SEED ============
+
+@router.post("/admin/seed")
+async def seed_templates(current_user: dict = Depends(get_current_user)):
+    """Seed the template marketplace with curated starter templates (admin only)."""
+    # Check if user has admin role
+    user = await db.users.find_one({"user_id": current_user["user_id"]})
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    # Check if already seeded
+    count = await db.templates.count_documents({})
+    if count > 10:
+        return {"success": True, "message": "Already seeded", "count": count}
+
+    # Run seed logic
+    from scripts.seed_templates import get_seed_templates
+    templates = get_seed_templates()
+    result = await db.templates.insert_many(templates)
+    return {
+        "success": True,
+        "message": "Templates seeded successfully",
+        "inserted": len(result.inserted_ids)
+    }
+
+
 # ============ BROWSE TEMPLATES ============
 
 @router.get("")
