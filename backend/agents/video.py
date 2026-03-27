@@ -427,7 +427,12 @@ async def generate_video(
     selected_provider = provider or get_best_available_provider("video")
     
     if not selected_provider:
-        return _mock_video(prompt, duration)
+        return {
+            "error": "provider_not_configured",
+            "provider": "none",
+            "generated": False,
+            "message": "No video provider is configured. Set RUNWAY_API_KEY, KLING_API_KEY, LUMA_API_KEY, or PIKA_API_KEY to enable video generation."
+        }
     
     # Route to appropriate provider
     provider_funcs = {
@@ -439,7 +444,12 @@ async def generate_video(
     
     generate_func = provider_funcs.get(selected_provider)
     if not generate_func:
-        return _mock_video(prompt, duration)
+        return {
+            "error": "provider_not_configured",
+            "provider": selected_provider,
+            "generated": False,
+            "message": f"Provider '{selected_provider}' is not supported. Supported: runway, kling, luma, pika."
+        }
     
     result = await generate_func()
     result["prompt_used"] = prompt[:500]
@@ -474,23 +484,23 @@ async def generate_avatar_video(
         return await _generate_did_avatar(script, source_image_url)
     else:
         return {
-            "generated": False,
-            "mock": True,
+            "error": "provider_not_configured",
             "provider": "none",
-            "message": "No avatar provider configured. Add HEYGEN_API_KEY or DID_API_KEY to enable."
+            "generated": False,
+            "message": "No avatar provider configured. Set HEYGEN_API_KEY or DID_API_KEY to enable avatar video generation."
         }
 
 
 def _mock_video(prompt: str, duration: int) -> Dict[str, Any]:
-    """Return mock video data when no providers available."""
+    """Return error response when no providers are available.
+
+    Kept for backward compatibility but no longer returns fake URLs.
+    """
     return {
-        "video_url": None,
-        "prompt_used": prompt[:500],
-        "duration": duration,
-        "generated": False,
-        "mock": True,
+        "error": "provider_not_configured",
         "provider": "none",
-        "message": "No video provider configured. Add API keys in Settings to enable video generation."
+        "generated": False,
+        "message": "No video provider configured. Set RUNWAY_API_KEY, KLING_API_KEY, LUMA_API_KEY, or PIKA_API_KEY to enable video generation."
     }
 
 

@@ -308,3 +308,136 @@ def generate_carousel(
         return run_async(_generate())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
+
+
+# ============ PIPELINE VIDEO GENERATION ============
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=90)
+def generate_video_for_job(
+    self,
+    job_id: str,
+    user_id: str,
+    content: str,
+    style: str = "cinematic",
+) -> Dict[str, Any]:
+    """
+    Generate a video for a content job as part of the pipeline.
+
+    Dispatched by the content pipeline when generate_video=True
+    and the user has studio/agency tier.
+
+    Args:
+        job_id: The content job to attach the video to.
+        user_id: Owner of the job.
+        content: Draft text used to derive the video prompt.
+        style: One of cinematic, talking_head, slideshow, abstract.
+    """
+    logger.info("Starting pipeline video generation for job %s (style=%s)", job_id, style)
+
+    async def _generate():
+        from database import db
+        from agents.video import generate_video as video_generate, generate_avatar_video
+        from services.credits import deduct_credits, CreditOperation
+        import uuid as _uuid
+
+        try:
+            # Mark as generating
+            now = datetime.now(timezone.utc)
+            await db.content_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {"video_status": "generating", "video_started_at": now, "updated_at": now}},
+            )
+
+            # Deduct credits
+            credit_result = await deduct_credits(
+                user_id=user_id,
+                operation=CreditOperation.VIDEO_GENERATE,
+                description=f"Pipeline video generation ({style})",
+                metadata={"job_id": job_id},
+            )
+            if not credit_result.get("success"):
+                raise Exception(credit_result.get("error", "Insufficient credits for video generation"))
+
+            # Build prompt from content
+            prompt = f"Create a {style} video visualizing: {content[:500]}"
+
+            # Talking head uses avatar flow; others use standard video generation
+            if style == "talking_head":
+                persona = await db.persona_engines.find_one({"user_id": user_id}, {"heygen_avatar_id": 1})
+                avatar_id = persona.get("heygen_avatar_id") if persona else None
+                result = await generate_avatar_video(
+                    script=content[:1000],
+                    avatar_id=avatar_id,
+                    provider=None,
+                )
+            else:
+                result = await video_generate(
+                    prompt=prompt,
+                    duration=5,
+                    provider=None,
+                    model=None,
+                )
+
+            if result.get("generated"):
+                video_url = result.get("video_url")
+                completed_at = datetime.now(timezone.utc)
+
+                # Update the content job
+                await db.content_jobs.update_one(
+                    {"job_id": job_id},
+                    {"$set": {
+                        "video_status": "completed",
+                        "video_url": video_url,
+                        "video_provider": result.get("provider"),
+                        "video_completed_at": completed_at,
+                        "updated_at": completed_at,
+                    }},
+                )
+
+                # Store in media_assets collection
+                await db.media_assets.insert_one({
+                    "asset_id": f"asset_{_uuid.uuid4().hex[:12]}",
+                    "user_id": user_id,
+                    "job_id": job_id,
+                    "type": "video",
+                    "url": video_url,
+                    "provider": result.get("provider"),
+                    "style": style,
+                    "created_at": completed_at,
+                })
+
+                # Create notification
+                try:
+                    from services.notification_service import create_notification
+                    await create_notification(
+                        user_id=user_id,
+                        type="video_ready",
+                        title="Your video is ready",
+                        body=f"Video for your {style} content has been generated.",
+                        metadata={"job_id": job_id, "video_url": video_url},
+                    )
+                except Exception as notif_err:
+                    logger.warning("Failed to create video notification for job %s: %s", job_id, notif_err)
+
+                logger.info("Video generation completed for job %s: %s", job_id, video_url)
+                return {"success": True, "video_url": video_url, "provider": result.get("provider")}
+            else:
+                error_msg = result.get("error") or result.get("message") or "Video generation failed"
+                raise Exception(error_msg)
+
+        except Exception as e:
+            logger.error("Video generation failed for job %s: %s", job_id, e)
+            await db.content_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {
+                    "video_status": "failed",
+                    "video_error": str(e),
+                    "updated_at": datetime.now(timezone.utc),
+                }},
+            )
+            raise
+
+    try:
+        return run_async(_generate())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=90 * (2 ** self.request.retries))

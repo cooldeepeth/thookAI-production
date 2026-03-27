@@ -18,8 +18,27 @@ export default function ContentStudio() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [uploadedItems, setUploadedItems] = useState([]);
+  const [generateVideo, setGenerateVideo] = useState(false);
+  const [videoStyle, setVideoStyle] = useState("cinematic");
+  const [userTier, setUserTier] = useState("free");
   const pollRef = useRef(null);
   const navigate = useNavigate();
+
+  // Fetch user tier on mount for feature gating
+  useEffect(() => {
+    const fetchTier = async () => {
+      try {
+        const token = localStorage.getItem("thook_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${BACKEND_URL}/api/billing/credits`, { credentials: "include", headers });
+        if (res.ok) {
+          const data = await res.json();
+          setUserTier(data.tier || "free");
+        }
+      } catch {}
+    };
+    fetchTier();
+  }, []);
 
   // Handle URL params for prefilling from Daily Brief
   useEffect(() => {
@@ -82,6 +101,8 @@ export default function ContentStudio() {
           content_type: contentType,
           raw_input: rawInput,
           upload_ids: uploadedItems.map((u) => u.upload_id),
+          generate_video: generateVideo,
+          video_style: videoStyle,
         }),
       });
       if (!res.ok) {
@@ -170,6 +191,11 @@ export default function ContentStudio() {
           onGenerate={handleCreate}
           isRunning={isRunning}
           error={error}
+          generateVideo={generateVideo}
+          onGenerateVideoChange={setGenerateVideo}
+          videoStyle={videoStyle}
+          onVideoStyleChange={setVideoStyle}
+          userTier={userTier}
           mediaSection={
             <div className="mb-4">
               <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1 font-mono">Add context (optional)</p>
