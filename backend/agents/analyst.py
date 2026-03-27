@@ -402,16 +402,60 @@ async def get_performance_trends(
     }
 
 
+async def get_persona_performance_data(user_id: str) -> Dict[str, Any]:
+    """Read performance_intelligence and optimal_posting_times from persona engine.
+
+    Returns real calculated data when available, or informational placeholder
+    messages when performance data has not yet been collected.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Dict with ``performance_intelligence`` and ``optimal_posting_times``.
+    """
+    from database import db
+
+    persona_engine = await db.persona_engines.find_one({"user_id": user_id})
+
+    if not persona_engine:
+        return {
+            "performance_intelligence": {
+                "message": "Performance data is being collected. Check back after your first 5 published posts."
+            },
+            "optimal_posting_times": {
+                "message": "Optimal times are calculated after 10+ published posts with performance data."
+            },
+        }
+
+    perf_intel = persona_engine.get("performance_intelligence", {})
+    if not perf_intel:
+        perf_intel = {
+            "message": "Performance data is being collected. Check back after your first 5 published posts."
+        }
+
+    optimal_times = persona_engine.get("optimal_posting_times", {})
+    if not optimal_times:
+        optimal_times = {
+            "message": "Optimal times are calculated after 10+ published posts with performance data."
+        }
+
+    return {
+        "performance_intelligence": perf_intel,
+        "optimal_posting_times": optimal_times,
+    }
+
+
 async def generate_insights(
     user_id: str,
     days: int = 30
 ) -> Dict[str, Any]:
     """Generate AI-powered insights from performance data.
-    
+
     Args:
         user_id: User ID
         days: Days to analyze
-    
+
     Returns:
         AI-generated insights and recommendations
     """
@@ -419,20 +463,26 @@ async def generate_insights(
     overview = await get_analytics_overview(user_id, days)
     trends = await get_performance_trends(user_id, days)
     
+    # Fetch persona-level performance intelligence (real calculated data or message)
+    persona_perf = await get_persona_performance_data(user_id)
+
     if not overview.get("has_data"):
         return {
             "success": True,
             "has_insights": False,
-            "message": "Need more content to generate insights"
+            "message": "Need more content to generate insights",
+            **persona_perf,
         }
-    
+
     # Get diversity data
     from agents.anti_repetition import get_content_diversity_score, analyze_hook_fatigue
     diversity = await get_content_diversity_score(user_id, days)
     hook_fatigue = await analyze_hook_fatigue(user_id, limit=10)
     
     if not openai_available():
-        return _mock_insights(overview, trends, diversity, hook_fatigue)
+        result = _mock_insights(overview, trends, diversity, hook_fatigue)
+        result.update(persona_perf)
+        return result
     
     try:
         from services.llm_client import LlmChat, UserMessage
@@ -489,17 +539,20 @@ Return JSON:
         )
         
         insights = json.loads(_clean_json(response))
-        
+
         return {
             "success": True,
             "has_insights": True,
             "period_days": days,
-            **insights
+            **insights,
+            **persona_perf,
         }
-    
+
     except Exception as e:
         logger.error(f"Insights generation failed: {e}")
-        return _mock_insights(overview, trends, diversity, hook_fatigue)
+        result = _mock_insights(overview, trends, diversity, hook_fatigue)
+        result.update(persona_perf)
+        return result
 
 
 def _mock_insights(overview: Dict, trends: Dict, diversity: Dict, hook_fatigue: Dict) -> Dict[str, Any]:

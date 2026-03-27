@@ -138,6 +138,31 @@ async def apply_persona_refinements(
     return result
 
 
+# ============ OPTIMAL POSTING TIMES ============
+
+@router.get("/optimal-times")
+async def get_optimal_posting_times(
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Returns the user's calculated optimal posting times per platform."""
+    user_id = current_user["user_id"]
+    persona = await db.persona_engines.find_one({"user_id": user_id})
+    optimal_times = persona.get("optimal_posting_times", {}) if persona else {}
+    last_calculated = persona.get("optimal_times_calculated_at") if persona else None
+
+    if not optimal_times:
+        return {
+            "optimal_times": {},
+            "message": "Optimal times are calculated after 10+ published posts with performance data.",
+            "last_calculated_at": None,
+        }
+
+    return {
+        "optimal_times": optimal_times,
+        "last_calculated_at": last_calculated.isoformat() if hasattr(last_calculated, "isoformat") else last_calculated,
+    }
+
+
 # ============ PATTERN FATIGUE SHIELD ============
 
 @router.get("/fatigue-shield")
