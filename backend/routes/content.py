@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
+from fastapi.responses import StreamingResponse, PlainTextResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
+import csv
+import io
 import uuid
 import logging
 from database import db
@@ -32,6 +35,7 @@ class ContentCreateRequest(BaseModel):
     raw_input: str
     attachment_url: Optional[str] = None  # For Visual Agent
     upload_ids: Optional[List[str]] = None
+    campaign_id: Optional[str] = None  # Link job to a campaign/project
 
 
 class ContentStatusUpdate(BaseModel):
@@ -116,7 +120,25 @@ async def create_content(
         "created_at": now,
         "updated_at": now,
     }
+
+    # Optionally link to a campaign
+    if data.campaign_id:
+        campaign = await db.campaigns.find_one(
+            {"campaign_id": data.campaign_id, "user_id": current_user["user_id"], "status": {"$ne": "archived"}}
+        )
+        if campaign:
+            job["campaign_id"] = data.campaign_id
+        else:
+            logger.warning(f"Campaign {data.campaign_id} not found or archived; job created without campaign link")
+
     await db.content_jobs.insert_one(job)
+
+    # Increment campaign content count if linked
+    if job.get("campaign_id"):
+        await db.campaigns.update_one(
+            {"campaign_id": job["campaign_id"]},
+            {"$inc": {"content_count": 1}, "$set": {"updated_at": now}},
+        )
 
     background_tasks.add_task(
         run_agent_pipeline,
@@ -192,6 +214,20 @@ async def update_job_status(
         )
         logger.info(f"Scheduled learning signal capture for rejected job {job_id}")
     
+    # Fire outbound webhook for job.approved
+    if data.status == "approved":
+        try:
+            import asyncio
+            from services.webhook_service import fire_webhook
+            asyncio.create_task(fire_webhook(user_id, "job.approved", {
+                "job_id": job_id,
+                "platform": job.get("platform"),
+                "content_type": job.get("content_type"),
+                "was_edited": bool(data.edited_content),
+            }))
+        except Exception:
+            logger.warning("Failed to fire job.approved webhook for job %s", job_id)
+
     return {"message": f"Content {data.status}", "status": data.status}
 
 
@@ -770,4 +806,163 @@ async def get_job_history(
         "versions": versions,
         "total_versions": len(versions)
     }
+
+
+# ============ CONTENT EXPORT ENDPOINTS ============
+
+def _extract_content_text(final_content) -> str:
+    """Extract plain text from final_content which may be a string or dict."""
+    if final_content is None:
+        return ""
+    if isinstance(final_content, str):
+        return final_content
+    if isinstance(final_content, dict):
+        return final_content.get("post", "")
+    return str(final_content)
+
+
+@router.get("/job/{job_id}/export")
+async def export_single_job(
+    job_id: str,
+    format: str = Query("text", pattern="^(text|json)$"),
+    current_user: dict = Depends(get_current_user),
+):
+    """Export a single content job as plain text or JSON."""
+    job = await db.content_jobs.find_one(
+        {"job_id": job_id, "user_id": current_user["user_id"]},
+        {"_id": 0},
+    )
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if format == "text":
+        content_text = _extract_content_text(job.get("final_content"))
+        if not content_text:
+            content_text = job.get("raw_input", "")
+        return PlainTextResponse(
+            content=content_text,
+            headers={
+                "Content-Disposition": f'attachment; filename="thookai-{job_id}.txt"',
+            },
+        )
+
+    # format == "json"
+    # Serialize datetime fields for JSON compatibility
+    serializable_job = {}
+    for key, value in job.items():
+        if isinstance(value, datetime):
+            serializable_job[key] = value.isoformat()
+        else:
+            serializable_job[key] = value
+    return JSONResponse(
+        content=serializable_job,
+        headers={
+            "Content-Disposition": f'attachment; filename="thookai-{job_id}.json"',
+        },
+    )
+
+
+@router.get("/export/bulk")
+async def export_bulk_jobs(
+    format: str = Query("csv", pattern="^(csv|text)$"),
+    platform: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None, description="ISO date string, e.g. 2025-01-01"),
+    to_date: Optional[str] = Query(None, description="ISO date string, e.g. 2025-12-31"),
+    current_user: dict = Depends(get_current_user),
+):
+    """Bulk export content jobs as CSV or plain text download."""
+    query = {"user_id": current_user["user_id"]}
+
+    if platform:
+        query["platform"] = platform.lower()
+    if status:
+        query["status"] = status
+
+    if from_date or to_date:
+        date_filter = {}
+        if from_date:
+            try:
+                date_filter["$gte"] = datetime.fromisoformat(from_date)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid from_date format. Use ISO date, e.g. 2025-01-01")
+        if to_date:
+            try:
+                # End of the to_date day
+                parsed = datetime.fromisoformat(to_date)
+                date_filter["$lte"] = parsed.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid to_date format. Use ISO date, e.g. 2025-12-31")
+        if date_filter:
+            query["created_at"] = date_filter
+
+    cursor = db.content_jobs.find(
+        query,
+        {
+            "_id": 0,
+            "job_id": 1,
+            "platform": 1,
+            "content_type": 1,
+            "status": 1,
+            "final_content": 1,
+            "raw_input": 1,
+            "was_edited": 1,
+            "created_at": 1,
+        },
+    ).sort("created_at", -1)
+
+    jobs = await cursor.to_list(length=5000)
+
+    if format == "text":
+        def generate_text():
+            for job in jobs:
+                content = _extract_content_text(job.get("final_content")) or job.get("raw_input", "")
+                date_str = job.get("created_at").isoformat() if isinstance(job.get("created_at"), datetime) else str(job.get("created_at", ""))
+                yield f"--- {job.get('platform', '')} | {job.get('content_type', '')} | {date_str} ---\n"
+                yield f"{content}\n\n"
+
+        return StreamingResponse(
+            generate_text(),
+            media_type="text/plain; charset=utf-8",
+            headers={
+                "Content-Disposition": 'attachment; filename="thookai-export.txt"',
+            },
+        )
+
+    # format == "csv"
+    def generate_csv():
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["date", "platform", "content_type", "content", "status", "was_edited"])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for job in jobs:
+            content = _extract_content_text(job.get("final_content")) or job.get("raw_input", "")
+            date_str = ""
+            if isinstance(job.get("created_at"), datetime):
+                date_str = job["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+            elif job.get("created_at"):
+                date_str = str(job["created_at"])
+
+            writer.writerow([
+                date_str,
+                job.get("platform", ""),
+                job.get("content_type", ""),
+                content,
+                job.get("status", ""),
+                "yes" if job.get("was_edited") else "no",
+            ])
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="thookai-export.csv"',
+        },
+    )
 

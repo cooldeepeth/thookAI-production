@@ -249,6 +249,7 @@ async def run_agent_pipeline(
                 }},
             )
 
+
             # Notify user that content generation is complete
             try:
                 from services.notification_service import create_notification
@@ -266,6 +267,23 @@ async def run_agent_pipeline(
                 )
             except Exception as notif_err:
                 logger.warning("Failed to create job completion notification: %s", notif_err)
+
+            # Fire outbound webhooks for job.completed
+            try:
+                from services.webhook_service import fire_webhook
+
+                asyncio.create_task(fire_webhook(user_id, "job.completed", {
+                    "job_id": job_id,
+                    "platform": platform,
+                    "content_type": content_type,
+                    "status": "completed",
+                    "qc_score": qc_output.get("personaMatch"),
+                    "completed_at": now.isoformat(),
+                }))
+            except Exception as wh_err:
+                logger.warning("Failed to fire job.completed webhook: %s", wh_err)
+
+           
 
     except asyncio.CancelledError:
         await update_job(job_id, {"status": "error", "current_agent": "error", "error": "Pipeline was cancelled"})

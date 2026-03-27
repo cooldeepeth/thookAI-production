@@ -379,3 +379,120 @@ async def get_learning_insights(user_id: str) -> Dict[str, Any]:
         },
         "last_updated": learning.get("last_updated")
     }
+
+
+async def process_bulk_import(
+    user_id: str,
+    posts: List[Dict[str, Any]],
+    source: str = "manual_paste"
+) -> Dict[str, Any]:
+    """Process a bulk import of historical posts for persona training.
+
+    Deduplicates against existing learning signals, stores each post as an
+    approved embedding in persona_engines.learning_signals, and attempts to
+    index in the Pinecone vector store (non-fatal on failure).
+
+    Args:
+        user_id: User ID
+        posts: List of dicts with keys: content, platform, date
+        source: Import source type (manual_paste, linkedin_export, twitter_archive)
+
+    Returns:
+        Dict with imported count, skipped count, and persona_updated flag
+    """
+    now = datetime.now(timezone.utc)
+    imported = 0
+    skipped = 0
+
+    # Fetch existing approved_embeddings to deduplicate
+    persona = await db.persona_engines.find_one(
+        {"user_id": user_id},
+        {"_id": 0, "learning_signals.approved_embeddings": 1}
+    )
+    existing_previews = set()
+    if persona:
+        for emb in persona.get("learning_signals", {}).get("approved_embeddings", []):
+            preview = emb.get("content_preview", "")
+            if preview:
+                existing_previews.add(preview)
+
+    new_embeddings = []
+    for post in posts:
+        content = post["content"]
+        platform = post.get("platform", "general")
+        post_date = post.get("date")
+
+        # Deduplicate: check if a post with the same first 200 chars already exists
+        content_preview = content[:200]
+        if content_preview in existing_previews:
+            skipped += 1
+            continue
+
+        content_id = f"import_{uuid.uuid4().hex[:12]}"
+
+        embedding_record = {
+            "content_id": content_id,
+            "content_preview": content_preview,
+            "platform": platform,
+            "source": source,
+            "post_date": post_date,
+            "imported_at": now,
+        }
+        new_embeddings.append(embedding_record)
+        existing_previews.add(content_preview)
+
+        # Store in vector store (non-fatal)
+        try:
+            from services.vector_store import upsert_approved_embedding
+            await upsert_approved_embedding(
+                user_id=user_id,
+                content_text=content,
+                content_id=content_id,
+                metadata={
+                    "action": "imported",
+                    "platform": platform,
+                    "source": source,
+                    "post_date": post_date or "",
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Vector store embedding failed for import (non-fatal): {e}")
+
+        imported += 1
+
+    # Batch update persona_engines with all new embeddings
+    if new_embeddings:
+        await db.persona_engines.update_one(
+            {"user_id": user_id},
+            {
+                "$push": {
+                    "learning_signals.approved_embeddings": {
+                        "$each": new_embeddings,
+                        "$slice": -500  # Keep last 500 embeddings
+                    }
+                },
+                "$set": {
+                    "learning_signals.last_updated": now,
+                    "learning_signals.last_import": {
+                        "source": source,
+                        "count": imported,
+                        "timestamp": now,
+                    }
+                },
+                "$inc": {
+                    "learning_signals.approved_count": imported
+                }
+            }
+        )
+
+    persona_updated = imported > 0
+
+    logger.info(
+        f"Bulk import for user {user_id}: imported={imported}, skipped={skipped}, source={source}"
+    )
+
+    return {
+        "imported": imported,
+        "skipped": skipped,
+        "persona_updated": persona_updated,
+    }

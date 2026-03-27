@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, RefreshCw, Edit2, Check, X, Share2, Download, Copy, Globe, ExternalLink } from "lucide-react";
+import { Zap, RefreshCw, Edit2, Check, X, Share2, Download, Copy, Globe, ExternalLink, Upload, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import PersonaShareModal from "@/components/PersonaShareModal";
 
@@ -99,6 +99,11 @@ export default function PersonaEngine() {
   const [downloadingImage, setDownloadingImage] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState("US");
   const [showRegionDropdown, setShowRegionDropdown] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importPlatform, setImportPlatform] = useState("linkedin");
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [showImportSection, setShowImportSection] = useState(false);
   const personaCardRef = useRef(null);
   const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
@@ -191,6 +196,42 @@ export default function PersonaEngine() {
       });
       setPersona(p => ({ ...p, card: { ...p.card, regional_english: code } }));
     } catch {}
+  };
+
+  // Import past posts handler
+  const detectedPosts = importText.trim()
+    ? importText.split(/\n\s*\n/).filter(p => p.trim().length > 0)
+    : [];
+
+  const handleImportPosts = async () => {
+    if (detectedPosts.length === 0) return;
+    setImportLoading(true);
+    setImportResult(null);
+    try {
+      const posts = detectedPosts.map(content => ({
+        content: content.trim(),
+        platform: importPlatform,
+        date: null,
+      }));
+      const res = await fetch(`${BACKEND_URL}/api/onboarding/import-history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ posts, source: "manual_paste" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setImportResult({ success: true, imported: data.imported, skipped: data.skipped });
+        setImportText("");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setImportResult({ success: false, message: err.detail || "Import failed" });
+      }
+    } catch (e) {
+      setImportResult({ success: false, message: "Network error. Please try again." });
+    } finally {
+      setImportLoading(false);
+    }
   };
 
   if (loading) return (
@@ -368,6 +409,103 @@ export default function PersonaEngine() {
             <h3 className="font-display font-semibold text-white mb-1">Voice Fingerprint</h3>
             <p className="text-zinc-500 text-xs mb-4">Calibrated from your interview and content analysis. Updates as you create.</p>
             <VoiceFingerprintBars fingerprint={persona.voice_fingerprint || {}} />
+          </motion.div>
+
+          {/* Import Past Posts */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="card-thook p-5" data-testid="import-posts-section">
+            <button
+              onClick={() => setShowImportSection(!showImportSection)}
+              className="w-full flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <Upload size={16} className="text-violet" />
+                <h3 className="font-display font-semibold text-white text-sm">Import Past Posts</h3>
+              </div>
+              <ChevronDown size={16} className={`text-zinc-500 transition-transform ${showImportSection ? "rotate-180" : ""}`} />
+            </button>
+            <p className="text-zinc-500 text-xs mt-1">Paste your existing posts to train your Persona Engine on your real voice.</p>
+
+            <AnimatePresence>
+              {showImportSection && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-4 space-y-3">
+                    {/* Platform selector */}
+                    <div>
+                      <label className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1 block">Platform</label>
+                      <select
+                        value={importPlatform}
+                        onChange={e => setImportPlatform(e.target.value)}
+                        className="w-full bg-[#18181B] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-lime/40"
+                      >
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="twitter">X (Twitter)</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="general">Other / General</option>
+                      </select>
+                    </div>
+
+                    {/* Textarea */}
+                    <div>
+                      <label className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1 block">
+                        Paste your posts (separate each post with a blank line)
+                      </label>
+                      <textarea
+                        value={importText}
+                        onChange={e => setImportText(e.target.value)}
+                        placeholder={"My first post goes here...\n\nMy second post goes here...\n\nSeparate each post with a blank line."}
+                        rows={8}
+                        className="w-full bg-[#18181B] border border-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-lime/40 resize-y placeholder-zinc-700"
+                        data-testid="import-textarea"
+                      />
+                    </div>
+
+                    {/* Post count preview */}
+                    {importText.trim() && (
+                      <p className="text-xs text-zinc-400">
+                        Detected <span className="text-lime font-semibold">{detectedPosts.length}</span> post{detectedPosts.length !== 1 ? "s" : ""}
+                      </p>
+                    )}
+
+                    {/* Submit button */}
+                    <button
+                      onClick={handleImportPosts}
+                      disabled={importLoading || detectedPosts.length === 0}
+                      data-testid="import-submit-btn"
+                      className="w-full flex items-center justify-center gap-2 bg-violet/20 text-violet border border-violet/30 rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-violet/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {importLoading ? (
+                        <div className="w-4 h-4 border-2 border-violet border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Upload size={14} />
+                      )}
+                      {importLoading ? "Importing..." : `Import ${detectedPosts.length} Post${detectedPosts.length !== 1 ? "s" : ""}`}
+                    </button>
+
+                    {/* Result toast */}
+                    {importResult && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`rounded-lg px-4 py-3 text-sm ${
+                          importResult.success
+                            ? "bg-lime/10 text-lime border border-lime/20"
+                            : "bg-red-500/10 text-red-400 border border-red-500/20"
+                        }`}
+                      >
+                        {importResult.success
+                          ? `Imported ${importResult.imported} post${importResult.imported !== 1 ? "s" : ""}${importResult.skipped > 0 ? ` (${importResult.skipped} duplicates skipped)` : ""} for persona training.`
+                          : importResult.message}
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
 
