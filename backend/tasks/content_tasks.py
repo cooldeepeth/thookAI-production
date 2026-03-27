@@ -116,6 +116,20 @@ def process_scheduled_posts() -> Dict[str, Any]:
                         }}
                     )
                     failed += 1
+                    # Fire outbound webhook for post.failed (no token)
+                    try:
+                        from services.webhook_service import fire_webhook
+                        await fire_webhook(user_id, "post.failed", {
+                            "schedule_id": post.get("schedule_id"),
+                            "job_id": post.get("job_id"),
+                            "platform": platform,
+                            "error": "Platform not connected",
+                        })
+                    except Exception as wh_err:
+                        logger.warning(
+                            "Failed to fire post.failed webhook for schedule %s: %s",
+                            post.get("schedule_id"), wh_err,
+                        )
                     continue
                 
                 # Attempt to publish (placeholder - implement actual API calls)
@@ -155,6 +169,21 @@ def process_scheduled_posts() -> Dict[str, Any]:
                                 job_id,
                                 poll_err,
                             )
+
+                    # Fire outbound webhook for post.published
+                    try:
+                        from services.webhook_service import fire_webhook
+                        await fire_webhook(user_id, "post.published", {
+                            "schedule_id": post.get("schedule_id"),
+                            "job_id": post.get("job_id"),
+                            "platform": platform,
+                            "published_at": now.isoformat(),
+                        })
+                    except Exception as wh_err:
+                        logger.warning(
+                            "Failed to fire post.published webhook for schedule %s: %s",
+                            post.get("schedule_id"), wh_err,
+                        )
                 else:
                     await db.scheduled_posts.update_one(
                         {"schedule_id": post["schedule_id"]},
@@ -165,6 +194,21 @@ def process_scheduled_posts() -> Dict[str, Any]:
                         }}
                     )
                     failed += 1
+
+                    # Fire outbound webhook for post.failed
+                    try:
+                        from services.webhook_service import fire_webhook
+                        await fire_webhook(user_id, "post.failed", {
+                            "schedule_id": post.get("schedule_id"),
+                            "job_id": post.get("job_id"),
+                            "platform": platform,
+                            "error": "Publishing failed",
+                        })
+                    except Exception as wh_err:
+                        logger.warning(
+                            "Failed to fire post.failed webhook for schedule %s: %s",
+                            post.get("schedule_id"), wh_err,
+                        )
                     
             except Exception as e:
                 logger.error(f"Failed to process scheduled post {post.get('schedule_id')}: {e}")

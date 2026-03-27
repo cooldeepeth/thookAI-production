@@ -42,6 +42,7 @@ from routes.agency import router as agency_router
 from routes.templates import router as templates_router
 from routes.media import router as media_router
 from routes.uploads import router as uploads_router
+from routes.webhooks import router as webhooks_router
 
 # Setup logging
 logging.basicConfig(
@@ -175,6 +176,7 @@ api_router.include_router(agency_router)
 api_router.include_router(templates_router)
 api_router.include_router(media_router)
 api_router.include_router(uploads_router)
+api_router.include_router(webhooks_router)
 
 
 @api_router.get("/")
