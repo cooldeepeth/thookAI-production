@@ -441,6 +441,261 @@ async def get_persona_evolution_timeline(user_id: str) -> Dict[str, Any]:
     }
 
 
+async def calculate_optimal_posting_times(user_id: str) -> dict:
+    """Calculate optimal posting times from real published post performance data.
+
+    Groups published posts (with real performance_data) by platform, day_of_week,
+    and hour_of_day.  For each slot that has at least 3 data points, computes the
+    average engagement rate, then returns the top 3 slots per platform.
+
+    The result is persisted to ``db.persona_engines[user_id].optimal_posting_times``
+    so that downstream consumers (planner, dashboard) can read it without
+    recalculating.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Dict with optimal posting times per platform, or an informational message
+        if there is insufficient data.
+    """
+    from database import db
+
+    MIN_TOTAL_POSTS = 10
+    MIN_SLOT_SAMPLE = 3
+    TOP_SLOTS = 3
+    now = datetime.now(timezone.utc)
+
+    # Fetch published posts that have real performance_data (not simulated)
+    cursor = db.content_jobs.find(
+        {
+            "user_id": user_id,
+            "status": "published",
+            "performance_data": {"$exists": True},
+        },
+        {
+            "platform": 1,
+            "published_at": 1,
+            "performance_data": 1,
+        },
+    )
+    posts = await cursor.to_list(500)
+
+    # Filter out posts whose performance_data has an error field
+    valid_posts = [
+        p for p in posts
+        if isinstance(p.get("performance_data"), dict)
+        and "error" not in p.get("performance_data", {})
+        and p.get("published_at") is not None
+    ]
+
+    if len(valid_posts) < MIN_TOTAL_POSTS:
+        return {
+            "message": "Need at least 10 published posts with performance data to calculate optimal posting times.",
+            "posts_with_data": len(valid_posts),
+        }
+
+    # Group by platform -> day_of_week -> hour_of_day
+    # Structure: { platform: { (day, hour): [engagement_rates] } }
+    slots: Dict[str, Dict[tuple, List[float]]] = {}
+
+    for post in valid_posts:
+        platform = post.get("platform", "unknown")
+        published_at = post["published_at"]
+        perf = post["performance_data"]
+        engagement_rate = perf.get("engagement_rate")
+        if engagement_rate is None:
+            continue
+
+        day_of_week = published_at.strftime("%A")  # e.g. "Monday"
+        hour_of_day = published_at.hour
+
+        slots.setdefault(platform, {})
+        key = (day_of_week, hour_of_day)
+        slots[platform].setdefault(key, [])
+        slots[platform][key].append(float(engagement_rate))
+
+    # For each platform, pick top 3 slots with sample_size >= MIN_SLOT_SAMPLE
+    optimal: Dict[str, Any] = {}
+
+    for platform, slot_data in slots.items():
+        ranked = []
+        for (day, hour), rates in slot_data.items():
+            if len(rates) < MIN_SLOT_SAMPLE:
+                continue
+            avg_rate = round(sum(rates) / len(rates), 6)
+            ranked.append({
+                "day_of_week": day,
+                "hour_of_day": hour,
+                "avg_engagement_rate": avg_rate,
+                "sample_size": len(rates),
+            })
+        ranked.sort(key=lambda s: s["avg_engagement_rate"], reverse=True)
+        optimal[platform] = ranked[:TOP_SLOTS]
+
+    # Persist to persona_engines
+    await db.persona_engines.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "optimal_posting_times": optimal,
+                "optimal_times_calculated_at": now,
+            }
+        },
+    )
+
+    logger.info(f"Optimal posting times calculated for user {user_id}: {len(optimal)} platforms")
+    return optimal
+
+
+async def calculate_performance_intelligence(user_id: str) -> dict:
+    """Aggregate real post performance data into persona-level intelligence.
+
+    Metrics produced:
+    - ``avg_engagement_by_platform``  – average engagement rate per platform
+    - ``best_performing_formats``     – top content_type/format by avg engagement
+    - ``performance_trend``           – ``improving`` / ``declining`` / ``stable``
+      (compares last 30 days vs previous 30 days)
+    - ``total_posts_with_data``       – count of qualifying posts
+
+    Only posts whose ``performance_data`` field exists *and* has no ``error``
+    key are considered.
+
+    The result is persisted to
+    ``db.persona_engines[user_id].performance_intelligence``.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        The calculated performance intelligence dict.
+    """
+    from database import db
+
+    now = datetime.now(timezone.utc)
+
+    # Fetch all published posts with real performance_data
+    cursor = db.content_jobs.find(
+        {
+            "user_id": user_id,
+            "status": "published",
+            "performance_data": {"$exists": True},
+        },
+        {
+            "platform": 1,
+            "content_type": 1,
+            "published_at": 1,
+            "created_at": 1,
+            "performance_data": 1,
+        },
+    )
+    posts = await cursor.to_list(1000)
+
+    # Filter valid
+    valid_posts = [
+        p for p in posts
+        if isinstance(p.get("performance_data"), dict)
+        and "error" not in p.get("performance_data", {})
+    ]
+
+    if not valid_posts:
+        result: Dict[str, Any] = {
+            "message": "No published posts with performance data yet.",
+            "total_posts_with_data": 0,
+            "calculated_at": now.isoformat(),
+        }
+        await db.persona_engines.update_one(
+            {"user_id": user_id},
+            {"$set": {"performance_intelligence": result}},
+        )
+        return result
+
+    # --- avg_engagement_by_platform ---
+    platform_rates: Dict[str, List[float]] = {}
+    for p in valid_posts:
+        platform = p.get("platform", "unknown")
+        rate = p.get("performance_data", {}).get("engagement_rate")
+        if rate is not None:
+            platform_rates.setdefault(platform, []).append(float(rate))
+
+    avg_engagement_by_platform = {
+        plat: round(sum(rates) / len(rates), 6)
+        for plat, rates in platform_rates.items()
+        if rates
+    }
+
+    # --- best_performing_formats ---
+    format_rates: Dict[str, List[float]] = {}
+    for p in valid_posts:
+        fmt = p.get("content_type", "post")
+        rate = p.get("performance_data", {}).get("engagement_rate")
+        if rate is not None:
+            format_rates.setdefault(fmt, []).append(float(rate))
+
+    best_performing_formats = sorted(
+        [
+            {"format": fmt, "avg_engagement_rate": round(sum(r) / len(r), 6), "count": len(r)}
+            for fmt, r in format_rates.items()
+            if r
+        ],
+        key=lambda x: x["avg_engagement_rate"],
+        reverse=True,
+    )
+
+    # --- performance_trend (last 30d vs previous 30d) ---
+    cutoff_recent = now - timedelta(days=30)
+    cutoff_prev = now - timedelta(days=60)
+
+    recent_rates: List[float] = []
+    prev_rates: List[float] = []
+
+    for p in valid_posts:
+        pub = p.get("published_at") or p.get("created_at")
+        rate = p.get("performance_data", {}).get("engagement_rate")
+        if pub is None or rate is None:
+            continue
+        if pub >= cutoff_recent:
+            recent_rates.append(float(rate))
+        elif pub >= cutoff_prev:
+            prev_rates.append(float(rate))
+
+    if recent_rates and prev_rates:
+        recent_avg = sum(recent_rates) / len(recent_rates)
+        prev_avg = sum(prev_rates) / len(prev_rates)
+        if prev_avg > 0:
+            change_pct = (recent_avg - prev_avg) / prev_avg
+            if change_pct > 0.10:
+                performance_trend = "improving"
+            elif change_pct < -0.10:
+                performance_trend = "declining"
+            else:
+                performance_trend = "stable"
+        else:
+            performance_trend = "stable"
+    else:
+        performance_trend = "insufficient_data"
+
+    result = {
+        "avg_engagement_by_platform": avg_engagement_by_platform,
+        "best_performing_formats": best_performing_formats,
+        "performance_trend": performance_trend,
+        "total_posts_with_data": len(valid_posts),
+        "calculated_at": now.isoformat(),
+    }
+
+    # Persist
+    await db.persona_engines.update_one(
+        {"user_id": user_id},
+        {"$set": {"performance_intelligence": result}},
+    )
+
+    logger.info(
+        f"Performance intelligence calculated for user {user_id}: "
+        f"{len(valid_posts)} posts, trend={performance_trend}"
+    )
+    return result
+
+
 async def get_pattern_fatigue_shield(user_id: str) -> Dict[str, Any]:
     """Pattern Fatigue Shield - Advanced protection against content staleness.
     

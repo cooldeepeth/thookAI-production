@@ -350,6 +350,35 @@ def cleanup_expired_shares() -> Dict[str, Any]:
     return run_async(_cleanup())
 
 
+# ============ PERFORMANCE INTELLIGENCE ============
+
+@shared_task
+def update_performance_intelligence(user_id: str) -> Dict[str, Any]:
+    """Recalculate performance intelligence after new metrics arrive.
+
+    Runs both performance intelligence aggregation and optimal posting
+    time calculation for a single user.  Intended to be called after
+    social analytics data is ingested for the user's published posts.
+    """
+
+    async def _update():
+        from services.persona_refinement import (
+            calculate_optimal_posting_times,
+            calculate_performance_intelligence,
+        )
+
+        perf = await calculate_performance_intelligence(user_id)
+        times = await calculate_optimal_posting_times(user_id)
+        logger.info(f"Performance intelligence updated for user {user_id}")
+        return {
+            "user_id": user_id,
+            "performance_intelligence": perf,
+            "optimal_posting_times": times,
+        }
+
+    return run_async(_update())
+
+
 # ============ ANALYTICS AGGREGATION ============
 
 @shared_task
