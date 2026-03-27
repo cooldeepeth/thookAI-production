@@ -136,6 +136,25 @@ def process_scheduled_posts() -> Dict[str, Any]:
                         }}
                     )
                     published += 1
+
+                    # Schedule follow-up analytics polling
+                    job_id = post.get("job_id", post.get("schedule_id"))
+                    if job_id:
+                        try:
+                            poll_post_metrics_24h.apply_async(
+                                args=[job_id, user_id, platform],
+                                countdown=86400,  # 24 hours
+                            )
+                            poll_post_metrics_7d.apply_async(
+                                args=[job_id, user_id, platform],
+                                countdown=604800,  # 7 days
+                            )
+                        except Exception as poll_err:
+                            logger.warning(
+                                "Failed to schedule metrics polling for job %s: %s",
+                                job_id,
+                                poll_err,
+                            )
                 else:
                     await db.scheduled_posts.update_one(
                         {"schedule_id": post["schedule_id"]},
@@ -386,3 +405,57 @@ def aggregate_daily_analytics() -> Dict[str, Any]:
         }
     
     return run_async(_aggregate())
+
+
+# ============ SOCIAL ANALYTICS POLLING ============
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=300)
+def poll_post_metrics_24h(self, job_id: str, user_id: str, platform: str) -> Dict[str, Any]:
+    """Poll post metrics 24 hours after publishing.
+
+    Fetches real engagement data from the platform API and persists it
+    to the content_job document and the user's performance_intelligence.
+
+    Retries up to 2 times with 5-minute delays on transient failures.
+    """
+    logger.info("Polling 24h metrics for job=%s platform=%s", job_id, platform)
+
+    async def _poll():
+        from services.social_analytics import update_post_performance
+
+        success = await update_post_performance(job_id, user_id, platform)
+        if not success:
+            logger.warning("24h metrics poll returned False for job=%s", job_id)
+        return {"success": success, "job_id": job_id, "interval": "24h"}
+
+    try:
+        return run_async(_poll())
+    except Exception as exc:
+        logger.error("poll_post_metrics_24h failed for job=%s: %s", job_id, exc)
+        raise self.retry(exc=exc, countdown=300 * (2 ** self.request.retries))
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=300)
+def poll_post_metrics_7d(self, job_id: str, user_id: str, platform: str) -> Dict[str, Any]:
+    """Poll post metrics 7 days after publishing.
+
+    Captures longer-term engagement data (evergreen reach, late shares)
+    and updates the stored performance data accordingly.
+
+    Retries up to 2 times with 5-minute delays on transient failures.
+    """
+    logger.info("Polling 7d metrics for job=%s platform=%s", job_id, platform)
+
+    async def _poll():
+        from services.social_analytics import update_post_performance
+
+        success = await update_post_performance(job_id, user_id, platform)
+        if not success:
+            logger.warning("7d metrics poll returned False for job=%s", job_id)
+        return {"success": success, "job_id": job_id, "interval": "7d"}
+
+    try:
+        return run_async(_poll())
+    except Exception as exc:
+        logger.error("poll_post_metrics_7d failed for job=%s: %s", job_id, exc)
+        raise self.retry(exc=exc, countdown=300 * (2 ** self.request.retries))

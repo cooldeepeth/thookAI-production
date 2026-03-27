@@ -77,9 +77,16 @@ async def get_content_analytics(
         return {"success": False, "error": "Content not found"}
     
     # Check if real metrics exist (from platform APIs)
-    real_metrics = job.get("performance_metrics")
-    
-    if real_metrics:
+    # Prefer performance_data.latest (set by social_analytics service),
+    # fall back to legacy performance_metrics field
+    perf_data = job.get("performance_data", {})
+    real_metrics = perf_data.get("latest") if perf_data else None
+    if not real_metrics:
+        real_metrics = job.get("performance_metrics")
+
+    has_real_data = real_metrics is not None and "error" not in (real_metrics or {})
+
+    if has_real_data:
         metrics = real_metrics
     else:
         # Generate simulated metrics for demo/testing
@@ -113,7 +120,9 @@ async def get_content_analytics(
         "metrics": metrics,
         "performance_score": performance_score,
         "performance_level": performance_level,
-        "is_simulated": real_metrics is None,
+        "is_estimated": not has_real_data,
+        "is_simulated": not has_real_data,  # backward compat alias
+        "metrics_updated_at": job.get("metrics_updated_at").isoformat() if job.get("metrics_updated_at") else None,
         "published_at": job.get("published_at").isoformat() if job.get("published_at") else None,
         "created_at": job.get("created_at").isoformat() if job.get("created_at") else None
     }
@@ -234,14 +243,24 @@ async def get_analytics_overview(
     total_engagements = 0
     performance_scores = []
     top_content = []
-    
+    real_data_count = 0
+    estimated_count = 0
+
     for job in jobs:
         platform = job.get("platform", "linkedin")
-        
-        # Get or simulate metrics
-        metrics = job.get("performance_metrics")
+
+        # Prefer real performance data, fall back to simulation
+        perf_data = job.get("performance_data", {})
+        metrics = perf_data.get("latest") if perf_data else None
         if not metrics:
+            metrics = job.get("performance_metrics")
+
+        is_real = metrics is not None and "error" not in (metrics or {})
+        if is_real:
+            real_data_count += 1
+        else:
             metrics = _simulate_engagement(platform, job)
+            estimated_count += 1
         
         # Calculate performance score
         engagement_rate = metrics.get("engagement_rate", 0)
@@ -285,8 +304,11 @@ async def get_analytics_overview(
             "total_impressions": total_impressions,
             "total_engagements": total_engagements,
             "avg_performance_score": round(sum(performance_scores) / len(performance_scores), 1) if performance_scores else 0,
-            "overall_engagement_rate": round(total_engagements / total_impressions, 4) if total_impressions else 0
+            "overall_engagement_rate": round(total_engagements / total_impressions, 4) if total_impressions else 0,
+            "real_data_posts": real_data_count,
+            "estimated_posts": estimated_count,
         },
+        "is_estimated": estimated_count > 0,
         "by_platform": dict(platform_stats),
         "top_performing": top_content[:5],
         "bottom_performing": list(reversed(top_content[-3:])) if len(top_content) >= 3 else []
@@ -349,8 +371,11 @@ async def get_performance_trends(
             engagements = 0
             
             for job in period_jobs:
-                metrics = job.get("performance_metrics")
+                perf_data = job.get("performance_data", {})
+                metrics = perf_data.get("latest") if perf_data else None
                 if not metrics:
+                    metrics = job.get("performance_metrics")
+                if not metrics or "error" in (metrics or {}):
                     metrics = _simulate_engagement(job.get("platform", "linkedin"), job)
                 
                 engagement_rate = metrics.get("engagement_rate", 0)
