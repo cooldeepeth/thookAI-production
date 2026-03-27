@@ -1,6 +1,7 @@
-import { Bell, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function TopBar({ title = "Dashboard" }) {
   const { user } = useAuth();
@@ -19,10 +20,7 @@ export default function TopBar({ title = "Dashboard" }) {
         </button>
 
         {/* Notifications */}
-        <button data-testid="notifications-btn" className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors relative">
-          <Bell size={16} />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-lime rounded-full" />
-        </button>
+        <NotificationBell />
 
         {/* Create button */}
         <button

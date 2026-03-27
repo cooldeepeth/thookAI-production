@@ -191,6 +191,7 @@ api_router.include_router(webhooks_router)
 api_router.include_router(campaigns_router)
 api_router.include_router(webhooks_router)
 
+
 @api_router.get("/")
 async def root():
     """API root endpoint"""
