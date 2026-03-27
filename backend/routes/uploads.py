@@ -154,6 +154,19 @@ async def upload_media(
             logger.error("R2 put_object failed: %s", e)
             raise HTTPException(status_code=500, detail="Upload failed")
     else:
+        # R2 not configured — block uploads in production to prevent data loss
+        if settings.app.is_production:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "media_storage_unavailable",
+                    "message": "Media storage is not configured. Contact support."
+                }
+            )
+        # Dev mode: allow /tmp fallback with warning
+        logger.warning(
+            "R2 not configured — using /tmp fallback. Files will be lost on restart."
+        )
         base = Path("/tmp/thookai_uploads") / user_id
         base.mkdir(parents=True, exist_ok=True)
         safe_name = "".join(c for c in filename if c.isalnum() or c in "._-")[:120] or "file"

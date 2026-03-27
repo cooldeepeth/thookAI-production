@@ -36,15 +36,20 @@ ALLOWED_MIME_TYPES = {
 def get_r2_client():
     """
     Get a boto3 S3 client configured for Cloudflare R2.
-    Returns None with warning if R2 is not configured.
+
+    Raises:
+        ValueError: If R2 credentials are present but invalid / client fails to initialise.
+
+    Returns:
+        boto3 S3 client, or None if R2 is not configured at all.
     """
     if not settings.r2.has_r2():
         logger.warning("R2 storage not configured. Media storage features unavailable.")
         return None
-    
+
     try:
         endpoint_url = f"https://{settings.r2.r2_account_id}.r2.cloudflarestorage.com"
-        
+
         client = boto3.client(
             's3',
             endpoint_url=endpoint_url,
@@ -56,11 +61,13 @@ def get_r2_client():
             ),
             region_name='auto'
         )
-        
+
         return client
     except Exception as e:
         logger.error(f"Failed to create R2 client: {e}")
-        return None
+        raise ValueError(
+            f"R2 credentials are configured but the client failed to initialise: {e}"
+        )
 
 
 def generate_upload_url(
@@ -98,21 +105,29 @@ def generate_upload_url(
             detail=f"Invalid content type '{content_type}' for file type '{file_type}'"
         )
     
-    client = get_r2_client()
+    try:
+        client = get_r2_client()
+    except ValueError as e:
+        logger.error(f"R2 client initialisation error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Media storage credentials are invalid. Please contact support."
+        )
+
     if not client:
         raise HTTPException(
             status_code=503,
             detail="Media storage not configured. Please contact support."
         )
-    
+
     # Generate unique storage key
     unique_id = str(uuid4())
     # Sanitize filename (keep only alphanumeric, dots, underscores, hyphens)
     safe_filename = "".join(c for c in filename if c.isalnum() or c in "._-")[:100]
     storage_key = f"{user_id}/{file_type}/{unique_id}/{safe_filename}"
-    
+
     expires_in = 600  # 10 minutes
-    
+
     try:
         upload_url = client.generate_presigned_url(
             'put_object',
@@ -124,7 +139,7 @@ def generate_upload_url(
             ExpiresIn=expires_in,
             HttpMethod='PUT'
         )
-        
+
         return {
             "upload_url": upload_url,
             "storage_key": storage_key,
@@ -154,18 +169,33 @@ def get_public_url(storage_key: str) -> str:
 async def delete_media(storage_key: str) -> bool:
     """
     Delete a file from R2 storage.
-    
+
     Args:
         storage_key: The storage key of the file to delete
-        
+
     Returns:
-        True if deleted successfully, False on error
+        True if deleted successfully
+
+    Raises:
+        HTTPException: If R2 is not configured or the delete operation fails
+        ValueError: If R2 credentials are invalid
     """
-    client = get_r2_client()
+    try:
+        client = get_r2_client()
+    except ValueError as e:
+        logger.error(f"R2 client initialisation error during delete: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Media storage credentials are invalid. Please contact support."
+        )
+
     if not client:
         logger.warning("Cannot delete media - R2 not configured")
-        return False
-    
+        raise HTTPException(
+            status_code=503,
+            detail="Media storage not configured. Cannot delete files."
+        )
+
     try:
         client.delete_object(
             Bucket=settings.r2.r2_bucket_name,
@@ -175,7 +205,10 @@ async def delete_media(storage_key: str) -> bool:
         return True
     except ClientError as e:
         logger.error(f"Failed to delete media from R2: {e}")
-        return False
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete media file from storage."
+        )
 
 
 async def confirm_upload(
