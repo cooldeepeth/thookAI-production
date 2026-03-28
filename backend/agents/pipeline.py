@@ -134,8 +134,60 @@ async def run_agent_pipeline(
     upload_ids: Optional[List[str]] = None,
     generate_video: bool = False,
     video_style: str = "cinematic",
+) -> None:
+    """Main entry point for content generation pipeline.
+
+    Uses the LangGraph orchestrator for hierarchical execution with debate
+    and quality loops.  Falls back to the legacy linear pipeline if the
+    orchestrator fails to initialise.
+    """
+    try:
+        from agents.orchestrator import run_orchestrated_pipeline
+        await run_orchestrated_pipeline(
+            job_id=job_id,
+            user_id=user_id,
+            platform=platform,
+            content_type=content_type,
+            raw_input=raw_input,
+            upload_ids=upload_ids,
+        )
+    except ImportError:
+        logger.warning("LangGraph orchestrator not available, falling back to legacy pipeline")
+        await run_agent_pipeline_legacy(
+            job_id=job_id,
+            user_id=user_id,
+            platform=platform,
+            content_type=content_type,
+            raw_input=raw_input,
+            upload_ids=upload_ids,
+            generate_video=generate_video,
+            video_style=video_style,
+        )
+    except Exception as e:
+        logger.error(f"Orchestrator failed: {e}, falling back to legacy pipeline")
+        await run_agent_pipeline_legacy(
+            job_id=job_id,
+            user_id=user_id,
+            platform=platform,
+            content_type=content_type,
+            raw_input=raw_input,
+            upload_ids=upload_ids,
+            generate_video=generate_video,
+            video_style=video_style,
+        )
+
+
+async def run_agent_pipeline_legacy(
+    job_id: str,
+    user_id: str,
+    platform: str,
+    content_type: str,
+    raw_input: str,
+    upload_ids: Optional[List[str]] = None,
+    generate_video: bool = False,
+    video_style: str = "cinematic",
 ):
-    """Main pipeline orchestrator. Runs all 5 agents sequentially, updates DB at each step."""
+    """Legacy linear pipeline orchestrator. Runs all 5 agents sequentially, updates DB at each step."""
     try:
         # Load persona (fallback to default if not onboarded)
         persona = await db.persona_engines.find_one({"user_id": user_id}, {"_id": 0})
@@ -205,7 +257,7 @@ async def run_agent_pipeline(
         # THINKER — strategy + structure
         await update_job(job_id, {"current_agent": "thinker"})
         thinker_output = await asyncio.wait_for(
-            run_thinker(raw_input, commander_output, scout_output, persona_card, fatigue_context=fatigue_data), timeout=30.0
+            run_thinker(raw_input, commander_output, scout_output, persona_card, fatigue_context=fatigue_data, user_id=user_id), timeout=30.0
         )
         await update_job(job_id, {
             "agent_outputs.thinker": thinker_output,

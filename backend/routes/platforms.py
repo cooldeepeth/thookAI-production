@@ -5,7 +5,6 @@ Handles OAuth flows for:
 - X/Twitter (OAuth 2.0 with PKCE)
 - Instagram (Meta OAuth)
 """
-import os
 import base64
 import hashlib
 import secrets
@@ -20,22 +19,23 @@ import httpx
 
 from database import db
 from auth_utils import get_current_user
+from config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/platforms", tags=["platforms"])
 
-# Environment variables
-LINKEDIN_CLIENT_ID = os.environ.get('LINKEDIN_CLIENT_ID', '')
-LINKEDIN_CLIENT_SECRET = os.environ.get('LINKEDIN_CLIENT_SECRET', '')
-META_APP_ID = os.environ.get('META_APP_ID', '')
-META_APP_SECRET = os.environ.get('META_APP_SECRET', '')
-TWITTER_API_KEY = os.environ.get('TWITTER_API_KEY', '')
-TWITTER_API_SECRET = os.environ.get('TWITTER_API_SECRET', '')
-ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
+# Platform config from settings
+LINKEDIN_CLIENT_ID = settings.platforms.linkedin_client_id or ''
+LINKEDIN_CLIENT_SECRET = settings.platforms.linkedin_client_secret or ''
+META_APP_ID = settings.platforms.meta_app_id or ''
+META_APP_SECRET = settings.platforms.meta_app_secret or ''
+TWITTER_API_KEY = settings.platforms.twitter_api_key or ''
+TWITTER_API_SECRET = settings.platforms.twitter_api_secret or ''
+ENCRYPTION_KEY = settings.platforms.encryption_key or Fernet.generate_key().decode()
 
 # Frontend URL for redirects
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:8001')
+FRONTEND_URL = settings.app.frontend_url
+BACKEND_URL = settings.app.backend_url
 
 # OAuth scopes
 LINKEDIN_SCOPES = "openid profile email w_member_social"

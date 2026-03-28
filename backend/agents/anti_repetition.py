@@ -459,7 +459,7 @@ async def get_variation_suggestions(
             api_key=chat_constructor_key(),
             session_id=f"variation-{uuid.uuid4().hex[:8]}",
             system_message="You are a content optimization expert. Provide specific, actionable suggestions. Return JSON only."
-        ).with_model("openai", "gpt-4.1-mini")
+        ).with_model("openai", "gpt-4o-mini")
         
         context = f"""
 Recent patterns to avoid: {json.dumps(patterns.get('avoid_topics', [])[:3])}

@@ -1,8 +1,6 @@
-import os
 import asyncio
 import httpx
-
-PERPLEXITY_KEY = os.environ.get('PERPLEXITY_API_KEY', '')
+from config import settings
 
 
 def _valid(key: str) -> bool:
@@ -11,10 +9,11 @@ def _valid(key: str) -> bool:
 
 async def run_scout(topic: str, research_query: str, platform: str) -> dict:
     """Scout Agent: Perplexity Sonar Pro for real-time research."""
-    if not _valid(PERPLEXITY_KEY):
+    perplexity_key = settings.llm.perplexity_key or ''
+    if not _valid(perplexity_key):
         return _mock_research(topic, platform)
 
-    headers = {"Authorization": f"Bearer {PERPLEXITY_KEY}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {perplexity_key}", "Content-Type": "application/json"}
     payload = {
         "model": "sonar-pro",
         "messages": [

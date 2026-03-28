@@ -262,75 +262,34 @@ async def capture_learning_signal(
         return False
 
 
-async def update_uom_after_interaction(
-    user_id: str,
-    action: str
-) -> None:
-    """Update User Operating Model (UOM) based on interaction.
-    
-    UOM tracks:
-    - trust_in_thook: 0-1 scale of how much user trusts AI output
-    - strategy_maturity: 1-5 scale based on total approvals
-    - burnout_risk: low|medium|high based on session frequency
-    - cognitive_load_tolerance: low|high
-    - monetization_priority: low|medium|high
+async def update_uom_after_interaction(user_id: str, action: str, data: dict = None):
+    """
+    Update UOM after a user interaction (approve, reject, edit).
+    Delegates to the comprehensive UOM inference service.
     """
     try:
-        now = datetime.now(timezone.utc)
-        
-        # Get current persona
-        persona = await db.persona_engines.find_one({"user_id": user_id})
-        
-        # Initialize UOM if not exists
-        current_uom = persona.get("uom", {}) if persona else {}
+        from services.uom_service import get_uom, update_uom, maybe_trigger_periodic_update
+
+        current_uom = await get_uom(user_id)
+
+        # Immediate trust adjustment (kept for responsiveness)
         trust = current_uom.get("trust_in_thook", 0.5)
-        
-        # Update trust based on action
         if action == "approved":
-            trust = min(1.0, trust + 0.05)  # Increase trust
+            trust = min(1.0, trust + 0.03)  # Smaller increments for smoother curve
         elif action == "rejected":
-            trust = max(0.0, trust - 0.05)  # Decrease trust
-        
-        # Calculate strategy maturity based on total approvals
-        approved_count = persona.get("learning_signals", {}).get("approved_count", 0) if persona else 0
-        strategy_maturity = min(5, 1 + (approved_count // 3))
-        
-        # Calculate burnout risk based on session frequency (last 7 days)
-        seven_days_ago = now - timedelta(days=7)
-        recent_sessions = await db.content_jobs.count_documents({
-            "user_id": user_id,
-            "created_at": {"$gte": seven_days_ago}
-        })
-        
-        if recent_sessions > 20:
-            burnout_risk = "high"
-        elif recent_sessions > 10:
-            burnout_risk = "medium"
-        else:
-            burnout_risk = "low"
-        
-        # Update UOM
-        new_uom = {
-            "trust_in_thook": round(trust, 2),
-            "strategy_maturity": strategy_maturity,
-            "burnout_risk": burnout_risk,
-            "cognitive_load_tolerance": current_uom.get("cognitive_load_tolerance", "high"),
-            "monetization_priority": current_uom.get("monetization_priority", "medium"),
-            "focus_preference": current_uom.get("focus_preference", "multi-platform"),
-            "risk_tolerance": current_uom.get("risk_tolerance", "balanced"),
-            "last_updated": now
-        }
-        
-        await db.persona_engines.update_one(
-            {"user_id": user_id},
-            {"$set": {"uom": new_uom}},
-            upsert=True
-        )
-        
-        logger.info(f"Updated UOM for user {user_id}: trust={trust}, maturity={strategy_maturity}, burnout={burnout_risk}")
-    
+            trust = max(0.0, trust - 0.04)  # Slightly larger penalty
+        elif action == "edited":
+            # Edits are mixed signals — slight trust increase (they're engaging)
+            trust = min(1.0, trust + 0.01)
+
+        await update_uom(user_id, {"trust_in_thook": round(trust, 3)})
+
+        # Check if we should run full inference (every 5 interactions)
+        await maybe_trigger_periodic_update(user_id)
+
     except Exception as e:
-        logger.error(f"Failed to update UOM: {e}")
+        logger.warning(f"UOM update failed for {user_id}: {e}")
+        # Fall through — UOM update failure should never block the learning flow
 
 
 async def get_learning_insights(user_id: str) -> Dict[str, Any]:

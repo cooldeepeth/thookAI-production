@@ -2,7 +2,6 @@
 
 Provides aggregated stats and insights for the dashboard.
 """
-import os
 import json
 import asyncio
 import uuid
@@ -14,11 +13,12 @@ from pydantic import BaseModel
 from database import db
 from auth_utils import get_current_user
 from services.llm_keys import chat_constructor_key, openai_available
+from config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-PERPLEXITY_API_KEY = os.environ.get('PERPLEXITY_API_KEY', '')
+PERPLEXITY_API_KEY = settings.llm.perplexity_key or ''
 DAILY_BRIEF_CACHE_HOURS = 6
 
 

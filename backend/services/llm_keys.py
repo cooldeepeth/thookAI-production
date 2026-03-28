@@ -1,8 +1,9 @@
 """Resolve which LLM API keys are available (direct provider env vars + optional Emergent)."""
 from __future__ import annotations
 
-import os
 from typing import Optional
+
+from config import settings
 
 _BAD_PREFIXES = (
     "placeholder",
@@ -26,41 +27,39 @@ def strip_valid_key(key: Optional[str]) -> bool:
 
 
 def openai_available() -> bool:
-    return strip_valid_key(os.environ.get("OPENAI_API_KEY")) or strip_valid_key(
-        os.environ.get("EMERGENT_LLM_KEY")
+    return strip_valid_key(settings.llm.openai_key) or strip_valid_key(
+        settings.llm.emergent_key
     )
 
 
 def anthropic_available() -> bool:
-    return strip_valid_key(os.environ.get("ANTHROPIC_API_KEY")) or strip_valid_key(
-        os.environ.get("EMERGENT_LLM_KEY")
+    return strip_valid_key(settings.llm.anthropic_key) or strip_valid_key(
+        settings.llm.emergent_key
     )
 
 
 def gemini_available() -> bool:
     return (
-        strip_valid_key(os.environ.get("GEMINI_API_KEY"))
-        or strip_valid_key(os.environ.get("GOOGLE_API_KEY"))
-        or strip_valid_key(os.environ.get("EMERGENT_LLM_KEY"))
+        strip_valid_key(settings.llm.gemini_key)
+        or strip_valid_key(settings.llm.emergent_key)
     )
 
 
 def chat_constructor_key() -> str:
     """Default `api_key` for `LlmChat`; per-provider env overrides in `llm_client._resolve_key`."""
     return (
-        os.environ.get("EMERGENT_LLM_KEY", "")
-        or os.environ.get("OPENAI_API_KEY", "")
-        or os.environ.get("ANTHROPIC_API_KEY", "")
-        or os.environ.get("GEMINI_API_KEY", "")
-        or os.environ.get("GOOGLE_API_KEY", "")
+        (settings.llm.emergent_key or "")
+        or (settings.llm.openai_key or "")
+        or (settings.llm.anthropic_key or "")
+        or (settings.llm.gemini_key or "")
         or ""
     )
 
 
 def openai_api_key_for_rest() -> str:
     """Bearer token for OpenAI HTTP APIs (embeddings, TTS). Prefers direct OpenAI key."""
-    if strip_valid_key(os.environ.get("OPENAI_API_KEY")):
-        return os.environ.get("OPENAI_API_KEY", "").strip()
-    if strip_valid_key(os.environ.get("EMERGENT_LLM_KEY")):
-        return os.environ.get("EMERGENT_LLM_KEY", "").strip()
+    if strip_valid_key(settings.llm.openai_key):
+        return (settings.llm.openai_key or "").strip()
+    if strip_valid_key(settings.llm.emergent_key):
+        return (settings.llm.emergent_key or "").strip()
     return ""

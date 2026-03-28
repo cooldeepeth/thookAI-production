@@ -169,7 +169,7 @@ async def _get_ai_reasoning(
             api_key=chat_constructor_key(),
             session_id=f"planner-{uuid.uuid4().hex[:8]}",
             system_message="You are a social media strategist. Give brief, actionable posting advice."
-        ).with_model("openai", "gpt-4.1-mini")
+        ).with_model("openai", "gpt-4o-mini")
         
         times_str = ", ".join([t["display_time"] for t in best_times[:3]])
         

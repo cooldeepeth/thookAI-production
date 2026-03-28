@@ -3,7 +3,6 @@
 Generates videos using multiple AI providers.
 Supports: Runway, Kling, Pika, Luma, HeyGen, D-ID
 """
-import os
 import base64
 import asyncio
 import logging
@@ -11,6 +10,7 @@ import httpx
 import fal_client
 from typing import Dict, Any, Optional, List
 from lumaai import AsyncLumaAI
+from config import settings
 from services.creative_providers import (
     get_best_available_provider,
     get_available_video_providers,
@@ -31,7 +31,7 @@ def _valid_key(key: str) -> bool:
 
 async def _generate_runway(prompt: str, model: str = "gen-3-alpha-turbo", duration: int = 5) -> Dict[str, Any]:
     """Generate video using Runway Gen-3."""
-    api_key = os.environ.get('RUNWAY_API_KEY', '')
+    api_key = settings.video.runway_api_key or ''
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "runway"}
     
@@ -89,7 +89,7 @@ async def _generate_runway(prompt: str, model: str = "gen-3-alpha-turbo", durati
 
 async def _generate_kling(prompt: str, model: str = "kling-v1.5", duration: int = 5) -> Dict[str, Any]:
     """Generate video using Kling AI."""
-    api_key = os.environ.get('KLING_API_KEY', '')
+    api_key = settings.video.kling_api_key or ''
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "kling"}
     
@@ -145,7 +145,7 @@ async def _generate_kling(prompt: str, model: str = "kling-v1.5", duration: int 
 
 async def _generate_luma(prompt: str, model: str = "dream-machine") -> Dict[str, Any]:
     """Generate video using Luma Dream Machine (official async SDK)."""
-    api_key = os.environ.get("LUMA_API_KEY", "")
+    api_key = settings.video.luma_api_key or ''
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "luma"}
 
@@ -191,7 +191,7 @@ async def _generate_luma(prompt: str, model: str = "dream-machine") -> Dict[str,
 
 async def _generate_pika(prompt: str, duration: int = 3) -> Dict[str, Any]:
     """Generate video using Pika Labs."""
-    api_key = os.environ.get('PIKA_API_KEY', '')
+    api_key = settings.video.pika_api_key or ''
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "pika"}
     
@@ -246,7 +246,7 @@ async def _generate_pika(prompt: str, duration: int = 3) -> Dict[str, Any]:
 
 async def _generate_heygen_avatar(script: str, avatar_id: str = "default") -> Dict[str, Any]:
     """Generate avatar video using HeyGen."""
-    api_key = os.environ.get('HEYGEN_API_KEY', '')
+    api_key = settings.video.heygen_api_key or ''
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "heygen"}
     
@@ -310,7 +310,7 @@ async def _generate_heygen_avatar(script: str, avatar_id: str = "default") -> Di
 
 async def _generate_did_avatar(script: str, source_url: str = None) -> Dict[str, Any]:
     """Generate talking head video using D-ID."""
-    api_key = os.environ.get('DID_API_KEY', '')
+    api_key = settings.video.did_api_key or ''
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "did"}
     
@@ -374,7 +374,7 @@ async def _generate_did_avatar(script: str, source_url: str = None) -> Dict[str,
 
 async def generate_motion_video(prompt: str, image_url: Optional[str] = None) -> Dict[str, Any]:
     """Motion / dance-style video via fal.ai Seadance (uses FAL_KEY)."""
-    api_key = os.environ.get("FAL_KEY") or os.environ.get("FAL_API_KEY", "")
+    api_key = settings.video.fal_key or ''
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "fal-seadance"}
 
@@ -475,8 +475,8 @@ async def generate_avatar_video(
         {video_url, provider, generated}
     """
     # Check which avatar providers are configured
-    heygen_key = os.environ.get('HEYGEN_API_KEY', '')
-    did_key = os.environ.get('DID_API_KEY', '')
+    heygen_key = settings.video.heygen_api_key or ''
+    did_key = settings.video.did_api_key or ''
     
     if provider == "heygen" or (_valid_key(heygen_key) and not provider):
         return await _generate_heygen_avatar(script, avatar_id or "default")
