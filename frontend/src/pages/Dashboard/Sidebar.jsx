@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, PenLine, Brain, Calendar, BarChart2,
   RefreshCw, Link2, BookOpen, Settings, Zap, LogOut, ChevronRight,
-  Building2, LayoutTemplate, CreditCard, FolderOpen
+  Building2, LayoutTemplate, CreditCard, FolderOpen, ShieldCheck
 } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
@@ -93,13 +93,31 @@ export default function Sidebar() {
             <span>{label}</span>
             {badge && (
               <span className={`ml-auto text-[10px] rounded-full px-1.5 py-0.5 ${
-                badge === "Pro" 
-                  ? "bg-violet/15 text-violet" 
+                badge === "Pro"
+                  ? "bg-violet/15 text-violet"
                   : "bg-lime/15 text-lime"
               }`}>{badge}</span>
             )}
           </NavLink>
         ))}
+
+        {/* Admin link — only visible to admin users */}
+        {user?.role === "admin" && (
+          <>
+            <div className="border-t border-white/5 my-2" />
+            <NavLink
+              to="/dashboard/admin"
+              data-testid="nav-admin"
+              className={({ isActive }) =>
+                `sidebar-nav-item ${isActive ? "active" : ""}`
+              }
+            >
+              <ShieldCheck size={17} />
+              <span>Admin</span>
+              <span className="ml-auto text-[10px] rounded-full px-1.5 py-0.5 bg-red-500/15 text-red-400">Admin</span>
+            </NavLink>
+          </>
+        )}
       </nav>
 
       {/* Credits banner */}
