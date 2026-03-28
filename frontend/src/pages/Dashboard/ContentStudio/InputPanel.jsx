@@ -1,4 +1,5 @@
-import { Linkedin, Twitter, Instagram, Zap } from "lucide-react";
+import { Linkedin, Twitter, Instagram, Zap, Video, Lock, Info } from "lucide-react";
+import { useState } from "react";
 
 const PLATFORMS = [
   { id: "linkedin", label: "LinkedIn", icon: Linkedin, color: "#0A66C2",
@@ -15,6 +16,13 @@ const PLACEHOLDERS = {
   instagram: "Caption idea or topic?\n\ne.g. 'Behind-the-scenes of our product launch' or 'My morning routine for peak productivity'",
 };
 
+const VIDEO_STYLES = [
+  { id: "cinematic", label: "Cinematic" },
+  { id: "talking_head", label: "Talking Head" },
+  { id: "slideshow", label: "Slideshow" },
+  { id: "abstract", label: "Abstract" },
+];
+
 export default function InputPanel({
   platform,
   contentType,
@@ -26,7 +34,14 @@ export default function InputPanel({
   isRunning,
   error,
   mediaSection,
+  generateVideo,
+  onGenerateVideoChange,
+  videoStyle,
+  onVideoStyleChange,
+  userTier,
 }) {
+  const [showUpgradeTooltip, setShowUpgradeTooltip] = useState(false);
+  const videoEnabled = userTier === "studio" || userTier === "agency";
   const cfg = PLATFORMS.find(p => p.id === platform) || PLATFORMS[0];
   const Icon = cfg.icon;
 
@@ -116,6 +131,71 @@ export default function InputPanel({
         {error && (
           <p data-testid="studio-error" className="text-red-400 text-xs mt-2">{error}</p>
         )}
+
+        {/* Video generation toggle */}
+        <div className="mt-4 rounded-xl border border-white/5 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Video size={14} className="text-violet" />
+              <span className="text-xs font-medium text-zinc-300">Generate video</span>
+              {!videoEnabled && (
+                <span className="relative">
+                  <button
+                    onMouseEnter={() => setShowUpgradeTooltip(true)}
+                    onMouseLeave={() => setShowUpgradeTooltip(false)}
+                    className="flex items-center gap-1 text-[10px] text-zinc-600 bg-white/5 rounded-full px-2 py-0.5"
+                  >
+                    <Lock size={10} /> Studio+
+                  </button>
+                  {showUpgradeTooltip && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-zinc-800 border border-zinc-700 rounded-lg p-2 text-[10px] text-zinc-400 text-center z-10">
+                      Upgrade to Studio or Agency to generate videos with your content
+                    </div>
+                  )}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => videoEnabled && onGenerateVideoChange?.(!generateVideo)}
+              disabled={!videoEnabled}
+              data-testid="video-toggle"
+              className={`relative w-10 h-5 rounded-full transition-colors ${
+                generateVideo && videoEnabled
+                  ? "bg-violet"
+                  : "bg-white/10"
+              } ${!videoEnabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                  generateVideo && videoEnabled ? "translate-x-5" : ""
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Video style selector */}
+          {generateVideo && videoEnabled && (
+            <div className="mt-3">
+              <p className="text-[10px] text-zinc-600 mb-1.5">Style</p>
+              <div className="flex gap-1.5">
+                {VIDEO_STYLES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => onVideoStyleChange?.(s.id)}
+                    data-testid={`video-style-${s.id}`}
+                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors border ${
+                      videoStyle === s.id
+                        ? "border-violet/40 bg-violet/10 text-violet"
+                        : "border-white/5 text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Generate button */}
         <button

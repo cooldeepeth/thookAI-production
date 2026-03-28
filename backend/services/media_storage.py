@@ -23,10 +23,18 @@ logger = logging.getLogger(__name__)
 # Valid file types for upload
 VALID_FILE_TYPES = {"video", "audio", "image", "document"}
 
+# Max file size per type (bytes)
+MAX_FILE_SIZE = {
+    "video": 500 * 1024 * 1024,   # 500MB
+    "audio": 25 * 1024 * 1024,    # 25MB
+    "image": 20 * 1024 * 1024,    # 20MB
+    "document": 50 * 1024 * 1024, # 50MB
+}
+
 # MIME type validation by file type
 ALLOWED_MIME_TYPES = {
     "video": ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/mpeg"],
-    "audio": ["audio/mpeg", "audio/wav", "audio/ogg", "audio/aac", "audio/flac", "audio/mp3"],
+    "audio": ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4", "audio/ogg", "audio/aac", "audio/flac", "audio/mp3"],
     "image": ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic"],
     "document": ["application/pdf", "text/plain", "application/msword", 
                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
@@ -260,6 +268,43 @@ async def confirm_upload(
     logger.info(f"Confirmed upload: media_id={media_id}, user={user_id}, file={filename}")
     
     return asset
+
+
+def upload_bytes_to_r2(storage_key: str, data: bytes, content_type: str) -> str:
+    """
+    Upload raw bytes directly to R2 and return the public URL.
+
+    Args:
+        storage_key: The full key (path) in the bucket
+        data: File bytes
+        content_type: MIME type
+
+    Returns:
+        Public URL of the uploaded file
+
+    Raises:
+        HTTPException if R2 is not configured or upload fails
+    """
+    try:
+        client = get_r2_client()
+    except ValueError as e:
+        logger.error(f"R2 client init error during direct upload: {e}")
+        raise HTTPException(status_code=500, detail="Media storage credentials are invalid.")
+
+    if not client:
+        raise HTTPException(status_code=503, detail="Media storage not configured.")
+
+    try:
+        client.put_object(
+            Bucket=settings.r2.r2_bucket_name,
+            Key=storage_key,
+            Body=data,
+            ContentType=content_type,
+        )
+        return get_public_url(storage_key)
+    except ClientError as e:
+        logger.error(f"R2 put_object failed for {storage_key}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload file to storage.")
 
 
 async def get_user_assets(

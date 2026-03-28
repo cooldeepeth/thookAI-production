@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp, AlertTriangle,
-  Image, Mic, Download, Play, Pause, Loader2, Sparkles,
+  Image, Mic, Download, Play, Pause, Loader2, Sparkles, Video,
   Calendar, Send, Clock, Linkedin, ExternalLink, Copy, ClipboardCheck
 } from "lucide-react";
 import { LinkedInShell, XShell, InstagramShell } from "./Shells";
@@ -131,6 +131,58 @@ const IMAGE_STYLES = [
   { id: "data-viz", name: "Data Viz", desc: "Infographic style" },
   { id: "personal", name: "Personal", desc: "Warm and authentic" },
 ];
+
+function VideoStatusBadge({ job }) {
+  const status = job.video_status;
+  if (!status) return null;
+
+  const statusConfig = {
+    queued: { label: "Video: Queued", color: "text-zinc-400 bg-zinc-400/10", spinning: false },
+    generating: { label: "Video: Generating...", color: "text-violet bg-violet/10", spinning: true },
+    completed: { label: "Video: Ready", color: "text-lime bg-lime/10", spinning: false },
+    failed: { label: "Video: Failed", color: "text-red-400 bg-red-400/10", spinning: false },
+    skipped: { label: "Video: Skipped", color: "text-yellow-400 bg-yellow-400/10", spinning: false },
+  };
+
+  const cfg = statusConfig[status] || statusConfig.queued;
+
+  return (
+    <div className={`card-thook p-4 mt-4`} data-testid="video-status-badge">
+      <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${cfg.color}`}>
+          {cfg.spinning ? <Loader2 size={14} className="animate-spin" /> : <Video size={14} />}
+          <span className="font-medium">{cfg.label}</span>
+        </div>
+        {status === "completed" && job.video_url && (
+          <a
+            href={job.video_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-violet hover:underline flex items-center gap-1"
+          >
+            View video <ExternalLink size={10} />
+          </a>
+        )}
+      </div>
+      {status === "failed" && job.video_error && (
+        <p className="text-xs text-red-400/70 mt-2">{job.video_error}</p>
+      )}
+      {status === "skipped" && job.video_error && (
+        <p className="text-xs text-yellow-400/70 mt-2">{job.video_error}</p>
+      )}
+      {status === "completed" && job.video_url && (
+        <div className="mt-3 rounded-xl overflow-hidden bg-black">
+          <video
+            src={job.video_url}
+            controls
+            className="w-full max-h-64"
+            preload="metadata"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function MediaPanel({ job, onMediaUpdate }) {
   const [generating, setGenerating] = useState(false);
@@ -531,6 +583,9 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
       {(isApproved || job.status === "reviewing" || job.status === "completed") && (
         <MediaPanel job={job} onMediaUpdate={handleMediaUpdate} />
       )}
+
+      {/* Video generation status */}
+      {job.video_status && <VideoStatusBadge job={job} />}
 
       {/* Publish Panel (for approved content) */}
       {isApproved && job.status !== "published" && job.status !== "scheduled" && (
