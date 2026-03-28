@@ -6,10 +6,14 @@ from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
-
 from database import db
 from auth_utils import get_current_user
 from config import settings
+import uuid
+import secrets
+import logging
+import httpx
+
 from services.media_storage import (
     ALLOWED_MIME_TYPES,
     MAX_FILE_SIZE,
@@ -339,6 +343,21 @@ async def update_regional_english(data: RegionalEnglishUpdate, current_user: dic
     }
 
 
+
+# ============ HEYGEN AVATAR CREATION ============
+
+class AvatarCreateRequest(BaseModel):
+    photo_url: str  # Public URL of the user's photo for avatar creation
+
+
+@router.post("/avatar/create")
+async def create_avatar(data: AvatarCreateRequest, current_user: dict = Depends(get_current_user)):
+    """Create a HeyGen photo avatar from a user's photo.
+
+    Tier gate: studio/agency only.
+    Stores the resulting avatar_id in persona_engines.heygen_avatar_id.
+    """
+
 # ============ VOICE CLONE ============
 
 VOICE_CLONE_TIERS = ("studio", "agency")
@@ -372,10 +391,76 @@ async def upload_voice_samples(
     current_user: dict = Depends(get_current_user),
 ):
     """Upload 1-5 audio samples for voice cloning. Studio/Agency only."""
+
     # Tier gate
     user = await db.users.find_one({"user_id": current_user["user_id"]})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+
+    tier = user.get("subscription_tier", "free")
+    if tier not in ("studio", "agency"):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Avatar creation requires Studio or Agency tier (current: {tier})"
+        )
+
+    # Ensure persona exists
+    persona = await db.persona_engines.find_one({"user_id": current_user["user_id"]})
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona not found. Complete onboarding first.")
+
+    # Check HeyGen API key
+    heygen_api_key = getattr(settings, "heygen_api_key", None) or __import__("os").environ.get("HEYGEN_API_KEY", "")
+    if not heygen_api_key or heygen_api_key.startswith("placeholder"):
+        raise HTTPException(
+            status_code=503,
+            detail="HeyGen is not configured. Set HEYGEN_API_KEY to enable avatar creation."
+        )
+
+    # Call HeyGen photo avatar creation API
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.heygen.com/v2/photo_avatar/avatar/create",
+                headers={
+                    "X-Api-Key": heygen_api_key,
+                    "Content-Type": "application/json",
+                },
+                json={"image_url": data.photo_url},
+            )
+
+            if response.status_code not in (200, 201):
+                error_detail = response.text[:500]
+                logger.error("HeyGen avatar creation failed: %s %s", response.status_code, error_detail)
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"HeyGen API error ({response.status_code}): {error_detail}"
+                )
+
+            resp_data = response.json()
+            avatar_id = (
+                resp_data.get("data", {}).get("avatar_id")
+                or resp_data.get("avatar_id")
+            )
+            if not avatar_id:
+                raise HTTPException(status_code=502, detail="HeyGen did not return an avatar_id")
+
+    except httpx.HTTPError as e:
+        logger.error("HeyGen request failed: %s", e)
+        raise HTTPException(status_code=502, detail=f"Failed to reach HeyGen API: {e}")
+
+    # Store avatar_id in persona
+    now = datetime.now(timezone.utc)
+    await db.persona_engines.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {
+            "heygen_avatar_id": avatar_id,
+            "heygen_avatar_photo_url": data.photo_url,
+            "heygen_avatar_created_at": now,
+            "updated_at": now,
+        }},
+
     _require_voice_clone_tier(user)
 
     if len(files) < 1 or len(files) > MAX_VOICE_SAMPLES:
@@ -418,10 +503,34 @@ async def upload_voice_samples(
                 "updated_at": now,
             }
         },
+
     )
 
     return {
         "success": True,
+
+        "avatar_id": avatar_id,
+        "message": "Avatar created successfully. You can now generate talking-head videos."
+    }
+
+
+@router.get("/avatar")
+async def get_avatar(current_user: dict = Depends(get_current_user)):
+    """Get the user's HeyGen avatar status."""
+    persona = await db.persona_engines.find_one(
+        {"user_id": current_user["user_id"]},
+        {"heygen_avatar_id": 1, "heygen_avatar_photo_url": 1, "heygen_avatar_created_at": 1},
+    )
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona not found. Complete onboarding first.")
+
+    avatar_id = persona.get("heygen_avatar_id")
+    return {
+        "has_avatar": avatar_id is not None,
+        "avatar_id": avatar_id,
+        "preview_url": persona.get("heygen_avatar_photo_url"),
+        "created_at": persona.get("heygen_avatar_created_at"),
+
         "sample_count": len(uploaded_urls),
         "sample_urls": uploaded_urls,
         "message": f"Uploaded {len(uploaded_urls)} voice sample(s). You can now create your voice clone.",
@@ -524,4 +633,5 @@ async def delete_voice_clone(current_user: dict = Depends(get_current_user)):
     return {
         "success": True,
         "message": "Voice clone deleted successfully.",
+
     }

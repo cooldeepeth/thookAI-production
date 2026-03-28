@@ -132,6 +132,8 @@ async def run_agent_pipeline(
     content_type: str,
     raw_input: str,
     upload_ids: Optional[List[str]] = None,
+    generate_video: bool = False,
+    video_style: str = "cinematic",
 ):
     """Main pipeline orchestrator. Runs all 5 agents sequentially, updates DB at each step."""
     try:
@@ -249,6 +251,37 @@ async def run_agent_pipeline(
                 }},
             )
 
+            # VIDEO STEP — dispatch async video generation if requested
+            if generate_video and draft:
+                try:
+                    # Tier-gate: only studio and agency users can generate video
+                    user_doc = await db.users.find_one({"user_id": user_id}, {"subscription_tier": 1})
+                    user_tier = user_doc.get("subscription_tier", "free") if user_doc else "free"
+                    if user_tier in ("studio", "agency"):
+                        from tasks.media_tasks import generate_video_for_job
+                        from tasks import is_redis_configured
+                        if is_redis_configured():
+                            generate_video_for_job.apply_async(
+                                args=[job_id, user_id, draft, video_style],
+                                countdown=2,
+                            )
+                            await update_job(job_id, {"video_status": "queued"})
+                            logger.info("Video generation queued for job %s (style=%s)", job_id, video_style)
+                        else:
+                            logger.warning("Video requested for job %s but Redis/Celery not available", job_id)
+                            await update_job(job_id, {
+                                "video_status": "skipped",
+                                "video_error": "Task queue not available"
+                            })
+                    else:
+                        logger.info("Video requested for job %s but user tier '%s' is not eligible", job_id, user_tier)
+                        await update_job(job_id, {
+                            "video_status": "skipped",
+                            "video_error": f"Video generation requires Studio or Agency tier (current: {user_tier})"
+                        })
+                except Exception as vid_err:
+                    logger.warning("Failed to dispatch video generation for job %s: %s", job_id, vid_err)
+                    await update_job(job_id, {"video_status": "failed", "video_error": str(vid_err)})
 
             # Notify user that content generation is complete
             try:

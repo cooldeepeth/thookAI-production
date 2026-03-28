@@ -36,6 +36,8 @@ class ContentCreateRequest(BaseModel):
     attachment_url: Optional[str] = None  # For Visual Agent
     upload_ids: Optional[List[str]] = None
     campaign_id: Optional[str] = None  # Link job to a campaign/project
+    generate_video: bool = False  # Trigger async video generation after pipeline
+    video_style: str = "cinematic"  # cinematic, talking_head, slideshow, abstract
 
 
 class ContentStatusUpdate(BaseModel):
@@ -103,6 +105,10 @@ async def create_content(
 
     job_id = f"job_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
+    # Validate video_style
+    valid_video_styles = ("cinematic", "talking_head", "slideshow", "abstract")
+    video_style = data.video_style if data.video_style in valid_video_styles else "cinematic"
+
     job = {
         "job_id": job_id,
         "user_id": current_user["user_id"],
@@ -117,6 +123,8 @@ async def create_content(
         "final_content": None,
         "qc_score": None,
         "error": None,
+        "generate_video": data.generate_video,
+        "video_style": video_style,
         "created_at": now,
         "updated_at": now,
     }
@@ -148,6 +156,8 @@ async def create_content(
         data.content_type,
         data.raw_input,
         data.upload_ids or [],
+        data.generate_video,
+        video_style,
     )
     return {"job_id": job_id, "status": "running"}
 

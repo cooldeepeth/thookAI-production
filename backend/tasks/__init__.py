@@ -76,6 +76,7 @@ celery_app.conf.update(
     # Task routes - different queues for different priorities
     task_routes={
         'tasks.media_tasks.generate_video': {'queue': 'video'},
+        'tasks.media_tasks.generate_video_for_job': {'queue': 'video'},
         'tasks.media_tasks.generate_voice': {'queue': 'voice'},
         'tasks.media_tasks.generate_image': {'queue': 'media'},
         'tasks.content_tasks.*': {'queue': 'content'},
