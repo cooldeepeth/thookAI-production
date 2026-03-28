@@ -5,7 +5,7 @@ import {
   ArrowLeft, ThumbsUp, Copy, Sparkles, Loader2,
   Hash, FileText, LayoutTemplate
 } from "lucide-react";
-import { getTemplate, upvoteTemplate, useTemplate } from "@/lib/templatesApi";
+import { getTemplate, upvoteTemplate, useTemplate as applyTemplate } from "@/lib/templatesApi";
 import {
   PLATFORM_ICONS,
   CATEGORY_LABELS,
@@ -66,7 +66,7 @@ export default function TemplateDetail() {
     if (using || !template) return;
     setUsing(true);
     try {
-      const data = await useTemplate(template.template_id);
+      const data = await applyTemplate(template.template_id);
       if (data.success && data.prefill) {
         const params = new URLSearchParams({
           platform: data.prefill.platform,
