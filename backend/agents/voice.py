@@ -2,13 +2,18 @@
 
 Converts text to audio narration using multiple AI providers.
 Supports: ElevenLabs, OpenAI TTS, Play.ht, Murf, Resemble, Google TTS
+Also supports voice cloning via ElevenLabs "Add Voice" API.
 """
 import os
 import base64
 import asyncio
 import logging
 import httpx
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
+
+from config import settings
+from database import db
 from services.creative_providers import (
     get_best_available_provider,
     get_available_voice_providers,
@@ -65,7 +70,7 @@ def _valid_key(key: str) -> bool:
 
 async def _generate_elevenlabs(text: str, voice_id: str, stability: float, similarity_boost: float) -> Dict[str, Any]:
     """Generate voice using ElevenLabs (async SDK)."""
-    api_key = os.environ.get("ELEVENLABS_API_KEY", "")
+    api_key = settings.llm.elevenlabs_key or ""
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "elevenlabs"}
 
@@ -357,15 +362,15 @@ def get_available_voices(provider: Optional[str] = None) -> Dict[str, List[Dict[
 async def get_user_cloned_voices() -> List[Dict[str, Any]]:
     """Fetch user's custom cloned voices from supported providers."""
     cloned_voices = []
-    
+
     # ElevenLabs cloned voices
-    api_key = os.environ.get('ELEVENLABS_API_KEY', '')
+    api_key = settings.llm.elevenlabs_key or ""
     if _valid_key(api_key):
         try:
             from elevenlabs import ElevenLabs
             client = ElevenLabs(api_key=api_key)
             voices_response = client.voices.get_all()
-            
+
             for voice in voices_response.voices:
                 if voice.category == "cloned":
                     cloned_voices.append({
@@ -377,5 +382,207 @@ async def get_user_cloned_voices() -> List[Dict[str, Any]]:
                     })
         except Exception as e:
             logger.error(f"Failed to fetch ElevenLabs cloned voices: {e}")
-    
+
     return cloned_voices
+
+
+# ============ VOICE CLONING (ElevenLabs) ============
+
+ELEVENLABS_API_BASE = "https://api.elevenlabs.io/v1"
+
+
+def _get_elevenlabs_key() -> str:
+    """Return the ElevenLabs API key from settings, or empty string."""
+    return settings.llm.elevenlabs_key or ""
+
+
+async def create_voice_clone(
+    user_id: str,
+    sample_urls: List[str],
+    voice_name: str,
+) -> Dict[str, Any]:
+    """Create a voice clone on ElevenLabs from audio sample URLs.
+
+    Downloads each sample from R2, then POSTs the raw audio files to the
+    ElevenLabs ``/v1/voices/add`` endpoint as multipart form data.
+
+    On success, stores ``voice_clone_id`` and ``voice_clone_name`` in the
+    user's ``persona_engines`` document.
+
+    Args:
+        user_id: The owning user's ID.
+        sample_urls: List of public R2 URLs pointing to audio samples.
+        voice_name: Display name for the cloned voice.
+
+    Returns:
+        ``{voice_id, name, status}`` on success, or
+        ``{error, status: "failed"}`` on failure.
+    """
+    api_key = _get_elevenlabs_key()
+    if not _valid_key(api_key):
+        return {"error": "ElevenLabs API key is not configured.", "status": "failed"}
+
+    if not sample_urls:
+        return {"error": "No sample URLs provided.", "status": "failed"}
+
+    # 1. Download all audio samples
+    downloaded_files: List[tuple] = []  # (filename, bytes)
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for idx, url in enumerate(sample_urls):
+                resp = await client.get(url)
+                resp.raise_for_status()
+                # Derive a filename from the URL or fall back
+                fname = url.rsplit("/", 1)[-1] if "/" in url else f"sample_{idx}.mp3"
+                downloaded_files.append((fname, resp.content))
+    except Exception as e:
+        logger.error(f"Failed to download voice samples for user {user_id}: {e}")
+        return {"error": f"Could not download audio samples: {e}", "status": "failed"}
+
+    # 2. POST to ElevenLabs /v1/voices/add
+    try:
+        files_payload = [
+            ("files", (fname, data, "audio/mpeg"))
+            for fname, data in downloaded_files
+        ]
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                f"{ELEVENLABS_API_BASE}/voices/add",
+                headers={"xi-api-key": api_key},
+                data={"name": voice_name},
+                files=files_payload,
+            )
+
+        if resp.status_code not in (200, 201):
+            error_detail = resp.text[:500]
+            logger.error(
+                f"ElevenLabs voice/add failed ({resp.status_code}) for user {user_id}: {error_detail}"
+            )
+            return {
+                "error": f"ElevenLabs returned {resp.status_code}: {error_detail}",
+                "status": "failed",
+            }
+
+        body = resp.json()
+        voice_id = body.get("voice_id")
+        if not voice_id:
+            return {"error": "ElevenLabs response did not include a voice_id.", "status": "failed"}
+
+    except Exception as e:
+        logger.error(f"ElevenLabs voice clone request error for user {user_id}: {e}")
+        return {"error": str(e), "status": "failed"}
+
+    # 3. Persist in persona_engines
+    now = datetime.now(timezone.utc)
+    await db.persona_engines.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "voice_clone_id": voice_id,
+                "voice_clone_name": voice_name,
+                "voice_clone_created_at": now,
+                "updated_at": now,
+            }
+        },
+    )
+
+    logger.info(f"Voice clone created for user {user_id}: voice_id={voice_id}")
+    return {"voice_id": voice_id, "name": voice_name, "status": "created"}
+
+
+async def delete_voice_clone(user_id: str) -> bool:
+    """Delete the user's cloned voice from ElevenLabs and clear local records.
+
+    Args:
+        user_id: The owning user's ID.
+
+    Returns:
+        True if deletion succeeded, False otherwise.
+    """
+    api_key = _get_elevenlabs_key()
+    if not _valid_key(api_key):
+        logger.error("Cannot delete voice clone: ElevenLabs API key not configured.")
+        return False
+
+    persona = await db.persona_engines.find_one({"user_id": user_id})
+    if not persona:
+        return False
+
+    voice_id = persona.get("voice_clone_id")
+    if not voice_id:
+        return False
+
+    # Call ElevenLabs DELETE
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.delete(
+                f"{ELEVENLABS_API_BASE}/voices/{voice_id}",
+                headers={"xi-api-key": api_key},
+            )
+        if resp.status_code not in (200, 204):
+            logger.warning(
+                f"ElevenLabs voice delete returned {resp.status_code} for voice {voice_id}: {resp.text[:300]}"
+            )
+            # Continue to clear local record even if remote fails (voice may already be gone)
+    except Exception as e:
+        logger.error(f"ElevenLabs voice delete request error: {e}")
+
+    # Clear from persona_engines
+    now = datetime.now(timezone.utc)
+    await db.persona_engines.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {"updated_at": now},
+            "$unset": {
+                "voice_clone_id": "",
+                "voice_clone_name": "",
+                "voice_clone_created_at": "",
+                "voice_sample_urls": "",
+                "voice_samples_uploaded_at": "",
+            },
+        },
+    )
+
+    logger.info(f"Voice clone deleted for user {user_id} (voice_id={voice_id})")
+    return True
+
+
+async def generate_speech_with_clone(
+    user_id: str,
+    text: str,
+    stability: float = 0.5,
+    similarity_boost: float = 0.75,
+) -> Dict[str, Any]:
+    """Generate speech using the user's cloned voice, falling back to defaults.
+
+    If the user has a ``voice_clone_id`` stored in ``persona_engines``, that
+    voice is used.  Otherwise, the standard default ElevenLabs voice is used.
+
+    Args:
+        user_id: The owning user's ID.
+        text: Text to synthesise.
+        stability: ElevenLabs stability parameter (0-1).
+        similarity_boost: ElevenLabs similarity boost (0-1).
+
+    Returns:
+        Same shape as ``_generate_elevenlabs`` result dict.
+    """
+    api_key = _get_elevenlabs_key()
+    if not _valid_key(api_key):
+        return {"generated": False, "error": "ElevenLabs API key not configured.", "provider": "elevenlabs"}
+
+    # Look up clone
+    persona = await db.persona_engines.find_one({"user_id": user_id})
+    voice_id = None
+    voice_source = "default"
+    if persona and persona.get("voice_clone_id"):
+        voice_id = persona["voice_clone_id"]
+        voice_source = "clone"
+
+    if not voice_id:
+        voice_id = DEFAULT_VOICES["elevenlabs"][0]["id"]
+
+    result = await _generate_elevenlabs(text, voice_id, stability, similarity_boost)
+    result["voice_source"] = voice_source
+    return result
