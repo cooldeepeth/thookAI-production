@@ -504,8 +504,8 @@ async def infer_uom_from_behavior(user_id: str) -> dict:
     # ------------------------------------------------------------------
     recent_7d_jobs = [
         j for j in recent_jobs
-        if j.get("created_at") and _normalize_datetime(j["created_at"])
-        and _normalize_datetime(j["created_at"]) >= seven_days_ago  # type: ignore[operator]
+        if j.get("created_at") and _normalize_datetime(j["created_at"]) and
+        _normalize_datetime(j["created_at"]) >= seven_days_ago  # type: ignore[operator]
     ]
     sessions_7d = len(recent_7d_jobs)
 
@@ -534,13 +534,13 @@ async def infer_uom_from_behavior(user_id: str) -> dict:
         cutoff_mid = now - timedelta(days=15)
         first_half = [
             j for j in recent_jobs
-            if j.get("created_at") and _normalize_datetime(j["created_at"])
-            and _normalize_datetime(j["created_at"]) < cutoff_mid  # type: ignore[operator]
+            if j.get("created_at") and _normalize_datetime(j["created_at"]) and
+            _normalize_datetime(j["created_at"]) < cutoff_mid  # type: ignore[operator]
         ]
         second_half = [
             j for j in recent_jobs
-            if j.get("created_at") and _normalize_datetime(j["created_at"])
-            and _normalize_datetime(j["created_at"]) >= cutoff_mid  # type: ignore[operator]
+            if j.get("created_at") and _normalize_datetime(j["created_at"]) and
+            _normalize_datetime(j["created_at"]) >= cutoff_mid  # type: ignore[operator]
         ]
         if len(first_half) > 0 and len(second_half) < len(first_half) * 0.5:
             burnout_score += 0.15  # Activity dropping off
@@ -761,11 +761,11 @@ async def infer_uom_from_behavior(user_id: str) -> dict:
     # Confidence grows with the amount of behavioral data available.
     # Ranges: 0.3 (onboarding only) -> 0.5 (some usage) -> 0.8+ (power user)
     data_points = (
-        min(total_decisions, 50) / 50.0 * 0.35
-        + min(len(recent_jobs), 30) / 30.0 * 0.25
-        + min(all_time_job_count, 100) / 100.0 * 0.2
-        + (1.0 if platform_counts else 0.0) * 0.1
-        + (1.0 if edited_jobs else 0.0) * 0.1
+        min(total_decisions, 50) / 50.0 * 0.35 +
+        min(len(recent_jobs), 30) / 30.0 * 0.25 +
+        min(all_time_job_count, 100) / 100.0 * 0.2 +
+        (1.0 if platform_counts else 0.0) * 0.1 +
+        (1.0 if edited_jobs else 0.0) * 0.1
     )
     confidence = round(_clamp(0.3 + data_points * 0.6, 0.3, 0.95), 3)
 
@@ -1087,7 +1087,7 @@ def _directives_writer(uom: dict, confidence: float) -> dict:
 def _directives_qc(uom: dict, confidence: float) -> dict:
     """QC agent: scoring thresholds and tolerance."""
     maturity = uom.get("strategy_maturity", 2)
-    trust = uom.get("trust_in_thook", 0.5)
+    _trust = uom.get("trust_in_thook", 0.5)  # noqa: F841 — reserved for future scoring
     risk = uom.get("risk_tolerance", "balanced")
 
     # persona_match_threshold: lower for new users (6), higher for mature (8)

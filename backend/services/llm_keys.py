@@ -40,19 +40,19 @@ def anthropic_available() -> bool:
 
 def gemini_available() -> bool:
     return (
-        strip_valid_key(settings.llm.gemini_key)
-        or strip_valid_key(settings.llm.emergent_key)
+        strip_valid_key(settings.llm.gemini_key) or
+        strip_valid_key(settings.llm.emergent_key)
     )
 
 
 def chat_constructor_key() -> str:
     """Default `api_key` for `LlmChat`; per-provider env overrides in `llm_client._resolve_key`."""
     return (
-        (settings.llm.emergent_key or "")
-        or (settings.llm.openai_key or "")
-        or (settings.llm.anthropic_key or "")
-        or (settings.llm.gemini_key or "")
-        or ""
+        (settings.llm.emergent_key or "") or
+        (settings.llm.openai_key or "") or
+        (settings.llm.anthropic_key or "") or
+        (settings.llm.gemini_key or "") or
+        ""
     )
 
 

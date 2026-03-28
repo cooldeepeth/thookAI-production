@@ -231,9 +231,9 @@ class TestFatigueShieldKeys:
     def test_pipeline_checks_correct_keys(self):
         """pipeline.py should check shield_status, not fatigue_detected."""
         import inspect
-        from agents.pipeline import run_agent_pipeline
+        from agents.pipeline import run_agent_pipeline_legacy
 
-        source = inspect.getsource(run_agent_pipeline)
+        source = inspect.getsource(run_agent_pipeline_legacy)
         # After fix: should reference shield_status
         assert "shield_status" in source
         # Should NOT reference the old wrong key

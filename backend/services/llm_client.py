@@ -16,6 +16,7 @@ from typing import Any, List, Optional
 
 from config import settings
 
+
 class MessageRole(str, Enum):
     """Role of a message in a conversation (OpenAI-compatible string values)."""
 

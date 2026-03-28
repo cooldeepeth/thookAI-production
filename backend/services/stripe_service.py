@@ -22,6 +22,8 @@ STRIPE_WEBHOOK_SECRET = settings.stripe.webhook_secret or ''
 STRIPE_PUBLISHABLE_KEY = settings.stripe.publishable_key or ''
 
 # Check if Stripe is configured
+
+
 def is_stripe_configured() -> bool:
     """Check if Stripe is properly configured."""
     return bool(STRIPE_SECRET_KEY and not STRIPE_SECRET_KEY.startswith('placeholder'))

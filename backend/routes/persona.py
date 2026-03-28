@@ -358,45 +358,10 @@ async def create_avatar(data: AvatarCreateRequest, current_user: dict = Depends(
     Stores the resulting avatar_id in persona_engines.heygen_avatar_id.
     """
 
-# ============ VOICE CLONE ============
-
-VOICE_CLONE_TIERS = ("studio", "agency")
-VOICE_CLONE_AUDIO_MIMES = set(ALLOWED_MIME_TYPES.get("audio", []))
-MAX_VOICE_SAMPLES = 5
-MAX_AUDIO_BYTES = MAX_FILE_SIZE.get("audio", 25 * 1024 * 1024)
-
-
-def _require_voice_clone_tier(user: dict) -> None:
-    """Raise 403 if the user's subscription does not include voice cloning."""
-    tier = user.get("subscription_tier", "free")
-    if tier not in VOICE_CLONE_TIERS:
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "error": "tier_required",
-                "message": "Voice cloning requires a Studio or Agency subscription.",
-                "current_tier": tier,
-                "required_tiers": list(VOICE_CLONE_TIERS),
-            },
-        )
-
-
-class VoiceCloneCreateRequest(BaseModel):
-    voice_name: str
-
-
-@router.post("/voice-clone/samples")
-async def upload_voice_samples(
-    files: List[UploadFile] = File(...),
-    current_user: dict = Depends(get_current_user),
-):
-    """Upload 1-5 audio samples for voice cloning. Studio/Agency only."""
-
     # Tier gate
     user = await db.users.find_one({"user_id": current_user["user_id"]})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
 
     tier = user.get("subscription_tier", "free")
     if tier not in ("studio", "agency"):
@@ -460,55 +425,10 @@ async def upload_voice_samples(
             "heygen_avatar_created_at": now,
             "updated_at": now,
         }},
-
-    _require_voice_clone_tier(user)
-
-    if len(files) < 1 or len(files) > MAX_VOICE_SAMPLES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Please upload between 1 and {MAX_VOICE_SAMPLES} audio files.",
-        )
-
-    user_id = current_user["user_id"]
-    uploaded_urls: List[str] = []
-
-    for file in files:
-        ct = (file.content_type or "").split(";")[0].strip().lower()
-        if ct not in VOICE_CLONE_AUDIO_MIMES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"File '{file.filename}' has unsupported type '{ct}'. Allowed: {', '.join(sorted(VOICE_CLONE_AUDIO_MIMES))}",
-            )
-
-        data = await file.read()
-        if len(data) > MAX_AUDIO_BYTES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"File '{file.filename}' exceeds the 25 MB limit.",
-            )
-
-        safe_name = "".join(c for c in (file.filename or "sample") if c.isalnum() or c in "._-")[:120] or "sample"
-        storage_key = f"voice-samples/{user_id}/{uuid.uuid4().hex[:12]}_{safe_name}"
-        url = upload_bytes_to_r2(storage_key, data, ct)
-        uploaded_urls.append(url)
-
-    # Store sample URLs in persona_engines
-    now = datetime.now(timezone.utc)
-    await db.persona_engines.update_one(
-        {"user_id": user_id},
-        {
-            "$set": {
-                "voice_sample_urls": uploaded_urls,
-                "voice_samples_uploaded_at": now,
-                "updated_at": now,
-            }
-        },
-
     )
 
     return {
         "success": True,
-
         "avatar_id": avatar_id,
         "message": "Avatar created successfully. You can now generate talking-head videos."
     }
@@ -530,7 +450,94 @@ async def get_avatar(current_user: dict = Depends(get_current_user)):
         "avatar_id": avatar_id,
         "preview_url": persona.get("heygen_avatar_photo_url"),
         "created_at": persona.get("heygen_avatar_created_at"),
+    }
 
+
+# ============ VOICE CLONE ============
+
+VOICE_CLONE_TIERS = ("studio", "agency")
+VOICE_CLONE_AUDIO_MIMES = set(ALLOWED_MIME_TYPES.get("audio", []))
+MAX_VOICE_SAMPLES = 5
+MAX_AUDIO_BYTES = MAX_FILE_SIZE.get("audio", 25 * 1024 * 1024)
+
+
+def _require_voice_clone_tier(user: dict) -> None:
+    """Raise 403 if the user's subscription does not include voice cloning."""
+    tier = user.get("subscription_tier", "free")
+    if tier not in VOICE_CLONE_TIERS:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "tier_required",
+                "message": "Voice cloning requires a Studio or Agency subscription.",
+                "current_tier": tier,
+                "required_tiers": list(VOICE_CLONE_TIERS),
+            },
+        )
+
+
+class VoiceCloneCreateRequest(BaseModel):
+    voice_name: str
+
+
+@router.post("/voice-clone/samples")
+async def upload_voice_samples(
+    files: List[UploadFile] = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload 1-5 audio samples for voice cloning. Studio/Agency only."""
+
+    # Tier gate
+    user = await db.users.find_one({"user_id": current_user["user_id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    _require_voice_clone_tier(user)
+
+    if len(files) < 1 or len(files) > MAX_VOICE_SAMPLES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Please upload between 1 and {MAX_VOICE_SAMPLES} audio files.",
+        )
+
+    user_id = current_user["user_id"]
+    uploaded_urls: List[str] = []
+
+    for file in files:
+        ct = (file.content_type or "").split(";")[0].strip().lower()
+        if ct not in VOICE_CLONE_AUDIO_MIMES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File '{file.filename}' has unsupported type '{ct}'. Allowed: {', '.join(sorted(VOICE_CLONE_AUDIO_MIMES))}",
+            )
+
+        file_data = await file.read()
+        if len(file_data) > MAX_AUDIO_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File '{file.filename}' exceeds the 25 MB limit.",
+            )
+
+        safe_name = "".join(c for c in (file.filename or "sample") if c.isalnum() or c in "._-")[:120] or "sample"
+        storage_key = f"voice-samples/{user_id}/{uuid.uuid4().hex[:12]}_{safe_name}"
+        url = upload_bytes_to_r2(storage_key, file_data, ct)
+        uploaded_urls.append(url)
+
+    # Store sample URLs in persona_engines
+    now = datetime.now(timezone.utc)
+    await db.persona_engines.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "voice_sample_urls": uploaded_urls,
+                "voice_samples_uploaded_at": now,
+                "updated_at": now,
+            }
+        },
+    )
+
+    return {
+        "success": True,
         "sample_count": len(uploaded_urls),
         "sample_urls": uploaded_urls,
         "message": f"Uploaded {len(uploaded_urls)} voice sample(s). You can now create your voice clone.",

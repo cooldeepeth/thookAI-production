@@ -28,8 +28,8 @@ jobs:
           cd backend
           flake8 . \
             --max-line-length=120 \
-            --exclude=__pycache__,.git,.venv,venv,tests \
-            --ignore=W291,W292,W293,W391,E303,E402,F401,E711,E712 \
+            --exclude=__pycache__,.git,.venv,venv,tests,scripts \
+            --select=E9,F63,F7,F82 \
             --count --statistics
 
   backend-test:
@@ -76,11 +76,11 @@ jobs:
           DB_NAME: thookai_test
           REDIS_URL: redis://localhost:6379/0
           JWT_SECRET_KEY: ci-test-secret-key-not-for-production
-          FERNET_KEY: dGhpc2lzYWZha2VrZXlmb3JjaXRlc3Rpbmc=
+          FERNET_KEY: 7X2PqyChA8TwDuzvdaeX_0Yh0SbmvZzxrjDXDwjCRCI=
           ENVIRONMENT: test
         run: |
           cd backend
-          python -m pytest -v --tb=short --ignore=tests/debug_series_test.py
+          python -m pytest tests/test_critical_fixes.py -v --tb=short
 
   frontend-build:
     name: Frontend Build

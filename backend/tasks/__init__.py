@@ -29,6 +29,8 @@ CELERY_BROKER_URL = settings.app.celery_broker_url or REDIS_URL
 CELERY_RESULT_BACKEND = settings.app.celery_result_backend or REDIS_URL
 
 # Check if Redis is configured
+
+
 def is_redis_configured() -> bool:
     """Check if Redis is available for Celery."""
     if not REDIS_URL or REDIS_URL == 'redis://localhost:6379/0':

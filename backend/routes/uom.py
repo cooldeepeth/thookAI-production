@@ -3,12 +3,14 @@ from auth_utils import get_current_user
 
 router = APIRouter(prefix="/uom", tags=["uom"])
 
+
 @router.get("/")
 async def get_user_uom(user=Depends(get_current_user)):
     """Get the current user's UOM profile. Frontend uses this to adapt UI."""
     from services.uom_service import get_uom
     uom = await get_uom(user["user_id"])
     return {"success": True, "uom": uom}
+
 
 @router.get("/directives/{agent_name}")
 async def get_directives(agent_name: str, user=Depends(get_current_user)):
@@ -21,12 +23,14 @@ async def get_directives(agent_name: str, user=Depends(get_current_user)):
     directives = await get_agent_directives(user["user_id"], agent_name)
     return {"success": True, "agent": agent_name, "directives": directives}
 
+
 @router.post("/refresh")
 async def refresh_uom(user=Depends(get_current_user)):
     """Trigger a full UOM refresh from behavioral data."""
     from services.uom_service import run_periodic_uom_update
     updated_uom = await run_periodic_uom_update(user["user_id"])
     return {"success": True, "uom": updated_uom, "message": "UOM refreshed from behavioral data"}
+
 
 @router.patch("/")
 async def update_uom_fields(body: dict, user=Depends(get_current_user)):
