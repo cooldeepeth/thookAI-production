@@ -91,8 +91,12 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
   };
 
   const copyShareLink = async () => {
-    // FIXED: prefer backend-provided share_url, fallback to constructed URL
-    const fullUrl = shareStatus?.share_url ?? `${window.location.origin}/creator/${shareStatus?.share_token}`;
+    // Prefer backend-provided share_url; normalize relative paths to absolute URLs, fallback to constructed URL
+    const shareUrl = shareStatus?.share_url;
+    const fullUrl =
+      shareUrl != null
+        ? (shareUrl.startsWith("/") ? `${window.location.origin}${shareUrl}` : shareUrl)
+        : `${window.location.origin}/creator/${shareStatus?.share_token}`;
     try {
       await navigator.clipboard.writeText(fullUrl);
       setCopiedLink(true);
