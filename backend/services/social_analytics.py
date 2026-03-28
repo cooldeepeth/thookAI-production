@@ -78,10 +78,11 @@ async def fetch_linkedin_post_metrics(
             impressions = 0
             clicks = 0
 
+            # FIXED: use params dict instead of string concat to avoid token/query leaks in logs
             stats_response = await client.get(
-                f"https://api.linkedin.com/v2/organizationalEntityShareStatistics"
-                f"?q=organizationalEntity&shares[0]={encoded_urn}",
+                "https://api.linkedin.com/v2/organizationalEntityShareStatistics",
                 headers=headers,
+                params={"q": "organizationalEntity", "shares[0]": encoded_urn},
             )
             if stats_response.status_code == 200:
                 elements = stats_response.json().get("elements", [])
@@ -221,14 +222,15 @@ async def fetch_instagram_post_metrics(
         Dict with metric values, or {"error": "..."} on failure.
     """
     metrics_param = "impressions,reach,likes,comments,shares,saved"
-    url = (
-        f"https://graph.instagram.com/{media_id}/insights"
-        f"?metric={metrics_param}&access_token={access_token}"
-    )
+    # FIXED: use correct Meta Graph API host and move access_token to params dict
+    url = f"https://graph.facebook.com/v18.0/{media_id}/insights"
 
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.get(url)
+            response = await client.get(
+                url,
+                params={"metric": metrics_param, "access_token": access_token},
+            )
 
             if response.status_code == 401 or (
                 response.status_code == 400
@@ -313,9 +315,11 @@ async def update_post_performance(
             logger.warning("update_post_performance: job %s not found", job_id)
             return False
 
-        publish_result = job.get("publish_result", {})
+        # FIXED: read publish_results (plural) and extract per-platform sub-dict
+        publish_results = job.get("publish_results", {})
+        publish_result = publish_results.get(platform, {}) if isinstance(publish_results, dict) else {}
         if not publish_result:
-            logger.warning("update_post_performance: no publish_result on job %s", job_id)
+            logger.warning("update_post_performance: no publish_results[%s] on job %s", platform, job_id)
             return False
 
         # ---- Get the decrypted access token ----

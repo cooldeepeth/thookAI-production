@@ -45,7 +45,6 @@ from routes.uploads import router as uploads_router
 from routes.notifications import router as notifications_router
 from routes.webhooks import router as webhooks_router
 from routes.campaigns import router as campaigns_router
-from routes.webhooks import router as webhooks_router
 
 
 # Setup logging
@@ -68,12 +67,13 @@ async def lifespan(app: FastAPI):
     # Validate configuration
     config_report = settings.log_startup_info()
     
-    # Fail fast in production if critical config is missing
-    if settings.app.is_production and config_report['status'] == 'error':
-        logger.error("CRITICAL: Configuration errors detected in production mode!")
-        logger.error("Fix the configuration issues before starting the server.")
-        # In production, we might want to raise an exception here
-        # raise RuntimeError("Invalid configuration for production")
+    # FIXED: fail fast in production if critical config is missing
+    if settings.app.is_production:
+        if not settings.security.jwt_secret_key:
+            raise RuntimeError("JWT_SECRET_KEY must be set in production")
+        if config_report['status'] == 'error':
+            logger.critical("Configuration errors detected in production mode!")
+            logger.critical("Fix the configuration issues before starting the server.")
     
     # Create database indexes (async)
     try:
@@ -94,8 +94,8 @@ async def lifespan(app: FastAPI):
     # Check media storage
     if not settings.r2.has_r2():
         if settings.app.is_production:
-            logger.error(
-                "CRITICAL: R2 media storage not configured in production! "
+            logger.critical(  # FIXED: use critical severity
+                "R2 media storage not configured in production! "
                 "File uploads will fail. Set R2_* environment variables."
             )
         else:
@@ -113,8 +113,8 @@ async def lifespan(app: FastAPI):
     # Check Stripe billing
     if settings.app.is_production:
         if not settings.stripe.is_fully_configured():
-            logger.error(
-                "CRITICAL: Stripe is not fully configured for production! "
+            logger.critical(  # FIXED: use critical severity
+                "Stripe is not fully configured for production! "
                 "Billing features will fail. Check STRIPE_SECRET_KEY, "
                 "STRIPE_WEBHOOK_SECRET, and all STRIPE_PRICE_* env vars."
             )
@@ -125,7 +125,8 @@ async def lifespan(app: FastAPI):
             )
 
     # Log LLM configuration
-    if settings.llm.anthropic_api_key:
+    # FIXED: correct attribute name (anthropic_key, not anthropic_api_key)
+    if settings.llm.anthropic_key:
         logger.info("LLM model configured: claude-sonnet-4-20250514")
     else:
         logger.warning("ANTHROPIC_API_KEY not set — LLM features will use fallback/mock responses")
@@ -189,7 +190,6 @@ api_router.include_router(uploads_router)
 api_router.include_router(notifications_router)
 api_router.include_router(webhooks_router)
 api_router.include_router(campaigns_router)
-api_router.include_router(webhooks_router)
 
 
 @api_router.get("/")

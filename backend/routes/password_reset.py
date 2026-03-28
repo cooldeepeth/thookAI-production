@@ -7,7 +7,7 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from auth_utils import hash_password
@@ -36,7 +36,7 @@ def _token_hash(token: str) -> str:
 
 
 @router.post("/forgot-password")
-async def forgot_password(data: ForgotPasswordRequest):
+async def forgot_password(data: ForgotPasswordRequest, background_tasks: BackgroundTasks):
     user = await db.users.find_one({"email": data.email}, {"_id": 0})
     if user and user.get("auth_method") == "email":
         token = secrets.token_urlsafe(32)
@@ -52,9 +52,8 @@ async def forgot_password(data: ForgotPasswordRequest):
                 "created_at": now,
             }
         )
-        email_sent = send_password_reset_email(data.email, token)
-        if not email_sent:
-            logger.warning(f"Password reset email failed to send for {data.email}")
+        # FIXED: send email in background to avoid blocking the event loop
+        background_tasks.add_task(send_password_reset_email, data.email, token)
 
     return FORGOT_RESPONSE
 

@@ -53,6 +53,15 @@ PLATFORM_ENGAGEMENT_PROFILES = {
 }
 
 
+def _normalize_engagements(metrics: dict) -> dict:
+    """Normalize engagement counts from platform-specific fields into a unified 'engagements' key."""
+    # FIXED: aggregate platform-specific engagement fields into unified 'engagements'
+    if "engagements" not in metrics:
+        keys = ["likes", "comments", "shares", "reposts", "retweets", "replies", "reactions", "saved", "bookmarks"]
+        metrics["engagements"] = sum(int(metrics.get(k, 0) or 0) for k in keys)
+    return metrics
+
+
 async def get_content_analytics(
     user_id: str,
     job_id: str
@@ -258,6 +267,7 @@ async def get_analytics_overview(
         is_real = metrics is not None and "error" not in (metrics or {})
         if is_real:
             real_data_count += 1
+            metrics = _normalize_engagements(metrics)  # FIXED: normalize engagement fields
         else:
             metrics = _simulate_engagement(platform, job)
             estimated_count += 1
@@ -377,7 +387,8 @@ async def get_performance_trends(
                     metrics = job.get("performance_metrics")
                 if not metrics or "error" in (metrics or {}):
                     metrics = _simulate_engagement(job.get("platform", "linkedin"), job)
-                
+                metrics = _normalize_engagements(metrics)
+
                 engagement_rate = metrics.get("engagement_rate", 0)
                 platform = job.get("platform", "linkedin")
                 profile = PLATFORM_ENGAGEMENT_PROFILES.get(platform, PLATFORM_ENGAGEMENT_PROFILES["linkedin"])
@@ -423,6 +434,7 @@ async def get_performance_trends(
         "period_days": days,
         "granularity": granularity,
         "trend": trend,
+        "is_estimated": any(not (j.get("performance_data", {}).get("latest") or j.get("performance_metrics")) for j in jobs),  # FIXED: track whether any period used simulated metrics
         "periods": periods
     }
 
@@ -446,7 +458,7 @@ async def get_persona_performance_data(user_id: str) -> Dict[str, Any]:
     if not persona_engine:
         return {
             "performance_intelligence": {
-                "message": "Performance data is being collected. Check back after your first 5 published posts."
+                "message": "Performance data is being collected. Publish posts and check back once platform metrics are available."
             },
             "optimal_posting_times": {
                 "message": "Optimal times are calculated after 10+ published posts with performance data."
@@ -456,7 +468,7 @@ async def get_persona_performance_data(user_id: str) -> Dict[str, Any]:
     perf_intel = persona_engine.get("performance_intelligence", {})
     if not perf_intel:
         perf_intel = {
-            "message": "Performance data is being collected. Check back after your first 5 published posts."
+            "message": "Performance data is being collected. Publish posts and check back once platform metrics are available."
         }
 
     optimal_times = persona_engine.get("optimal_posting_times", {})

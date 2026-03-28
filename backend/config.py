@@ -120,8 +120,10 @@ class EmailConfig:
 
     def is_configured(self) -> bool:
         """Check if Resend API key is set"""
-        return bool(self.resend_api_key)
+        # FIXED: strip whitespace before checking
+        return bool((self.resend_api_key or "").strip())
 
+@dataclass
 class GoogleConfig:
     """Google OAuth configuration"""
     client_id: Optional[str] = field(default_factory=lambda: os.environ.get('GOOGLE_CLIENT_ID'))
@@ -129,11 +131,14 @@ class GoogleConfig:
     backend_url: str = field(default_factory=lambda: os.environ.get('BACKEND_URL', 'http://localhost:8001'))
 
     def is_configured(self) -> bool:
-        return bool(self.client_id and self.client_secret)
+        # FIXED: strip whitespace from config values before checking
+        return bool((self.client_id or "").strip() and (self.client_secret or "").strip())
 
     @property
     def redirect_uri(self) -> str:
-        return f"{self.backend_url}/api/auth/google/callback"
+        # FIXED: strip trailing slash from backend_url to prevent double-slash in redirect_uri
+        base = (self.backend_url or "").strip().rstrip('/')
+        return f"{base}/api/auth/google/callback"
 
 
 
@@ -163,7 +168,11 @@ class StripeConfig:
 
     def is_fully_configured(self) -> bool:
         """Check if Stripe is fully configured for production billing."""
-        return bool(self.secret_key and self.webhook_secret and self.all_price_ids_configured())
+        # FIXED: reject placeholder/example keys
+        key = (self.secret_key or "").strip()
+        if not key or any(p in key.lower() for p in ("placeholder", "example", "your_")):
+            return False
+        return bool(self.webhook_secret and self.all_price_ids_configured())
 
 
 @dataclass

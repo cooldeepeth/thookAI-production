@@ -26,3 +26,4 @@ def make_celery() -> Celery:
 
 
 celery_app = make_celery()
+app = celery_app  # FIXED: alias for CLI discovery (celery -A celery_app)

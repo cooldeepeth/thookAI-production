@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutTemplate, Search, Filter, ThumbsUp,
+  LayoutTemplate, Search, Filter,
   Sparkles, Loader2, X, TrendingUp, Plus,
   ChevronLeft, ChevronRight, BookOpen, Upload, Trash2
 } from "lucide-react";
@@ -348,6 +348,7 @@ function MyTemplatesTab({ onUpvote, onUseTemplate }) {
                   disabled={deleting === template.template_id}
                   className="absolute top-3 right-3 p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 opacity-0 group-hover/card:opacity-100 transition-opacity z-10"
                   title="Delete template"
+                  aria-label="Delete template"
                 >
                   {deleting === template.template_id ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -438,7 +439,8 @@ export default function Templates() {
     try {
       const data = await upvoteTemplate(templateId);
       if (data.success) {
-        setTemplates((prev) =>
+        // FIXED: update ALL state arrays so upvote is reflected everywhere
+        const updater = (prev) =>
           prev.map((t) =>
             t.template_id === templateId
               ? {
@@ -447,8 +449,9 @@ export default function Templates() {
                   user_upvoted: data.upvoted,
                 }
               : t
-          )
-        );
+          );
+        setTemplates(updater);
+        setFeatured(updater);
       }
     } catch (err) {
       console.error("Failed to upvote:", err);
@@ -736,6 +739,7 @@ export default function Templates() {
                   <button
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
                     disabled={page === 0}
+                    aria-label="Previous page"
                     className="p-2 rounded-lg bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft size={18} />
@@ -772,6 +776,7 @@ export default function Templates() {
                       setPage((p) => Math.min(totalPages - 1, p + 1))
                     }
                     disabled={page >= totalPages - 1}
+                    aria-label="Next page"
                     className="p-2 rounded-lg bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight size={18} />

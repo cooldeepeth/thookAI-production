@@ -15,6 +15,7 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
+# NOTE: These use os.environ directly as they are not yet in config.py dataclasses
 PINECONE_ENVIRONMENT = os.environ.get('PINECONE_ENVIRONMENT', 'us-east-1')
 INDEX_NAME = os.environ.get('PINECONE_INDEX_NAME', 'thookai-personas')
 EMBEDDING_DIMENSION = 1536  # OpenAI text-embedding-3-small dimension
@@ -34,12 +35,12 @@ def _is_valid_key(key: str) -> bool:
 def get_vector_store_client():
     """Returns Pinecone index client if configured, None otherwise."""
     if not settings.llm.pinecone_key:
-        logger.warning("PINECONE_API_KEY not set — vector store disabled, using MongoDB fallback")
+        logger.warning("PINECONE_API_KEY not set — vector operations skipped")  # FIXED: no MongoDB fallback exists
         return None
     try:
         from pinecone import Pinecone
         pc = Pinecone(api_key=settings.llm.pinecone_key)
-        index_name = os.environ.get('PINECONE_INDEX_NAME', 'thookai-personas')
+        index_name = INDEX_NAME  # FIXED: use module constant instead of os.environ.get
         return pc.Index(index_name)
     except Exception as e:
         logger.error(f"Pinecone initialisation failed: {e}")
@@ -53,7 +54,7 @@ def get_pinecone_client():
     pinecone_key = settings.llm.pinecone_key or ''
 
     if not _is_valid_key(pinecone_key):
-        logger.warning("PINECONE_API_KEY not set — vector store disabled, using MongoDB fallback")
+        logger.warning("PINECONE_API_KEY not set — vector operations skipped")  # FIXED: no MongoDB fallback exists
         return None
 
     if _pinecone_client is None:
@@ -175,7 +176,7 @@ async def upsert_approved_embedding(
             logger.error(f"Failed to upsert embedding: {e}")
     
     # Fallback: store in MongoDB if Pinecone unavailable
-    logger.info(f"Using MongoDB fallback for embedding storage: {vector_id}")
+    logger.warning("Pinecone not configured — vector upsert skipped for %s", vector_id)  # FIXED: clarify message
     return vector_id
 
 

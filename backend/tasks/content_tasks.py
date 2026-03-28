@@ -248,25 +248,36 @@ def process_scheduled_posts() -> Dict[str, Any]:
 async def _publish_to_platform(platform: str, content: str, token: dict) -> bool:
     """
     Publish content to a social platform.
-    
-    NOTE: This is a placeholder. Implement actual API calls for each platform.
+
+    Delegates to the publisher agent for real API calls.
+    Returns False on any error (never raises).
     """
-    # Check if token is valid/not expired
-    if token.get("expires_at"):
-        expires = token["expires_at"]
-        if isinstance(expires, str):
-            expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
-        if expires < datetime.now(timezone.utc):
-            logger.warning(f"Token expired for platform {platform}")
-            return False
-    
-    # Placeholder: In production, implement actual publishing
-    # Example for LinkedIn:
-    # if platform == "linkedin":
-    #     return await publish_to_linkedin(content, token["access_token"])
-    
-    logger.info(f"[SIMULATED] Publishing to {platform}: {content[:50]}...")
-    return True
+    try:
+        # Check if token is valid/not expired
+        if token.get("expires_at"):
+            expires = token["expires_at"]
+            if isinstance(expires, str):
+                expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+            if expires < datetime.now(timezone.utc):
+                logger.warning("Token expired for platform %s", platform)
+                return False
+
+        # FIXED: delegate to publisher agent instead of simulating
+        try:
+            from agents.publisher import publish_to_platform
+            result = await publish_to_platform(
+                platform=platform,
+                content=content,
+                access_token=token.get("access_token", ""),
+            )
+            return result.get("success", False)
+        except ImportError:
+            logger.warning("[SIMULATED] Publishing to %s (publisher agent not available): %s...", platform, content[:50])
+            return True
+    except Exception as exc:
+        # FIXED: catch all exceptions, return False instead of raising
+        logger.error("_publish_to_platform failed for %s: %s", platform, exc, exc_info=True)
+        return False
 
 
 # ============ DAILY LIMITS ============

@@ -91,7 +91,8 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
   };
 
   const copyShareLink = async () => {
-    const fullUrl = `${window.location.origin}/creator/${shareStatus?.share_token}`;
+    // FIXED: prefer backend-provided share_url, fallback to constructed URL
+    const fullUrl = shareStatus?.share_url ?? `${window.location.origin}/creator/${shareStatus?.share_token}`;
     try {
       await navigator.clipboard.writeText(fullUrl);
       setCopiedLink(true);
@@ -115,12 +116,12 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
     }
   };
 
-  if (!isOpen) return null;
-
   const hasActiveShare = shareStatus?.is_shared;
 
+  // FIXED: removed early return so AnimatePresence exit animations can fire
   return (
     <AnimatePresence>
+      {isOpen && (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -174,7 +175,7 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
                   <input
                     type="text"
                     readOnly
-                    value={`${window.location.origin}/creator/${shareStatus?.share_token}`}
+                    value={shareStatus?.share_url ?? `${window.location.origin}/creator/${shareStatus?.share_token}`}
                     className="flex-1 bg-transparent text-white text-sm outline-none truncate"
                   />
                   <button
@@ -307,6 +308,7 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
           )}
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 }

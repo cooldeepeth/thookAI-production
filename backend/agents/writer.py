@@ -1,4 +1,3 @@
-import os
 import asyncio
 import uuid
 import logging
@@ -177,7 +176,7 @@ async def run_writer(
             api_key=chat_constructor_key(),
             session_id=f"writer-{uuid.uuid4().hex[:8]}",
             system_message=system_msg,
-        ).with_model("anthropic", "claude-4-sonnet-20250514")
+        ).with_model("anthropic", "claude-sonnet-4-20250514")  # FIXED: correct model name
 
         prompt = WRITER_PROMPT.format(
             creator_name=persona_card.get("creator_name", "the creator"),

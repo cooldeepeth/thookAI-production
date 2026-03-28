@@ -358,12 +358,13 @@ async def stripe_webhook(
         raise HTTPException(status_code=400, detail="Missing Stripe-Signature header")
 
     # Guard: webhook secret must be configured in production
+    # FIXED: use explicit allowlist instead of is_production check
     if not settings.stripe.webhook_secret:
-        if settings.app.is_production:
-            logger.error("Stripe webhook secret not configured in production — rejecting webhook")
+        allowed_envs = {"development", "test"}
+        if settings.app.environment not in allowed_envs:
+            logger.error("Stripe webhook secret not configured in %s — rejecting webhook", settings.app.environment)
             raise HTTPException(status_code=500, detail="Webhook secret not configured")
-        else:
-            logger.warning("Stripe webhook secret not configured — skipping signature verification in dev mode")
+        logger.warning("Stripe webhook secret not configured — skipping signature verification in %s", settings.app.environment)
 
     payload = await request.body()
 
@@ -394,7 +395,7 @@ async def simulate_upgrade(
     from services.stripe_service import TIER_PRICING
     
     if settings.app.environment not in ("development", "test"):
-        raise HTTPException(status_code=403, detail="Simulation endpoints disabled outside development")
+        raise HTTPException(status_code=403, detail="Simulation endpoints are only available in development and test environments")  # FIXED: include test in message
 
     valid_tiers = ["free", "pro", "studio", "agency"]
     if request.tier not in valid_tiers:
@@ -438,7 +439,7 @@ async def simulate_add_credits(
     from services.credits import add_credits
     
     if settings.app.environment not in ("development", "test"):
-        raise HTTPException(status_code=403, detail="Simulation endpoints disabled outside development")
+        raise HTTPException(status_code=403, detail="Simulation endpoints are only available in development and test environments")  # FIXED: include test in message
 
     result = await add_credits(
         user_id=current_user["user_id"],

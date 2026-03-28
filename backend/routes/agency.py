@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 
 from auth_utils import get_current_user
@@ -227,6 +227,7 @@ async def delete_workspace(workspace_id: str, current_user: dict = Depends(get_c
 async def invite_creator(
     workspace_id: str,
     data: InviteCreatorRequest,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
     """Invite a creator to the workspace."""
@@ -280,13 +281,17 @@ async def invite_creator(
     
     await db.workspace_members.insert_one(member_doc)
 
-    # Send invitation email
-    send_workspace_invite_email(
-        to_email=data.email.lower(),
-        workspace_name=workspace["name"],
-        invite_token=invite_id,
-        inviter_name=current_user.get("name", "A team member"),
-    )
+    # FIXED: send invite email in background to avoid blocking event loop
+    try:
+        background_tasks.add_task(
+            send_workspace_invite_email,
+            to_email=data.email.lower(),
+            workspace_name=workspace["name"],
+            invite_token=invite_id,
+            inviter_name=current_user.get("name", "A team member"),
+        )
+    except Exception as email_err:
+        logger.warning("Failed to queue invite email for %s: %s", data.email, email_err)
 
     return {
         "success": True,

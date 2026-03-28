@@ -3,7 +3,10 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import json
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 from database import db
 from auth_utils import get_current_user
 from services.llm_client import LlmChat, UserMessage
@@ -133,7 +136,8 @@ Be specific and actionable."""
         import asyncio
         response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=25.0)
         return {"analysis": response, "demo_mode": False}
-    except Exception:
+    except Exception as e:
+        logger.exception("Post analysis failed, returning fallback")  # FIXED: use logger.exception for full traceback
         return {
             "analysis": "We analyzed your posts. Your writing has a distinctive analytical voice with a preference for structured insights.",
             "demo_mode": True
@@ -177,7 +181,8 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
                 if clean.startswith("json"):
                     clean = clean[4:]
             persona_card = json.loads(clean.strip())
-        except Exception:
+        except Exception as e:
+            logger.exception("Persona generation via LLM failed, falling back to smart generator")  # FIXED: use logger.exception for full traceback
             persona_card = None
 
     if not persona_card:

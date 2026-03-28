@@ -186,11 +186,19 @@ async def run_agent_pipeline(
         # FATIGUE SHIELD — gather pattern fatigue data before Thinker
         fatigue_data = {}
         try:
-            fatigue_data = await get_pattern_fatigue_shield(user_id)
-            if fatigue_data.get("fatigue_detected"):
-                logger.info(f"Fatigue shield active for {user_id}: {fatigue_data.get('overused_patterns', [])}")
-        except Exception as e:
-            logger.warning(f"Fatigue shield check failed (non-fatal): {e}")
+            # FIXED: add timeout to prevent fatigue shield from blocking pipeline
+            fatigue_data = await asyncio.wait_for(
+                get_pattern_fatigue_shield(user_id), timeout=2.0
+            )
+            # FIXED: use correct key names from get_pattern_fatigue_shield() response
+            shield_status = fatigue_data.get("shield_status")
+            if shield_status and shield_status != "healthy":
+                logger.info(
+                    "Fatigue shield active for %s: status=%s, risk_factors=%s",
+                    user_id, shield_status, fatigue_data.get("risk_factors", [])
+                )
+        except (asyncio.TimeoutError, Exception) as e:
+            logger.warning("Fatigue shield check failed (non-fatal): %s", e)
 
         # THINKER — strategy + structure
         await update_job(job_id, {"current_agent": "thinker"})

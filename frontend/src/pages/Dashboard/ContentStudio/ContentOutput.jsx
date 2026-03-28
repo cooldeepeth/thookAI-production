@@ -403,10 +403,46 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
   const [approved, setApproved] = useState(job.status === "approved");
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [videoStatus, setVideoStatus] = useState(job.video_status);
 
   useEffect(() => {
     setEditedContent(finalContentToText(job.final_content));
   }, [job.final_content, job.job_id]);
+
+  // FIXED: continue polling video_status after content job completes,
+  // since video generation runs asynchronously via Celery
+  useEffect(() => {
+    setVideoStatus(job.video_status);
+  }, [job.video_status]);
+
+  useEffect(() => {
+    if (
+      job?.status === "completed" &&
+      job?.generate_video &&
+      !["completed", "failed", "skipped"].includes(videoStatus)
+    ) {
+      const videoPoller = setInterval(async () => {
+        try {
+          const token = localStorage.getItem("thook_token");
+          const res = await fetch(
+            `${API_URL}/api/content/${job.job_id}`,
+            { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "include" }
+          );
+          if (res.ok) {
+            const updated = await res.json();
+            const newStatus = updated?.video_status || updated?.job?.video_status;
+            if (["completed", "failed", "skipped"].includes(newStatus)) {
+              clearInterval(videoPoller);
+              setVideoStatus(newStatus);
+            }
+          }
+        } catch (err) {
+          console.error("Video status poll failed:", err);
+        }
+      }, 5000);
+      return () => clearInterval(videoPoller);
+    }
+  }, [job?.status, job?.generate_video, job?.job_id, videoStatus]);
 
   const qc = job.qc_score || {};
   const scout = job.agent_outputs?.scout;
