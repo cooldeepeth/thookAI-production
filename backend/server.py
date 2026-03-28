@@ -46,6 +46,7 @@ from routes.notifications import router as notifications_router
 from routes.webhooks import router as webhooks_router
 from routes.campaigns import router as campaigns_router
 from routes.webhooks import router as webhooks_router
+from routes.admin import router as admin_router
 
 
 # Setup logging
@@ -190,6 +191,9 @@ api_router.include_router(notifications_router)
 api_router.include_router(webhooks_router)
 api_router.include_router(campaigns_router)
 api_router.include_router(webhooks_router)
+
+# Admin dashboard — hidden from Swagger, requires admin role
+app.include_router(admin_router, prefix="/api/admin", include_in_schema=False)
 
 
 @api_router.get("/")

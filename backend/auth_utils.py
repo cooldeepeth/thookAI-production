@@ -8,7 +8,7 @@ Features:
 - Password policy enforcement
 """
 
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timezone
@@ -184,6 +184,16 @@ async def get_current_user(request: Request):
 
     # Neither JWT nor session token validation worked
     raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+# Set admin via MongoDB: db.users.updateOne({email: "..."}, {$set: {role: "admin"}})
+async def require_admin(current_user: dict = Depends(get_current_user)):
+    """Dependency that requires admin role."""
+    from database import db
+    user = await db.users.find_one({"user_id": current_user["user_id"]})
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
 
 
 async def get_optional_user(request: Request):

@@ -15,6 +15,8 @@ import Templates from "./Templates";
 import TemplateDetail from "./TemplateDetail";
 import Campaigns from "./Campaigns";
 import ComingSoon from "./ComingSoon";
+import Admin from "./Admin";
+import AdminUsers from "./AdminUsers";
 
 export default function Dashboard() {
   return (
@@ -35,6 +37,8 @@ export default function Dashboard() {
           <Route path="/templates/:templateId" element={<><TopBar title="Template Detail" /><TemplateDetail /></>} />
           <Route path="/campaigns" element={<><TopBar title="Campaigns" /><Campaigns /></>} />
           <Route path="/settings" element={<><TopBar title="Settings" /><Settings /></>} />
+          <Route path="/admin" element={<><TopBar title="Admin Dashboard" /><Admin /></>} />
+          <Route path="/admin/users" element={<><TopBar title="User Management" /><AdminUsers /></>} />
         </Routes>
       </div>
     </div>
