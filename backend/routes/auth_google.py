@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import quote
@@ -42,7 +41,8 @@ def _register_google_client() -> bool:
 
 
 def _frontend_url() -> str:
-    return os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    # FIXED: use settings instead of os.environ.get directly
+    return settings.email.frontend_url.rstrip("/")
 
 
 @router.get("/google")

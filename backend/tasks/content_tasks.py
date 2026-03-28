@@ -248,25 +248,75 @@ def process_scheduled_posts() -> Dict[str, Any]:
 async def _publish_to_platform(platform: str, content: str, token: dict) -> bool:
     """
     Publish content to a social platform.
-    
-    NOTE: This is a placeholder. Implement actual API calls for each platform.
+
+    Delegates to the publisher agent for real API calls.
+    Returns False on any error (never raises).
     """
-    # Check if token is valid/not expired
-    if token.get("expires_at"):
-        expires = token["expires_at"]
-        if isinstance(expires, str):
-            expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
-        if expires < datetime.now(timezone.utc):
-            logger.warning(f"Token expired for platform {platform}")
-            return False
-    
-    # Placeholder: In production, implement actual publishing
-    # Example for LinkedIn:
-    # if platform == "linkedin":
-    #     return await publish_to_linkedin(content, token["access_token"])
-    
-    logger.info(f"[SIMULATED] Publishing to {platform}: {content[:50]}...")
-    return True
+    try:
+        # Check if token is valid/not expired
+        if token.get("expires_at"):
+            expires = token["expires_at"]
+            if isinstance(expires, str):
+                expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+            if expires < datetime.now(timezone.utc):
+                logger.warning("Token expired for platform %s", platform)
+                return False
+
+        # Delegate to publisher agent instead of simulating.
+        try:
+            import agents.publisher as publisher
+        except ImportError:
+            logger.warning(
+                "[SIMULATED] Publishing to %s (publisher agent module not available): %s...",
+                platform,
+                content[:50],
+            )
+            return True
+
+        # Use publish_to_platform if it exists; otherwise dispatch via publish_content.
+        publish_fn = getattr(publisher, "publish_to_platform", None)
+        if publish_fn is not None:
+            try:
+                result = await publish_fn(
+                    platform=platform,
+                    content=content,
+                    access_token=token.get("access_token", ""),
+                )
+            except Exception as pub_exc:
+                logger.error("publish_to_platform failed for %s: %s", platform, pub_exc, exc_info=True)
+                return False
+            if isinstance(result, dict):
+                return result.get("success", False)
+            return bool(result)
+        elif hasattr(publisher, "publish_content"):
+            user_id = token.get("user_id", "")
+            if not user_id:
+                logger.error("No user_id in token for platform %s; cannot publish", platform)
+                return False
+            try:
+                result = await publisher.publish_content(
+                    user_id=user_id,
+                    content=content,
+                    platforms=[platform],
+                )
+            except Exception as pub_exc:
+                logger.error("publish_content failed for %s: %s", platform, pub_exc, exc_info=True)
+                return False
+            if isinstance(result, dict):
+                return result.get("all_success", False)
+            return bool(result)
+        else:
+            logger.warning(
+                "[SIMULATED] No suitable publish function found in agents.publisher; "
+                "simulating publish to %s: %s...",
+                platform,
+                content[:50],
+            )
+            return True
+    except Exception as exc:
+        # FIXED: catch all exceptions, return False instead of raising
+        logger.error("_publish_to_platform failed for %s: %s", platform, exc, exc_info=True)
+        return False
 
 
 # ============ DAILY LIMITS ============

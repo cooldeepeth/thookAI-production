@@ -22,6 +22,27 @@ from services.llm_keys import (
 logger = logging.getLogger(__name__)
 
 
+def _normalize_datetime(val):
+    """Normalize datetime values from strings or naive datetimes to timezone-aware UTC.
+
+    Returns:
+        A timezone-aware datetime in UTC, or None if the value cannot be parsed.
+    """
+    if isinstance(val, str):
+        try:
+            dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError as exc:
+            logger.warning("Failed to parse datetime from value %r: %s. Expected ISO 8601 format.", val, exc)
+            return None
+    elif isinstance(val, datetime):
+        dt = val
+    else:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def _clean_json(raw: str) -> str:
     s = raw.strip()
     if "```" in s:
@@ -501,7 +522,9 @@ async def calculate_optimal_posting_times(user_id: str) -> dict:
 
     for post in valid_posts:
         platform = post.get("platform", "unknown")
-        published_at = post["published_at"]
+        published_at = _normalize_datetime(post.get("published_at"))  # FIXED: normalize datetime type
+        if published_at is None:
+            continue
         perf = post["performance_data"]
         engagement_rate = perf.get("engagement_rate")
         if engagement_rate is None:
@@ -531,7 +554,9 @@ async def calculate_optimal_posting_times(user_id: str) -> dict:
                 "sample_size": len(rates),
             })
         ranked.sort(key=lambda s: s["avg_engagement_rate"], reverse=True)
-        optimal[platform] = ranked[:TOP_SLOTS]
+        top = ranked[:TOP_SLOTS]
+        if top:  # FIXED: skip platforms with no qualifying slots
+            optimal[platform] = top
 
     # Persist to persona_engines
     await db.persona_engines.update_one(
@@ -650,7 +675,7 @@ async def calculate_performance_intelligence(user_id: str) -> dict:
     prev_rates: List[float] = []
 
     for p in valid_posts:
-        pub = p.get("published_at") or p.get("created_at")
+        pub = _normalize_datetime(p.get("published_at") or p.get("created_at"))  # FIXED: normalize datetime
         rate = p.get("performance_data", {}).get("engagement_rate")
         if pub is None or rate is None:
             continue

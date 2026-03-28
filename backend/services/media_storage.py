@@ -74,7 +74,7 @@ def get_r2_client():
     except Exception as e:
         logger.error(f"Failed to create R2 client: {e}")
         raise ValueError(
-            f"R2 credentials are configured but the client failed to initialise: {e}"
+            f"R2 storage configuration error (check credentials, endpoint, bucket name): {e}"  # FIXED: more accurate error message
         )
 
 

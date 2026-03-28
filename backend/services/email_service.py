@@ -9,7 +9,9 @@ Usage:
     success = send_password_reset_email("user@example.com", reset_token)
 """
 
+import html as html_lib
 import logging
+from urllib.parse import quote as url_quote
 
 import resend
 
@@ -45,7 +47,7 @@ def _send_email(to_email: str, subject: str, html: str) -> bool:
         logger.info("Email sent to %s — subject: %s", to_email, subject)
         return True
     except Exception as exc:
-        logger.error("Failed to send email to %s: %s", to_email, exc)
+        logger.exception("Failed to send email to %s", to_email)  # FIXED: use logger.exception for traceback
         return False
 
 
@@ -66,7 +68,7 @@ def send_password_reset_email(to_email: str, reset_token: str) -> bool:
         True if the email was accepted by Resend, False otherwise.
     """
     frontend_url = settings.email.frontend_url.rstrip("/")
-    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+    reset_link = f"{frontend_url}/reset-password?token={url_quote(reset_token, safe='')}"  # FIXED: URL-encode token
 
     html = f"""\
 <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
@@ -111,13 +113,14 @@ def send_workspace_invite_email(
         True if the email was accepted by Resend, False otherwise.
     """
     frontend_url = settings.email.frontend_url.rstrip("/")
-    invite_link = f"{frontend_url}/invite?token={invite_token}"
-
+    invite_link = f"{frontend_url}/invite?token={url_quote(invite_token, safe='')}"  # FIXED: URL-encode token
+    safe_workspace = html_lib.escape(workspace_name)  # FIXED: escape user-controlled HTML
+    safe_inviter = html_lib.escape(inviter_name)  # FIXED: escape user-controlled HTML
     html = f"""\
 <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-  <h2 style="color: #111;">You're invited to {workspace_name}</h2>
-  <p><strong>{inviter_name}</strong> has invited you to join the
-  <strong>{workspace_name}</strong> workspace on ThookAI.</p>
+  <h2 style="color: #111;">You're invited to {safe_workspace}</h2>
+  <p><strong>{safe_inviter}</strong> has invited you to join the
+  <strong>{safe_workspace}</strong> workspace on ThookAI.</p>
   <p>Click the button below to accept the invitation and start collaborating.</p>
   <p style="text-align: center; margin: 32px 0;">
     <a href="{invite_link}"
@@ -135,7 +138,7 @@ def send_workspace_invite_email(
 </div>
 """
 
-    subject = f"You've been invited to {workspace_name} on ThookAI"
+    subject = f"You've been invited to {safe_workspace} on ThookAI"
     return _send_email(to_email, subject, html)
 
 
@@ -156,8 +159,8 @@ def send_content_published_email(
         True if the email was accepted by Resend, False otherwise.
     """
     # Truncate preview for safety
-    preview = (content_preview[:200] + "...") if len(content_preview) > 200 else content_preview
-    platform_display = platform.capitalize()
+    preview = html_lib.escape((content_preview[:200] + "...") if len(content_preview) > 200 else content_preview)  # FIXED: escape user content
+    platform_display = html_lib.escape(platform.capitalize())  # FIXED: escape platform name
 
     html = f"""\
 <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">

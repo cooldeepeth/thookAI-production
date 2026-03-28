@@ -455,7 +455,6 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
   const [approved, setApproved] = useState(job.status === "approved");
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [copied, setCopied] = useState(false);
-
   useEffect(() => {
     setEditedContent(finalContentToText(job.final_content));
   }, [job.final_content, job.job_id]);
