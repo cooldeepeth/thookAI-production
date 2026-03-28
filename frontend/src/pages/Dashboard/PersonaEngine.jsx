@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, RefreshCw, Edit2, Check, X, Share2, Download, Copy, Globe, ExternalLink, Upload, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import PersonaShareModal from "@/components/PersonaShareModal";
+import VoiceCloneCard from "@/components/VoiceCloneCard";
 
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -564,6 +565,9 @@ export default function PersonaEngine() {
               ))}
             </div>
           </motion.div>
+
+          {/* Voice Clone */}
+          <VoiceCloneCard user={user} />
 
           {/* Style Notes */}
           {card.writing_style_notes?.length > 0 && (
