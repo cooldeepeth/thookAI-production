@@ -170,20 +170,43 @@ class TestGoogleOAuthConfig:
 class TestStripeWebhookGuard:
     """Fix 2.7.1 — webhook rejects in non-dev/test environments without secret."""
 
-    @pytest.mark.asyncio
-    async def test_webhook_rejects_in_staging_without_secret(self):
+    def test_webhook_rejects_in_staging_without_secret(self):
         """Staging environment without webhook secret should return 500."""
+        from fastapi import FastAPI
         from fastapi.testclient import TestClient
         from unittest.mock import patch, MagicMock
+        import importlib
 
-        with patch("config.settings") as mock_settings:
-            mock_settings.stripe.webhook_secret = ""
-            mock_settings.app.environment = "staging"
-            mock_settings.app.is_production = False
+        # Import billing module first (so database.py initialises with real settings)
+        import routes.billing as billing_module
 
-            # Import after patching to pick up mocked settings
-            # This tests the route logic directly
-            assert mock_settings.app.environment not in {"development", "test"}
+        test_app = FastAPI()
+        test_app.include_router(billing_module.router, prefix="/api")
+        client = TestClient(test_app, raise_server_exceptions=False)
+
+        # Build a minimal settings mock that mimics the real config shape
+        mock_stripe = MagicMock()
+        mock_stripe.webhook_secret = ""
+        mock_app = MagicMock()
+        mock_app.environment = "staging"
+        mock_app.is_production = False
+        mock_settings = MagicMock()
+        mock_settings.stripe = mock_stripe
+        mock_settings.app = mock_app
+
+        # Patch config.settings only during the request so the lazy
+        # `from config import settings` inside the route handler sees the mock
+        with patch("config.settings", mock_settings):
+            response = client.post(
+                "/api/billing/webhook/stripe",
+                content="{}",
+                headers={"Stripe-Signature": "t=1,v1=abc"},
+            )
+
+        # A staging env with no webhook secret must be rejected
+        assert mock_settings.app.environment not in {"development", "test"}
+        assert response.status_code == 500
+        assert response.json().get("detail") == "Webhook secret not configured"
 
 
 # ============================================================
@@ -254,6 +277,13 @@ class TestDatetimeNormalization:
         from services.persona_refinement import _normalize_datetime
 
         assert _normalize_datetime(12345) is None
+
+    def test_normalize_invalid_iso_string(self):
+        """Invalid ISO string should return None without raising."""
+        from services.persona_refinement import _normalize_datetime
+
+        assert _normalize_datetime("not-a-date") is None
+        assert _normalize_datetime("2025-99-99T00:00:00Z") is None
 
 
 # ============================================================

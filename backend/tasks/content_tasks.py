@@ -262,17 +262,56 @@ async def _publish_to_platform(platform: str, content: str, token: dict) -> bool
                 logger.warning("Token expired for platform %s", platform)
                 return False
 
-        # FIXED: delegate to publisher agent instead of simulating
+        # Delegate to publisher agent instead of simulating.
         try:
-            from agents.publisher import publish_to_platform
-            result = await publish_to_platform(
-                platform=platform,
-                content=content,
-                access_token=token.get("access_token", ""),
-            )
-            return result.get("success", False)
+            import agents.publisher as publisher
         except ImportError:
-            logger.warning("[SIMULATED] Publishing to %s (publisher agent not available): %s...", platform, content[:50])
+            logger.warning(
+                "[SIMULATED] Publishing to %s (publisher agent module not available): %s...",
+                platform,
+                content[:50],
+            )
+            return True
+
+        # Use publish_to_platform if it exists; otherwise dispatch via publish_content.
+        publish_fn = getattr(publisher, "publish_to_platform", None)
+        if publish_fn is not None:
+            try:
+                result = await publish_fn(
+                    platform=platform,
+                    content=content,
+                    access_token=token.get("access_token", ""),
+                )
+            except Exception as pub_exc:
+                logger.error("publish_to_platform failed for %s: %s", platform, pub_exc, exc_info=True)
+                return False
+            if isinstance(result, dict):
+                return result.get("success", False)
+            return bool(result)
+        elif hasattr(publisher, "publish_content"):
+            user_id = token.get("user_id", "")
+            if not user_id:
+                logger.error("No user_id in token for platform %s; cannot publish", platform)
+                return False
+            try:
+                result = await publisher.publish_content(
+                    user_id=user_id,
+                    content=content,
+                    platforms=[platform],
+                )
+            except Exception as pub_exc:
+                logger.error("publish_content failed for %s: %s", platform, pub_exc, exc_info=True)
+                return False
+            if isinstance(result, dict):
+                return result.get("all_success", False)
+            return bool(result)
+        else:
+            logger.warning(
+                "[SIMULATED] No suitable publish function found in agents.publisher; "
+                "simulating publish to %s: %s...",
+                platform,
+                content[:50],
+            )
             return True
     except Exception as exc:
         # FIXED: catch all exceptions, return False instead of raising

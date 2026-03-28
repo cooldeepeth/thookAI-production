@@ -23,9 +23,17 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_datetime(val):
-    """Normalize datetime values from strings or naive datetimes to timezone-aware UTC."""
+    """Normalize datetime values from strings or naive datetimes to timezone-aware UTC.
+
+    Returns:
+        A timezone-aware datetime in UTC, or None if the value cannot be parsed.
+    """
     if isinstance(val, str):
-        dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+        try:
+            dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError as exc:
+            logger.warning("Failed to parse datetime from value %r: %s. Expected ISO 8601 format.", val, exc)
+            return None
     elif isinstance(val, datetime):
         dt = val
     else:

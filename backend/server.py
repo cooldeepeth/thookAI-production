@@ -72,8 +72,12 @@ async def lifespan(app: FastAPI):
         if not settings.security.jwt_secret_key:
             raise RuntimeError("JWT_SECRET_KEY must be set in production")
         if config_report['status'] == 'error':
-            logger.critical("Configuration errors detected in production mode!")
-            logger.critical("Fix the configuration issues before starting the server.")
+            error_message = (
+                "Configuration errors detected in production mode! "
+                "Fix the configuration issues before starting the server."
+            )
+            logger.critical(error_message)
+            raise RuntimeError(error_message)
     
     # Create database indexes (async)
     try:
