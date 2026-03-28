@@ -179,7 +179,13 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
                   <input
                     type="text"
                     readOnly
-                    value={shareStatus?.share_url ?? `${window.location.origin}/creator/${shareStatus?.share_token}`}
+                    value={
+                      shareStatus?.share_url
+                        ? (shareStatus.share_url.startsWith("/")
+                            ? `${window.location.origin}${shareStatus.share_url}`
+                            : shareStatus.share_url)
+                        : `${window.location.origin}/creator/${shareStatus?.share_token}`
+                    }
                     className="flex-1 bg-transparent text-white text-sm outline-none truncate"
                   />
                   <button
