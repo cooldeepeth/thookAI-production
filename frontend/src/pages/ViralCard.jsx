@@ -542,8 +542,8 @@ export default function ViralCard() {
         card_id: data.card_id,
         name: data.name,
       });
-      // Update URL to shareable link without full reload
-      window.history.replaceState(null, "", `/discover/${data.card_id}`);
+      // Update URL to shareable link without full reload, keeping React Router in sync
+      navigate(`/discover/${data.card_id}`, { replace: true });
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
