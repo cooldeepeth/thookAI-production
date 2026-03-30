@@ -361,9 +361,10 @@ async def publish_to_platform(
     """Dispatch to the appropriate platform-specific publisher.
 
     This is the entry point used by the scheduled-post publisher in
-    ``tasks.content_tasks``.  It passes the *access_token* directly
-    rather than looking it up from the DB, because the caller already
-    resolved the token.
+    ``tasks.content_tasks``.
+
+    Note: The access_token parameter is accepted for interface compatibility
+    but platform-specific functions resolve tokens from the database using user_id.
 
     Returns a dict with at least ``{"success": bool}``.
     """

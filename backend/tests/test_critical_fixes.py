@@ -384,3 +384,101 @@ class TestCeleryProcfile:
 
         assert "-Q default,media,content,video" in content
         assert "celery_app:celery_app" in content
+
+
+# ============================================================
+# 11. Billing /payments endpoint returns correct shape
+# ============================================================
+
+class TestBillingPaymentsEndpoint:
+    """Copilot review comment 1 — test coverage for GET /billing/payments."""
+
+    @pytest.mark.asyncio
+    async def test_get_payments_returns_success_and_list(self):
+        """GET /billing/payments should return {success: True, payments: [...]}."""
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from unittest.mock import patch, AsyncMock, MagicMock
+
+        import routes.billing as billing_module
+
+        test_app = FastAPI()
+        test_app.include_router(billing_module.router, prefix="/api")
+        client = TestClient(test_app, raise_server_exceptions=False)
+
+        fake_user = {"user_id": "user_test_123", "email": "test@example.com"}
+        sample_payments = [
+            {
+                "payment_id": "pay_abc123",
+                "user_id": "user_test_123",
+                "amount_cents": 1900,
+                "currency": "usd",
+                "tier": "pro",
+                "status": "succeeded",
+            },
+            {
+                "payment_id": "pay_def456",
+                "user_id": "user_test_123",
+                "amount_cents": 4900,
+                "currency": "usd",
+                "tier": "studio",
+                "status": "succeeded",
+            },
+        ]
+
+        # Build a mock cursor that supports .sort().limit().to_list()
+        mock_cursor = MagicMock()
+        mock_cursor.sort.return_value = mock_cursor
+        mock_cursor.limit.return_value = mock_cursor
+        mock_cursor.to_list = AsyncMock(return_value=sample_payments)
+
+        with patch("routes.billing.get_current_user", return_value=fake_user):
+            with patch("routes.billing.db") as mock_db:
+                mock_db.payments.find.return_value = mock_cursor
+
+                response = client.get(
+                    "/api/billing/payments",
+                    headers={"Authorization": "Bearer fake_token"},
+                )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert isinstance(data["payments"], list)
+        assert len(data["payments"]) == 2
+        assert data["payments"][0]["payment_id"] == "pay_abc123"
+
+    @pytest.mark.asyncio
+    async def test_get_payments_returns_empty_list_when_no_payments(self):
+        """GET /billing/payments should return empty list for users with no payments."""
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from unittest.mock import patch, AsyncMock, MagicMock
+
+        import routes.billing as billing_module
+
+        test_app = FastAPI()
+        test_app.include_router(billing_module.router, prefix="/api")
+        client = TestClient(test_app, raise_server_exceptions=False)
+
+        fake_user = {"user_id": "user_no_payments", "email": "empty@example.com"}
+
+        mock_cursor = MagicMock()
+        mock_cursor.sort.return_value = mock_cursor
+        mock_cursor.limit.return_value = mock_cursor
+        mock_cursor.to_list = AsyncMock(return_value=[])
+
+        with patch("routes.billing.get_current_user", return_value=fake_user):
+            with patch("routes.billing.db") as mock_db:
+                mock_db.payments.find.return_value = mock_cursor
+
+                response = client.get(
+                    "/api/billing/payments",
+                    headers={"Authorization": "Bearer fake_token"},
+                )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert isinstance(data["payments"], list)
+        assert len(data["payments"]) == 0

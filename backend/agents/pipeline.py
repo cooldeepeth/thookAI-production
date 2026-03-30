@@ -171,6 +171,8 @@ async def run_agent_pipeline(
             "current_agent": "error",
             "error": "Content generation timed out. Please try again.",
         })
+        logger.info("Job %s marked as error after timeout — returning early", job_id)
+        return
 
 
 async def _run_agent_pipeline_inner(

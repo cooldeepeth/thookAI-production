@@ -465,23 +465,10 @@ async def handle_checkout_completed(session: Dict[str, Any]):
                 "created_at": datetime.now(timezone.utc),
             })
     else:
-        # Subscription checkout - subscription.created event will handle tier update
-        tier = session.get("metadata", {}).get("tier", "pro")
-        tier_credits = TIER_PRICING.get(tier, {}).get("credits", 0)
-
-        # Record payment for subscription checkout
-        await db.payments.insert_one({
-            "payment_id": f"pay_{uuid.uuid4().hex[:12]}",
-            "user_id": user_id,
-            "stripe_invoice_id": session.get("invoice") or session.get("id"),
-            "amount_cents": session.get("amount_total", 0),
-            "currency": session.get("currency", "usd"),
-            "tier": tier,
-            "credits_granted": tier_credits,
-            "status": "succeeded",
-            "created_at": datetime.now(timezone.utc),
-        })
-        logger.info(f"Subscription checkout completed for user {user_id}")
+        # Subscription checkout - subscription.created event will handle tier update.
+        # Payment recording is handled by handle_payment_succeeded (invoice.payment_succeeded)
+        # to avoid duplicate payment entries.
+        logger.info(f"Subscription checkout completed for user {user_id} — payment will be recorded via invoice.payment_succeeded")
 
 
 async def handle_subscription_created(subscription: Dict[str, Any]):

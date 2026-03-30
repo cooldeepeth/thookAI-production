@@ -1,3 +1,8 @@
+/**
+ * Centralized API fetch wrapper with auth token injection and 401 handling.
+ * New code should use apiFetch() instead of raw fetch().
+ * Existing pages will be migrated progressively.
+ */
 const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
 
 export async function apiFetch(path, options = {}) {

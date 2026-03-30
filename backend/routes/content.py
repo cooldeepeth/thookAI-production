@@ -11,7 +11,7 @@ from database import db
 from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
 from agents.learning import capture_learning_signal
-from services.credits import deduct_credits, CreditOperation, get_credit_balance
+from services.credits import deduct_credits, CreditOperation
 
 # Celery task imports
 from tasks import is_redis_configured, get_task_status as celery_get_task_status
@@ -104,18 +104,14 @@ async def create_content(
     if data.content_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid content type for {data.platform}")
 
-    # Check credit balance before proceeding
+    # Deduct credits before proceeding — deduct_credits checks balance internally
     cost = CreditOperation.CONTENT_CREATE.value
-    balance_info = await get_credit_balance(current_user["user_id"])
-    available = balance_info.get("credits", 0) if balance_info.get("success") else 0
-    if available < cost:
+    deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CONTENT_CREATE)
+    if not deduct_result.get("success"):
+        available = deduct_result.get("available", 0)
         raise HTTPException(
             status_code=402,
-            detail={
-                "message": "Not enough credits",
-                "required": cost,
-                "available": available
-            }
+            detail=f"Not enough credits. Required: {cost}, available: {available}"
         )
 
     job_id = f"job_{uuid.uuid4().hex[:12]}"
@@ -737,18 +733,13 @@ async def regenerate_content(
     if regen_count >= 5:
         raise HTTPException(status_code=400, detail="Maximum regenerations reached (5)")
 
-    # Check credit balance before regeneration
+    # Deduct credits before regeneration — deduct_credits checks balance internally
     regen_cost = CreditOperation.CONTENT_REGENERATE.value
-    balance_info = await get_credit_balance(current_user["user_id"])
-    regen_available = balance_info.get("credits", 0) if balance_info.get("success") else 0
-    if regen_available < regen_cost:
+    deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CONTENT_REGENERATE)
+    if not deduct_result.get("success"):
         raise HTTPException(
             status_code=402,
-            detail={
-                "message": "Not enough credits",
-                "required": regen_cost,
-                "available": regen_available
-            }
+            detail=f"Not enough credits for regeneration. Required: {regen_cost}, available: {deduct_result.get('available', 0)}"
         )
     
     # Create new job as a regeneration

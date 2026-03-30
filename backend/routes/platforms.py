@@ -36,7 +36,12 @@ if settings.app.is_production and not settings.platforms.encryption_key:
         "ENCRYPTION_KEY must be set in production. "
         "Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
     )
-ENCRYPTION_KEY = settings.platforms.encryption_key or 'xuu5KYoINnNcaAwdyaVxOo6vlDGHurKAKjawbYGICO8='
+elif settings.platforms.encryption_key:
+    ENCRYPTION_KEY = settings.platforms.encryption_key
+else:
+    # Dev only: ephemeral key — tokens won't survive restart, which is fine for dev
+    ENCRYPTION_KEY = Fernet.generate_key().decode()
+    logger.warning("Using ephemeral ENCRYPTION_KEY — platform tokens will not survive restart")
 
 # Frontend URL for redirects
 FRONTEND_URL = settings.app.frontend_url

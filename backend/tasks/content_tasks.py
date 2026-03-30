@@ -350,12 +350,8 @@ async def _publish_to_platform(platform: str, content: str, token: dict) -> bool
             )
             return True
         except Exception as pub_exc:
-            logger.warning(
-                "[DEV] publish_to_platform raised for %s, simulating success: %s",
-                platform,
-                pub_exc,
-            )
-            return True
+            logger.warning("[DEV] publish_to_platform raised for %s: %s", platform, pub_exc)
+            return False  # Don't hide real errors
 
     except Exception as exc:
         logger.error("_publish_to_platform failed for %s: %s", platform, exc, exc_info=True)
@@ -408,8 +404,15 @@ def refresh_monthly_credits() -> Dict[str, Any]:
         threshold = datetime.now(timezone.utc) - timedelta(days=30)
         
         # Get all subscribers including free tier
+        # Only refresh credits for free users and paid users with active subscriptions
         users = await db.users.find({
-            "subscription_tier": {"$in": ["free", "pro", "studio", "agency"]}
+            "$or": [
+                {"subscription_tier": "free"},  # Free users always get renewal
+                {
+                    "subscription_tier": {"$in": ["pro", "studio", "agency"]},
+                    "subscription_status": "active"
+                }
+            ]
         }).to_list(length=1000)
         
         refreshed = 0
