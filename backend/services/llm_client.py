@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import os
 import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, List, Optional
+
+from config import settings
+
 
 class MessageRole(str, Enum):
     """Role of a message in a conversation (OpenAI-compatible string values)."""
@@ -115,13 +117,12 @@ async def _gemini_parts_async(text: str, images: Optional[List[str]]) -> List[An
 def _resolve_key(provider: str, constructor_key: str) -> str:
     p = provider.lower()
     if p == "openai":
-        return os.environ.get("OPENAI_API_KEY") or constructor_key
+        return settings.llm.openai_key or constructor_key
     if p == "anthropic":
-        return os.environ.get("ANTHROPIC_API_KEY") or constructor_key
+        return settings.llm.anthropic_key or constructor_key
     if p in ("google", "gemini"):
         return (
-            os.environ.get("GOOGLE_API_KEY")
-            or os.environ.get("GEMINI_API_KEY")
+            settings.llm.gemini_key
             or constructor_key
         )
     return constructor_key

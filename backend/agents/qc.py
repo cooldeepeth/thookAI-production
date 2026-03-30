@@ -61,6 +61,19 @@ async def run_qc(draft: str, persona_card: dict, platform: str, content_type: st
     Returns:
         QC scores and feedback
     """
+    # Fetch UOM directives for the QC agent (non-fatal)
+    uom_directives = {}
+    if user_id:
+        try:
+            from services.uom_service import get_agent_directives
+            uom_directives = await get_agent_directives(user_id, "qc")
+        except Exception:
+            pass
+
+    # UOM-aware thresholds (fall back to original hardcoded values)
+    persona_threshold = uom_directives.get("persona_match_threshold", 7)
+    ai_risk_threshold = uom_directives.get("ai_risk_threshold", 35)
+
     # Start with base QC
     if not openai_available():
         result = _mock_qc(draft)
@@ -70,7 +83,7 @@ async def run_qc(draft: str, persona_card: dict, platform: str, content_type: st
                 api_key=chat_constructor_key(),
                 session_id=f"qc-{uuid.uuid4().hex[:8]}",
                 system_message=QC_SYSTEM
-            ).with_model("openai", "gpt-4.1-mini")
+            ).with_model("openai", "gpt-4o-mini")
 
             prompt = QC_PROMPT.format(
                 platform=platform, content_type=content_type,
@@ -82,10 +95,10 @@ async def run_qc(draft: str, persona_card: dict, platform: str, content_type: st
             )
             response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=20.0)
             result = json.loads(_clean_json(response))
-            # Ensure overall_pass is computed correctly
+            # Ensure overall_pass is computed correctly using UOM-aware thresholds
             result["overall_pass"] = (
-                result.get("personaMatch", 0) >= 7 and
-                result.get("aiRisk", 100) <= 35 and
+                result.get("personaMatch", 0) >= persona_threshold and
+                result.get("aiRisk", 100) <= ai_risk_threshold and
                 result.get("platformFit", 0) >= 7
             )
         except Exception as e:

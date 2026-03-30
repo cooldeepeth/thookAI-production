@@ -496,10 +496,21 @@ async def generate_insights(
     Returns:
         AI-generated insights and recommendations
     """
+    # Fetch UOM directives for the Analyst agent (non-fatal)
+    uom_directives = {}
+    try:
+        from services.uom_service import get_agent_directives
+        uom_directives = await get_agent_directives(user_id, "analyst") if user_id else {}
+    except Exception:
+        pass
+
+    insight_depth = uom_directives.get("insight_depth", "detailed")
+    suggestion_count = uom_directives.get("suggestion_count", 3)
+
     # Get analytics data
     overview = await get_analytics_overview(user_id, days)
     trends = await get_performance_trends(user_id, days)
-    
+
     # Fetch persona-level performance intelligence (real calculated data or message)
     persona_perf = await get_persona_performance_data(user_id)
 
@@ -528,7 +539,7 @@ async def generate_insights(
             api_key=chat_constructor_key(),
             session_id=f"insights-{uuid.uuid4().hex[:8]}",
             system_message="You are a social media strategist. Analyze data and provide actionable insights. Return JSON only."
-        ).with_model("openai", "gpt-4.1-mini")
+        ).with_model("openai", "gpt-4o-mini")
         
         prompt = f"""Analyze this content performance data and provide strategic insights.
 
@@ -549,6 +560,10 @@ TREND: {trends.get('trend', 'unknown')}
 CONTENT DIVERSITY SCORE: {diversity.get('score', 'N/A')}/100
 HOOK FATIGUE: {hook_fatigue.get('has_fatigue', False)}
 OVERUSED HOOKS: {json.dumps(hook_fatigue.get('overused_hooks', []))}
+
+ANALYSIS PREFERENCES:
+- Insight depth: {insight_depth} (if "summary", be concise; if "detailed", provide thorough analysis)
+- Maximum recommendations: {suggestion_count}
 
 Return JSON:
 {{

@@ -279,7 +279,7 @@ async def _ai_analyze_hook(hook: str, platform: str, pattern_analysis: Dict) -> 
             api_key=chat_constructor_key(),
             session_id=f"viral-{uuid.uuid4().hex[:8]}",
             system_message="You are a viral content expert who analyzes hooks for social media. Return JSON only."
-        ).with_model("openai", "gpt-4.1-mini")
+        ).with_model("openai", "gpt-4o-mini")
         
         prompt = f"""Analyze this {platform.upper()} hook for viral potential.
 

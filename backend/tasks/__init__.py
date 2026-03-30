@@ -15,20 +15,22 @@ Usage:
     celery -A tasks.celery_app beat --loglevel=info
 """
 
-import os
 import logging
 from celery import Celery
 from datetime import datetime, timezone
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 # ============ CONFIGURATION ============
 
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', REDIS_URL)
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', REDIS_URL)
+REDIS_URL = settings.app.redis_url or 'redis://localhost:6379/0'
+CELERY_BROKER_URL = settings.app.celery_broker_url or REDIS_URL
+CELERY_RESULT_BACKEND = settings.app.celery_result_backend or REDIS_URL
 
 # Check if Redis is configured
+
+
 def is_redis_configured() -> bool:
     """Check if Redis is available for Celery."""
     if not REDIS_URL or REDIS_URL == 'redis://localhost:6379/0':

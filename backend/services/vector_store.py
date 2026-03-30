@@ -5,7 +5,6 @@ Handles:
 - Querying similar content for anti-repetition
 - Managing learning signals in vector DB
 """
-import os
 import logging
 import hashlib
 from datetime import datetime, timezone
@@ -15,9 +14,8 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-# NOTE: These use os.environ directly as they are not yet in config.py dataclasses
-PINECONE_ENVIRONMENT = os.environ.get('PINECONE_ENVIRONMENT', 'us-east-1')
-INDEX_NAME = os.environ.get('PINECONE_INDEX_NAME', 'thookai-personas')
+PINECONE_ENVIRONMENT = settings.pinecone.environment
+INDEX_NAME = settings.pinecone.index_name
 EMBEDDING_DIMENSION = 1536  # OpenAI text-embedding-3-small dimension
 
 # Global references

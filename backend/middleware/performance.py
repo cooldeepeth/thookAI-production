@@ -3,7 +3,7 @@ Performance Middleware for ThookAI
 
 Provides:
 - Response compression (gzip)
-- Response caching for static data
+- Response caching (Redis-backed, skips when unavailable)
 - Request timing
 """
 
@@ -13,11 +13,9 @@ import json
 import hashlib
 import logging
 from typing import Callable, Dict, Optional, Set
-from datetime import datetime, timedelta
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
-from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -104,31 +102,17 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         )
 
 
-class CacheEntry:
-    """Cache entry with expiration"""
-    def __init__(self, content: bytes, headers: dict, status_code: int, expires_at: datetime):
-        self.content = content
-        self.headers = headers
-        self.status_code = status_code
-        self.expires_at = expires_at
-        self.created_at = datetime.utcnow()
-    
-    @property
-    def is_expired(self) -> bool:
-        return datetime.utcnow() > self.expires_at
-
-
 class CacheMiddleware(BaseHTTPMiddleware):
     """
-    In-memory response caching for static/semi-static endpoints.
-    For production, consider Redis for distributed caching.
+    Response caching middleware backed by Redis.
+    Skips caching gracefully when Redis is unavailable (no fallback cache —
+    requests simply pass through uncached).
     """
-    
+
     def __init__(self, app, max_entries: int = 1000):
         super().__init__(app)
-        self.cache: Dict[str, CacheEntry] = {}
-        self.max_entries = max_entries
-        
+        self.max_entries = max_entries  # kept for API compat; Redis handles eviction via TTL
+
         # Cacheable endpoints with TTL in seconds
         self.cacheable_endpoints: Dict[str, int] = {
             '/api/templates/categories': 3600,      # 1 hour
@@ -140,85 +124,114 @@ class CacheMiddleware(BaseHTTPMiddleware):
             '/api/content/providers/summary': 300,  # 5 minutes
             '/api/persona/regional-english/options': 86400,  # 24 hours
         }
-    
-    def _get_cache_key(self, request: Request) -> str:
-        """Generate cache key from request"""
-        # Include query params in key
+
+    @staticmethod
+    def _get_cache_key(request: Request) -> str:
+        """Generate a Redis key from the request.  Pattern: cache:{method}:{path}:{query_hash}"""
         query = str(sorted(request.query_params.items()))
-        key_data = f"{request.method}:{request.url.path}:{query}"
-        return hashlib.md5(key_data.encode()).hexdigest()
-    
-    def _cleanup_expired(self):
-        """Remove expired cache entries"""
-        expired_keys = [k for k, v in self.cache.items() if v.is_expired]
-        for key in expired_keys:
-            del self.cache[key]
-        
-        # If still over limit, remove oldest entries
-        if len(self.cache) > self.max_entries:
-            sorted_entries = sorted(self.cache.items(), key=lambda x: x[1].created_at)
-            entries_to_remove = len(self.cache) - self.max_entries
-            for key, _ in sorted_entries[:entries_to_remove]:
-                del self.cache[key]
-    
+        query_hash = hashlib.md5(query.encode()).hexdigest()
+        return f"cache:{request.method}:{request.url.path}:{query_hash}"
+
+    # ------------------------------------------------------------------
+    # Redis helpers
+    # ------------------------------------------------------------------
+    async def _get_from_redis(self, redis_client, cache_key: str) -> Optional[dict]:
+        """Fetch a cached response from Redis.  Returns parsed dict or None."""
+        raw = await redis_client.get(cache_key)
+        if raw is None:
+            return None
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+    async def _set_in_redis(
+        self, redis_client, cache_key: str, data: dict, ttl: int
+    ) -> None:
+        """Store a serialised response in Redis with the given TTL."""
+        await redis_client.set(cache_key, json.dumps(data), ex=ttl)
+
+    # ------------------------------------------------------------------
+    # Dispatch
+    # ------------------------------------------------------------------
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Only cache GET requests
         if request.method != 'GET':
             return await call_next(request)
-        
+
         # Check if endpoint is cacheable
         path = request.url.path
         ttl = self.cacheable_endpoints.get(path)
         if ttl is None:
             return await call_next(request)
-        
-        # Check cache
+
         cache_key = self._get_cache_key(request)
-        cached = self.cache.get(cache_key)
-        
-        if cached and not cached.is_expired:
-            logger.debug(f"Cache hit for {path}")
-            headers = dict(cached.headers)
-            headers['X-Cache'] = 'HIT'
-            return Response(
-                content=cached.content,
-                status_code=cached.status_code,
-                headers=headers,
-                media_type='application/json'
-            )
-        
-        # Get fresh response
+
+        # --- Try to serve from Redis cache ---
+        redis_client = None
+        try:
+            from middleware.redis_client import get_redis
+            redis_client = await get_redis()
+        except Exception as exc:
+            logger.warning("Redis unavailable for cache lookup: %s", exc)
+
+        if redis_client is not None:
+            try:
+                cached = await self._get_from_redis(redis_client, cache_key)
+                if cached is not None:
+                    logger.debug(f"Cache hit for {path}")
+                    headers = cached.get("headers", {})
+                    headers['X-Cache'] = 'HIT'
+                    return Response(
+                        content=cached["body"].encode("utf-8") if isinstance(cached["body"], str) else cached["body"],
+                        status_code=cached.get("status_code", 200),
+                        headers=headers,
+                        media_type='application/json'
+                    )
+            except Exception as exc:
+                logger.warning("Redis cache read failed, skipping cache: %s", exc)
+
+        # --- Cache miss: get fresh response ---
         response = await call_next(request)
-        
+
         # Only cache successful responses
         if response.status_code == 200:
-            # Get response body
             body = b''
             async for chunk in response.body_iterator:
                 body += chunk
-            
-            # Store in cache
-            self._cleanup_expired()
-            self.cache[cache_key] = CacheEntry(
-                content=body,
-                headers=dict(response.headers),
-                status_code=response.status_code,
-                expires_at=datetime.utcnow() + timedelta(seconds=ttl)
-            )
-            
-            logger.debug(f"Cached response for {path} (TTL: {ttl}s)")
-            
+
+            # Try to store in Redis
+            if redis_client is not None:
+                try:
+                    await self._set_in_redis(
+                        redis_client,
+                        cache_key,
+                        {
+                            "body": body.decode("utf-8", errors="replace"),
+                            "status_code": response.status_code,
+                            "headers": {
+                                k: v
+                                for k, v in response.headers.items()
+                                if k.lower() not in ("content-length", "transfer-encoding")
+                            },
+                        },
+                        ttl,
+                    )
+                    logger.debug(f"Cached response for {path} in Redis (TTL: {ttl}s)")
+                except Exception as exc:
+                    logger.warning("Redis cache write failed: %s", exc)
+
             headers = dict(response.headers)
             headers['X-Cache'] = 'MISS'
             headers['Cache-Control'] = f'public, max-age={ttl}'
-            
+
             return Response(
                 content=body,
                 status_code=response.status_code,
                 headers=headers,
                 media_type=response.media_type
             )
-        
+
         return response
 
 

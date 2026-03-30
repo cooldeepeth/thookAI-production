@@ -151,6 +151,15 @@ async def run_writer(
     media_system_suffix: str = "",
     user_id: str = "",
 ) -> dict:
+    # Fetch UOM directives for the Writer agent (non-fatal)
+    uom_directives = {}
+    if user_id:
+        try:
+            from services.uom_service import get_agent_directives
+            uom_directives = await get_agent_directives(user_id, "writer")
+        except Exception:
+            pass
+
     if not anthropic_available():
         return _mock_writer(platform, content_type, persona_card)
     try:
@@ -195,6 +204,20 @@ async def run_writer(
             platform_rules=PLATFORM_RULES.get(platform.lower(), PLATFORM_RULES["linkedin"]),
             word_count=commander_output.get("estimated_word_count", 200)
         )
+
+        # Inject UOM adaptive style directives when available
+        if uom_directives:
+            uom_section = (
+                "\n\nADAPTIVE STYLE DIRECTIVES:"
+                f"\n- Tone intensity: {uom_directives.get('tone_intensity', 'confident')}"
+                f"\n- Vocabulary depth: {uom_directives.get('vocabulary_depth', 'intermediate')}"
+                f"\n- Content length preference: {uom_directives.get('content_length', 'standard')}"
+                f"\n- Emotional energy: {uom_directives.get('emotional_energy', 'moderate')}"
+                f"\n- CTA style: {uom_directives.get('cta_aggressiveness', 'moderate')}"
+            )
+            prompt = prompt + uom_section
+            logger.info("UOM adaptive style directives injected into Writer prompt")
+
         draft = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=30.0)
         word_count = len(draft.split())
         return {"draft": draft.strip(), "word_count": word_count, "character_count": len(draft), "platform": platform, "regional_english": regional_english}

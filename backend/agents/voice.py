@@ -4,7 +4,6 @@ Converts text to audio narration using multiple AI providers.
 Supports: ElevenLabs, OpenAI TTS, Play.ht, Murf, Resemble, Google TTS
 Also supports voice cloning via ElevenLabs "Add Voice" API.
 """
-import os
 import base64
 import asyncio
 import logging
@@ -156,8 +155,8 @@ async def _generate_openai_tts(text: str, voice_id: str, model: str = "tts-1-hd"
 
 async def _generate_playht(text: str, voice_id: str) -> Dict[str, Any]:
     """Generate voice using Play.ht."""
-    api_key = os.environ.get('PLAYHT_API_KEY', '')
-    user_id = os.environ.get('PLAYHT_USER_ID', '')
+    api_key = settings.voice.playht_api_key or ''
+    user_id = settings.voice.playht_user_id or ''
     if not _valid_key(api_key) or not _valid_key(user_id):
         return {"generated": False, "error": "no_key", "provider": "playht"}
     
@@ -204,7 +203,7 @@ async def _generate_playht(text: str, voice_id: str) -> Dict[str, Any]:
 
 async def _generate_google_tts(text: str, voice_id: str) -> Dict[str, Any]:
     """Generate voice using Google Cloud TTS."""
-    api_key = os.environ.get('GOOGLE_TTS_API_KEY', '')
+    api_key = settings.voice.google_tts_api_key or ''
     if not _valid_key(api_key):
         return {"generated": False, "error": "no_key", "provider": "google_tts"}
     

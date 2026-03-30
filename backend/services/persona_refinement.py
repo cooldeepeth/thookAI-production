@@ -237,7 +237,7 @@ async def suggest_persona_updates(user_id: str) -> Dict[str, Any]:
             api_key=chat_constructor_key(),
             session_id=f"refine-{uuid.uuid4().hex[:8]}",
             system_message="You are a personal branding expert. Suggest persona refinements based on data. Return JSON only."
-        ).with_model("openai", "gpt-4.1-mini")
+        ).with_model("openai", "gpt-4o-mini")
         
         prompt = f"""Suggest persona card updates based on this data.
 

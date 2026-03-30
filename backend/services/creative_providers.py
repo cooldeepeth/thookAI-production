@@ -7,10 +7,11 @@ Supports multiple providers for:
 
 Provides automatic fallback and load distribution.
 """
-import os
 import logging
 from typing import Dict, Any, List, Optional, Literal
 from enum import Enum
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,30 @@ def _valid_key(key: str) -> bool:
 
 
 def _env_value_for_config(env_key: str) -> str:
-    """Resolve env value; OpenAI image/TTS accept OPENAI_API_KEY or legacy EMERGENT_LLM_KEY."""
-    if env_key == "EMERGENT_LLM_KEY":
-        return os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY") or ""
-    if env_key == "FAL_API_KEY":
-        return os.environ.get("FAL_KEY") or os.environ.get("FAL_API_KEY") or ""
-    return os.environ.get(env_key, "") or ""
+    """Resolve config value from settings; maps provider env_key names to settings attributes."""
+    _ENV_KEY_MAP = {
+        "EMERGENT_LLM_KEY": settings.llm.openai_key or settings.llm.emergent_key or "",
+        "OPENAI_API_KEY": settings.llm.openai_key or "",
+        "FAL_KEY": settings.video.fal_key or "",
+        "FAL_API_KEY": settings.video.fal_key or "",
+        "STABILITY_API_KEY": "",  # Not yet in config dataclasses
+        "REPLICATE_API_TOKEN": "",  # Not yet in config dataclasses
+        "LEONARDO_API_KEY": "",  # Not yet in config dataclasses
+        "IDEOGRAM_API_KEY": "",  # Not yet in config dataclasses
+        "RUNWAY_API_KEY": settings.video.runway_api_key or "",
+        "KLING_API_KEY": settings.video.kling_api_key or "",
+        "PIKA_API_KEY": settings.video.pika_api_key or "",
+        "LUMA_API_KEY": settings.video.luma_api_key or "",
+        "HEYGEN_API_KEY": settings.video.heygen_api_key or "",
+        "DID_API_KEY": settings.video.did_api_key or "",
+        "SYNTHESIA_API_KEY": "",  # Not yet in config dataclasses
+        "ELEVENLABS_API_KEY": settings.llm.elevenlabs_key or "",
+        "PLAYHT_API_KEY": settings.voice.playht_api_key or "",
+        "MURF_API_KEY": "",  # Not yet in config dataclasses
+        "RESEMBLE_API_KEY": "",  # Not yet in config dataclasses
+        "GOOGLE_TTS_API_KEY": settings.voice.google_tts_api_key or "",
+    }
+    return _ENV_KEY_MAP.get(env_key, "")
 
 
 # ============ PROVIDER CONFIGURATIONS ============

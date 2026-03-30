@@ -92,7 +92,17 @@ async def run_thinker(
     scout_output: dict,
     persona_card: dict,
     fatigue_context: Optional[dict] = None,
+    user_id: str = "",
 ) -> dict:
+    # Fetch UOM directives for the Thinker agent (non-fatal)
+    uom_directives = {}
+    if user_id:
+        try:
+            from services.uom_service import get_agent_directives
+            uom_directives = await get_agent_directives(user_id, "thinker")
+        except Exception:
+            pass
+
     if not openai_available():
         return _mock_thinker(raw_input, commander_output)
     try:
@@ -100,7 +110,7 @@ async def run_thinker(
             api_key=chat_constructor_key(),
             session_id=f"thinker-{uuid.uuid4().hex[:8]}",
             system_message="You are the Thinker Agent for ThookAI. Return only valid JSON, no markdown."
-        ).with_model("openai", "o4-mini")
+        ).with_model("openai", "gpt-4o-mini")
 
         prompt = THINKER_PROMPT.format(
             raw_input=raw_input,
@@ -109,6 +119,17 @@ async def run_thinker(
             content_niche=persona_card.get("content_niche_signature", "Thought leadership"),
             platform=commander_output.get("content_type", "post")
         )
+
+        # Inject UOM constraints when directives are available
+        if uom_directives:
+            uom_section = (
+                "\n\nUOM CONSTRAINTS:"
+                f"\n- Risk level: {uom_directives.get('risk_level', 'medium')}"
+                f"\n- Hook complexity: {uom_directives.get('hook_complexity', 'advanced')}"
+                f"\n- Maximum hook options: {uom_directives.get('max_options', 3)}"
+            )
+            prompt = prompt + uom_section
+            logger.info("UOM constraints injected into Thinker prompt")
 
         # Inject fatigue shield constraints when fatigue is detected
         fatigue_section = _build_fatigue_prompt_section(fatigue_context)

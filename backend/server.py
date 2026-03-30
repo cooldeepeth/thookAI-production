@@ -46,6 +46,7 @@ from routes.notifications import router as notifications_router
 from routes.webhooks import router as webhooks_router
 from routes.campaigns import router as campaigns_router
 from routes.admin import router as admin_router
+from routes.uom import router as uom_router
 
 
 # Setup logging
@@ -142,14 +143,21 @@ async def lifespan(app: FastAPI):
     
     # ==================== SHUTDOWN ====================
     logger.info("Shutting down ThookAI API...")
-    
+
+    try:
+        from middleware.redis_client import close_redis
+        await close_redis()
+        logger.info("Middleware Redis connection closed")
+    except Exception as e:
+        logger.error(f"Error closing middleware Redis connection: {e}")
+
     try:
         from database import client
         client.close()
         logger.info("Database connection closed")
     except Exception as e:
         logger.error(f"Error closing database connection: {e}")
-    
+
     logger.info("ThookAI API shutdown complete")
 
 
@@ -195,6 +203,7 @@ api_router.include_router(uploads_router)
 api_router.include_router(notifications_router)
 api_router.include_router(webhooks_router)
 api_router.include_router(campaigns_router)
+api_router.include_router(uom_router)
 
 # Admin dashboard — hidden from Swagger, requires admin role
 app.include_router(admin_router, prefix="/api/admin", include_in_schema=False)

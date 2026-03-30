@@ -176,12 +176,55 @@ class StripeConfig:
 
 
 @dataclass
+class VideoProviderConfig:
+    """Video generation provider configuration"""
+    runway_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('RUNWAY_API_KEY'))
+    kling_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('KLING_API_KEY'))
+    luma_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('LUMA_API_KEY'))
+    pika_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('PIKA_API_KEY'))
+    heygen_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('HEYGEN_API_KEY'))
+    did_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('DID_API_KEY'))
+    fal_key: Optional[str] = field(default_factory=lambda: os.environ.get('FAL_KEY'))
+
+
+@dataclass
+class VoiceProviderConfig:
+    """Voice/audio generation provider configuration"""
+    playht_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('PLAYHT_API_KEY'))
+    playht_user_id: Optional[str] = field(default_factory=lambda: os.environ.get('PLAYHT_USER_ID'))
+    google_tts_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('GOOGLE_TTS_API_KEY'))
+
+
+@dataclass
+class PlatformOAuthConfig:
+    """Social platform OAuth configuration"""
+    linkedin_client_id: Optional[str] = field(default_factory=lambda: os.environ.get('LINKEDIN_CLIENT_ID'))
+    linkedin_client_secret: Optional[str] = field(default_factory=lambda: os.environ.get('LINKEDIN_CLIENT_SECRET'))
+    meta_app_id: Optional[str] = field(default_factory=lambda: os.environ.get('META_APP_ID'))
+    meta_app_secret: Optional[str] = field(default_factory=lambda: os.environ.get('META_APP_SECRET'))
+    twitter_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('TWITTER_API_KEY'))
+    twitter_api_secret: Optional[str] = field(default_factory=lambda: os.environ.get('TWITTER_API_SECRET'))
+    encryption_key: Optional[str] = field(default_factory=lambda: os.environ.get('ENCRYPTION_KEY'))
+
+
+@dataclass
+class PineconeConfig:
+    """Pinecone vector store configuration"""
+    environment: str = field(default_factory=lambda: os.environ.get('PINECONE_ENVIRONMENT', 'us-east-1'))
+    index_name: str = field(default_factory=lambda: os.environ.get('PINECONE_INDEX_NAME', 'thookai-personas'))
+
+
+@dataclass
 class AppConfig:
     """Application configuration"""
     environment: str = field(default_factory=lambda: os.environ.get('ENVIRONMENT', 'development'))
     debug: bool = field(default_factory=lambda: os.environ.get('DEBUG', 'false').lower() == 'true')
     log_level: str = field(default_factory=lambda: os.environ.get('LOG_LEVEL', 'INFO'))
     redis_url: Optional[str] = field(default_factory=lambda: os.environ.get('REDIS_URL'))
+    celery_broker_url: Optional[str] = field(default_factory=lambda: os.environ.get('CELERY_BROKER_URL'))
+    celery_result_backend: Optional[str] = field(default_factory=lambda: os.environ.get('CELERY_RESULT_BACKEND'))
+    frontend_url: str = field(default_factory=lambda: os.environ.get('FRONTEND_URL', 'http://localhost:3000'))
+    backend_url: str = field(default_factory=lambda: os.environ.get('BACKEND_URL', 'http://localhost:8001'))
     sentry_dsn: Optional[str] = field(default_factory=lambda: os.environ.get('SENTRY_DSN'))
     
     @property
@@ -204,6 +247,10 @@ class Settings:
     email: EmailConfig = field(default_factory=EmailConfig)
     google: GoogleConfig = field(default_factory=GoogleConfig)
     stripe: StripeConfig = field(default_factory=StripeConfig)
+    video: VideoProviderConfig = field(default_factory=VideoProviderConfig)
+    voice: VoiceProviderConfig = field(default_factory=VoiceProviderConfig)
+    platforms: PlatformOAuthConfig = field(default_factory=PlatformOAuthConfig)
+    pinecone: PineconeConfig = field(default_factory=PineconeConfig)
 
     def validate(self) -> dict:
         """

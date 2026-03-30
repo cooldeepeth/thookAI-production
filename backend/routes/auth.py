@@ -4,13 +4,13 @@ from jose import jwt
 from datetime import datetime, timezone, timedelta
 from pymongo import WriteConcern
 import uuid
-import os
 from database import db
 from auth_utils import hash_password, verify_password, get_current_user
+from config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'thook-dev-secret')
+SECRET_KEY = settings.security.jwt_secret_key or 'thook-dev-secret'
 ALGORITHM = "HS256"
 EXPIRE_DAYS = 7
 

@@ -8,20 +8,22 @@ Handles:
 - Customer management
 """
 
-import os
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 from database import db
+from config import settings
 
 logger = logging.getLogger(__name__)
 
-# Stripe API key from environment
-STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
-STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
-STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
+# Stripe API keys from config
+STRIPE_SECRET_KEY = settings.stripe.secret_key or ''
+STRIPE_WEBHOOK_SECRET = settings.stripe.webhook_secret or ''
+STRIPE_PUBLISHABLE_KEY = settings.stripe.publishable_key or ''
 
 # Check if Stripe is configured
+
+
 def is_stripe_configured() -> bool:
     """Check if Stripe is properly configured."""
     return bool(STRIPE_SECRET_KEY and not STRIPE_SECRET_KEY.startswith('placeholder'))
@@ -46,19 +48,19 @@ else:
 # Stripe Price IDs - Create these in your Stripe Dashboard
 # Format: price_xxxxxxxxxxxxxxxxxx
 PRICE_IDS = {
-    "pro_monthly": os.environ.get('STRIPE_PRICE_PRO_MONTHLY', ''),
-    "pro_annual": os.environ.get('STRIPE_PRICE_PRO_ANNUAL', ''),
-    "studio_monthly": os.environ.get('STRIPE_PRICE_STUDIO_MONTHLY', ''),
-    "studio_annual": os.environ.get('STRIPE_PRICE_STUDIO_ANNUAL', ''),
-    "agency_monthly": os.environ.get('STRIPE_PRICE_AGENCY_MONTHLY', ''),
-    "agency_annual": os.environ.get('STRIPE_PRICE_AGENCY_ANNUAL', ''),
+    "pro_monthly": settings.stripe.price_pro_monthly or '',
+    "pro_annual": settings.stripe.price_pro_annual or '',
+    "studio_monthly": settings.stripe.price_studio_monthly or '',
+    "studio_annual": settings.stripe.price_studio_annual or '',
+    "agency_monthly": settings.stripe.price_agency_monthly or '',
+    "agency_annual": settings.stripe.price_agency_annual or '',
 }
 
 # Credit package prices (one-time)
 CREDIT_PACKAGES = {
-    "small": {"credits": 100, "price": 1000, "stripe_price": os.environ.get('STRIPE_PRICE_CREDITS_100', '')},
-    "medium": {"credits": 500, "price": 4500, "stripe_price": os.environ.get('STRIPE_PRICE_CREDITS_500', '')},
-    "large": {"credits": 1000, "price": 8000, "stripe_price": os.environ.get('STRIPE_PRICE_CREDITS_1000', '')},
+    "small": {"credits": 100, "price": 1000, "stripe_price": settings.stripe.price_credits_100 or ''},
+    "medium": {"credits": 500, "price": 4500, "stripe_price": settings.stripe.price_credits_500 or ''},
+    "large": {"credits": 1000, "price": 8000, "stripe_price": settings.stripe.price_credits_1000 or ''},
 }
 
 # Tier pricing in cents
@@ -162,8 +164,8 @@ async def create_checkout_session(
             payment_method_types=["card"],
             line_items=[{"price": price_id, "quantity": 1}],
             mode="subscription",
-            success_url=success_url or f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/dashboard?subscription=success",
-            cancel_url=cancel_url or f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/settings?subscription=cancelled",
+            success_url=success_url or f"{settings.app.frontend_url}/dashboard?subscription=success",
+            cancel_url=cancel_url or f"{settings.app.frontend_url}/settings?subscription=cancelled",
             metadata={
                 "user_id": user_id,
                 "tier": tier,
@@ -240,8 +242,8 @@ async def create_credit_checkout(
             payment_method_types=["card"],
             line_items=line_items,
             mode="payment",
-            success_url=success_url or f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/settings?credits=success",
-            cancel_url=cancel_url or f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/settings?credits=cancelled",
+            success_url=success_url or f"{settings.app.frontend_url}/settings?credits=success",
+            cancel_url=cancel_url or f"{settings.app.frontend_url}/settings?credits=cancelled",
             metadata={
                 "user_id": user_id,
                 "type": "credit_purchase",
@@ -546,7 +548,7 @@ async def create_customer_portal_session(user_id: str, return_url: str = None) -
     try:
         session = stripe.billing_portal.Session.create(
             customer=user["stripe_customer_id"],
-            return_url=return_url or f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/settings"
+            return_url=return_url or f"{settings.app.frontend_url}/settings"
         )
         return {"success": True, "portal_url": session.url}
     except Exception as e:
