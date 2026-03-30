@@ -31,7 +31,17 @@ META_APP_ID = settings.platforms.meta_app_id or ''
 META_APP_SECRET = settings.platforms.meta_app_secret or ''
 TWITTER_API_KEY = settings.platforms.twitter_api_key or ''
 TWITTER_API_SECRET = settings.platforms.twitter_api_secret or ''
-ENCRYPTION_KEY = settings.platforms.encryption_key or Fernet.generate_key().decode()
+if settings.app.is_production and not settings.platforms.encryption_key:
+    raise RuntimeError(
+        "ENCRYPTION_KEY must be set in production. "
+        "Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+    )
+elif settings.platforms.encryption_key:
+    ENCRYPTION_KEY = settings.platforms.encryption_key
+else:
+    # Dev only: ephemeral key — tokens won't survive restart, which is fine for dev
+    ENCRYPTION_KEY = Fernet.generate_key().decode()
+    logger.warning("Using ephemeral ENCRYPTION_KEY — platform tokens will not survive restart")
 
 # Frontend URL for redirects
 FRONTEND_URL = settings.app.frontend_url

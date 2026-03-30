@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
@@ -19,26 +20,28 @@ import Admin from "./Admin";
 import AdminUsers from "./AdminUsers";
 
 export default function Dashboard() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex bg-[#050505] min-h-screen" data-testid="dashboard-layout">
-      <Sidebar />
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
         <Routes>
-          <Route path="/" element={<><TopBar title="Dashboard" /><DashboardHome /></>} />
-          <Route path="/studio" element={<><TopBar title="Content Studio" /><ContentStudio /></>} />
-          <Route path="/persona" element={<><TopBar title="Persona Engine" /><PersonaEngine /></>} />
-          <Route path="/repurpose" element={<><TopBar title="Repurpose Agent" /><RepurposeAgent /></>} />
-          <Route path="/calendar" element={<><TopBar title="Content Calendar" /><ContentCalendar /></>} />
-          <Route path="/analytics" element={<><TopBar title="Analytics" /><Analytics /></>} />
-          <Route path="/library" element={<><TopBar title="Content Library" /><ContentLibrary /></>} />
-          <Route path="/connections" element={<><TopBar title="Platform Connections" /><Connections /></>} />
-          <Route path="/agency" element={<><TopBar title="Agency Workspace" /><AgencyWorkspace /></>} />
-          <Route path="/templates" element={<><TopBar title="Templates Marketplace" /><Templates /></>} />
-          <Route path="/templates/:templateId" element={<><TopBar title="Template Detail" /><TemplateDetail /></>} />
-          <Route path="/campaigns" element={<><TopBar title="Campaigns" /><Campaigns /></>} />
-          <Route path="/settings" element={<><TopBar title="Settings" /><Settings /></>} />
-          <Route path="/admin" element={<><TopBar title="Admin Dashboard" /><Admin /></>} />
-          <Route path="/admin/users" element={<><TopBar title="User Management" /><AdminUsers /></>} />
+          <Route path="/" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Dashboard" /><DashboardHome /></>} />
+          <Route path="/studio" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Content Studio" /><ContentStudio /></>} />
+          <Route path="/persona" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Persona Engine" /><PersonaEngine /></>} />
+          <Route path="/repurpose" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Repurpose Agent" /><RepurposeAgent /></>} />
+          <Route path="/calendar" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Content Calendar" /><ContentCalendar /></>} />
+          <Route path="/analytics" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Analytics" /><Analytics /></>} />
+          <Route path="/library" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Content Library" /><ContentLibrary /></>} />
+          <Route path="/connections" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Platform Connections" /><Connections /></>} />
+          <Route path="/agency" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Agency Workspace" /><AgencyWorkspace /></>} />
+          <Route path="/templates" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Templates Marketplace" /><Templates /></>} />
+          <Route path="/templates/:templateId" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Template Detail" /><TemplateDetail /></>} />
+          <Route path="/campaigns" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Campaigns" /><Campaigns /></>} />
+          <Route path="/settings" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Settings" /><Settings /></>} />
+          <Route path="/admin" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Admin Dashboard" /><Admin /></>} />
+          <Route path="/admin/users" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="User Management" /><AdminUsers /></>} />
         </Routes>
       </div>
     </div>

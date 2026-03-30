@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, ArrowRight, Check, ChevronRight, Play } from "lucide-react";
+import { Zap, ArrowRight, Check, ChevronRight } from "lucide-react";
 
 // ─── Navbar ──────────────────────────────────────────────
 function Navbar() {
@@ -91,15 +91,13 @@ function Hero() {
             Get Started
             <ArrowRight size={16} />
           </button>
-          <a 
-            href="https://www.youtube.com/watch?v=YOUR_DEMO_VIDEO_ID" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            data-testid="hero-cta-secondary" 
+          <a
+            href="#features"
+            data-testid="hero-cta-secondary"
             className="btn-ghost text-base flex items-center gap-2"
           >
-            <Play size={16} className="text-lime" />
-            <span>Watch 2-min demo</span>
+            <ChevronRight size={16} className="text-lime" />
+            <span>See how it works</span>
           </a>
         </motion.div>
 

@@ -157,6 +157,20 @@ async def purchase_credits(
     }
 
 
+# ============ PAYMENT HISTORY ============
+
+@router.get("/payments")
+async def get_payment_history(
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Get user's payment history from db.payments."""
+    payments = await db.payments.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    return {"success": True, "payments": payments}
+
+
 # ============ SUBSCRIPTION ENDPOINTS ============
 
 @router.get("/subscription")
@@ -238,22 +252,44 @@ async def upgrade_subscription(
 ) -> Dict[str, Any]:
     """
     Upgrade subscription tier.
-    
-    For Stripe Checkout, use /subscription/checkout instead.
-    This endpoint handles simulated upgrades when Stripe is not configured.
+
+    - If user already has a Stripe subscription, modify it in-place (proration).
+    - If not, create a new Stripe Checkout session.
+    - Falls back to simulated upgrade when Stripe is not configured.
     """
     from services.subscriptions import upgrade_subscription as do_upgrade
-    from services.stripe_service import is_stripe_configured, create_checkout_session
-    
+    from services.stripe_service import is_stripe_configured, create_checkout_session, modify_subscription
+
     valid_tiers = ["free", "pro", "studio", "agency"]
     if request.tier not in valid_tiers:
         raise HTTPException(status_code=400, detail=f"Invalid tier. Choose from: {valid_tiers}")
-    
+
     if request.billing_period not in ["monthly", "annual"]:
         raise HTTPException(status_code=400, detail="Billing period must be 'monthly' or 'annual'")
-    
-    # For paid tiers with Stripe, redirect to checkout
+
+    # For paid tiers with Stripe configured
     if request.tier != "free" and is_stripe_configured():
+        # Check if user already has an active Stripe subscription
+        user = await db.users.find_one(
+            {"user_id": current_user["user_id"]},
+            {"stripe_subscription_id": 1}
+        )
+        if user and user.get("stripe_subscription_id"):
+            # Modify existing subscription (immediate upgrade/downgrade with proration)
+            result = await modify_subscription(
+                user_id=current_user["user_id"],
+                new_tier=request.tier,
+                billing_period=request.billing_period,
+            )
+            if not result.get("success"):
+                raise HTTPException(status_code=400, detail=result.get("error"))
+            return {
+                "success": True,
+                "new_tier": result.get("new_tier"),
+                "message": f"Subscription updated to {request.tier} with proration",
+            }
+
+        # No existing subscription -- create a new Checkout session
         result = await create_checkout_session(
             user_id=current_user["user_id"],
             email=current_user.get("email", ""),
@@ -266,17 +302,17 @@ async def upgrade_subscription(
             "checkout_url": result.get("checkout_url"),
             "message": "Redirecting to Stripe checkout"
         }
-    
+
     # Simulated upgrade (or downgrade to free)
     result = await do_upgrade(
         user_id=current_user["user_id"],
         new_tier=request.tier,
         billing_period=request.billing_period
     )
-    
+
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
-    
+
     return result
 
 

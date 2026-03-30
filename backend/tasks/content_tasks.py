@@ -12,6 +12,7 @@ import logging
 import asyncio
 from datetime import datetime, timezone, timedelta
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,8 @@ def run_async(coro):
 
 # ============ CONTENT PIPELINE ============
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=30)
+@shared_task(bind=True, max_retries=2, default_retry_delay=30,
+             soft_time_limit=240, time_limit=300)
 def run_content_pipeline(
     self,
     job_id: str,
@@ -41,14 +43,18 @@ def run_content_pipeline(
 ) -> Dict[str, Any]:
     """
     Run the full content generation pipeline asynchronously.
-    
+
     Pipeline: Commander → Scout → Thinker → Writer → QC
+
+    Time limits:
+    - soft_time_limit=240s — raises SoftTimeLimitExceeded, allowing graceful cleanup
+    - time_limit=300s — hard kill by the Celery worker if soft limit is not honoured
     """
     logger.info(f"Starting content pipeline task for job {job_id}")
-    
+
     async def _run_pipeline():
         from agents.pipeline import run_agent_pipeline
-        
+
         try:
             await run_agent_pipeline(
                 job_id=job_id,
@@ -62,9 +68,29 @@ def run_content_pipeline(
         except Exception as e:
             logger.error(f"Content pipeline failed for job {job_id}: {e}")
             raise
-    
+
     try:
         return run_async(_run_pipeline())
+    except SoftTimeLimitExceeded:
+        logger.error(f"Content pipeline soft time limit exceeded for job {job_id}")
+        # Mark job as timed out in the DB (synchronous fallback since the
+        # event loop used by run_async has been torn down at this point).
+        async def _mark_timeout():
+            from database import db
+            await db.content_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {
+                    "status": "error",
+                    "current_agent": "error",
+                    "error": "Content generation timed out. Please try again.",
+                    "updated_at": datetime.now(timezone.utc),
+                }},
+            )
+        try:
+            run_async(_mark_timeout())
+        except Exception:
+            logger.exception("Failed to mark timed-out job %s as error", job_id)
+        return {"success": False, "job_id": job_id, "error": "timeout"}
     except Exception as exc:
         raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries))
 
@@ -132,8 +158,7 @@ def process_scheduled_posts() -> Dict[str, Any]:
                         )
                     continue
                 
-                # Attempt to publish (placeholder - implement actual API calls)
-                # In production, this would call platform-specific publishing APIs
+                # Publish via real platform APIs (production) or simulation (dev)
                 success = await _publish_to_platform(
                     platform=platform,
                     content=post.get("content"),
@@ -249,9 +274,12 @@ async def _publish_to_platform(platform: str, content: str, token: dict) -> bool
     """
     Publish content to a social platform.
 
-    Delegates to the publisher agent for real API calls.
+    In production: delegates to the real publisher agent.  Never simulates.
+    In dev/test: falls back to simulation if the publisher module is missing.
     Returns False on any error (never raises).
     """
+    from config import settings
+
     try:
         # Check if token is valid/not expired
         if token.get("expires_at"):
@@ -262,59 +290,70 @@ async def _publish_to_platform(platform: str, content: str, token: dict) -> bool
                 logger.warning("Token expired for platform %s", platform)
                 return False
 
-        # Delegate to publisher agent instead of simulating.
-        try:
-            import agents.publisher as publisher
-        except ImportError:
-            logger.warning(
-                "[SIMULATED] Publishing to %s (publisher agent module not available): %s...",
-                platform,
-                content[:50],
-            )
-            return True
+        access_token = token.get("access_token", "")
+        user_id = token.get("user_id", "")
 
-        # Use publish_to_platform if it exists; otherwise dispatch via publish_content.
-        publish_fn = getattr(publisher, "publish_to_platform", None)
-        if publish_fn is not None:
+        # --- Production: always call the real publisher, no simulation ---
+        if settings.app.is_production:
+            from agents.publisher import publish_to_platform
+
             try:
-                result = await publish_fn(
+                result = await publish_to_platform(
                     platform=platform,
                     content=content,
-                    access_token=token.get("access_token", ""),
+                    access_token=access_token,
+                    user_id=user_id,
                 )
             except Exception as pub_exc:
-                logger.error("publish_to_platform failed for %s: %s", platform, pub_exc, exc_info=True)
+                logger.error(
+                    "Production publish_to_platform failed for %s: %s",
+                    platform,
+                    pub_exc,
+                    exc_info=True,
+                )
                 return False
+
             if isinstance(result, dict):
+                if not result.get("success"):
+                    logger.error(
+                        "Publishing to %s failed: %s",
+                        platform,
+                        result.get("error", "unknown error"),
+                    )
                 return result.get("success", False)
             return bool(result)
-        elif hasattr(publisher, "publish_content"):
-            user_id = token.get("user_id", "")
-            if not user_id:
-                logger.error("No user_id in token for platform %s; cannot publish", platform)
-                return False
-            try:
-                result = await publisher.publish_content(
-                    user_id=user_id,
-                    content=content,
-                    platforms=[platform],
-                )
-            except Exception as pub_exc:
-                logger.error("publish_content failed for %s: %s", platform, pub_exc, exc_info=True)
-                return False
+
+        # --- Dev / test: try real publisher, fall back to simulation ---
+        try:
+            from agents.publisher import publish_to_platform
+
+            result = await publish_to_platform(
+                platform=platform,
+                content=content,
+                access_token=access_token,
+                user_id=user_id,
+            )
             if isinstance(result, dict):
-                return result.get("all_success", False)
+                if not result.get("success"):
+                    logger.warning(
+                        "[DEV] Publishing to %s failed: %s",
+                        platform,
+                        result.get("error", "unknown error"),
+                    )
+                return result.get("success", False)
             return bool(result)
-        else:
+        except ImportError:
             logger.warning(
-                "[SIMULATED] No suitable publish function found in agents.publisher; "
-                "simulating publish to %s: %s...",
+                "[SIMULATED] Publishing to %s (publisher agent not available, dev mode): %s...",
                 platform,
-                content[:50],
+                (content or "")[:50],
             )
             return True
+        except Exception as pub_exc:
+            logger.warning("[DEV] publish_to_platform raised for %s: %s", platform, pub_exc)
+            return False  # Don't hide real errors
+
     except Exception as exc:
-        # FIXED: catch all exceptions, return False instead of raising
         logger.error("_publish_to_platform failed for %s: %s", platform, exc, exc_info=True)
         return False
 
@@ -364,10 +403,16 @@ def refresh_monthly_credits() -> Dict[str, Any]:
         # and haven't had credits refreshed
         threshold = datetime.now(timezone.utc) - timedelta(days=30)
         
-        # Get all paying subscribers
+        # Get all subscribers including free tier
+        # Only refresh credits for free users and paid users with active subscriptions
         users = await db.users.find({
-            "subscription_tier": {"$in": ["pro", "studio", "agency"]},
-            "subscription_status": "active"
+            "$or": [
+                {"subscription_tier": "free"},  # Free users always get renewal
+                {
+                    "subscription_tier": {"$in": ["pro", "studio", "agency"]},
+                    "subscription_status": "active"
+                }
+            ]
         }).to_list(length=1000)
         
         refreshed = 0
@@ -385,8 +430,9 @@ def refresh_monthly_credits() -> Dict[str, Any]:
             await db.users.update_one(
                 {"user_id": user["user_id"]},
                 {"$set": {
-                    "credits": tier_config["credits"],
-                    "credits_refreshed_at": datetime.now(timezone.utc)
+                    "credits": tier_config["monthly_credits"],
+                    "credits_refreshed_at": datetime.now(timezone.utc),
+                    "credits_last_refresh": datetime.now(timezone.utc),
                 }}
             )
             refreshed += 1
@@ -607,3 +653,47 @@ def poll_post_metrics_7d(self, job_id: str, user_id: str, platform: str) -> Dict
     except Exception as exc:
         logger.error("poll_post_metrics_7d failed for job=%s: %s", job_id, exc)
         raise self.retry(exc=exc, countdown=300 * (2 ** self.request.retries))
+
+
+# ============ STALE JOB CLEANUP ============
+
+@shared_task(name='tasks.content_tasks.cleanup_stale_running_jobs')
+def cleanup_stale_running_jobs() -> Dict[str, Any]:
+    """Find and mark stale running jobs as errored.
+
+    A job is considered stale if its status is ``running`` and its
+    ``updated_at`` timestamp is more than 10 minutes in the past.
+    This guards against jobs that slip through both the in-pipeline
+    ``asyncio.wait_for`` timeout and the Celery soft/hard time limits
+    (e.g. worker crash, OOM kill).
+
+    Runs every 10 minutes via Celery Beat.
+    """
+    logger.info("Scanning for stale running jobs...")
+
+    async def _cleanup():
+        from database import db
+
+        threshold = datetime.now(timezone.utc) - timedelta(minutes=10)
+
+        result = await db.content_jobs.update_many(
+            {
+                "status": "running",
+                "updated_at": {"$lt": threshold},
+            },
+            {"$set": {
+                "status": "error",
+                "current_agent": "error",
+                "error": "Job timed out (stale running job detected by cleanup task).",
+                "updated_at": datetime.now(timezone.utc),
+            }},
+        )
+
+        count = result.modified_count
+        if count:
+            logger.warning("Marked %d stale running jobs as errored", count)
+        else:
+            logger.info("No stale running jobs found")
+        return {"stale_jobs_cleaned": count}
+
+    return run_async(_cleanup())

@@ -9,6 +9,7 @@ Handles:
 """
 
 import logging
+import uuid
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 from database import db
@@ -70,6 +71,15 @@ TIER_PRICING = {
     "studio": {"monthly": 4900, "annual": 49000, "credits": 2000},  # Early bird: $49/mo
     "agency": {"monthly": 12900, "annual": 129000, "credits": 10000},  # Early bird: $129/mo
 }
+
+
+# ============ PRICE LOOKUP HELPER ============
+
+def _get_price_id(tier: str, billing_period: str = "monthly") -> Optional[str]:
+    """Look up a Stripe Price ID for a given tier and billing period."""
+    price_key = f"{tier}_{billing_period}"
+    price_id = PRICE_IDS.get(price_key, "")
+    return price_id if price_id else None
 
 
 # ============ CUSTOMER MANAGEMENT ============
@@ -331,6 +341,50 @@ async def cancel_stripe_subscription(user_id: str, at_period_end: bool = True) -
         return {"success": False, "error": str(e)}
 
 
+async def modify_subscription(user_id: str, new_tier: str, billing_period: str = "monthly") -> Dict[str, Any]:
+    """Modify existing subscription (upgrade/downgrade) with proration."""
+    user = await db.users.find_one({"user_id": user_id})
+    if not user:
+        return {"success": False, "error": "User not found"}
+
+    subscription_id = user.get("stripe_subscription_id")
+    if not subscription_id:
+        return {"success": False, "error": "No active subscription to modify"}
+
+    if not stripe:
+        return {"success": False, "error": "Stripe not configured"}
+
+    price_id = _get_price_id(new_tier, billing_period)
+    if not price_id:
+        return {"success": False, "error": f"Invalid tier/period: {new_tier}/{billing_period}"}
+
+    try:
+        subscription = stripe.Subscription.retrieve(subscription_id)
+        updated = stripe.Subscription.modify(
+            subscription_id,
+            items=[{"id": subscription["items"]["data"][0]["id"], "price": price_id}],
+            proration_behavior="create_prorations",
+            metadata={"user_id": user_id, "tier": new_tier},
+        )
+
+        # Update user tier in DB immediately
+        credits = TIER_PRICING.get(new_tier, {}).get("credits", 50)
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {
+                "subscription_tier": new_tier,
+                "credits": credits,
+                "credit_allowance": credits,
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+
+        return {"success": True, "subscription_id": updated.id, "new_tier": new_tier}
+    except Exception as e:
+        logger.error(f"Failed to modify subscription for user {user_id}: {e}")
+        return {"success": False, "error": str(e)}
+
+
 # ============ WEBHOOK HANDLING ============
 
 async def handle_webhook_event(payload: bytes, sig_header: str) -> Dict[str, Any]:
@@ -397,9 +451,24 @@ async def handle_checkout_completed(session: Dict[str, Any]):
                 description=f"Purchased {credits} credits via Stripe"
             )
             logger.info(f"Added {credits} credits to user {user_id}")
+
+            # Record payment
+            await db.payments.insert_one({
+                "payment_id": f"pay_{uuid.uuid4().hex[:12]}",
+                "user_id": user_id,
+                "stripe_invoice_id": session.get("invoice") or session.get("id"),
+                "amount_cents": session.get("amount_total", 0),
+                "currency": session.get("currency", "usd"),
+                "tier": "credits",
+                "credits_granted": credits,
+                "status": "succeeded",
+                "created_at": datetime.now(timezone.utc),
+            })
     else:
-        # Subscription checkout - subscription.created event will handle tier update
-        logger.info(f"Subscription checkout completed for user {user_id}")
+        # Subscription checkout - subscription.created event will handle tier update.
+        # Payment recording is handled by handle_payment_succeeded (invoice.payment_succeeded)
+        # to avoid duplicate payment entries.
+        logger.info(f"Subscription checkout completed for user {user_id} — payment will be recorded via invoice.payment_succeeded")
 
 
 async def handle_subscription_created(subscription: Dict[str, Any]):
@@ -495,7 +564,7 @@ async def handle_payment_succeeded(invoice: Dict[str, Any]):
     # Refresh credits on successful payment
     tier = user.get("subscription_tier", "free")
     credits = TIER_PRICING.get(tier, {}).get("credits", 50)
-    
+
     await db.users.update_one(
         {"user_id": user["user_id"]},
         {"$set": {
@@ -503,6 +572,20 @@ async def handle_payment_succeeded(invoice: Dict[str, Any]):
             "last_payment_at": datetime.now(timezone.utc)
         }}
     )
+
+    # Record payment
+    await db.payments.insert_one({
+        "payment_id": f"pay_{uuid.uuid4().hex[:12]}",
+        "user_id": user["user_id"],
+        "stripe_invoice_id": invoice.get("id"),
+        "amount_cents": invoice.get("amount_paid", 0),
+        "currency": invoice.get("currency", "usd"),
+        "tier": tier,
+        "credits_granted": credits,
+        "status": "succeeded",
+        "created_at": datetime.now(timezone.utc),
+    })
+
     logger.info(f"Payment succeeded for user {user['user_id']}, credits reset to {credits}")
 
 

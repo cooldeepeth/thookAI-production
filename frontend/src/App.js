@@ -2,6 +2,7 @@ import "@/index.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ToastProvider } from "@/components/ui/UIComponents";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
@@ -39,13 +40,15 @@ function AppRouter() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <AppRouter />
-        </ToastProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <AppRouter />
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

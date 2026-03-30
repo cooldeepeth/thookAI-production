@@ -11,6 +11,7 @@ from database import db
 from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
 from agents.learning import capture_learning_signal
+from services.credits import deduct_credits, CreditOperation
 
 # Celery task imports
 from tasks import is_redis_configured, get_task_status as celery_get_task_status
@@ -102,6 +103,16 @@ async def create_content(
     valid_types = PLATFORM_CONTENT_TYPES.get(data.platform.lower(), [])
     if data.content_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid content type for {data.platform}")
+
+    # Deduct credits before proceeding — deduct_credits checks balance internally
+    cost = CreditOperation.CONTENT_CREATE.value
+    deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CONTENT_CREATE)
+    if not deduct_result.get("success"):
+        available = deduct_result.get("available", 0)
+        raise HTTPException(
+            status_code=402,
+            detail=f"Not enough credits. Required: {cost}, available: {available}"
+        )
 
     job_id = f"job_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
@@ -721,6 +732,15 @@ async def regenerate_content(
     regen_count = original_job.get("regeneration_count", 0)
     if regen_count >= 5:
         raise HTTPException(status_code=400, detail="Maximum regenerations reached (5)")
+
+    # Deduct credits before regeneration — deduct_credits checks balance internally
+    regen_cost = CreditOperation.CONTENT_REGENERATE.value
+    deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CONTENT_REGENERATE)
+    if not deduct_result.get("success"):
+        raise HTTPException(
+            status_code=402,
+            detail=f"Not enough credits for regeneration. Required: {regen_cost}, available: {deduct_result.get('available', 0)}"
+        )
     
     # Create new job as a regeneration
     new_job_id = f"job_{uuid.uuid4().hex[:12]}"

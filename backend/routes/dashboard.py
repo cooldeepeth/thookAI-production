@@ -22,6 +22,21 @@ PERPLEXITY_API_KEY = settings.llm.perplexity_key or ''
 DAILY_BRIEF_CACHE_HOURS = 6
 
 
+@router.post("/feedback")
+async def submit_feedback(body: dict, user=Depends(get_current_user)):
+    """Simple user feedback collection."""
+    feedback = {
+        "feedback_id": f"fb_{uuid.uuid4().hex[:12]}",
+        "user_id": user["user_id"],
+        "message": body.get("message", "")[:2000],
+        "sentiment": body.get("sentiment", "neutral"),  # happy|neutral|sad
+        "page": body.get("page", "unknown"),
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.user_feedback.insert_one(feedback)
+    return {"success": True, "feedback_id": feedback["feedback_id"]}
+
+
 @router.get("/stats")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """Get aggregated dashboard statistics for the current user.

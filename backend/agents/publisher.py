@@ -26,19 +26,21 @@ async def get_platform_token(user_id: str, platform: str) -> Optional[str]:
 async def publish_to_linkedin(
     user_id: str,
     content: str,
-    media_assets: Optional[List[Dict[str, Any]]] = None
+    media_assets: Optional[List[Dict[str, Any]]] = None,
+    token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Publish content to LinkedIn.
-    
+
     Args:
         user_id: User ID
         content: Text content to post
         media_assets: Optional list of images/media
-    
+        token: Pre-fetched access token (skips DB lookup if provided)
+
     Returns:
         {success, post_id, post_url, error}
     """
-    access_token = await get_platform_token(user_id, "linkedin")
+    access_token = token or await get_platform_token(user_id, "linkedin")
     if not access_token:
         return {"success": False, "error": "LinkedIn not connected or token expired"}
     
@@ -116,7 +118,8 @@ async def publish_to_linkedin(
 async def publish_to_x(
     user_id: str,
     content: str,
-    is_thread: bool = False
+    is_thread: bool = False,
+    token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Publish content to X/Twitter.
     
@@ -128,7 +131,7 @@ async def publish_to_x(
     Returns:
         {success, tweet_ids, tweet_urls, error}
     """
-    access_token = await get_platform_token(user_id, "x")
+    access_token = token or await get_platform_token(user_id, "x")
     if not access_token:
         return {"success": False, "error": "X not connected or token expired"}
     
@@ -228,7 +231,8 @@ def _parse_thread(content: str) -> List[str]:
 async def publish_to_instagram(
     user_id: str,
     caption: str,
-    image_url: Optional[str] = None
+    image_url: Optional[str] = None,
+    token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Publish content to Instagram.
     
@@ -244,7 +248,7 @@ async def publish_to_instagram(
     """
     from database import db
     
-    access_token = await get_platform_token(user_id, "instagram")
+    access_token = token or await get_platform_token(user_id, "instagram")
     if not access_token:
         return {"success": False, "error": "Instagram not connected or token expired"}
     
@@ -347,6 +351,42 @@ async def publish_to_instagram(
     except Exception as e:
         logger.error(f"Instagram publish error: {e}")
         return {"success": False, "error": str(e)}
+
+
+# ============ SINGLE-PLATFORM DISPATCHER ============
+
+async def publish_to_platform(
+    platform: str,
+    content: str,
+    access_token: str,
+    user_id: str = None,
+    media_assets: list = None,
+) -> dict:
+    """Dispatch to the appropriate platform-specific publisher.
+
+    This is the entry point used by the scheduled-post publisher in
+    ``tasks.content_tasks``.
+
+    When ``access_token`` is provided it is passed directly to the
+    platform function, avoiding a redundant database lookup.
+
+    Returns a dict with at least ``{"success": bool}``.
+    """
+    if platform == "linkedin":
+        return await publish_to_linkedin(user_id or "", content, media_assets, token=access_token)
+    elif platform in ("x", "twitter"):
+        return await publish_to_x(user_id or "", content, token=access_token)
+    elif platform == "instagram":
+        image_url = None
+        if media_assets:
+            for asset in media_assets:
+                if isinstance(asset, dict) and asset.get("type") == "image":
+                    image_url = asset.get("image_url") or asset.get("url")
+                    if image_url:
+                        break
+        return await publish_to_instagram(user_id or "", content, image_url, token=access_token)
+    else:
+        return {"success": False, "error": f"Unsupported platform: {platform}"}
 
 
 # ============ UNIFIED PUBLISHER ============

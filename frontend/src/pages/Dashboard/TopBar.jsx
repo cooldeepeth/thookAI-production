@@ -1,15 +1,24 @@
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Menu } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import NotificationBell from "@/components/NotificationBell";
 
-export default function TopBar({ title = "Dashboard" }) {
+export default function TopBar({ title = "Dashboard", onMenuClick }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   return (
     <header className="h-16 bg-[#050505]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 flex items-center justify-between px-6" data-testid="topbar">
       <div className="flex items-center gap-4">
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            data-testid="mobile-menu-btn"
+            className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
+          >
+            <Menu size={20} />
+          </button>
+        )}
         <h1 className="font-display font-semibold text-lg text-white">{title}</h1>
       </div>
 

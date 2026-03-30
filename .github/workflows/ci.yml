@@ -80,7 +80,7 @@ jobs:
           ENVIRONMENT: test
         run: |
           cd backend
-          python -m pytest tests/test_critical_fixes.py -v --tb=short
+          python -m pytest tests/test_critical_fixes.py tests/test_e2e_ship.py tests/test_health_endpoint.py -v --tb=short
 
   frontend-build:
     name: Frontend Build

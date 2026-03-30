@@ -53,4 +53,8 @@ beat_schedule = {
         "task": "tasks.content_tasks.aggregate_daily_analytics",
         "schedule": crontab(hour=1, minute=0),  # Daily at 01:00 UTC
     },
+    "cleanup-stale-jobs": {
+        "task": "tasks.content_tasks.cleanup_stale_running_jobs",
+        "schedule": crontab(minute="*/10"),  # Every 10 minutes
+    },
 }

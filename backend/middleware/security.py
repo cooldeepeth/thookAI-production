@@ -243,14 +243,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         
         if is_limited:
             logger.warning(f"Rate limit exceeded for {client_ip} on {path}")
+            retry_seconds = 60
             return JSONResponse(
                 status_code=429,
                 content={
-                    "detail": "Too many requests. Please try again later.",
-                    "retry_after": 60
+                    "detail": "Too many requests. Please wait.",
+                    "retry_after": retry_seconds
                 },
                 headers={
-                    "Retry-After": "60",
+                    "Retry-After": str(retry_seconds),
                     "X-RateLimit-Limit": str(limit),
                     "X-RateLimit-Remaining": "0"
                 }
