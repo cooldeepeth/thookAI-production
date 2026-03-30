@@ -129,10 +129,10 @@ async def share_persona(data: SharePersonaRequest, current_user: dict = Depends(
     
     # Get user subscription tier for permanent share eligibility
     user = await db.users.find_one({"user_id": current_user["user_id"]})
-    tier = user.get("subscription_tier", "free")
-    
-    # Pro+ users can have permanent shares
-    is_pro_plus = tier in ["pro", "studio", "agency"]
+    tier = user.get("subscription_tier", "starter")
+
+    # Paid users can have permanent shares
+    is_pro_plus = tier not in ("starter", "free")
     
     # Generate new share token
     share_token = secrets.token_urlsafe(16)
@@ -363,11 +363,16 @@ async def create_avatar(data: AvatarCreateRequest, current_user: dict = Depends(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    tier = user.get("subscription_tier", "free")
-    if tier not in ("studio", "agency"):
+    tier = user.get("subscription_tier", "starter")
+    # Allow custom plan users with voice_enabled
+    has_access = tier in ("studio", "agency")
+    if tier == "custom":
+        plan_features = user.get("plan_config", {}).get("features", {})
+        has_access = plan_features.get("voice_enabled", False)
+    if not has_access:
         raise HTTPException(
             status_code=403,
-            detail=f"Avatar creation requires Studio or Agency tier (current: {tier})"
+            detail=f"Avatar creation requires a plan with voice features (current: {tier})"
         )
 
     # Ensure persona exists
@@ -455,7 +460,7 @@ async def get_avatar(current_user: dict = Depends(get_current_user)):
 
 # ============ VOICE CLONE ============
 
-VOICE_CLONE_TIERS = ("studio", "agency")
+VOICE_CLONE_TIERS = ("studio", "agency", "custom")
 VOICE_CLONE_AUDIO_MIMES = set(ALLOWED_MIME_TYPES.get("audio", []))
 MAX_VOICE_SAMPLES = 5
 MAX_AUDIO_BYTES = MAX_FILE_SIZE.get("audio", 25 * 1024 * 1024)
@@ -463,13 +468,18 @@ MAX_AUDIO_BYTES = MAX_FILE_SIZE.get("audio", 25 * 1024 * 1024)
 
 def _require_voice_clone_tier(user: dict) -> None:
     """Raise 403 if the user's subscription does not include voice cloning."""
-    tier = user.get("subscription_tier", "free")
-    if tier not in VOICE_CLONE_TIERS:
+    tier = user.get("subscription_tier", "starter")
+    has_access = tier in VOICE_CLONE_TIERS
+    # Custom plan users need voice_enabled in their plan config
+    if tier == "custom":
+        plan_features = user.get("plan_config", {}).get("features", {})
+        has_access = plan_features.get("voice_enabled", False)
+    if not has_access:
         raise HTTPException(
             status_code=403,
             detail={
                 "error": "tier_required",
-                "message": "Voice cloning requires a Studio or Agency subscription.",
+                "message": "Voice cloning requires a plan with voice features.",
                 "current_tier": tier,
                 "required_tiers": list(VOICE_CLONE_TIERS),
             },

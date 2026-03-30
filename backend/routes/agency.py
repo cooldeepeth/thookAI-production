@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/agency", tags=["agency"])
 
 # Tiers that can create/manage workspaces
-AGENCY_TIERS = ["studio", "agency"]
+AGENCY_TIERS = ["studio", "agency", "custom"]
 
 
 class CreateWorkspaceRequest(BaseModel):
@@ -43,11 +43,20 @@ class WorkspaceMember(BaseModel):
 
 async def check_agency_tier(user: dict):
     """Verify user has Studio+ tier for agency features."""
-    tier = user.get("subscription_tier", "free")
-    if tier not in AGENCY_TIERS:
+    tier = user.get("subscription_tier", "starter")
+    # Custom plan users need team_members > 1 in their plan config
+    if tier == "custom":
+        plan_config = user.get("plan_config", {})
+        features = plan_config.get("features", {})
+        if features.get("team_members", 1) <= 1:
+            raise HTTPException(
+                status_code=403,
+                detail="Your current plan doesn't include team features. Upgrade your plan to add team members."
+            )
+    elif tier not in AGENCY_TIERS:
         raise HTTPException(
             status_code=403,
-            detail=f"Agency features require Studio or Agency tier. Current tier: {tier}"
+            detail=f"Team features require a paid plan with team access. Current tier: {tier}"
         )
     return tier
 
@@ -86,11 +95,15 @@ async def create_workspace(data: CreateWorkspaceRequest, current_user: dict = De
     await check_agency_tier(current_user)
     
     # Check workspace limit based on tier
-    tier = current_user.get("subscription_tier", "free")
+    tier = current_user.get("subscription_tier", "starter")
     existing_count = await db.workspaces.count_documents({"owner_id": current_user["user_id"]})
-    
-    limits = {"studio": 3, "agency": 10}
-    max_workspaces = limits.get(tier, 1)
+
+    if tier == "custom":
+        plan_features = current_user.get("plan_config", {}).get("features", {})
+        max_workspaces = min(plan_features.get("team_members", 1), 10)
+    else:
+        limits = {"studio": 3, "agency": 10}
+        max_workspaces = limits.get(tier, 1)
     
     if existing_count >= max_workspaces:
         raise HTTPException(
@@ -237,10 +250,14 @@ async def invite_creator(
     
     # Check member limit based on tier
     owner = await db.users.find_one({"user_id": workspace["owner_id"]})
-    tier = owner.get("subscription_tier", "free") if owner else "free"
-    
-    limits = {"studio": 10, "agency": 50}
-    max_members = limits.get(tier, 5)
+    tier = owner.get("subscription_tier", "starter") if owner else "starter"
+
+    if tier == "custom" and owner:
+        plan_features = owner.get("plan_config", {}).get("features", {})
+        max_members = plan_features.get("team_members", 1)
+    else:
+        limits = {"studio": 10, "agency": 50}
+        max_members = limits.get(tier, 5)
     
     current_members = await db.workspace_members.count_documents({
         "workspace_id": workspace_id,

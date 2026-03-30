@@ -407,9 +407,9 @@ def refresh_monthly_credits() -> Dict[str, Any]:
         # Only refresh credits for free users and paid users with active subscriptions
         users = await db.users.find({
             "$or": [
-                {"subscription_tier": "free"},  # Free users always get renewal
+                {"subscription_tier": {"$in": ["starter", "free"]}},
                 {
-                    "subscription_tier": {"$in": ["pro", "studio", "agency"]},
+                    "subscription_tier": "custom",
                     "subscription_status": "active"
                 }
             ]
@@ -424,13 +424,19 @@ def refresh_monthly_credits() -> Dict[str, Any]:
                 if last_refresh > threshold:
                     continue  # Already refreshed recently
             
-            tier = user.get("subscription_tier", "free")
-            tier_config = TIER_CONFIGS.get(tier, TIER_CONFIGS["free"])
+            tier = user.get("subscription_tier", "starter")
+            # For custom plan users, use their plan_config for credit allowance
+            if tier == "custom":
+                plan_config = user.get("plan_config", {})
+                monthly_credits = plan_config.get("monthly_credits", 0)
+            else:
+                tier_config = TIER_CONFIGS.get(tier, TIER_CONFIGS["starter"])
+                monthly_credits = tier_config["monthly_credits"]
             
             await db.users.update_one(
                 {"user_id": user["user_id"]},
                 {"$set": {
-                    "credits": tier_config["monthly_credits"],
+                    "credits": monthly_credits,
                     "credits_refreshed_at": datetime.now(timezone.utc),
                     "credits_last_refresh": datetime.now(timezone.utc),
                 }}

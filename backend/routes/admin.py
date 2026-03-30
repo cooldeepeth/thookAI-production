@@ -85,7 +85,7 @@ async def admin_stats_overview(
     no_tier_count = await db.users.count_documents(
         {"subscription_tier": {"$exists": False}}
     )
-    subscription_breakdown["free"] = subscription_breakdown.get("free", 0) + no_tier_count
+    subscription_breakdown["starter"] = subscription_breakdown.get("starter", 0) + no_tier_count
 
     return {
         "total_users": total_users,
@@ -197,7 +197,7 @@ async def admin_list_users(
                 "user_id": u.get("user_id"),
                 "email": u.get("email"),
                 "name": u.get("name"),
-                "subscription_tier": u.get("subscription_tier", "free"),
+                "subscription_tier": u.get("subscription_tier", "starter"),
                 "credits": u.get("credits", 0),
                 "role": u.get("role", "user"),
                 "active": u.get("active", True),
