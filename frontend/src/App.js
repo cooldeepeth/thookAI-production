@@ -9,6 +9,7 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import Dashboard from "@/pages/Dashboard";
 import OnboardingWizard from "@/pages/Onboarding";
 import PersonaCardPublic from "@/pages/Public/PersonaCardPublic";
+import ViralCard from "@/pages/ViralCard";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -31,6 +32,8 @@ function AppRouter() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/creator/:shareToken" element={<PersonaCardPublic />} />
       <Route path="/p/:shareToken" element={<PersonaCardPublic />} />
+      <Route path="/discover" element={<ViralCard />} />
+      <Route path="/discover/:cardId" element={<ViralCard />} />
       <Route path="/onboarding" element={<ProtectedRoute><OnboardingWizard /></ProtectedRoute>} />
       <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />

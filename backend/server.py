@@ -47,6 +47,7 @@ from routes.webhooks import router as webhooks_router
 from routes.campaigns import router as campaigns_router
 from routes.admin import router as admin_router
 from routes.uom import router as uom_router
+from routes.viral_card import router as viral_card_router
 
 
 # Setup logging
@@ -106,7 +107,16 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"Index error: {error}")
     except Exception as e:
         logger.warning(f"Could not check/create indexes: {e}")
-    
+
+    # Seed templates if collection is empty
+    try:
+        template_count = await db.templates.count_documents({})
+        if template_count == 0:
+            from scripts.seed_templates import seed_templates
+            await seed_templates()
+            logger.info(f"Seeded {await db.templates.count_documents({})} templates")
+    except Exception as e:
+        logger.warning(f"Could not seed templates: {e}")
 
     # Check encryption key for OAuth tokens
     if settings.app.is_production and not settings.platforms.encryption_key:
@@ -252,6 +262,7 @@ api_router.include_router(notifications_router)
 api_router.include_router(webhooks_router)
 api_router.include_router(campaigns_router)
 api_router.include_router(uom_router)
+api_router.include_router(viral_card_router)
 
 # Admin dashboard — hidden from Swagger, requires admin role
 app.include_router(admin_router, prefix="/api/admin", include_in_schema=False)
