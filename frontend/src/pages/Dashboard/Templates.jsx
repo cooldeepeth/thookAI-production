@@ -701,14 +701,22 @@ export default function Templates() {
                 size={48}
                 className="text-zinc-700 mx-auto mb-4"
               />
-              <h3 className="text-lg text-zinc-500 mb-2">
-                No templates found
+              <h3 className="text-lg font-medium text-white mb-2">
+                {searchQuery ? "No templates found" : "Discover templates from the community"}
               </h3>
-              <p className="text-sm text-zinc-600">
+              <p className="text-sm text-zinc-400 mb-6">
                 {searchQuery
-                  ? "Try a different search term"
-                  : "Be the first to publish a template!"}
+                  ? "Try a different search term or adjust your filters."
+                  : "Browse proven content templates or be the first to share yours!"}
               </p>
+              {!searchQuery && (
+                <button
+                  onClick={() => setShowShareDialog(true)}
+                  className="px-6 py-2 bg-lime text-black font-medium rounded-lg hover:bg-lime/90 transition-colors inline-flex items-center gap-2"
+                >
+                  <Plus size={16} /> Share Your Template
+                </button>
+              )}
             </div>
           ) : (
             <>

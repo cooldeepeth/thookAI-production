@@ -125,6 +125,9 @@ async def update_job(job_id: str, data: dict):
     await db.content_jobs.update_one({"job_id": job_id}, {"$set": data})
 
 
+PIPELINE_TIMEOUT_SECONDS = 180.0  # 3-minute global timeout
+
+
 async def run_agent_pipeline(
     job_id: str,
     user_id: str,
@@ -140,7 +143,47 @@ async def run_agent_pipeline(
     Uses the LangGraph orchestrator for hierarchical execution with debate
     and quality loops.  Falls back to the legacy linear pipeline if the
     orchestrator fails to initialise.
+
+    A global timeout of ``PIPELINE_TIMEOUT_SECONDS`` (180 s) wraps both
+    the orchestrator and the legacy path.  If any agent hangs, the job is
+    marked as ``error`` with a clear timeout message.
     """
+    try:
+        await asyncio.wait_for(
+            _run_agent_pipeline_inner(
+                job_id=job_id,
+                user_id=user_id,
+                platform=platform,
+                content_type=content_type,
+                raw_input=raw_input,
+                upload_ids=upload_ids,
+                generate_video=generate_video,
+                video_style=video_style,
+            ),
+            timeout=PIPELINE_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.error(
+            "Pipeline timed out after %ss for job %s", PIPELINE_TIMEOUT_SECONDS, job_id
+        )
+        await update_job(job_id, {
+            "status": "error",
+            "current_agent": "error",
+            "error": "Content generation timed out. Please try again.",
+        })
+
+
+async def _run_agent_pipeline_inner(
+    job_id: str,
+    user_id: str,
+    platform: str,
+    content_type: str,
+    raw_input: str,
+    upload_ids: Optional[List[str]] = None,
+    generate_video: bool = False,
+    video_style: str = "cinematic",
+) -> None:
+    """Inner dispatch — try orchestrator, fall back to legacy."""
     try:
         from agents.orchestrator import run_orchestrated_pipeline
         await run_orchestrated_pipeline(

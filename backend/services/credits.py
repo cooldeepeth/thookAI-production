@@ -232,7 +232,7 @@ async def deduct_credits(
     if current_credits < amount:
         return {
             "success": False,
-            "error": "Insufficient credits",
+            "error": f"Not enough credits. This operation requires {amount} credits but you only have {current_credits} available.",
             "required": amount,
             "available": current_credits,
             "operation": operation.name

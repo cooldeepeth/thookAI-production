@@ -53,7 +53,9 @@ async def register(data: RegisterRequest, response: Response):
         "user_id": user_id, "email": data.email, "name": data.name,
         "picture": None, "auth_method": "email",
         "hashed_password": hash_password(data.password),
-        "plan": "free", "credits": 100,
+        "plan": "free", "subscription_tier": "free",
+        "credits": 50, "credit_allowance": 50,
+        "credits_last_refresh": datetime.now(timezone.utc),
         "onboarding_completed": False, "platforms_connected": [],
         "created_at": datetime.now(timezone.utc)
     }

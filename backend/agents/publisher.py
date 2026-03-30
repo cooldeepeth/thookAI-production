@@ -349,6 +349,41 @@ async def publish_to_instagram(
         return {"success": False, "error": str(e)}
 
 
+# ============ SINGLE-PLATFORM DISPATCHER ============
+
+async def publish_to_platform(
+    platform: str,
+    content: str,
+    access_token: str,
+    user_id: str = None,
+    media_assets: list = None,
+) -> dict:
+    """Dispatch to the appropriate platform-specific publisher.
+
+    This is the entry point used by the scheduled-post publisher in
+    ``tasks.content_tasks``.  It passes the *access_token* directly
+    rather than looking it up from the DB, because the caller already
+    resolved the token.
+
+    Returns a dict with at least ``{"success": bool}``.
+    """
+    if platform == "linkedin":
+        return await publish_to_linkedin(user_id or "", content, media_assets)
+    elif platform in ("x", "twitter"):
+        return await publish_to_x(user_id or "", content)
+    elif platform == "instagram":
+        image_url = None
+        if media_assets:
+            for asset in media_assets:
+                if isinstance(asset, dict) and asset.get("type") == "image":
+                    image_url = asset.get("image_url") or asset.get("url")
+                    if image_url:
+                        break
+        return await publish_to_instagram(user_id or "", content, image_url)
+    else:
+        return {"success": False, "error": f"Unsupported platform: {platform}"}
+
+
 # ============ UNIFIED PUBLISHER ============
 
 async def publish_content(

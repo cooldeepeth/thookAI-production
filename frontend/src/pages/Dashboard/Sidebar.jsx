@@ -24,7 +24,7 @@ const navItems = [
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [credits, setCredits] = useState(null);
@@ -65,7 +65,21 @@ export default function Sidebar() {
   const isLowBalance = credits?.is_low_balance || currentCredits < maxCredits * 0.2;
 
   return (
-    <aside className="w-64 bg-[#050505] border-r border-white/5 flex flex-col h-screen fixed left-0 top-0 z-50" data-testid="sidebar">
+    <>
+      {/* Mobile backdrop overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={onClose}
+          data-testid="sidebar-backdrop"
+        />
+      )}
+      <aside
+        className={`w-64 bg-[#050505] border-r border-white/5 flex flex-col h-screen fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
+        data-testid="sidebar"
+      >
       {/* Logo */}
       <div className="h-16 flex items-center px-5 border-b border-white/5">
         <div className="flex items-center gap-2">
@@ -176,5 +190,6 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

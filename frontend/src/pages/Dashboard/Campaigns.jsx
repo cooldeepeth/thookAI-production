@@ -503,18 +503,18 @@ export default function Campaigns() {
       ) : filteredCampaigns.length === 0 ? (
         <div className="text-center py-16">
           <FolderOpen size={48} className="text-zinc-700 mx-auto mb-4" />
-          <h3 className="text-lg text-zinc-500 mb-2">
+          <h3 className="text-lg font-medium text-white mb-2">
             {campaigns.length === 0 ? "No campaigns yet" : "No campaigns match your search"}
           </h3>
-          <p className="text-sm text-zinc-600 mb-4">
+          <p className="text-sm text-zinc-400 mb-6">
             {campaigns.length === 0
-              ? "Create your first campaign to organise your content."
+              ? "Group your content into campaigns to track progress and stay organized."
               : "Try a different search term or filter."}
           </p>
           {campaigns.length === 0 && (
             <button
               onClick={() => setShowCreateDialog(true)}
-              className="btn-primary text-sm inline-flex items-center gap-2"
+              className="px-6 py-2 bg-lime text-black font-medium rounded-lg hover:bg-lime/90 transition-colors inline-flex items-center gap-2"
             >
               <Plus size={16} /> Create Campaign
             </button>

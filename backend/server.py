@@ -97,6 +97,10 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Could not check/create indexes: {e}")
     
 
+    # Check encryption key for OAuth tokens
+    if settings.app.is_production and not settings.platforms.encryption_key:
+        logger.critical("ENCRYPTION_KEY not set! Platform OAuth tokens will be unreadable after restart!")
+
     # Check media storage
     if not settings.r2.has_r2():
         if settings.app.is_production:

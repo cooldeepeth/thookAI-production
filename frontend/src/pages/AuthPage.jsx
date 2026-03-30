@@ -21,6 +21,7 @@ export default function AuthPage() {
   useEffect(() => {
     if (user) navigate("/dashboard", { replace: true });
     if (searchParams.get("error")) setError("Authentication failed. Please try again.");
+    if (searchParams.get("expired") === "1") setError("Your session has expired. Please sign in again.");
   }, [user, navigate, searchParams]);
 
   const handleGoogleAuth = () => {

@@ -280,15 +280,21 @@ export default function ContentLibrary() {
             {/* Content Grid */}
             {filteredContents.length === 0 ? (
               <Card className="bg-surface-2 border-white/5">
-                <CardContent className="py-12 text-center">
-                  <BookOpen className="mx-auto text-zinc-600 mb-3" size={40} />
-                  <p className="text-zinc-400 mb-4">
-                    {contents.length === 0 ? "No content yet" : "No content matches your filters"}
-                  </p>
-                  {contents.length === 0 && (
-                    <Button onClick={() => navigate("/dashboard/studio")} className="bg-lime text-black hover:bg-lime/90">
-                      Create Your First Content
-                    </Button>
+                <CardContent className="py-16 text-center">
+                  <BookOpen className="mx-auto text-zinc-600 mb-4" size={48} />
+                  {contents.length === 0 ? (
+                    <>
+                      <h3 className="text-lg font-medium text-white mb-2">No content yet</h3>
+                      <p className="text-zinc-400 mb-6">Create your first post!</p>
+                      <Button onClick={() => navigate("/dashboard/studio")} className="bg-lime text-black hover:bg-lime/90 px-6 py-2 font-medium rounded-lg">
+                        Create Your First Content
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-medium text-white mb-2">No results</h3>
+                      <p className="text-zinc-400">No content matches your filters. Try adjusting your search or filters.</p>
+                    </>
                   )}
                 </CardContent>
               </Card>
