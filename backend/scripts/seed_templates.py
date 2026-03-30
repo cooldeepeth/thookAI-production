@@ -20,10 +20,49 @@ from config import settings  # noqa: E402
 from database import db      # noqa: E402
 
 
+def _normalize_hook_type(raw: str) -> str:
+    """Map legacy hook_type values to the canonical set defined in routes/templates.py."""
+    mapping = {
+        "bold_statement": "bold_claim",
+        "story_opening": "story_opener",
+        "data_point": "statistic",
+        "contrarian_take": "contrarian",
+    }
+    return mapping.get(raw, raw)
+
+
+def _normalize_category(raw: str) -> str:
+    """Map legacy category values to the canonical set defined in routes/templates.py."""
+    mapping = {
+        "social_proof": "case_study",
+    }
+    return mapping.get(raw, raw)
+
+
+def _normalize_format_type(raw: str) -> str:
+    """Map legacy format_type values to the canonical set expected by the frontend."""
+    mapping = {
+        "list_post": "long_post",
+        "story": "long_post",
+    }
+    return mapping.get(raw, raw)
+
+
+# Top 5 template titles that should be marked as featured
+_FEATURED_TITLES = {
+    "The Unpopular Industry Truth",
+    "The Rejection That Redirected My Life",
+    "Step-by-Step Process Breakdown",
+    "The Popular Advice That's Wrong",
+    "Revenue Transparency Report",
+}
+
+
 def get_seed_templates() -> list[dict]:
     """
     Return 30 curated seed templates ready for insertion into MongoDB.
-    Each template mirrors the schema used in backend/routes/templates.py.
+    Each template includes ALL fields expected by backend/routes/templates.py
+    and the frontend, plus backward-compatible legacy fields.
     """
     now = datetime.now(timezone.utc)
 
@@ -1413,11 +1452,50 @@ def get_seed_templates() -> list[dict]:
         },
     ]
 
+    # ---- Post-process: add derived / missing fields for route compatibility ----
+    for t in templates:
+        # Normalize hook_type to canonical values
+        t["hook_type"] = _normalize_hook_type(t["hook_type"])
+
+        # Normalize category to canonical values
+        t["category"] = _normalize_category(t["category"])
+
+        # Normalize format_type to canonical values
+        t["format_type"] = _normalize_format_type(t["format_type"])
+
+        # hook — first line of example_post (what the routes/frontend expect)
+        example = t.get("example_post", "")
+        first_line = example.strip().split("\n")[0] if example else ""
+        t.setdefault("hook", first_line[:200])
+
+        # structure_preview — short preview derived from body_structure list
+        body_steps = t.get("body_structure", [])
+        if isinstance(body_steps, list):
+            t.setdefault("structure_preview", "\n".join(f"- {s}" for s in body_steps)[:500])
+        else:
+            t.setdefault("structure_preview", str(body_steps)[:500])
+
+        # word_count — derived from example_post
+        t.setdefault("word_count", len(example.split()) if example else 0)
+
+        # author_name — system templates are by ThookAI
+        t.setdefault("author_name", "ThookAI")
+
+        # author_archetype
+        t.setdefault("author_archetype", "System")
+
+        # is_featured — True for the top 5 templates
+        t.setdefault("is_featured", t["title"] in _FEATURED_TITLES)
+
     return templates
 
 
-async def seed():
-    """Insert seed templates into the database (idempotent)."""
+async def seed_templates():
+    """Insert seed templates into the database (idempotent).
+
+    This is the function called from server.py lifespan and from
+    the admin seed endpoint in routes/templates.py.
+    """
     count = await db.templates.count_documents({})
     if count > 10:
         print(f"Templates collection already has {count} documents. Skipping seed.")
@@ -1428,8 +1506,11 @@ async def seed():
     print(f"Successfully seeded {len(result.inserted_ids)} templates into the marketplace.")
 
 
+# Keep backward-compatible alias
+seed = seed_templates
+
+
 if __name__ == "__main__":
     import asyncio
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(seed())
+    asyncio.get_event_loop().run_until_complete(seed_templates())

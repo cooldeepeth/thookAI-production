@@ -193,6 +193,12 @@ INDEXES = {
         IndexModel([('user_id', ASCENDING)], name='idx_user_id'),
         IndexModel([('user_id', ASCENDING), ('created_at', DESCENDING)], name='idx_user_created'),
     ],
+
+    # ========== VIRAL CARDS (public persona cards — 30-day TTL) ==========
+    'viral_cards': [
+        IndexModel([('card_id', ASCENDING)], unique=True, name='idx_card_id'),
+        IndexModel([('created_at', ASCENDING)], expireAfterSeconds=2592000, name='idx_ttl_30d'),
+    ],
 }
 
 

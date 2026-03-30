@@ -39,6 +39,8 @@ export default function ContentLibrary() {
   const [filterPlatform, setFilterPlatform] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportFromDate, setExportFromDate] = useState("");
+  const [exportToDate, setExportToDate] = useState("");
   const [copiedJobId, setCopiedJobId] = useState(null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -100,6 +102,8 @@ export default function ContentLibrary() {
       const params = new URLSearchParams({ format });
       if (filterPlatform !== "all") params.set("platform", filterPlatform);
       if (filterStatus !== "all") params.set("status", filterStatus);
+      if (exportFromDate) params.set("from_date", exportFromDate);
+      if (exportToDate) params.set("to_date", exportToDate);
 
       const res = await fetch(`${BACKEND_URL}/api/content/export/bulk?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -173,7 +177,24 @@ export default function ContentLibrary() {
               Refresh
             </Button>
 
-            {/* Export dropdown */}
+            {/* Export date range + dropdown */}
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={exportFromDate}
+                onChange={(e) => setExportFromDate(e.target.value)}
+                className="px-2 py-1.5 bg-surface-2 border border-white/5 rounded-lg text-xs text-white focus:outline-none focus:border-white/10 w-[130px]"
+                title="Export from date"
+              />
+              <span className="text-zinc-500 text-xs">to</span>
+              <input
+                type="date"
+                value={exportToDate}
+                onChange={(e) => setExportToDate(e.target.value)}
+                className="px-2 py-1.5 bg-surface-2 border border-white/5 rounded-lg text-xs text-white focus:outline-none focus:border-white/10 w-[130px]"
+                title="Export to date"
+              />
+            </div>
             <div className="relative">
               <Button
                 variant="outline"
