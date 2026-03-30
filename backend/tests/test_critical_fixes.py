@@ -399,48 +399,32 @@ class TestBillingPaymentsEndpoint:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
         from unittest.mock import patch, AsyncMock, MagicMock
-
+        from auth_utils import get_current_user
         import routes.billing as billing_module
-
-        test_app = FastAPI()
-        test_app.include_router(billing_module.router, prefix="/api")
-        client = TestClient(test_app, raise_server_exceptions=False)
 
         fake_user = {"user_id": "user_test_123", "email": "test@example.com"}
         sample_payments = [
-            {
-                "payment_id": "pay_abc123",
-                "user_id": "user_test_123",
-                "amount_cents": 1900,
-                "currency": "usd",
-                "tier": "pro",
-                "status": "succeeded",
-            },
-            {
-                "payment_id": "pay_def456",
-                "user_id": "user_test_123",
-                "amount_cents": 4900,
-                "currency": "usd",
-                "tier": "studio",
-                "status": "succeeded",
-            },
+            {"payment_id": "pay_abc123", "user_id": "user_test_123",
+             "amount_cents": 1900, "currency": "usd", "tier": "pro", "status": "succeeded"},
+            {"payment_id": "pay_def456", "user_id": "user_test_123",
+             "amount_cents": 4900, "currency": "usd", "tier": "studio", "status": "succeeded"},
         ]
 
-        # Build a mock cursor that supports .sort().limit().to_list()
         mock_cursor = MagicMock()
         mock_cursor.sort.return_value = mock_cursor
         mock_cursor.limit.return_value = mock_cursor
         mock_cursor.to_list = AsyncMock(return_value=sample_payments)
 
-        with patch("routes.billing.get_current_user", return_value=fake_user):
-            with patch("routes.billing.db") as mock_db:
-                mock_db.payments.find.return_value = mock_cursor
+        test_app = FastAPI()
+        test_app.include_router(billing_module.router, prefix="/api")
+        test_app.dependency_overrides[get_current_user] = lambda: fake_user
 
-                response = client.get(
-                    "/api/billing/payments",
-                    headers={"Authorization": "Bearer fake_token"},
-                )
+        with patch("routes.billing.db") as mock_db:
+            mock_db.payments.find.return_value = mock_cursor
+            client = TestClient(test_app, raise_server_exceptions=False)
+            response = client.get("/api/billing/payments")
 
+        test_app.dependency_overrides.clear()
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -454,12 +438,8 @@ class TestBillingPaymentsEndpoint:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
         from unittest.mock import patch, AsyncMock, MagicMock
-
+        from auth_utils import get_current_user
         import routes.billing as billing_module
-
-        test_app = FastAPI()
-        test_app.include_router(billing_module.router, prefix="/api")
-        client = TestClient(test_app, raise_server_exceptions=False)
 
         fake_user = {"user_id": "user_no_payments", "email": "empty@example.com"}
 
@@ -468,15 +448,16 @@ class TestBillingPaymentsEndpoint:
         mock_cursor.limit.return_value = mock_cursor
         mock_cursor.to_list = AsyncMock(return_value=[])
 
-        with patch("routes.billing.get_current_user", return_value=fake_user):
-            with patch("routes.billing.db") as mock_db:
-                mock_db.payments.find.return_value = mock_cursor
+        test_app = FastAPI()
+        test_app.include_router(billing_module.router, prefix="/api")
+        test_app.dependency_overrides[get_current_user] = lambda: fake_user
 
-                response = client.get(
-                    "/api/billing/payments",
-                    headers={"Authorization": "Bearer fake_token"},
-                )
+        with patch("routes.billing.db") as mock_db:
+            mock_db.payments.find.return_value = mock_cursor
+            client = TestClient(test_app, raise_server_exceptions=False)
+            response = client.get("/api/billing/payments")
 
+        test_app.dependency_overrides.clear()
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
