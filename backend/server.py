@@ -68,7 +68,18 @@ async def lifespan(app: FastAPI):
     
     # Validate configuration
     config_report = settings.log_startup_info()
-    
+
+    # Initialize Sentry error tracking (early, before DB, so it catches startup errors)
+    if settings.app.sentry_dsn:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=settings.app.sentry_dsn,
+            environment=settings.app.environment,
+            traces_sample_rate=0.1 if settings.app.is_production else 1.0,
+            profiles_sample_rate=0.1 if settings.app.is_production else 1.0,
+        )
+        logger.info("Sentry error tracking initialized")
+
     # FIXED: fail fast in production if critical config is missing
     if settings.app.is_production:
         if not settings.security.jwt_secret_key:
@@ -179,9 +190,42 @@ app = FastAPI(
 
 
 @app.get("/health")
-async def health_redirect():
-    """Alias for load balancers that probe /health instead of /api/health."""
-    return RedirectResponse(url="/api/health")
+async def health_check():
+    """Health check for Render/load balancer monitoring."""
+    from database import db
+    from datetime import datetime, timezone
+    from fastapi.responses import JSONResponse
+
+    checks = {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+    # Check MongoDB
+    try:
+        await db.command("ping")
+        checks["mongodb"] = "connected"
+    except Exception:
+        checks["mongodb"] = "disconnected"
+        checks["status"] = "degraded"
+
+    # Check Redis
+    try:
+        from middleware.redis_client import get_redis
+        redis = await get_redis()
+        if redis:
+            await redis.ping()
+            checks["redis"] = "connected"
+        else:
+            checks["redis"] = "not_configured"
+    except Exception:
+        checks["redis"] = "disconnected"
+
+    # Check R2
+    checks["r2_storage"] = "configured" if settings.r2.has_r2() else "not_configured"
+
+    # Check LLM
+    checks["llm_provider"] = "configured" if settings.llm.has_llm_provider() else "not_configured"
+
+    status_code = 200 if checks["status"] == "ok" else 503
+    return JSONResponse(content=checks, status_code=status_code)
 
 
 api_router = APIRouter(prefix="/api")

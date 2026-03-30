@@ -41,6 +41,7 @@ redis[hiredis]>=5.0.0
 resend>=2.0.0
 langgraph>=0.2.0
 langchain-core>=0.3.0
+sentry-sdk[fastapi]>=2.0.0
 
 # Celery dependencies
 kombu>=5.6.0
