@@ -319,11 +319,7 @@ app.include_router(api_router)
 # ==================== MIDDLEWARE STACK ====================
 # Order matters! Middleware is executed in reverse order (bottom to top)
 
-allowed_origins = [
-    o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
-    if o.strip()
-]
+allowed_origins = [o.strip() for o in settings.security.cors_origins if o.strip()]
 
 # 1. CORS - must be first (closest to response)
 app.add_middleware(
