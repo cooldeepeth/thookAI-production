@@ -110,6 +110,7 @@ async def lifespan(app: FastAPI):
 
     # Seed templates if collection is empty
     try:
+        from database import db
         template_count = await db.templates.count_documents({})
         if template_count == 0:
             from scripts.seed_templates import seed_templates

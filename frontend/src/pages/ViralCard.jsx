@@ -6,7 +6,6 @@ import {
   Sparkles,
   Copy,
   Check,
-  ChevronRight,
   ArrowRight,
   Twitter,
   Linkedin,
@@ -17,7 +16,6 @@ import {
   Brain,
   Flame,
   Share2,
-  ExternalLink,
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
