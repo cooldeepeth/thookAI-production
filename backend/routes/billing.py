@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Query, Request, Header
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from database import db
 from auth_utils import get_current_user
@@ -19,24 +19,24 @@ router = APIRouter(prefix="/billing", tags=["billing"])
 
 class PlanBuilderRequest(BaseModel):
     """Request to preview or subscribe to a custom plan."""
-    text_posts: int = 0
-    images: int = 0
-    videos: int = 0
-    carousels: int = 0
-    repurposes: int = 0
-    voice_narrations: int = 0
-    series_plans: int = 0
+    text_posts: int = Field(default=0, ge=0)
+    images: int = Field(default=0, ge=0)
+    videos: int = Field(default=0, ge=0)
+    carousels: int = Field(default=0, ge=0)
+    repurposes: int = Field(default=0, ge=0)
+    voice_narrations: int = Field(default=0, ge=0)
+    series_plans: int = Field(default=0, ge=0)
 
 
 class PlanCheckoutRequest(BaseModel):
     """Request to create checkout for a custom plan."""
-    text_posts: int = 0
-    images: int = 0
-    videos: int = 0
-    carousels: int = 0
-    repurposes: int = 0
-    voice_narrations: int = 0
-    series_plans: int = 0
+    text_posts: int = Field(default=0, ge=0)
+    images: int = Field(default=0, ge=0)
+    videos: int = Field(default=0, ge=0)
+    carousels: int = Field(default=0, ge=0)
+    repurposes: int = Field(default=0, ge=0)
+    voice_narrations: int = Field(default=0, ge=0)
+    series_plans: int = Field(default=0, ge=0)
     success_url: Optional[str] = None
     cancel_url: Optional[str] = None
 

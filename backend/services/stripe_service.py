@@ -379,17 +379,26 @@ async def modify_subscription(user_id: str, monthly_credits: int, monthly_price_
     try:
         subscription = stripe.Subscription.retrieve(subscription_id)
 
-        # Create new price for the updated plan
+        # Create a new Price object first — Subscription.modify() does not
+        # accept inline price_data; it requires a Price ID.
+        product_id = subscription["items"]["data"][0]["price"]["product"]
+        new_price = stripe.Price.create(
+            currency="usd",
+            product=product_id,
+            unit_amount=monthly_price_cents,
+            recurring={"interval": "month"},
+            metadata={
+                "user_id": user_id,
+                "type": "custom_plan",
+                "monthly_credits": str(monthly_credits),
+            },
+        )
+
         updated = stripe.Subscription.modify(
             subscription_id,
             items=[{
                 "id": subscription["items"]["data"][0]["id"],
-                "price_data": {
-                    "currency": "usd",
-                    "product": subscription["items"]["data"][0]["price"]["product"],
-                    "unit_amount": monthly_price_cents,
-                    "recurring": {"interval": "month"}
-                }
+                "price": new_price.id,
             }],
             proration_behavior="create_prorations",
             metadata={

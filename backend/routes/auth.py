@@ -56,6 +56,7 @@ async def register(data: RegisterRequest, response: Response):
         "plan": "starter", "subscription_tier": "starter",
         "credits": 200, "credit_allowance": 0,
         "credits_last_refresh": datetime.now(timezone.utc),
+        "credits_refreshed_at": datetime.now(timezone.utc),
         "onboarding_completed": False, "platforms_connected": [],
         "created_at": datetime.now(timezone.utc)
     }

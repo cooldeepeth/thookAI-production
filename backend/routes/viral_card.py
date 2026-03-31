@@ -21,6 +21,9 @@ router = APIRouter(prefix="/viral-card", tags=["viral-card"])
 
 # ─── Request / Response Models ────────────────────────────
 
+ALLOWED_PLATFORMS = {"linkedin", "x", "instagram", "general"}
+
+
 class ViralCardRequest(BaseModel):
     posts_text: str  # User's posts (separated by blank lines)
     platform: str = "general"  # linkedin, x, instagram, general
@@ -34,7 +37,18 @@ async def generate_viral_card(data: ViralCardRequest):
     """
     PUBLIC endpoint (no auth).  Analyzes pasted posts and generates
     a shareable persona card.  This is the viral growth funnel.
+
+    TODO (Phase 2): Add IP-based rate limiting to protect against abuse of
+    the downstream LLM call.  This endpoint currently has no rate limit.
+    Implement via Redis-backed middleware in backend/middleware/security.py
+    (e.g., 5 requests/IP/hour).  Tracked in infra backlog.
     """
+    if data.platform not in ALLOWED_PLATFORMS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid platform '{data.platform}'. Must be one of: {sorted(ALLOWED_PLATFORMS)}",
+        )
+
     posts = data.posts_text.strip()
     if len(posts) < 100:
         raise HTTPException(

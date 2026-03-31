@@ -460,7 +460,7 @@ function PersonaCardResult({ card, name, cardId }) {
             <ArrowRight size={16} />
           </button>
           <p className="text-zinc-600 text-xs mt-3">
-            50 free credits. No credit card required.
+            200 free credits. No credit card required.
           </p>
         </div>
       </motion.div>

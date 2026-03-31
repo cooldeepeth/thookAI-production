@@ -129,14 +129,20 @@ async def upgrade_subscription(
     now = datetime.now(timezone.utc)
 
     if new_tier == "starter":
-        # Downgrade to starter
+        # Downgrade to starter — clear paid-plan fields and reset credits
+        # to the starter signup allotment (200 one-time credits).
         monthly_credits = 0
+        from services.credits import STARTER_CONFIG
         update = {
             "subscription_tier": "starter",
             "plan_config": None,
             "credit_allowance": 0,
+            "credits": STARTER_CONFIG["signup_credits"],
+            "credits_refreshed_at": now,
+            "credits_last_refresh": now,
             "subscription_started": now,
             "subscription_billing_period": None,
+            "subscription_expires": None,
         }
     elif new_tier == "custom" and plan_config:
         monthly_credits = plan_config.get("monthly_credits", 500)
