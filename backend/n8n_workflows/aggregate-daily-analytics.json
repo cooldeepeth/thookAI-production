@@ -1,0 +1,104 @@
+{
+  "name": "aggregate-daily-analytics",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 1 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.N8N_BACKEND_CALLBACK_URL || 'http://backend:8001'}}/api/n8n/execute/aggregate-daily-analytics",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-ThookAI-Signature",
+              "value": "={{require('crypto').createHmac('sha256', $env.N8N_WEBHOOK_SECRET || '').update(JSON.stringify({})).digest('hex')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000,
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 5000
+          }
+        }
+      },
+      "id": "execute-task",
+      "name": "Execute Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.N8N_BACKEND_CALLBACK_URL || 'http://backend:8001'}}/api/n8n/callback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-ThookAI-Signature",
+              "value": "={{require('crypto').createHmac('sha256', $env.N8N_WEBHOOK_SECRET || '').update(JSON.stringify({workflow_type: 'aggregate-daily-analytics', status: $json.status || 'completed', result: $json.result || {}, executed_at: new Date().toISOString()})).digest('hex')}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "workflow_type", "value": "aggregate-daily-analytics"},
+            {"name": "status", "value": "={{$json.status || 'completed'}}"},
+            {"name": "result", "value": "={{JSON.stringify($json.result || {})}}"},
+            {"name": "executed_at", "value": "={{new Date().toISOString()}}"}
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "callback",
+      "name": "Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [750, 300]
+    }
+  ],
+  "connections": {
+    "Cron Trigger": {
+      "main": [
+        [{"node": "Execute Task", "type": "main", "index": 0}]
+      ]
+    },
+    "Execute Task": {
+      "main": [
+        [{"node": "Callback", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
