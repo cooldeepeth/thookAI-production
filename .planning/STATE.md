@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-auth-onboarding-email/03-02-PLAN.md
-last_updated: "2026-03-31T04:26:18.144Z"
+stopped_at: Completed 03-auth-onboarding-email/03-01-PLAN.md
+last_updated: "2026-03-31T04:28:04.100Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 8
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 03 (Auth, Onboarding & Email) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-03-31
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-infrastructure-celery P01 | 12 | 2 tasks | 11 files |
 | Phase 02-infrastructure-celery P03 | 5 | 2 tasks | 3 files |
 | Phase 03-auth-onboarding-email P02 | 127 | 2 tasks | 1 files |
+| Phase 03-auth-onboarding-email P01 | 4 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Recent decisions affecting current work:
 - [Phase 02-infrastructure-celery]: CORS confirmed centralized via settings — no manual Access-Control-Allow-Origin headers found in route files
 - [Phase 03-auth-onboarding-email]: Email service and password reset route were already correctly implemented — tests confirmed full correctness without code changes
 - [Phase 03-auth-onboarding-email]: XSS prevention verified: html.escape applied to workspace_name and inviter_name in invite emails
+- [Phase 03-auth-onboarding-email]: JWT secret fallback 'thook-dev-secret' applied consistently in both create and decode paths to prevent auth breakage when JWT_SECRET_KEY env var not set
+- [Phase 03-auth-onboarding-email]: Cookie secure/samesite flags now conditional on settings.app.is_development — dev uses lax/http-safe, production uses none/https
 
 ### Pending Todos
 
@@ -92,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T04:26:18.141Z
-Stopped at: Completed 03-auth-onboarding-email/03-02-PLAN.md
+Last session: 2026-03-31T04:28:04.097Z
+Stopped at: Completed 03-auth-onboarding-email/03-01-PLAN.md
 Resume file: None
