@@ -379,17 +379,44 @@ async def modify_subscription(user_id: str, monthly_credits: int, monthly_price_
     try:
         subscription = stripe.Subscription.retrieve(subscription_id)
 
-        # Create new price for the updated plan
+        # Look up an existing active Price with the same amount before creating
+        # a new one. Creating a fresh Price on every modification leads to
+        # unbounded Price objects in Stripe that accumulate over time.
+        # TODO: improve further with an in-process price cache (dict keyed by
+        #   (product_id, unit_amount)) to avoid a Stripe API round-trip per call.
+        product_id = subscription["items"]["data"][0]["price"]["product"]
+        existing_prices = stripe.Price.list(
+            product=product_id,
+            active=True,
+            currency="usd",
+            recurring={"interval": "month"},
+            limit=100,
+        )
+        new_price = next(
+            (
+                p for p in existing_prices.auto_paging_iter()
+                if p["unit_amount"] == monthly_price_cents
+            ),
+            None,
+        )
+        if new_price is None:
+            new_price = stripe.Price.create(
+                currency="usd",
+                product=product_id,
+                unit_amount=monthly_price_cents,
+                recurring={"interval": "month"},
+                metadata={
+                    "user_id": user_id,
+                    "type": "custom_plan",
+                    "monthly_credits": str(monthly_credits),
+                },
+            )
+
         updated = stripe.Subscription.modify(
             subscription_id,
             items=[{
                 "id": subscription["items"]["data"][0]["id"],
-                "price_data": {
-                    "currency": "usd",
-                    "product": subscription["items"]["data"][0]["price"]["product"],
-                    "unit_amount": monthly_price_cents,
-                    "recurring": {"interval": "month"}
-                }
+                "price": new_price.id,
             }],
             proration_behavior="create_prorations",
             metadata={

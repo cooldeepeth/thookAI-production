@@ -129,14 +129,23 @@ async def upgrade_subscription(
     now = datetime.now(timezone.utc)
 
     if new_tier == "starter":
-        # Downgrade to starter
+        # Downgrade to starter — clear paid-plan fields.
+        # Do NOT reset credits to signup_credits: signup_credits are a one-time
+        # grant at registration, not a repeatable downgrade benefit. Users who
+        # toggled between tiers to farm free credits would otherwise receive 200
+        # credits on every downgrade. We preserve whatever credits they have (or
+        # zero them out if they are already negative/zero).
         monthly_credits = 0
         update = {
             "subscription_tier": "starter",
             "plan_config": None,
             "credit_allowance": 0,
+            "credits": 0,
+            "credits_refreshed_at": now,
+            "credits_last_refresh": now,
             "subscription_started": now,
             "subscription_billing_period": None,
+            "subscription_expires": None,
         }
     elif new_tier == "custom" and plan_config:
         monthly_credits = plan_config.get("monthly_credits", 500)

@@ -36,8 +36,8 @@ FAKE_USER_FREE = {
     "user_id": "user_free_001",
     "email": "free@thookai.io",
     "name": "Free User",
-    "subscription_tier": "free",
-    "credits": 50,
+    "subscription_tier": "starter",
+    "credits": 200,
     "credits_last_refresh": datetime.now(timezone.utc),
     "onboarding_completed": True,
 }
@@ -521,11 +521,11 @@ class TestStripeBilling:
     # -- a) Checkout creates Stripe session ---------------------------------
 
     def test_checkout_creates_stripe_session(self):
-        """POST /billing/subscription/checkout creates a checkout session.
+        """POST /billing/plan/checkout creates a custom-plan checkout session.
 
-        The billing route lazily imports create_checkout_session from
+        The billing route lazily imports create_custom_plan_checkout from
         services.stripe_service inside the handler, so we must patch
-        at ``services.stripe_service.create_checkout_session``.
+        at ``services.stripe_service.create_custom_plan_checkout``.
         """
         from fastapi.testclient import TestClient
 
@@ -535,17 +535,24 @@ class TestStripeBilling:
             "success": True,
             "checkout_url": "https://checkout.stripe.com/session_123",
             "session_id": "cs_test_123",
+            "monthly_price": 30.0,
+            "monthly_credits": 500,
         }
 
         with patch(
-            "services.stripe_service.create_checkout_session",
+            "services.stripe_service.create_custom_plan_checkout",
             new_callable=AsyncMock,
             return_value=mock_session_result,
         ) as mock_create:
             client = TestClient(app, raise_server_exceptions=False)
-            resp = client.post("/api/billing/subscription/checkout", json={
-                "tier": "pro",
-                "billing_period": "monthly",
+            resp = client.post("/api/billing/plan/checkout", json={
+                "text_posts": 50,
+                "images": 0,
+                "videos": 0,
+                "carousels": 0,
+                "repurposes": 0,
+                "voice_narrations": 0,
+                "series_plans": 0,
             })
 
         app.dependency_overrides.clear()
@@ -555,14 +562,14 @@ class TestStripeBilling:
         assert data["success"] is True
         assert "checkout_url" in data
 
-        mock_create.assert_called_once_with(
-            user_id=FAKE_USER["user_id"],
-            email=FAKE_USER["email"],
-            tier="pro",
-            billing_period="monthly",
-            success_url=None,
-            cancel_url=None,
-        )
+        mock_create.assert_called_once()
+        # Verify the correct args were forwarded to create_custom_plan_checkout
+        call_kwargs = mock_create.call_args.kwargs
+        assert call_kwargs["user_id"] == FAKE_USER["user_id"]
+        assert call_kwargs["monthly_credits"] > 0, "monthly_credits must be positive"
+        assert call_kwargs["monthly_price_cents"] > 0, "monthly_price_cents must be positive"
+        assert isinstance(call_kwargs["plan_config"], dict)
+        assert call_kwargs["plan_config"]["monthly_credits"] == call_kwargs["monthly_credits"]
 
     # -- b) Webhook checkout.session.completed updates tier -----------------
 
@@ -594,12 +601,13 @@ class TestStripeBilling:
 
     @pytest.mark.asyncio
     async def test_webhook_subscription_created_updates_tier(self):
-        """handle_subscription_created sets subscription_tier and credits."""
+        """handle_subscription_created sets subscription_tier to 'custom' and credits."""
         mock_subscription = {
             "id": "sub_test_789",
             "metadata": {
                 "user_id": "user_test_e2e_001",
-                "tier": "pro",
+                "type": "custom_plan",
+                "monthly_credits": "500",
             },
             "customer": "cus_test_abc",
             "status": "active",
@@ -618,8 +626,8 @@ class TestStripeBilling:
         filter_arg = call_args[0][0]
         update_set = call_args[0][1]["$set"]
         assert filter_arg == {"user_id": "user_test_e2e_001"}
-        assert update_set["subscription_tier"] == "pro"
-        assert update_set["credits"] == 500  # pro tier = 500 credits
+        assert update_set["subscription_tier"] == "custom"
+        assert update_set["credits"] == 500  # custom plan credits from metadata
 
     # -- c) Payment succeeded refreshes credits -----------------------------
 
@@ -674,28 +682,35 @@ class TestStripeBilling:
         mock_stripe = MagicMock()
         mock_subscription_obj = {
             "id": "sub_existing_1",
-            "items": {"data": [{"id": "si_item_1"}]},
+            "items": {"data": [{"id": "si_item_1", "price": {"product": "prod_abc"}}]},
         }
         mock_stripe.Subscription.retrieve.return_value = mock_subscription_obj
         mock_stripe.Subscription.modify.return_value = MagicMock(id="sub_existing_1")
 
+        plan_config = {
+            "monthly_credits": 500,
+            "monthly_price_usd": 30,
+            "selections": {"text_posts": 50},
+        }
+
         with (
             patch("services.stripe_service.db") as mock_db,
             patch("services.stripe_service.stripe", mock_stripe),
-            patch(
-                "services.stripe_service._get_price_id",
-                return_value="price_studio_monthly_123",
-            ),
         ):
             mock_db.users.find_one = AsyncMock(return_value=mock_user)
             mock_db.users.update_one = AsyncMock()
 
             from services.stripe_service import modify_subscription
 
-            result = await modify_subscription("user_test_e2e_001", "studio", "monthly")
+            result = await modify_subscription(
+                "user_test_e2e_001",
+                monthly_credits=500,
+                monthly_price_cents=3000,
+                plan_config=plan_config,
+            )
 
         assert result["success"] is True
-        assert result["new_tier"] == "studio"
+        assert result["monthly_credits"] == 500
         mock_stripe.Subscription.modify.assert_called_once()
         modify_call_args = mock_stripe.Subscription.modify.call_args
         assert modify_call_args[0][0] == "sub_existing_1"
@@ -780,48 +795,60 @@ class TestFreeCredits:
 
         assert resp.status_code == 200
         # Verify the document that was inserted into the database
-        assert inserted_doc["credits"] == 50
-        assert inserted_doc["subscription_tier"] == "free"
+        assert inserted_doc["credits"] == 200
+        assert inserted_doc["subscription_tier"] == "starter"
         assert "credits_last_refresh" in inserted_doc
+        assert "credits_refreshed_at" in inserted_doc
 
     # -- b) refresh_monthly_credits includes free tier ----------------------
 
     @pytest.mark.asyncio
     async def test_refresh_monthly_credits_includes_free_tier(self):
-        """refresh_monthly_credits refreshes credits for free tier users.
+        """refresh_monthly_credits refreshes credits for custom plan users.
 
-        The Celery task imports ``from database import db`` lazily.
-        We replicate its core logic directly with a mock db to test
-        the refresh calculation for free tier users.
+        Starter (formerly free) tier has 0 monthly_credits — no refresh.
+        Custom plan users with monthly_credits > 0 do get refreshed.
+
+        Matches production logic in tasks/content_tasks.py:refresh_monthly_credits:
+        - custom tier reads monthly_credits from user.plan_config, not TIER_CONFIGS
+        - starter/free tier monthly_credits == 0, so they are skipped
         """
-        from services.credits import TIER_CONFIGS
-
         old_refresh = datetime.now(timezone.utc) - timedelta(days=35)
-        free_user = {
-            "user_id": "user_free_refresh_1",
-            "subscription_tier": "free",
+        custom_user = {
+            "user_id": "user_custom_refresh_1",
+            "subscription_tier": "custom",
             "credits": 5,
             "credits_refreshed_at": old_refresh,
+            # plan_config is required; production code reads monthly_credits from here
+            "plan_config": {"monthly_credits": 750},
         }
 
         mock_db = MagicMock()
         mock_db.users.update_one = AsyncMock()
 
-        # Replicate the refresh logic from refresh_monthly_credits
+        # Mirror production logic from tasks/content_tasks.py:refresh_monthly_credits
         threshold = datetime.now(timezone.utc) - timedelta(days=30)
-        users = [free_user]
+        users = [custom_user]
         refreshed = 0
 
         for user in users:
             last_refresh = user.get("credits_refreshed_at")
             if last_refresh and last_refresh > threshold:
                 continue  # Already refreshed recently
-            tier = user.get("subscription_tier", "free")
-            tier_config = TIER_CONFIGS.get(tier, TIER_CONFIGS["free"])
+            tier = user.get("subscription_tier", "starter")
+            if tier == "custom":
+                plan_config = user.get("plan_config", {})
+                monthly_credits = plan_config.get("monthly_credits", 0)
+            else:
+                from services.credits import TIER_CONFIGS
+                tier_config = TIER_CONFIGS.get(tier, TIER_CONFIGS["starter"])
+                monthly_credits = tier_config["monthly_credits"]
+            if monthly_credits <= 0:
+                continue  # Starter has no monthly refresh
             await mock_db.users.update_one(
                 {"user_id": user["user_id"]},
                 {"$set": {
-                    "credits": tier_config["monthly_credits"],
+                    "credits": monthly_credits,
                     "credits_refreshed_at": datetime.now(timezone.utc),
                     "credits_last_refresh": datetime.now(timezone.utc),
                 }},
@@ -831,7 +858,7 @@ class TestFreeCredits:
         assert refreshed == 1
         mock_db.users.update_one.assert_called_once()
         update_set = mock_db.users.update_one.call_args[0][1]["$set"]
-        assert update_set["credits"] == 50  # free tier monthly_credits
+        assert update_set["credits"] == 750  # from plan_config, not TIER_CONFIGS placeholder
 
     # -- c) Refresh skips past_due paid users -------------------------------
 
@@ -890,13 +917,19 @@ class TestFreeCredits:
         free_user = {"subscription_tier": "free"}
         assert matches_filter(free_user, query_filter) is True
 
-    # -- d) TIER_CONFIGS free tier has 50 credits ---------------------------
+    # -- d) TIER_CONFIGS starter tier has 0 monthly_credits (200 signup credits) --
 
-    def test_tier_configs_free_has_50_credits(self):
-        """TIER_CONFIGS['free'] defines monthly_credits as 50."""
-        from services.credits import TIER_CONFIGS
+    def test_tier_configs_starter_has_correct_credits(self):
+        """TIER_CONFIGS['starter'] defines monthly_credits as 0 (signup gives 200 one-time).
 
-        assert TIER_CONFIGS["free"]["monthly_credits"] == 50
+        'free' is kept as a backward-compat alias for 'starter'.
+        """
+        from services.credits import TIER_CONFIGS, STARTER_CONFIG
+
+        assert TIER_CONFIGS["starter"]["monthly_credits"] == 0
+        assert STARTER_CONFIG["signup_credits"] == 200
+        # Backward-compat: 'free' is an alias for 'starter'
+        assert TIER_CONFIGS["free"] is TIER_CONFIGS["starter"]
 
     # -- e) Register response includes token --------------------------------
 
@@ -926,5 +959,5 @@ class TestFreeCredits:
         assert resp.status_code == 200
         data = resp.json()
         assert "token" in data
-        assert data["subscription_tier"] == "free"
-        assert data["credits"] == 50
+        assert data["subscription_tier"] == "starter"
+        assert data["credits"] == 200
