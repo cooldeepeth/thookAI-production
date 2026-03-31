@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 07-platform-features-admin-frontend-quality/07-02-PLAN.md
-last_updated: "2026-03-31T11:18:25.559Z"
+status: executing
+stopped_at: Completed 08-gap-closure-tech-debt/08-02-PLAN.md
+last_updated: "2026-03-31T13:25:23.643Z"
 last_activity: 2026-03-31
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 22
+  completed_plans: 21
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 06 — Media Generation & Analytics
+**Current focus:** Phase 08 — Gap Closure & Tech Debt
 
 ## Current Position
 
-Phase: 07
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 08 (Gap Closure & Tech Debt) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0%
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 07-platform-features-admin-frontend-quality P01 | 7 | 2 tasks | 2 files |
 | Phase 07 P03 | 8 | 2 tasks | 1 files |
 | Phase 07 P02 | 17 | 2 tasks | 1 files |
+| Phase 08-gap-closure-tech-debt P02 | 525661 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,7 @@ Recent decisions affecting current work:
 - [Phase 07]: TIER_CONFIGS only has starter/custom/free; pro/studio not separate tier keys — use custom tier in admin tier tests
 - [Phase 07]: Patch route-level imported names (routes.x.fn) not service-level because Python binds names at import time
 - [Phase 07]: Mock SSE _sse_event_generator with finite async generator to prevent infinite loop hang in tests
+- [Phase 08-gap-closure-tech-debt]: CRA env pattern: all frontend files declare backend URL as process.env.REACT_APP_BACKEND_URL (no import.meta.env fallback)
 
 ### Pending Todos
 
@@ -117,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T11:09:48.912Z
-Stopped at: Completed 07-platform-features-admin-frontend-quality/07-02-PLAN.md
+Last session: 2026-03-31T13:25:23.639Z
+Stopped at: Completed 08-gap-closure-tech-debt/08-02-PLAN.md
 Resume file: None

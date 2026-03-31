@@ -168,7 +168,7 @@ Plans:
 
 Plans:
 - [ ] 08-01-PLAN.md — Fix MEDIA-05: add db.media_assets.insert_one to Celery media tasks + Celery task naming
-- [ ] 08-02-PLAN.md — Fix frontend import.meta.env syntax and REQUIREMENTS.md doc drift
+- [x] 08-02-PLAN.md — Fix frontend import.meta.env syntax and REQUIREMENTS.md doc drift
 
 ## Progress
 
@@ -184,4 +184,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Publishing, Scheduling & Billing | 3/3 | Complete   | 2026-03-31 |
 | 6. Media Generation & Analytics | 3/3 | Complete   | 2026-03-31 |
 | 7. Platform Features, Admin & Frontend Quality | 4/4 | Complete   | 2026-03-31 |
-| 8. Gap Closure & Tech Debt | 0/2 | Not started | - |
+| 8. Gap Closure & Tech Debt | 1/2 | In Progress|  |
