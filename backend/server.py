@@ -48,6 +48,7 @@ from routes.campaigns import router as campaigns_router
 from routes.admin import router as admin_router
 from routes.uom import router as uom_router
 from routes.viral_card import router as viral_card_router
+from routes.n8n_bridge import router as n8n_bridge_router
 
 
 # Setup logging
@@ -296,6 +297,7 @@ api_router.include_router(webhooks_router)
 api_router.include_router(campaigns_router)
 api_router.include_router(uom_router)
 api_router.include_router(viral_card_router)
+api_router.include_router(n8n_bridge_router)
 
 # Admin dashboard — hidden from Swagger, requires admin role
 app.include_router(admin_router, prefix="/api/admin", include_in_schema=False)

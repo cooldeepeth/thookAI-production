@@ -215,6 +215,26 @@ class PineconeConfig:
 
 
 @dataclass
+class N8nConfig:
+    """n8n workflow orchestration configuration"""
+    n8n_url: str = field(default_factory=lambda: os.environ.get('N8N_URL', 'http://n8n:5678'))
+    webhook_secret: str = field(default_factory=lambda: os.environ.get('N8N_WEBHOOK_SECRET', ''))
+    api_key: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_API_KEY'))
+    backend_callback_url: str = field(default_factory=lambda: os.environ.get('N8N_BACKEND_CALLBACK_URL', 'http://backend:8001'))
+    workflow_scheduled_posts: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_SCHEDULED_POSTS'))
+    workflow_reset_daily_limits: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_RESET_DAILY_LIMITS'))
+    workflow_refresh_monthly_credits: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_REFRESH_MONTHLY_CREDITS'))
+    workflow_cleanup_old_jobs: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_OLD_JOBS'))
+    workflow_cleanup_expired_shares: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_EXPIRED_SHARES'))
+    workflow_aggregate_daily_analytics: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_AGGREGATE_DAILY_ANALYTICS'))
+    workflow_cleanup_stale_jobs: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_STALE_JOBS'))
+
+    def is_configured(self) -> bool:
+        """Check if n8n is configured with required URL and secret."""
+        return bool(self.n8n_url and self.webhook_secret)
+
+
+@dataclass
 class AppConfig:
     """Application configuration"""
     environment: str = field(default_factory=lambda: os.environ.get('ENVIRONMENT', 'development'))
@@ -251,6 +271,7 @@ class Settings:
     voice: VoiceProviderConfig = field(default_factory=VoiceProviderConfig)
     platforms: PlatformOAuthConfig = field(default_factory=PlatformOAuthConfig)
     pinecone: PineconeConfig = field(default_factory=PineconeConfig)
+    n8n: N8nConfig = field(default_factory=N8nConfig)
 
     def validate(self) -> dict:
         """
