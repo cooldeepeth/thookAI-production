@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Infrastructure & Celery** - Restore the task queue and supporting services that everything depends on
 - [x] **Phase 3: Auth, Onboarding & Email** - Fix the user entry point and persona generation (core product value) (completed 2026-03-31)
 - [x] **Phase 4: Content Pipeline** - Verify and repair the 5-agent generation pipeline end-to-end (completed 2026-03-31)
-- [ ] **Phase 5: Publishing, Scheduling & Billing** - Wire real publishing dispatch and restore the credit/billing loop
+- [x] **Phase 5: Publishing, Scheduling & Billing** - Wire real publishing dispatch and restore the credit/billing loop (completed 2026-03-31)
 - [ ] **Phase 6: Media Generation & Analytics** - Verify credit-gated media features and real social metrics
 - [ ] **Phase 7: Platform Features, Admin & Frontend Quality** - Confirm all auxiliary features and frontend polish
 
@@ -112,7 +112,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Publishing dispatch and platform OAuth verification tests
 - [x] 05-02-PLAN.md — Atomic credit deduction fix and starter tier restrictions
-- [ ] 05-03-PLAN.md — Stripe billing flow verification and monthly credit refresh tests
+- [x] 05-03-PLAN.md — Stripe billing flow verification and monthly credit refresh tests
 
 ### Phase 6: Media Generation & Analytics
 **Goal**: Credit-gated media features (image, voice, video) run correctly and asynchronously, file uploads land in R2, and the analytics dashboard shows real platform metrics
@@ -151,6 +151,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Infrastructure & Celery | 3/3 | Complete |  |
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
 | 4. Content Pipeline | 2/2 | Complete   | 2026-03-31 |
-| 5. Publishing, Scheduling & Billing | 2/3 | In Progress|  |
+| 5. Publishing, Scheduling & Billing | 3/3 | Complete   | 2026-03-31 |
 | 6. Media Generation & Analytics | 0/TBD | Not started | - |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |
