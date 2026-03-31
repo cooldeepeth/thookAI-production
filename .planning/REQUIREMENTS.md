@@ -59,10 +59,10 @@ Requirements for stabilization release. Each maps to roadmap phases.
 
 ### Analytics & Intelligence
 
-- [ ] **ANAL-01**: Social analytics service polls LinkedIn/X/Instagram APIs 24h and 7d after publish
-- [ ] **ANAL-02**: Performance intelligence calculates real optimal posting times from engagement data
-- [ ] **ANAL-03**: Analytics dashboard displays real metrics (not fabricated from job counts)
-- [ ] **ANAL-04**: Persona evolution and refinement cycles tracked over time
+- [x] **ANAL-01**: Social analytics service polls LinkedIn/X/Instagram APIs 24h and 7d after publish
+- [x] **ANAL-02**: Performance intelligence calculates real optimal posting times from engagement data
+- [x] **ANAL-03**: Analytics dashboard displays real metrics (not fabricated from job counts)
+- [x] **ANAL-04**: Persona evolution and refinement cycles tracked over time
 
 ### Platform Features
 
@@ -180,10 +180,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEDIA-03 | Phase 6 | Complete |
 | MEDIA-04 | Phase 6 | Complete |
 | MEDIA-05 | Phase 6 | Complete |
-| ANAL-01 | Phase 6 | Pending |
-| ANAL-02 | Phase 6 | Pending |
-| ANAL-03 | Phase 6 | Pending |
-| ANAL-04 | Phase 6 | Pending |
+| ANAL-01 | Phase 6 | Complete |
+| ANAL-02 | Phase 6 | Complete |
+| ANAL-03 | Phase 6 | Complete |
+| ANAL-04 | Phase 6 | Complete |
 | FEAT-01 | Phase 7 | Pending |
 | FEAT-02 | Phase 7 | Pending |
 | FEAT-03 | Phase 7 | Pending |
