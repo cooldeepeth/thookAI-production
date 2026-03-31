@@ -70,6 +70,21 @@ async def lifespan(app: FastAPI):
     # Validate configuration
     config_report = settings.log_startup_info()
 
+    # Validate required environment variables and log any that are missing
+    from config import validate_required_env_vars
+    missing_vars = validate_required_env_vars()
+    if missing_vars:
+        for var in missing_vars:
+            logger.critical(f"MISSING REQUIRED ENV VAR: {var}")
+        if settings.app.is_production:
+            raise RuntimeError(
+                f"Cannot start in production — missing required env vars: {', '.join(missing_vars)}"
+            )
+        else:
+            logger.warning(
+                f"Missing {len(missing_vars)} env var(s) — some features will be unavailable in dev mode"
+            )
+
     # Initialize Sentry error tracking (early, before DB, so it catches startup errors)
     if settings.app.sentry_dsn:
         import sentry_sdk

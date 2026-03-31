@@ -331,5 +331,53 @@ def get_settings() -> Settings:
     return Settings()
 
 
+def validate_required_env_vars() -> list:
+    """
+    Check that critical environment variables are set.
+    Returns list of missing variable names.
+
+    Required in ALL environments:
+      MONGO_URL, DB_NAME, JWT_SECRET_KEY, FERNET_KEY
+
+    Required in production (ENVIRONMENT=production):
+      REDIS_URL, ANTHROPIC_API_KEY (or OPENAI_API_KEY),
+      R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL,
+      STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+      ENCRYPTION_KEY
+    """
+    missing = []
+
+    # Always required
+    always_required = ["MONGO_URL", "DB_NAME", "JWT_SECRET_KEY", "FERNET_KEY"]
+    for var in always_required:
+        val = os.environ.get(var, "").strip()
+        if not val or val in ("change_this_to_a_random_64_char_string", "your_fernet_key_here"):
+            missing.append(var)
+
+    env = os.environ.get("ENVIRONMENT", "development")
+    if env == "production":
+        prod_required = [
+            "REDIS_URL",
+            "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY",
+            "R2_BUCKET_NAME", "R2_PUBLIC_URL",
+            "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
+            "ENCRYPTION_KEY",
+        ]
+        for var in prod_required:
+            val = os.environ.get(var, "").strip()
+            if not val:
+                missing.append(var)
+
+        # At least one LLM provider required in production
+        has_llm = any(
+            os.environ.get(k, "").strip()
+            for k in ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "EMERGENT_LLM_KEY"]
+        )
+        if not has_llm:
+            missing.append("ANTHROPIC_API_KEY (or OPENAI_API_KEY or EMERGENT_LLM_KEY)")
+
+    return missing
+
+
 # Convenience function for quick access
 settings = get_settings()
