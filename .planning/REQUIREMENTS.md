@@ -71,10 +71,10 @@ Requirements for stabilization release. Each maps to roadmap phases.
 - [x] **FEAT-03**: Template marketplace displays 30 seed templates with browse/filter/use
 - [x] **FEAT-04**: Content export produces copy/CSV/bulk download with date range filter
 - [x] **FEAT-05**: Post history import accepts batch uploads and uses them for persona training
-- [ ] **FEAT-06**: Persona sharing generates link and public view page renders persona card
-- [ ] **FEAT-07**: Viral persona card at /discover analyzes pasted posts and generates shareable card
-- [ ] **FEAT-08**: SSE notifications fire for job completion and publish events
-- [ ] **FEAT-09**: Outbound webhooks fire on configurable events (Zapier integration)
+- [x] **FEAT-06**: Persona sharing generates link and public view page renders persona card
+- [x] **FEAT-07**: Viral persona card at /discover analyzes pasted posts and generates shareable card
+- [x] **FEAT-08**: SSE notifications fire for job completion and publish events
+- [x] **FEAT-09**: Outbound webhooks fire on configurable events (Zapier integration)
 
 ### Admin & Agency
 
@@ -189,10 +189,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FEAT-03 | Phase 7 | Complete |
 | FEAT-04 | Phase 7 | Complete |
 | FEAT-05 | Phase 7 | Complete |
-| FEAT-06 | Phase 7 | Pending |
-| FEAT-07 | Phase 7 | Pending |
-| FEAT-08 | Phase 7 | Pending |
-| FEAT-09 | Phase 7 | Pending |
+| FEAT-06 | Phase 7 | Complete |
+| FEAT-07 | Phase 7 | Complete |
+| FEAT-08 | Phase 7 | Complete |
+| FEAT-09 | Phase 7 | Complete |
 | ADMIN-01 | Phase 7 | Complete |
 | ADMIN-02 | Phase 7 | Complete |
 | ADMIN-03 | Phase 7 | Complete |
