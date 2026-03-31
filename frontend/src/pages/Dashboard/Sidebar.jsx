@@ -7,7 +7,7 @@ import {
   Building2, LayoutTemplate, CreditCard, FolderOpen, ShieldCheck
 } from "lucide-react";
 
-const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },

@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, X, RefreshCw, Linkedin, Twitter, Instagram, ArrowRight
 } from "lucide-react";
 
-const API_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const platformIcons = {
   linkedin: { icon: Linkedin, color: "#0A66C2" },
