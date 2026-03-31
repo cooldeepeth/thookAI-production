@@ -5,7 +5,7 @@ Tests new health/config endpoints, security headers, rate limiting, caching, and
 """
 
 import asyncio
-import aiohttp
+import httpx
 import json
 import time
 from datetime import datetime
@@ -19,17 +19,17 @@ TEST_USER_NAME = "Production Test User"
 
 class ProductionTestRunner:
     def __init__(self):
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: Optional[httpx.AsyncClient] = None
         self.auth_token: Optional[str] = None
         self.test_results = []
-        
+
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
+        self.session = httpx.AsyncClient()
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.session:
-            await self.session.close()
+            await self.session.aclose()
     
     def log_result(self, test_name: str, passed: bool, details: str = ""):
         status = "✅ PASS" if passed else "❌ FAIL"
@@ -59,18 +59,17 @@ class ProductionTestRunner:
             request_headers["Authorization"] = f"Bearer {self.auth_token}"
         
         try:
-            async with self.session.request(
+            response = await self.session.request(
                 method, url, json=data, headers=request_headers, timeout=30
-            ) as response:
-                try:
-                    response_data = await response.json()
-                except Exception:
-                    response_data = {"error": "Invalid JSON response", "text": await response.text()}
-                
-                # Convert headers to dict for easier access
-                response_headers = dict(response.headers)
-                return response.status, response_data, response_headers
-        except asyncio.TimeoutError:
+            )
+            try:
+                response_data = response.json()
+            except Exception:
+                response_data = {"error": "Invalid JSON response", "text": response.text}
+            # Convert headers to dict for easier access
+            response_headers = dict(response.headers)
+            return response.status_code, response_data, response_headers
+        except httpx.TimeoutException:
             return 408, {"error": "Request timeout"}, {}
         except Exception as e:
             return 500, {"error": f"Request failed: {str(e)}"}, {}

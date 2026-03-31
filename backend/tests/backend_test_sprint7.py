@@ -3,10 +3,14 @@
 Sprint 7 Backend Testing Suite for ThookAI
 Tests Platform Integrations, Planner, and Publisher functionality
 
+NOTE: This is a live E2E integration script. Run directly against a running server.
+Run: python3 backend_test_sprint7.py
+It is also collectable by pytest (all test_* methods are marked skip for pytest).
+
 Focus Areas:
 1. Platform Status Endpoint
 2. Planner - Optimal Times
-3. Planner - Weekly Schedule 
+3. Planner - Weekly Schedule
 4. Content Scheduling Flow
 5. Upcoming Scheduled Content
 6. Cancel Scheduled Content
@@ -20,28 +24,31 @@ import sys
 import os
 from datetime import datetime, timezone, timedelta
 
-# Get backend URL from frontend env
-FRONTEND_ENV_PATH = "/app/frontend/.env"
-BACKEND_URL = None
+# Get backend URL from frontend env — only at runtime (not import time)
+def _get_backend_url():
+    FRONTEND_ENV_PATH = "/app/frontend/.env"
+    backend_url = None
+    try:
+        with open(FRONTEND_ENV_PATH, "r") as f:
+            for line in f:
+                if line.startswith("REACT_APP_BACKEND_URL="):
+                    backend_url = line.split("=", 1)[1].strip()
+                    break
+    except Exception:
+        pass
+    # Fallback to environment variable
+    if not backend_url:
+        backend_url = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:8000")
+    return backend_url
 
-try:
-    with open(FRONTEND_ENV_PATH, "r") as f:
-        for line in f:
-            if line.startswith("REACT_APP_BACKEND_URL="):
-                BACKEND_URL = line.split("=", 1)[1].strip()
-                break
-except Exception as e:
-    print(f"Error reading frontend .env: {e}")
-    sys.exit(1)
 
-if not BACKEND_URL:
-    print("Error: REACT_APP_BACKEND_URL not found in frontend/.env")
-    sys.exit(1)
-
-API_BASE = f"{BACKEND_URL}/api"
+API_BASE = None  # Resolved at runtime only
 
 class Sprint7TestRunner:
     def __init__(self):
+        global API_BASE
+        if API_BASE is None:
+            API_BASE = f"{_get_backend_url()}/api"
         self.token = None
         self.user_id = None
         self.job_ids = []
@@ -713,6 +720,15 @@ async def main():
     else:
         print("❌ Some tests failed - check logs above")
         return 1
+
+import pytest
+
+
+@pytest.mark.skip(reason="Live E2E integration script — run directly against a server, not via pytest")
+def test_sprint7_e2e_placeholder():
+    """Placeholder so pytest can collect this file without errors."""
+    pass
+
 
 if __name__ == "__main__":
     exit_code = asyncio.run(main())
