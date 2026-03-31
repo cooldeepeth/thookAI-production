@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
 status: executing
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-31T21:19:34.318Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-31T21:27:44.953Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 8
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 09 (n8n-infrastructure-real-publishing) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-03-31
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 09 P01 | 4 | 2 tasks | 5 files |
+| Phase 09 P02 | 18 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 09]: HMAC-SHA256 over full request body bytes for n8n callback authentication — consistent with existing webhook_service.py pattern
 - [Phase 09]: hmac.compare_digest used for constant-time comparison to prevent timing attacks on n8n webhook callbacks
 - [Phase 09]: Trigger endpoint returns 404 for unconfigured workflow IDs — explicit failure over silent no-op
+- [Phase 09]: D-09 honored: process-scheduled-posts uses agents.publisher.publish_to_platform directly — no content_tasks._publish_to_platform indirection
+- [Phase 09]: D-05 honored: idempotency via find_one_and_update atomic claim + 2-minute published_at guard prevents duplicate social posts during overlapping n8n runs
+- [Phase 09]: Celery worker retained for media/content tasks; beat schedule fully removed — n8n now owns all periodic scheduling via 7 execute endpoints
 
 ### Pending Todos
 
@@ -80,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T21:19:34.315Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-31T21:27:44.950Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
