@@ -19,12 +19,12 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 ### LightRAG Knowledge Graph
 
 - [x] **LRAG-01**: LightRAG sidecar service deployed as separate container with MongoDB storage (`thookai_lightrag` database)
-- [ ] **LRAG-02**: Per-user namespace isolation — each user's knowledge graph is strictly separated at storage level
-- [ ] **LRAG-03**: Domain-specific entity extraction prompt (topic domains, hook archetypes, emotional tones, named entities) tested on 10+ real posts before production ingestion
+- [x] **LRAG-02**: Per-user namespace isolation — each user's knowledge graph is strictly separated at storage level
+- [x] **LRAG-03**: Domain-specific entity extraction prompt (topic domains, hook archetypes, emotional tones, named entities) tested on 10+ real posts before production ingestion
 - [x] **LRAG-04**: Embedding model (`text-embedding-3-small`) locked in config before first document insert with startup assertion on vector dimension
-- [ ] **LRAG-05**: Thinker agent enhanced with multi-hop LightRAG retrieval — "what angles have I NOT used on topic X?"
-- [ ] **LRAG-06**: Learning agent writes to both Pinecone (similarity) and LightRAG (relationships) on content approval
-- [ ] **LRAG-07**: Strict retrieval routing contract — Thinker calls LightRAG only, Writer calls Pinecone only (no context bleeding)
+- [x] **LRAG-05**: Thinker agent enhanced with multi-hop LightRAG retrieval — "what angles have I NOT used on topic X?"
+- [x] **LRAG-06**: Learning agent writes to both Pinecone (similarity) and LightRAG (relationships) on content approval
+- [x] **LRAG-07**: Strict retrieval routing contract — Thinker calls LightRAG only, Writer calls Pinecone only (no context bleeding)
 
 ### Multi-Model Media Orchestration
 
@@ -138,12 +138,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | N8N-05 | Phase 9 | Complete |
 | N8N-06 | Phase 9 | Complete |
 | LRAG-01 | Phase 10 | Complete |
-| LRAG-02 | Phase 10 | Pending |
-| LRAG-03 | Phase 10 | Pending |
+| LRAG-02 | Phase 10 | Complete |
+| LRAG-03 | Phase 10 | Complete |
 | LRAG-04 | Phase 10 | Complete |
-| LRAG-05 | Phase 10 | Pending |
-| LRAG-06 | Phase 10 | Pending |
-| LRAG-07 | Phase 10 | Pending |
+| LRAG-05 | Phase 10 | Complete |
+| LRAG-06 | Phase 10 | Complete |
+| LRAG-07 | Phase 10 | Complete |
 | MEDIA-01 | Phase 11 | Pending |
 | MEDIA-02 | Phase 11 | Pending |
 | MEDIA-03 | Phase 11 | Pending |

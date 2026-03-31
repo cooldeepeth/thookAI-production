@@ -156,7 +156,7 @@ Plans:
 | 7. Platform Features, Admin & Frontend Quality | v1.0 | 4/4 | Complete | 2026-03-31 |
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
-| 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete   | 2026-03-31 |
+| 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
 | 11. Multi-Model Media Orchestration | v2.0 | 0/TBD | Not started | - |
 | 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
