@@ -107,7 +107,12 @@ Plans:
   5. Credits are atomically deducted before the pipeline starts — concurrent requests cannot produce a negative credit balance
   6. Starter tier hard caps are enforced: attempting a 3rd video or 6th carousel returns a 402 with a clear message; LinkedIn-only restriction blocks non-LinkedIn posts for free tier
   7. Monthly credit refresh runs on schedule via Celery beat and resets user credits to the correct tier amount
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Publishing dispatch and platform OAuth verification tests
+- [ ] 05-02-PLAN.md — Atomic credit deduction fix and starter tier restrictions
+- [ ] 05-03-PLAN.md — Stripe billing flow verification and monthly credit refresh tests
 
 ### Phase 6: Media Generation & Analytics
 **Goal**: Credit-gated media features (image, voice, video) run correctly and asynchronously, file uploads land in R2, and the analytics dashboard shows real platform metrics
@@ -146,6 +151,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Infrastructure & Celery | 3/3 | Complete |  |
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
 | 4. Content Pipeline | 2/2 | Complete   | 2026-03-31 |
-| 5. Publishing, Scheduling & Billing | 0/TBD | Not started | - |
+| 5. Publishing, Scheduling & Billing | 0/3 | Not started | - |
 | 6. Media Generation & Analytics | 0/TBD | Not started | - |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |
