@@ -210,6 +210,22 @@ async def capture_learning_signal(
             except Exception as e:
                 logger.warning(f"Vector store embedding failed (non-fatal): {e}")
 
+            # Write to LightRAG knowledge graph (non-fatal, parallel to Pinecone)
+            try:
+                from services.lightrag_service import insert_content
+                await insert_content(
+                    user_id=user_id,
+                    content=final_content,
+                    metadata={
+                        "job_id": job_id,
+                        "platform": job_meta.get("platform", "unknown"),
+                        "content_type": job_meta.get("content_type", "post"),
+                        "was_edited": job_meta.get("was_edited", False),
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"LightRAG insert failed (non-fatal): {e}")
+
             # Increment approved count
             update_ops["$inc"] = {"learning_signals.approved_count": 1}
         
@@ -416,6 +432,22 @@ async def process_bulk_import(
             )
         except Exception as e:
             logger.warning(f"Vector store embedding failed for import (non-fatal): {e}")
+
+        # Write to LightRAG knowledge graph (non-fatal, parallel to Pinecone)
+        try:
+            from services.lightrag_service import insert_content
+            await insert_content(
+                user_id=user_id,
+                content=content,
+                metadata={
+                    "job_id": content_id,
+                    "platform": platform,
+                    "content_type": "post",
+                    "was_edited": False,
+                },
+            )
+        except Exception as e:
+            logger.warning(f"LightRAG insert failed (non-fatal): {e}")
 
         imported += 1
 
