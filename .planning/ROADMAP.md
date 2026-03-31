@@ -149,7 +149,7 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — Platform features verification: repurpose, campaigns, templates, export, import
 - [ ] 07-02-PLAN.md — Persona sharing, viral card, SSE notifications, outbound webhooks verification
-- [ ] 07-03-PLAN.md — Admin dashboard and agency workspace verification
+- [x] 07-03-PLAN.md — Admin dashboard and agency workspace verification
 - [x] 07-04-PLAN.md — Frontend quality: mobile sidebar, error boundary, empty states, 401 handling
 
 ## Progress

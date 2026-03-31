@@ -78,10 +78,10 @@ Requirements for stabilization release. Each maps to roadmap phases.
 
 ### Admin & Agency
 
-- [ ] **ADMIN-01**: Admin dashboard shows real platform stats and user management
-- [ ] **ADMIN-02**: Agency workspace creation, joining, and member management works
-- [ ] **ADMIN-03**: Workspace invitation emails send via Resend with correct links
-- [ ] **ADMIN-04**: Member roles (owner/admin/member) and permissions enforced
+- [x] **ADMIN-01**: Admin dashboard shows real platform stats and user management
+- [x] **ADMIN-02**: Agency workspace creation, joining, and member management works
+- [x] **ADMIN-03**: Workspace invitation emails send via Resend with correct links
+- [x] **ADMIN-04**: Member roles (owner/admin/member) and permissions enforced
 
 ### Infrastructure
 
@@ -193,10 +193,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FEAT-07 | Phase 7 | Pending |
 | FEAT-08 | Phase 7 | Pending |
 | FEAT-09 | Phase 7 | Pending |
-| ADMIN-01 | Phase 7 | Pending |
-| ADMIN-02 | Phase 7 | Pending |
-| ADMIN-03 | Phase 7 | Pending |
-| ADMIN-04 | Phase 7 | Pending |
+| ADMIN-01 | Phase 7 | Complete |
+| ADMIN-02 | Phase 7 | Complete |
+| ADMIN-03 | Phase 7 | Complete |
+| ADMIN-04 | Phase 7 | Complete |
 | UI-01 | Phase 7 | Complete |
 | UI-02 | Phase 7 | Complete |
 | UI-03 | Phase 7 | Complete |
