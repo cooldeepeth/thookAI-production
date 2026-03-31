@@ -103,6 +103,21 @@ async def run_thinker(
         except Exception:
             pass
 
+    # Fetch knowledge graph context for topic gap analysis (non-fatal)
+    # NOTE: query_knowledge_graph enforces per-user isolation via storage-level
+    # doc_filter_func — only documents tagged with CREATOR:{user_id} are retrieved
+    knowledge_context = ""
+    if user_id:
+        try:
+            from services.lightrag_service import query_knowledge_graph
+            knowledge_context = await query_knowledge_graph(
+                user_id=user_id,
+                topic=raw_input,
+                mode="hybrid",
+            )
+        except Exception:
+            pass  # Non-fatal — proceed without graph context
+
     if not openai_available():
         return _mock_thinker(raw_input, commander_output)
     try:
@@ -136,6 +151,16 @@ async def run_thinker(
         if fatigue_section:
             prompt = prompt + "\n" + fatigue_section
             logger.info("Fatigue shield constraints injected into Thinker prompt")
+
+        # Inject knowledge graph context for angle gap analysis
+        if knowledge_context:
+            kg_section = (
+                "\n\nKNOWLEDGE GRAPH - TOPICS AND ANGLES ALREADY USED:"
+                f"\n{knowledge_context[:800]}"
+                "\n\nPrioritise angles, hook archetypes, and emotional tones NOT listed above."
+            )
+            prompt = prompt + kg_section
+            logger.info("Knowledge graph context injected into Thinker prompt")
 
         response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=25.0)
         return json.loads(_clean_json(response))
