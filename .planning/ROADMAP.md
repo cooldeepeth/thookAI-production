@@ -24,6 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Publishing, Scheduling & Billing** - Wire real publishing dispatch and restore the credit/billing loop (completed 2026-03-31)
 - [x] **Phase 6: Media Generation & Analytics** - Verify credit-gated media features and real social metrics (completed 2026-03-31)
 - [x] **Phase 7: Platform Features, Admin & Frontend Quality** - Confirm all auxiliary features and frontend polish (completed 2026-03-31)
+- [ ] **Phase 8: Gap Closure & Tech Debt** - Close MEDIA-05 gap, fix frontend env vars, harden Celery naming, update docs
 
 ## Phase Details
 
@@ -152,10 +153,22 @@ Plans:
 - [x] 07-03-PLAN.md — Admin dashboard and agency workspace verification
 - [x] 07-04-PLAN.md — Frontend quality: mobile sidebar, error boundary, empty states, 401 handling
 
+### Phase 8: Gap Closure & Tech Debt
+**Goal**: Close the MEDIA-05 integration gap (Celery tasks → db.media_assets), fix frontend env var syntax, harden Celery task naming, and update REQUIREMENTS.md documentation drift
+**Depends on**: Phase 7
+**Requirements**: MEDIA-05
+**Gap Closure**: Closes gaps from v1.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. After Celery generate_image/voice/video tasks complete, a document appears in db.media_assets with type, public_url, user_id, and job_id fields
+  2. GET /api/media/assets returns AI-generated media (not just presigned uploads)
+  3. All frontend files use process.env.REACT_APP_BACKEND_URL exclusively — zero occurrences of import.meta.env
+  4. poll_post_metrics_24h and poll_post_metrics_7d have explicit name= kwargs matching celeryconfig references
+  5. All 57 requirements in REQUIREMENTS.md traceability table show correct status (no Pending drift)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -166,3 +179,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 5. Publishing, Scheduling & Billing | 3/3 | Complete   | 2026-03-31 |
 | 6. Media Generation & Analytics | 3/3 | Complete   | 2026-03-31 |
 | 7. Platform Features, Admin & Frontend Quality | 4/4 | Complete   | 2026-03-31 |
+| 8. Gap Closure & Tech Debt | 0/TBD | Not started | - |
