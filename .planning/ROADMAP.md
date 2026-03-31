@@ -128,7 +128,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Async media generation verification (image, voice, video agents)
+- [x] 06-01-PLAN.md — Async media generation verification (image, voice, video agents)
 - [ ] 06-02-PLAN.md — R2 upload path and media asset storage verification
 - [ ] 06-03-PLAN.md — Social analytics polling, optimal times, and real-data dashboard verification
 
@@ -157,5 +157,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
 | 4. Content Pipeline | 2/2 | Complete   | 2026-03-31 |
 | 5. Publishing, Scheduling & Billing | 3/3 | Complete   | 2026-03-31 |
-| 6. Media Generation & Analytics | 0/3 | Not started | - |
+| 6. Media Generation & Analytics | 1/3 | In Progress|  |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |
