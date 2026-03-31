@@ -58,8 +58,8 @@ Personalized content creation at scale — every user gets a unique voice finger
 
 - [x] n8n infrastructure replacing Celery for task orchestration and automation — Phase 9
 - [x] Real publishing to LinkedIn/X/Instagram via platform APIs through n8n — Phase 9
-- [ ] LightRAG knowledge graph with entity/relationship extraction from approved content
-- [ ] Multi-hop retrieval for Thinker agent via LightRAG
+- [x] LightRAG knowledge graph with entity/relationship extraction from approved content — Phase 10
+- [x] Multi-hop retrieval for Thinker agent via LightRAG — Phase 10
 - [ ] Multi-model media orchestration engine (Designer plans → Orchestrator decomposes → best model per task → Remotion assembles)
 - [ ] Static image with typography generation pipeline
 - [ ] Image carousel generation pipeline
@@ -151,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 9 complete — n8n infrastructure + real publishing. 7 Celery beat tasks migrated, webhook bridge with HMAC auth, idempotency guard, Docker Compose with n8n + PostgreSQL, 51 tests.*
+*Last updated: 2026-04-01 after Phase 10 complete — LightRAG knowledge graph. Sidecar container, per-user isolation, domain entity extraction, Thinker multi-hop query, Learning dual-write, routing contract, 32 tests.*
