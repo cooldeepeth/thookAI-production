@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Auth, Onboarding & Email** - Fix the user entry point and persona generation (core product value) (completed 2026-03-31)
 - [x] **Phase 4: Content Pipeline** - Verify and repair the 5-agent generation pipeline end-to-end (completed 2026-03-31)
 - [x] **Phase 5: Publishing, Scheduling & Billing** - Wire real publishing dispatch and restore the credit/billing loop (completed 2026-03-31)
-- [ ] **Phase 6: Media Generation & Analytics** - Verify credit-gated media features and real social metrics
+- [x] **Phase 6: Media Generation & Analytics** - Verify credit-gated media features and real social metrics (completed 2026-03-31)
 - [ ] **Phase 7: Platform Features, Admin & Frontend Quality** - Confirm all auxiliary features and frontend polish
 
 ## Phase Details
@@ -129,8 +129,8 @@ Plans:
 
 Plans:
 - [x] 06-01-PLAN.md — Async media generation verification (image, voice, video agents)
-- [ ] 06-02-PLAN.md — R2 upload path and media asset storage verification
-- [ ] 06-03-PLAN.md — Social analytics polling, optimal times, and real-data dashboard verification
+- [x] 06-02-PLAN.md — R2 upload path and media asset storage verification
+- [x] 06-03-PLAN.md — Social analytics polling, optimal times, and real-data dashboard verification
 
 ### Phase 7: Platform Features, Admin & Frontend Quality
 **Goal**: Every auxiliary feature (templates, exports, campaigns, sharing, webhooks, notifications) and admin/agency tooling works end-to-end, and the frontend has no broken states
@@ -157,5 +157,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
 | 4. Content Pipeline | 2/2 | Complete   | 2026-03-31 |
 | 5. Publishing, Scheduling & Billing | 3/3 | Complete   | 2026-03-31 |
-| 6. Media Generation & Analytics | 1/3 | In Progress|  |
+| 6. Media Generation & Analytics | 3/3 | Complete   | 2026-03-31 |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |

@@ -54,8 +54,8 @@ Requirements for stabilization release. Each maps to roadmap phases.
 - [x] **MEDIA-01**: AI image generation runs async (does not block FastAPI event loop)
 - [x] **MEDIA-02**: Voice clone sample upload and ElevenLabs clone creation works
 - [x] **MEDIA-03**: Video generation pipeline and HeyGen avatar creation works
-- [ ] **MEDIA-04**: File uploads go to Cloudflare R2 (HTTP 503 if R2 unavailable in production, no /tmp fallback)
-- [ ] **MEDIA-05**: Media assets stored in DB with valid R2 URLs that resolve
+- [x] **MEDIA-04**: File uploads go to Cloudflare R2 (HTTP 503 if R2 unavailable in production, no /tmp fallback)
+- [x] **MEDIA-05**: Media assets stored in DB with valid R2 URLs that resolve
 
 ### Analytics & Intelligence
 
@@ -178,8 +178,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEDIA-01 | Phase 6 | Complete |
 | MEDIA-02 | Phase 6 | Complete |
 | MEDIA-03 | Phase 6 | Complete |
-| MEDIA-04 | Phase 6 | Pending |
-| MEDIA-05 | Phase 6 | Pending |
+| MEDIA-04 | Phase 6 | Complete |
+| MEDIA-05 | Phase 6 | Complete |
 | ANAL-01 | Phase 6 | Pending |
 | ANAL-02 | Phase 6 | Pending |
 | ANAL-03 | Phase 6 | Pending |
