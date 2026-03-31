@@ -88,8 +88,8 @@ Requirements for stabilization release. Each maps to roadmap phases.
 - [ ] **INFRA-01**: Celery worker starts with all queues (default, media, content, video) and beat runs scheduled tasks
 - [ ] **INFRA-02**: All existing tests pass (baseline 59, expected to grow)
 - [ ] **INFRA-03**: Docker/docker-compose builds and runs all 6 services successfully
-- [ ] **INFRA-04**: Health endpoint at /health checks MongoDB, Redis, R2, LLM connectivity
-- [ ] **INFRA-05**: All 35 env vars documented in .env.example and validated at startup with clear error messages
+- [x] **INFRA-04**: Health endpoint at /health checks MongoDB, Redis, R2, LLM connectivity
+- [x] **INFRA-05**: All 35 env vars documented in .env.example and validated at startup with clear error messages
 - [ ] **INFRA-06**: CORS config centralized via settings.security.cors_origins
 - [ ] **INFRA-07**: Rate limiting works (Redis-backed primary, in-memory fallback)
 
@@ -148,8 +148,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-01 | Phase 2 | Pending |
 | INFRA-02 | Phase 2 | Pending |
 | INFRA-03 | Phase 2 | Pending |
-| INFRA-04 | Phase 2 | Pending |
-| INFRA-05 | Phase 2 | Pending |
+| INFRA-04 | Phase 2 | Complete |
+| INFRA-05 | Phase 2 | Complete |
 | INFRA-06 | Phase 2 | Pending |
 | INFRA-07 | Phase 2 | Pending |
 | AUTH-01 | Phase 3 | Pending |

@@ -57,7 +57,7 @@ Plans:
 
 Plans:
 - [ ] 02-01-PLAN.md — Fix test suite and verify Celery configuration
-- [ ] 02-02-PLAN.md — Env var validation, .env.example completion, health endpoint
+- [x] 02-02-PLAN.md — Env var validation, .env.example completion, health endpoint
 - [ ] 02-03-PLAN.md — Docker setup, CORS centralization, rate limiting verification
 
 
@@ -132,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Git & Branch Cleanup | 0/2 | Not started | - |
-| 2. Infrastructure & Celery | 0/3 | Not started | - |
+| 2. Infrastructure & Celery | 1/3 | In Progress|  |
 | 3. Auth, Onboarding & Email | 0/TBD | Not started | - |
 | 4. Content Pipeline | 0/TBD | Not started | - |
 | 5. Publishing, Scheduling & Billing | 0/TBD | Not started | - |
