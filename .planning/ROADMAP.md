@@ -56,7 +56,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Fix test suite and verify Celery configuration
+- [x] 02-01-PLAN.md — Fix test suite and verify Celery configuration
 - [x] 02-02-PLAN.md — Env var validation, .env.example completion, health endpoint
 - [ ] 02-03-PLAN.md — Docker setup, CORS centralization, rate limiting verification
 
