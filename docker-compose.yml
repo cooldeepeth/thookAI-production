@@ -89,27 +89,76 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: celery -A celery_app:celery_app beat --loglevel=info --scheduler celery.beat:PersistentScheduler
-    volumes:
-      - ./backend:/app
-    env_file:
-      - .env
+  n8n:
+    image: n8nio/n8n:stable
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
     environment:
-      - MONGO_URL=mongodb://mongo:27017
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres-n8n
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=${N8N_POSTGRES_PASSWORD:-n8n_dev_password}
+      - EXECUTIONS_MODE=queue
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-dev_encryption_key_change_in_prod}
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=true
+      - EXECUTIONS_DATA_MAX_AGE=336
+      - EXECUTIONS_DATA_PRUNE_MAX_COUNT=10000
+      - N8N_BACKEND_CALLBACK_URL=http://backend:8001
     depends_on:
-      mongo:
+      postgres-n8n:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  n8n-worker:
+    image: n8nio/n8n:stable
     restart: unless-stopped
+    command: worker
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres-n8n
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=${N8N_POSTGRES_PASSWORD:-n8n_dev_password}
+      - EXECUTIONS_MODE=queue
+      - N8N_PROCESS_TYPE=worker
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-dev_encryption_key_change_in_prod}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=true
+    depends_on:
+      - n8n
+      - redis
+      - postgres-n8n
+
+  postgres-n8n:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=n8n
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=${N8N_POSTGRES_PASSWORD:-n8n_dev_password}
+    volumes:
+      - n8n_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   mongo_data:
   frontend_node_modules:
+  n8n_postgres_data:
