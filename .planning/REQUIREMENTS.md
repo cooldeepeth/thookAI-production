@@ -19,7 +19,7 @@ Requirements for stabilization release. Each maps to roadmap phases.
 - [ ] **AUTH-01**: User can register with email/password and receives 200 starter credits
 - [ ] **AUTH-02**: User can log in and session persists across browser refresh
 - [ ] **AUTH-03**: Google OAuth login completes and creates/links user account
-- [ ] **AUTH-04**: Password reset email sends via Resend and reset link works
+- [x] **AUTH-04**: Password reset email sends via Resend and reset link works
 - [ ] **AUTH-05**: Onboarding interview uses correct Claude model (claude-sonnet-4-20250514, not mock fallback)
 - [ ] **AUTH-06**: Persona Engine generated from onboarding is personalized with real voice fingerprint
 
@@ -155,7 +155,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-01 | Phase 3 | Pending |
 | AUTH-02 | Phase 3 | Pending |
 | AUTH-03 | Phase 3 | Pending |
-| AUTH-04 | Phase 3 | Pending |
+| AUTH-04 | Phase 3 | Complete |
 | AUTH-05 | Phase 3 | Pending |
 | AUTH-06 | Phase 3 | Pending |
 | PIPE-01 | Phase 4 | Pending |

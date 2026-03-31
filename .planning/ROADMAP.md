@@ -76,7 +76,7 @@ Plans:
 
 Plans:
 - [ ] 03-01-PLAN.md — Auth core: registration with credits, login, session persistence, Google OAuth
-- [ ] 03-02-PLAN.md — Email service verification and password reset flow
+- [x] 03-02-PLAN.md — Email service verification and password reset flow
 - [ ] 03-03-PLAN.md — Onboarding model fix verification and persona generation quality
 
 ### Phase 4: Content Pipeline
