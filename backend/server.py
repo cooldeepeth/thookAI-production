@@ -124,6 +124,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not check/create indexes: {e}")
 
+    # Validate LightRAG embedding config (fail-fast on misconfiguration)
+    try:
+        from services.lightrag_service import assert_lightrag_embedding_config
+        await assert_lightrag_embedding_config()
+    except AssertionError:
+        if settings.app.is_production:
+            raise  # Block startup in production
+        logger.warning("LightRAG embedding config invalid - knowledge graph disabled in dev mode")
+    except Exception as e:
+        logger.warning("LightRAG startup check skipped: %s", e)
+
     # Seed templates if collection is empty
     try:
         from database import db
