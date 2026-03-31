@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
-status: executing
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-31T21:27:44.953Z"
+status: verifying
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-03-31T21:42:15.467Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 3
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 Phase: 09 (n8n-infrastructure-real-publishing) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0%
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 09 P01 | 4 | 2 tasks | 5 files |
 | Phase 09 P02 | 18 | 3 tasks | 6 files |
+| Phase 09 P03 | 22 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 09]: D-09 honored: process-scheduled-posts uses agents.publisher.publish_to_platform directly — no content_tasks._publish_to_platform indirection
 - [Phase 09]: D-05 honored: idempotency via find_one_and_update atomic claim + 2-minute published_at guard prevents duplicate social posts during overlapping n8n runs
 - [Phase 09]: Celery worker retained for media/content tasks; beat schedule fully removed — n8n now owns all periodic scheduling via 7 execute endpoints
+- [Phase 09]: WORKFLOW_NOTIFICATION_MAP excludes cleanup tasks — they are infrastructure ops, not user-visible events
+- [Phase 09]: process-scheduled-posts callback includes affected_user_ids from result.published_user_ids to close notification loop
+- [Phase 09]: _dispatch_workflow_notification uses lazy import pattern consistent with other execute endpoints in n8n_bridge.py
 
 ### Pending Todos
 
@@ -84,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T21:27:44.950Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-03-31T21:42:15.464Z
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None

@@ -25,7 +25,7 @@
 
 **Milestone Goal:** Transform ThookAI from a reactive content generation tool into a proactive content operating system — n8n orchestrates all workflows, LightRAG builds a living knowledge graph of each user's content history, a Strategist Agent synthesizes signals into ranked daily recommendations, and a multi-model media orchestrator produces professional-grade visuals and video.
 
-- [ ] **Phase 9: n8n Infrastructure + Real Publishing** - Replace Celery beat with n8n for all scheduled/external-API tasks; establish webhook bridge; hard cutover with idempotency keys
+- [x] **Phase 9: n8n Infrastructure + Real Publishing** - Replace Celery beat with n8n for all scheduled/external-API tasks; establish webhook bridge; hard cutover with idempotency keys (completed 2026-03-31)
 - [ ] **Phase 10: LightRAG Knowledge Graph** - Deploy per-user knowledge graph sidecar; wire Thinker agent with multi-hop retrieval; lock embedding model before first insert
 - [ ] **Phase 11: Multi-Model Media Orchestration** - Media Orchestrator service routing to best provider per asset type; Remotion compositions for all formats; credit ledger for partial-failure accounting
 - [ ] **Phase 12: Strategist Agent** - Nightly n8n-triggered agent synthesizing LightRAG + persona + analytics into ranked recommendation cards with cadence controls
@@ -49,8 +49,8 @@
 **Plans**: 3 plans
 Plans:
 - [x] 09-01-PLAN.md — N8nConfig dataclass + webhook bridge route (callback + trigger) + tests
-- [ ] 09-02-PLAN.md — Execute endpoints + Celery beat cutover + Docker Compose n8n + idempotency
-- [ ] 09-03-PLAN.md — Workflow status notifications + n8n workflow JSON templates
+- [x] 09-02-PLAN.md — Execute endpoints + Celery beat cutover + Docker Compose n8n + idempotency
+- [x] 09-03-PLAN.md — Workflow status notifications + n8n workflow JSON templates
 **UI hint**: yes
 
 ### Phase 10: LightRAG Knowledge Graph
@@ -151,7 +151,7 @@ Plans:
 | 6. Media Generation & Analytics | v1.0 | 3/3 | Complete | 2026-03-31 |
 | 7. Platform Features, Admin & Frontend Quality | v1.0 | 4/4 | Complete | 2026-03-31 |
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
-| 9. n8n Infrastructure + Real Publishing | v2.0 | 1/3 | In Progress|  |
+| 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 10. LightRAG Knowledge Graph | v2.0 | 0/TBD | Not started | - |
 | 11. Multi-Model Media Orchestration | v2.0 | 0/TBD | Not started | - |
 | 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |

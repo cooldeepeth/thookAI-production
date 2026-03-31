@@ -14,7 +14,7 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 - [x] **N8N-03**: Celery beat tasks migrated to n8n workflows — publishing, analytics polling, credit resets, cleanup jobs, strategist trigger
 - [x] **N8N-04**: Hard Celery→n8n cutover protocol with idempotency keys on all publish operations (no dual execution)
 - [x] **N8N-05**: Celery retained only for Motor-coupled media generation tasks (image/video rendering)
-- [ ] **N8N-06**: User can see workflow status for in-progress operations (publishing countdown, analytics polling status)
+- [x] **N8N-06**: User can see workflow status for in-progress operations (publishing countdown, analytics polling status)
 
 ### LightRAG Knowledge Graph
 
@@ -136,7 +136,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | N8N-03 | Phase 9 | Complete |
 | N8N-04 | Phase 9 | Complete |
 | N8N-05 | Phase 9 | Complete |
-| N8N-06 | Phase 9 | Pending |
+| N8N-06 | Phase 9 | Complete |
 | LRAG-01 | Phase 10 | Pending |
 | LRAG-02 | Phase 10 | Pending |
 | LRAG-03 | Phase 10 | Pending |
