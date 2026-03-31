@@ -89,6 +89,11 @@ Plans:
   3. The Writer stage queries Pinecone for similar past approved content and injects style examples into its prompt (verifiable in Writer prompt logs — Pinecone is called, not skipped)
   4. Jobs stuck in "processing" for more than 10 minutes are automatically cleaned up by Celery beat and marked as failed — they do not stay stuck forever
   5. UOM behavioral inference fields from the persona engine are present in the job context passed to agents
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Pipeline integration tests: orchestrator, UOM, fatigue shield, vector store
+- [ ] 04-02-PLAN.md — End-to-end pipeline execution and stale job cleanup verification
 
 ### Phase 5: Publishing, Scheduling & Billing
 **Goal**: Scheduled posts actually reach social platforms, the credit/billing loop is end-to-end functional, and Celery beat handles all time-driven billing tasks
@@ -140,7 +145,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Git & Branch Cleanup | 0/2 | Not started | - |
 | 2. Infrastructure & Celery | 3/3 | Complete |  |
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
-| 4. Content Pipeline | 0/TBD | Not started | - |
+| 4. Content Pipeline | 0/2 | Not started | - |
 | 5. Publishing, Scheduling & Billing | 0/TBD | Not started | - |
 | 6. Media Generation & Analytics | 0/TBD | Not started | - |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |
