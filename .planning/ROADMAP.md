@@ -150,7 +150,7 @@ Plans:
 - [ ] 07-01-PLAN.md — Platform features verification: repurpose, campaigns, templates, export, import
 - [ ] 07-02-PLAN.md — Persona sharing, viral card, SSE notifications, outbound webhooks verification
 - [ ] 07-03-PLAN.md — Admin dashboard and agency workspace verification
-- [ ] 07-04-PLAN.md — Frontend quality: mobile sidebar, error boundary, empty states, 401 handling
+- [x] 07-04-PLAN.md — Frontend quality: mobile sidebar, error boundary, empty states, 401 handling
 
 ## Progress
 
@@ -165,4 +165,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Content Pipeline | 2/2 | Complete   | 2026-03-31 |
 | 5. Publishing, Scheduling & Billing | 3/3 | Complete   | 2026-03-31 |
 | 6. Media Generation & Analytics | 3/3 | Complete   | 2026-03-31 |
-| 7. Platform Features, Admin & Frontend Quality | 0/4 | Not started | - |
+| 7. Platform Features, Admin & Frontend Quality | 1/4 | In Progress|  |

@@ -95,11 +95,11 @@ Requirements for stabilization release. Each maps to roadmap phases.
 
 ### Frontend Quality
 
-- [ ] **UI-01**: Mobile responsive sidebar with hamburger menu works
-- [ ] **UI-02**: Error boundary catches render crashes and shows recovery UI
-- [ ] **UI-03**: Empty states show friendly CTAs on ContentLibrary, Campaigns, Templates
-- [ ] **UI-04**: Expired sessions (401) redirect to /auth automatically
-- [ ] **UI-05**: All frontend pages load without JavaScript console errors
+- [x] **UI-01**: Mobile responsive sidebar with hamburger menu works
+- [x] **UI-02**: Error boundary catches render crashes and shows recovery UI
+- [x] **UI-03**: Empty states show friendly CTAs on ContentLibrary, Campaigns, Templates
+- [x] **UI-04**: Expired sessions (401) redirect to /auth automatically
+- [x] **UI-05**: All frontend pages load without JavaScript console errors
 
 ## v2 Requirements
 
@@ -197,11 +197,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADMIN-02 | Phase 7 | Pending |
 | ADMIN-03 | Phase 7 | Pending |
 | ADMIN-04 | Phase 7 | Pending |
-| UI-01 | Phase 7 | Pending |
-| UI-02 | Phase 7 | Pending |
-| UI-03 | Phase 7 | Pending |
-| UI-04 | Phase 7 | Pending |
-| UI-05 | Phase 7 | Pending |
+| UI-01 | Phase 7 | Complete |
+| UI-02 | Phase 7 | Complete |
+| UI-03 | Phase 7 | Complete |
+| UI-04 | Phase 7 | Complete |
+| UI-05 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 52 total
