@@ -523,3 +523,187 @@ async def execute_aggregate_daily_analytics(
         },
         "executed_at": now.isoformat(),
     }
+
+
+@router.post("/execute/process-scheduled-posts")
+async def execute_process_scheduled_posts(
+    request: Request,
+    _payload: dict = Depends(_verify_n8n_request),
+) -> Dict[str, Any]:
+    """
+    Publish all scheduled posts that are due.
+
+    Uses agents.publisher.publish_to_platform directly (per D-09) for real
+    publishing to LinkedIn/X/Instagram.
+
+    Idempotency guard (per D-05):
+      1. Atomic claim via find_one_and_update — only the first caller can
+         set status "processing" on a given post in a given run.
+      2. A post with published_at within the last 2 minutes is skipped — this
+         guards against duplicate delivery during overlapping n8n executions.
+      3. A claim older than 5 minutes is considered stale and can be reclaimed
+         (handles worker crash mid-publish).
+
+    Called by n8n every 5 minutes (replaces Celery beat process-scheduled-posts).
+    """
+    logger.info("Executing process-scheduled-posts via n8n")
+
+    from database import db
+
+    now = datetime.now(timezone.utc)
+    published = 0
+    failed = 0
+    skipped = 0
+    published_user_ids: List[str] = []
+
+    # Fetch all posts that are due for publishing
+    cursor = db.scheduled_posts.find(
+        {
+            "status": "scheduled",
+            "scheduled_at": {"$lte": now},
+        }
+    )
+    due_posts = await cursor.to_list(length=100)
+
+    for post in due_posts:
+        schedule_id = post.get("schedule_id", str(post.get("_id", "")))
+
+        # -----------------------------------------------------------------
+        # IDEMPOTENCY GUARD (per D-05)
+        # Atomic claim: only one worker instance can transition this post
+        # from "scheduled" → "processing".  A second concurrent call will
+        # find no matching document and receive None.
+        # -----------------------------------------------------------------
+        claim = await db.scheduled_posts.find_one_and_update(
+            {
+                "schedule_id": schedule_id,
+                "status": "scheduled",
+                "$or": [
+                    {"processing_started_at": {"$exists": False}},
+                    {
+                        "processing_started_at": {
+                            "$lt": now - timedelta(minutes=5)
+                        }
+                    },
+                ],
+            },
+            {"$set": {"status": "processing", "processing_started_at": now}},
+            return_document=True,
+        )
+        if not claim:
+            logger.info(
+                "Post %s already claimed — skipping (idempotency guard)",
+                schedule_id,
+            )
+            skipped += 1
+            continue
+
+        # 2-minute recently-published check (second layer of idempotency)
+        published_at = post.get("published_at")
+        if published_at:
+            if isinstance(published_at, str):
+                published_at = datetime.fromisoformat(
+                    published_at.replace("Z", "+00:00")
+                )
+            if (now - published_at) < timedelta(minutes=2):
+                logger.info(
+                    "Post %s published within last 2 min — skipping (idempotency)",
+                    schedule_id,
+                )
+                # Revert status to scheduled so it won't be stuck in processing
+                await db.scheduled_posts.update_one(
+                    {"schedule_id": schedule_id},
+                    {"$set": {"status": "scheduled"}},
+                )
+                skipped += 1
+                continue
+        # -----------------------------------------------------------------
+        # END IDEMPOTENCY GUARD
+        # -----------------------------------------------------------------
+
+        platform = post.get("platform", "")
+        user_id = post.get("user_id", "")
+        content = post.get("content", "")
+        media_assets = post.get("media_assets")
+
+        # Fetch OAuth token for the platform
+        token = await db.platform_tokens.find_one(
+            {
+                "user_id": user_id,
+                "platform": platform,
+            }
+        )
+        if not token:
+            logger.warning(
+                "No OAuth token for user %s platform %s", user_id, platform
+            )
+            await db.scheduled_posts.update_one(
+                {"schedule_id": schedule_id},
+                {"$set": {"status": "failed", "error": "No OAuth token"}},
+            )
+            failed += 1
+            continue
+
+        access_token = token.get("access_token", "")
+
+        # Call the REAL publisher (per D-09) — NOT content_tasks._publish_to_platform
+        try:
+            result = await real_publish_to_platform(
+                platform=platform,
+                content=content,
+                access_token=access_token,
+                user_id=user_id,
+                media_assets=media_assets,
+            )
+            success = (
+                result.get("success", False)
+                if isinstance(result, dict)
+                else bool(result)
+            )
+        except Exception as pub_exc:
+            logger.error(
+                "publish_to_platform failed for %s: %s",
+                platform,
+                pub_exc,
+                exc_info=True,
+            )
+            success = False
+            result = {}
+
+        if success:
+            await db.scheduled_posts.update_one(
+                {"schedule_id": schedule_id},
+                {"$set": {"status": "published", "published_at": now}},
+            )
+            published += 1
+            if user_id not in published_user_ids:
+                published_user_ids.append(user_id)
+        else:
+            error_msg = (
+                str(result.get("error", "Unknown"))
+                if isinstance(result, dict)
+                else "Publishing failed"
+            )
+            await db.scheduled_posts.update_one(
+                {"schedule_id": schedule_id},
+                {"$set": {"status": "failed", "error": error_msg}},
+            )
+            failed += 1
+
+    logger.info(
+        "process-scheduled-posts complete: %d published, %d failed, %d skipped",
+        published,
+        failed,
+        skipped,
+    )
+
+    return {
+        "status": "completed",
+        "result": {
+            "published": published,
+            "failed": failed,
+            "skipped": skipped,
+            "published_user_ids": published_user_ids,
+        },
+        "executed_at": now.isoformat(),
+    }
