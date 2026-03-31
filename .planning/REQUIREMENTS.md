@@ -141,13 +141,73 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| GIT-01 | Phase 1 | Pending |
+| GIT-02 | Phase 1 | Pending |
+| GIT-03 | Phase 1 | Pending |
+| GIT-04 | Phase 1 | Pending |
+| INFRA-01 | Phase 2 | Pending |
+| INFRA-02 | Phase 2 | Pending |
+| INFRA-03 | Phase 2 | Pending |
+| INFRA-04 | Phase 2 | Pending |
+| INFRA-05 | Phase 2 | Pending |
+| INFRA-06 | Phase 2 | Pending |
+| INFRA-07 | Phase 2 | Pending |
+| AUTH-01 | Phase 3 | Pending |
+| AUTH-02 | Phase 3 | Pending |
+| AUTH-03 | Phase 3 | Pending |
+| AUTH-04 | Phase 3 | Pending |
+| AUTH-05 | Phase 3 | Pending |
+| AUTH-06 | Phase 3 | Pending |
+| PIPE-01 | Phase 4 | Pending |
+| PIPE-02 | Phase 4 | Pending |
+| PIPE-03 | Phase 4 | Pending |
+| PIPE-04 | Phase 4 | Pending |
+| PIPE-05 | Phase 4 | Pending |
+| PIPE-06 | Phase 4 | Pending |
+| PUB-01 | Phase 5 | Pending |
+| PUB-02 | Phase 5 | Pending |
+| PUB-03 | Phase 5 | Pending |
+| PUB-04 | Phase 5 | Pending |
+| PUB-05 | Phase 5 | Pending |
+| BILL-01 | Phase 5 | Pending |
+| BILL-02 | Phase 5 | Pending |
+| BILL-03 | Phase 5 | Pending |
+| BILL-04 | Phase 5 | Pending |
+| BILL-05 | Phase 5 | Pending |
+| BILL-06 | Phase 5 | Pending |
+| MEDIA-01 | Phase 6 | Pending |
+| MEDIA-02 | Phase 6 | Pending |
+| MEDIA-03 | Phase 6 | Pending |
+| MEDIA-04 | Phase 6 | Pending |
+| MEDIA-05 | Phase 6 | Pending |
+| ANAL-01 | Phase 6 | Pending |
+| ANAL-02 | Phase 6 | Pending |
+| ANAL-03 | Phase 6 | Pending |
+| ANAL-04 | Phase 6 | Pending |
+| FEAT-01 | Phase 7 | Pending |
+| FEAT-02 | Phase 7 | Pending |
+| FEAT-03 | Phase 7 | Pending |
+| FEAT-04 | Phase 7 | Pending |
+| FEAT-05 | Phase 7 | Pending |
+| FEAT-06 | Phase 7 | Pending |
+| FEAT-07 | Phase 7 | Pending |
+| FEAT-08 | Phase 7 | Pending |
+| FEAT-09 | Phase 7 | Pending |
+| ADMIN-01 | Phase 7 | Pending |
+| ADMIN-02 | Phase 7 | Pending |
+| ADMIN-03 | Phase 7 | Pending |
+| ADMIN-04 | Phase 7 | Pending |
+| UI-01 | Phase 7 | Pending |
+| UI-02 | Phase 7 | Pending |
+| UI-03 | Phase 7 | Pending |
+| UI-04 | Phase 7 | Pending |
+| UI-05 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 52 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 52
+- Mapped to phases: 52
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after initial definition*
+*Last updated: 2026-03-31 after roadmap creation — traceability populated*
