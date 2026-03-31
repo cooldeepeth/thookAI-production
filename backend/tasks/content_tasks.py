@@ -615,7 +615,7 @@ def aggregate_daily_analytics() -> Dict[str, Any]:
 
 # ============ SOCIAL ANALYTICS POLLING ============
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=300)
+@shared_task(bind=True, name='tasks.content_tasks.poll_post_metrics_24h', max_retries=2, default_retry_delay=300)
 def poll_post_metrics_24h(self, job_id: str, user_id: str, platform: str) -> Dict[str, Any]:
     """Poll post metrics 24 hours after publishing.
 
@@ -641,7 +641,7 @@ def poll_post_metrics_24h(self, job_id: str, user_id: str, platform: str) -> Dic
         raise self.retry(exc=exc, countdown=300 * (2 ** self.request.retries))
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=300)
+@shared_task(bind=True, name='tasks.content_tasks.poll_post_metrics_7d', max_retries=2, default_retry_delay=300)
 def poll_post_metrics_7d(self, job_id: str, user_id: str, platform: str) -> Dict[str, Any]:
     """Poll post metrics 7 days after publishing.
 
