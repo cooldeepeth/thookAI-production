@@ -235,6 +235,35 @@ class N8nConfig:
 
 
 @dataclass
+class LightRAGConfig:
+    """LightRAG knowledge graph sidecar configuration.
+
+    CRITICAL: embedding_model and embedding_dim are FROZEN after first document insert.
+    Changing them requires full index rebuild (delete all NanoVectorDB files + re-ingest).
+    """
+    url: str = field(default_factory=lambda: os.environ.get('LIGHTRAG_URL', 'http://lightrag:9621'))
+    api_key: Optional[str] = field(default_factory=lambda: os.environ.get('LIGHTRAG_API_KEY'))
+    embedding_model: str = field(default_factory=lambda: os.environ.get('LIGHTRAG_EMBEDDING_MODEL', 'text-embedding-3-small'))
+    embedding_dim: int = field(default_factory=lambda: int(os.environ.get('LIGHTRAG_EMBEDDING_DIM', '1536')))
+
+    def is_configured(self) -> bool:
+        """Check if LightRAG sidecar URL is set."""
+        return bool(self.url)
+
+    def assert_embedding_config(self) -> None:
+        """Fail loudly if embedding config diverges from locked decision.
+
+        Must match NanoVectorDB stored dimension. Called once at FastAPI startup.
+        """
+        assert self.embedding_model == "text-embedding-3-small", (
+            f"LIGHTRAG_EMBEDDING_MODEL must be 'text-embedding-3-small', got: {self.embedding_model}"
+        )
+        assert self.embedding_dim == 1536, (
+            f"LIGHTRAG_EMBEDDING_DIM must be 1536 for text-embedding-3-small, got: {self.embedding_dim}"
+        )
+
+
+@dataclass
 class AppConfig:
     """Application configuration"""
     environment: str = field(default_factory=lambda: os.environ.get('ENVIRONMENT', 'development'))
@@ -272,6 +301,7 @@ class Settings:
     platforms: PlatformOAuthConfig = field(default_factory=PlatformOAuthConfig)
     pinecone: PineconeConfig = field(default_factory=PineconeConfig)
     n8n: N8nConfig = field(default_factory=N8nConfig)
+    lightrag: LightRAGConfig = field(default_factory=LightRAGConfig)
 
     def validate(self) -> dict:
         """
