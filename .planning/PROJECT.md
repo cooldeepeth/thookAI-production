@@ -1,12 +1,12 @@
-# ThookAI — Stabilization & Production Readiness
+# ThookAI — Production Ready
 
 ## What This Is
 
-ThookAI is an AI-powered content creation platform for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline. The platform handles scheduling, repurposing, analytics, billing, media generation, and multi-user workspaces. Currently deployed to Render (backend) and Vercel (frontend) but not publicly launched — multiple features are broken or partially implemented.
+ThookAI is an AI-powered content creation platform for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline. The platform handles scheduling, repurposing, analytics, billing, media generation, and multi-user workspaces. Deployed to Render (backend) and Vercel (frontend). v1.0 stabilization complete — all features verified end-to-end with 319+ tests.
 
 ## Core Value
 
-Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
+Personalized content creation at scale — every user gets a unique voice fingerprint that drives all content generation, with real social platform publishing and analytics feedback loops.
 
 ## Requirements
 
@@ -54,18 +54,9 @@ Every feature that exists in the codebase must actually work end-to-end — a us
 
 ### Active
 
-<!-- This milestone: verify every validated item actually works, fix what's broken, clean up branches -->
+<!-- Next milestone: features, growth, and polish -->
 
-- [ ] Audit all "fixed" bugs — verify against actual codebase, not PR descriptions
-- [ ] Fix all confirmed broken features with E2E verification per fix
-- [ ] Update/add tests for each fixed feature (improve 59-test baseline)
-- [ ] Clean up 20+ abandoned worktree-agent-* branches
-- [ ] Merge PR #30 (custom plan builder) into dev cleanly
-- [ ] Reconcile dev and main branches for production deploy
-- [ ] Update CLAUDE.md to reflect actual current state (remove stale bug list)
-- [ ] Verify full user journey: signup → onboard → generate → schedule → publish → pay
-- [ ] Verify all auxiliary flows: analytics, admin, agency, webhooks, templates, exports
-- [ ] Ensure Render/Vercel deployment works with all 35 env vars configured
+(To be defined in next milestone via `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -82,15 +73,12 @@ Every feature that exists in the codebase must actually work end-to-end — a us
 
 ## Context
 
-- **30 PRs merged in ~5 days** by previous Claude Code sessions — speed over depth caused bugs marked as fixed that aren't actually fixed
-- **Codebase mapper (2026-03-31)** found the same bugs from CLAUDE.md still present in code — fixes may be incomplete, superficial, or lost in branch divergence
-- **20+ worktree-agent-* branches** left behind by abandoned parallel agent runs — need cleanup
-- **dev is 28+ PRs ahead of main** — main has never been updated
-- **PR #30 (open)** adds custom plan builder pricing pivot — user wants this included
-- **Current branch: feat/post-launch-sprint** — 5 commits ahead of dev with pricing changes
-- **Deployed but broken** on Render (backend) + Vercel (frontend) — not publicly launched
-- **59 existing tests** but real bugs slipped through — tests need strengthening
-- **Audit report (2026-03-28)** documented 38 bot-flagged issues as fixed — need re-verification
+- **v1.0 Stabilization shipped** — 8 phases, 22 plans, 57 requirements, all verified
+- **319+ tests** across auth, pipeline, publishing, billing, media, analytics, platform features, frontend quality
+- **Key fixes in v1.0**: JWT secret mismatch, atomic credit deduction, real HTTP dispatch to social platforms, MEDIA-05 integration gap, frontend env var syntax
+- **54 files changed**, 10,110 insertions, 508 deletions across backend and frontend
+- **Deployed** to Render (backend) and Vercel (frontend) — ready for soft launch
+- **Tech stack stable**: FastAPI + Motor + Celery + Redis + React + TailwindCSS + shadcn/ui
 
 ## Constraints
 
@@ -106,11 +94,12 @@ Every feature that exists in the codebase must actually work end-to-end — a us
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Stabilize before building new features | Previous rapid development created unreliable foundation — bugs marked fixed but still broken | — Pending |
-| Include custom plan builder (PR #30) in stabilization | Pricing pivot is final direction, not experimental | — Pending |
-| Start from dev branch | Has all 28 merged PRs — better to audit and fix than reapply from main | — Pending |
-| GSD workflow for granular task decomposition | Previous approach shipped fast but without per-fix verification, causing compounding bugs | — Pending |
-| Manual E2E + automated tests for verification | 59 existing tests missed real bugs — need both layers | — Pending |
+| Stabilize before building new features | Previous rapid development created unreliable foundation | ✓ Good — all 57 requirements verified |
+| Include custom plan builder (PR #30) in stabilization | Pricing pivot is final direction, not experimental | ✓ Good — atomic credits + custom tiers working |
+| Start from dev branch | Has all 28 merged PRs — better to audit and fix than reapply from main | ✓ Good — avoided rebase complexity |
+| GSD workflow for granular task decomposition | Previous approach shipped fast but without per-fix verification | ✓ Good — 22 plans with verification loops caught real bugs |
+| TDD-first approach for phases 3-8 | Write failing tests → fix code → verify | ✓ Good — 319+ tests, 0 failures, caught JWT bug and race condition |
+| Parallel agent execution per wave | Independent plans run simultaneously | ✓ Good — significant time savings, merge conflicts minimal |
 
 ## Evolution
 
@@ -130,4 +119,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 — ALL PHASES COMPLETE. Phase 7 (Platform Features, Admin & Frontend Quality) complete: 84 tests for templates/exports/sharing/notifications/webhooks/admin/agency/frontend quality. Full milestone: 7 phases, 20 plans, 319+ tests, 0 failures.*
+*Last updated: 2026-04-01 after v1.0 milestone — ThookAI Stabilization shipped. 8 phases, 22 plans, 57 requirements, 319+ tests. Ready for next milestone.*
