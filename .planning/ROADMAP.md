@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Git & Branch Cleanup** - Establish a single clean baseline before any code changes
 - [ ] **Phase 2: Infrastructure & Celery** - Restore the task queue and supporting services that everything depends on
 - [x] **Phase 3: Auth, Onboarding & Email** - Fix the user entry point and persona generation (core product value) (completed 2026-03-31)
-- [ ] **Phase 4: Content Pipeline** - Verify and repair the 5-agent generation pipeline end-to-end
+- [x] **Phase 4: Content Pipeline** - Verify and repair the 5-agent generation pipeline end-to-end (completed 2026-03-31)
 - [ ] **Phase 5: Publishing, Scheduling & Billing** - Wire real publishing dispatch and restore the credit/billing loop
 - [ ] **Phase 6: Media Generation & Analytics** - Verify credit-gated media features and real social metrics
 - [ ] **Phase 7: Platform Features, Admin & Frontend Quality** - Confirm all auxiliary features and frontend polish
@@ -93,7 +93,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Pipeline integration tests: orchestrator, UOM, fatigue shield, vector store
-- [ ] 04-02-PLAN.md — End-to-end pipeline execution and stale job cleanup verification
+- [x] 04-02-PLAN.md — End-to-end pipeline execution and stale job cleanup verification
 
 ### Phase 5: Publishing, Scheduling & Billing
 **Goal**: Scheduled posts actually reach social platforms, the credit/billing loop is end-to-end functional, and Celery beat handles all time-driven billing tasks
@@ -145,7 +145,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Git & Branch Cleanup | 0/2 | Not started | - |
 | 2. Infrastructure & Celery | 3/3 | Complete |  |
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
-| 4. Content Pipeline | 1/2 | In Progress|  |
+| 4. Content Pipeline | 2/2 | Complete   | 2026-03-31 |
 | 5. Publishing, Scheduling & Billing | 0/TBD | Not started | - |
 | 6. Media Generation & Analytics | 0/TBD | Not started | - |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |

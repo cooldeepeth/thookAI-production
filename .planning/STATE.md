@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-content-pipeline/04-01-PLAN.md
-last_updated: "2026-03-31T05:37:49.009Z"
+status: verifying
+stopped_at: Completed 04-content-pipeline/04-02-PLAN.md
+last_updated: "2026-03-31T05:43:27.374Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 Phase: 04 (Content Pipeline) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0%
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 03 P03 | 8 | 2 tasks | 2 files |
 | Phase 04 P01 | 5 | 2 tasks | 1 files |
+| Phase 04-content-pipeline P02 | 3 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Recent decisions affecting current work:
 - [Phase 03]: AUTH-06 verified: Persona Engine has voice_fingerprint, content_identity, uom, learning_signals; smart fallback produces archetype-specific non-generic personas
 - [Phase 03]: Source transparency: generate-persona returns source field (llm|smart_fallback) so frontend can show notice when fallback used
 - [Phase 04]: Mock langgraph.graph at sys.modules level to allow testing orchestrator pure functions in envs without langgraph installed
+- [Phase 04-content-pipeline]: Stale job cleanup only targets status='running' — all jobs start with this status in content routes
 
 ### Pending Todos
 
@@ -86,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T05:37:49.006Z
-Stopped at: Completed 04-content-pipeline/04-01-PLAN.md
+Last session: 2026-03-31T05:43:27.370Z
+Stopped at: Completed 04-content-pipeline/04-02-PLAN.md
 Resume file: None
