@@ -6,13 +6,17 @@ Covers PIPE-02 through PIPE-05 requirements:
 - PIPE-04: Fatigue shield constraint injection into Thinker prompt
 - PIPE-05: Vector store retrieval in Writer and embedding storage in Learning
 
-All integration points verified:
+All integration points verified (Task 2 confirmation — all passed without code fixes):
 - orchestrator.build_content_pipeline() compiles without errors
-- orchestrator.quality_gate() routes correctly
-- orchestrator.should_research() reads research_needed correctly
-- thinker.run_thinker() injects UOM and fatigue data into prompts
-- writer.run_writer() injects UOM directives and style examples from vector store
-- learning.capture_learning_signal() calls upsert_approved_embedding on approval
+- orchestrator.quality_gate() routes correctly (pass/rewrite/accept)
+- orchestrator.should_research() reads research_needed correctly with fallback default=True
+- pipeline._run_agent_pipeline_inner() falls back to legacy on ImportError and exceptions
+- thinker.run_thinker() injects UOM constraints and fatigue shield data into prompts
+- thinker._build_fatigue_prompt_section() builds correct constraint text per shield_status
+- writer.run_writer() injects UOM adaptive style directives and style examples from vector store
+- writer._fetch_style_examples() queries Pinecone with correct parameters, handles empty/errors
+- learning.capture_learning_signal() calls upsert_approved_embedding on approval actions
+- learning.capture_learning_signal() does NOT call upsert on rejection actions
 """
 
 import sys
