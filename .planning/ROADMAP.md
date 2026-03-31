@@ -111,7 +111,7 @@ Plans:
 
 Plans:
 - [ ] 05-01-PLAN.md — Publishing dispatch and platform OAuth verification tests
-- [ ] 05-02-PLAN.md — Atomic credit deduction fix and starter tier restrictions
+- [x] 05-02-PLAN.md — Atomic credit deduction fix and starter tier restrictions
 - [ ] 05-03-PLAN.md — Stripe billing flow verification and monthly credit refresh tests
 
 ### Phase 6: Media Generation & Analytics

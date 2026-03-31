@@ -45,8 +45,8 @@ Requirements for stabilization release. Each maps to roadmap phases.
 - [ ] **BILL-01**: Custom plan builder preview endpoint returns correct credit count and price
 - [ ] **BILL-02**: Stripe checkout session creates successfully and processes payment
 - [ ] **BILL-03**: Stripe webhook updates subscription status and credits in DB
-- [ ] **BILL-04**: Credits are deducted before pipeline starts (not check-only)
-- [ ] **BILL-05**: Starter tier hard caps enforced (max 2 videos, 5 carousels, LinkedIn only)
+- [x] **BILL-04**: Credits are deducted before pipeline starts (not check-only)
+- [x] **BILL-05**: Starter tier hard caps enforced (max 2 videos, 5 carousels, LinkedIn only)
 - [ ] **BILL-06**: Monthly credit refresh runs via Celery beat and resets user credits
 
 ### Media Generation
@@ -172,8 +172,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BILL-01 | Phase 5 | Pending |
 | BILL-02 | Phase 5 | Pending |
 | BILL-03 | Phase 5 | Pending |
-| BILL-04 | Phase 5 | Pending |
-| BILL-05 | Phase 5 | Pending |
+| BILL-04 | Phase 5 | Complete |
+| BILL-05 | Phase 5 | Complete |
 | BILL-06 | Phase 5 | Pending |
 | MEDIA-01 | Phase 6 | Pending |
 | MEDIA-02 | Phase 6 | Pending |
