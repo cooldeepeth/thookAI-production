@@ -104,6 +104,14 @@ async def create_content(
     if data.content_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid content type for {data.platform}")
 
+    # Enforce starter tier platform restriction (LinkedIn only)
+    user_tier = current_user.get("subscription_tier", "starter")
+    if user_tier in ("starter", "free") and data.platform.lower() != "linkedin":
+        raise HTTPException(
+            status_code=402,
+            detail=f"Starter accounts can only create content for LinkedIn. Upgrade to a paid plan to unlock {data.platform.capitalize()}."
+        )
+
     # Deduct credits before proceeding — deduct_credits checks balance internally
     cost = CreditOperation.CONTENT_CREATE.value
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CONTENT_CREATE)
