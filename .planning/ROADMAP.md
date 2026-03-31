@@ -65,7 +65,7 @@ Plans:
   5. Starting the LightRAG service with the wrong embedding model dimension causes a startup assertion failure, not silent data corruption
 **Plans**: 3 plans
 Plans:
-- [ ] 10-01-PLAN.md — LightRAGConfig dataclass + docker-compose sidecar + lightrag_service.py HTTP client + startup assertion
+- [x] 10-01-PLAN.md — LightRAGConfig dataclass + docker-compose sidecar + lightrag_service.py HTTP client + startup assertion
 - [ ] 10-02-PLAN.md — Learning agent dual-write (Pinecone + LightRAG) + Thinker graph query injection + routing contract
 - [ ] 10-03-PLAN.md — Unit tests for lightrag_service.py + integration tests for routing contract and entity type config
 
@@ -156,7 +156,7 @@ Plans:
 | 7. Platform Features, Admin & Frontend Quality | v1.0 | 4/4 | Complete | 2026-03-31 |
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
-| 10. LightRAG Knowledge Graph | v2.0 | 0/3 | Planning complete | - |
+| 10. LightRAG Knowledge Graph | v2.0 | 1/3 | In Progress|  |
 | 11. Multi-Model Media Orchestration | v2.0 | 0/TBD | Not started | - |
 | 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
