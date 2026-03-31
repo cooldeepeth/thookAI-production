@@ -66,11 +66,11 @@ Requirements for stabilization release. Each maps to roadmap phases.
 
 ### Platform Features
 
-- [ ] **FEAT-01**: Content repurposing generates adapted content for target platform
-- [ ] **FEAT-02**: Campaign grouping creates/lists/manages campaign umbrellas
-- [ ] **FEAT-03**: Template marketplace displays 30 seed templates with browse/filter/use
-- [ ] **FEAT-04**: Content export produces copy/CSV/bulk download with date range filter
-- [ ] **FEAT-05**: Post history import accepts batch uploads and uses them for persona training
+- [x] **FEAT-01**: Content repurposing generates adapted content for target platform
+- [x] **FEAT-02**: Campaign grouping creates/lists/manages campaign umbrellas
+- [x] **FEAT-03**: Template marketplace displays 30 seed templates with browse/filter/use
+- [x] **FEAT-04**: Content export produces copy/CSV/bulk download with date range filter
+- [x] **FEAT-05**: Post history import accepts batch uploads and uses them for persona training
 - [ ] **FEAT-06**: Persona sharing generates link and public view page renders persona card
 - [ ] **FEAT-07**: Viral persona card at /discover analyzes pasted posts and generates shareable card
 - [ ] **FEAT-08**: SSE notifications fire for job completion and publish events
@@ -184,11 +184,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ANAL-02 | Phase 6 | Complete |
 | ANAL-03 | Phase 6 | Complete |
 | ANAL-04 | Phase 6 | Complete |
-| FEAT-01 | Phase 7 | Pending |
-| FEAT-02 | Phase 7 | Pending |
-| FEAT-03 | Phase 7 | Pending |
-| FEAT-04 | Phase 7 | Pending |
-| FEAT-05 | Phase 7 | Pending |
+| FEAT-01 | Phase 7 | Complete |
+| FEAT-02 | Phase 7 | Complete |
+| FEAT-03 | Phase 7 | Complete |
+| FEAT-04 | Phase 7 | Complete |
+| FEAT-05 | Phase 7 | Complete |
 | FEAT-06 | Phase 7 | Pending |
 | FEAT-07 | Phase 7 | Pending |
 | FEAT-08 | Phase 7 | Pending |
