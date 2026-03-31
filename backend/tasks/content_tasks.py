@@ -97,7 +97,7 @@ def run_content_pipeline(
 
 # ============ SCHEDULED POSTS ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.process_scheduled_posts')
 def process_scheduled_posts() -> Dict[str, Any]:
     """
     Process posts scheduled for publishing.
@@ -360,7 +360,7 @@ async def _publish_to_platform(platform: str, content: str, token: dict) -> bool
 
 # ============ DAILY LIMITS ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.reset_daily_limits')
 def reset_daily_limits() -> Dict[str, Any]:
     """
     Reset daily content creation counters for all users.
@@ -385,7 +385,7 @@ def reset_daily_limits() -> Dict[str, Any]:
 
 # ============ CREDIT REFRESH ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.refresh_monthly_credits')
 def refresh_monthly_credits() -> Dict[str, Any]:
     """
     Refresh monthly credits for subscribed users.
@@ -451,7 +451,7 @@ def refresh_monthly_credits() -> Dict[str, Any]:
 
 # ============ CLEANUP TASKS ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.cleanup_old_jobs')
 def cleanup_old_jobs() -> Dict[str, Any]:
     """
     Clean up old content jobs and temporary data.
@@ -495,7 +495,7 @@ def cleanup_old_jobs() -> Dict[str, Any]:
     return run_async(_cleanup())
 
 
-@shared_task
+@shared_task(name='tasks.content_tasks.cleanup_expired_shares')
 def cleanup_expired_shares() -> Dict[str, Any]:
     """
     Deactivate expired persona share links.
@@ -552,7 +552,7 @@ def update_performance_intelligence(user_id: str) -> Dict[str, Any]:
 
 # ============ ANALYTICS AGGREGATION ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.aggregate_daily_analytics')
 def aggregate_daily_analytics() -> Dict[str, Any]:
     """
     Aggregate daily analytics for reporting.

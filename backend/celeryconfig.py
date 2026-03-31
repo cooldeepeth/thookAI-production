@@ -23,7 +23,12 @@ result_expires = 86400  # 24 hours
 
 # Task routing
 task_routes = {
+    # Video generation tasks route to dedicated video queue for isolation
+    "tasks.media_tasks.generate_video*": {"queue": "video"},
+    "tasks.media_tasks.generate_video_for_job*": {"queue": "video"},
+    # All other media tasks (images, audio) route to media queue
     "tasks.media_tasks.*": {"queue": "media"},
+    # Content pipeline and scheduled task management
     "tasks.content_tasks.*": {"queue": "content"},
 }
 
