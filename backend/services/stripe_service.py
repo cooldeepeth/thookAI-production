@@ -2,7 +2,7 @@
 Stripe Payment Integration for ThookAI
 
 Handles:
-- Subscription creation and management
+- Custom plan subscriptions (plan builder)
 - One-time credit purchases
 - Webhooks for payment events
 - Customer management
@@ -21,8 +21,6 @@ logger = logging.getLogger(__name__)
 STRIPE_SECRET_KEY = settings.stripe.secret_key or ''
 STRIPE_WEBHOOK_SECRET = settings.stripe.webhook_secret or ''
 STRIPE_PUBLISHABLE_KEY = settings.stripe.publishable_key or ''
-
-# Check if Stripe is configured
 
 
 def is_stripe_configured() -> bool:
@@ -44,52 +42,22 @@ else:
     logger.warning("Stripe not configured. Payment features will be simulated.")
 
 
-# ============ PRICE CONFIGURATION ============
+# ============ CREDIT PACKAGES (one-time purchases) ============
 
-# Stripe Price IDs - Create these in your Stripe Dashboard
-# Format: price_xxxxxxxxxxxxxxxxxx
-PRICE_IDS = {
-    "pro_monthly": settings.stripe.price_pro_monthly or '',
-    "pro_annual": settings.stripe.price_pro_annual or '',
-    "studio_monthly": settings.stripe.price_studio_monthly or '',
-    "studio_annual": settings.stripe.price_studio_annual or '',
-    "agency_monthly": settings.stripe.price_agency_monthly or '',
-    "agency_annual": settings.stripe.price_agency_annual or '',
-}
-
-# Credit package prices (one-time)
 CREDIT_PACKAGES = {
-    "small": {"credits": 100, "price": 1000, "stripe_price": settings.stripe.price_credits_100 or ''},
-    "medium": {"credits": 500, "price": 4500, "stripe_price": settings.stripe.price_credits_500 or ''},
-    "large": {"credits": 1000, "price": 8000, "stripe_price": settings.stripe.price_credits_1000 or ''},
+    "small": {"credits": 100, "price": 600, "stripe_price": settings.stripe.price_credits_100 or ''},
+    "medium": {"credits": 500, "price": 2500, "stripe_price": settings.stripe.price_credits_500 or ''},
+    "large": {"credits": 1000, "price": 4000, "stripe_price": settings.stripe.price_credits_1000 or ''},
 }
-
-# Tier pricing in cents
-TIER_PRICING = {
-    "free": {"monthly": 0, "annual": 0, "credits": 50},
-    "pro": {"monthly": 1900, "annual": 19000, "credits": 500},  # Early bird: $19/mo
-    "studio": {"monthly": 4900, "annual": 49000, "credits": 2000},  # Early bird: $49/mo
-    "agency": {"monthly": 12900, "annual": 129000, "credits": 10000},  # Early bird: $129/mo
-}
-
-
-# ============ PRICE LOOKUP HELPER ============
-
-def _get_price_id(tier: str, billing_period: str = "monthly") -> Optional[str]:
-    """Look up a Stripe Price ID for a given tier and billing period."""
-    price_key = f"{tier}_{billing_period}"
-    price_id = PRICE_IDS.get(price_key, "")
-    return price_id if price_id else None
 
 
 # ============ CUSTOMER MANAGEMENT ============
 
 async def get_or_create_stripe_customer(user_id: str, email: str, name: str = None) -> Dict[str, Any]:
     """Get existing Stripe customer or create new one."""
-    
-    # Check if user already has a Stripe customer ID
+
     user = await db.users.find_one({"user_id": user_id}, {"stripe_customer_id": 1})
-    
+
     if user and user.get("stripe_customer_id"):
         if stripe:
             try:
@@ -98,7 +66,7 @@ async def get_or_create_stripe_customer(user_id: str, email: str, name: str = No
             except Exception as e:
                 logger.error(f"Failed to retrieve Stripe customer: {e}")
         return {"success": True, "customer_id": user["stripe_customer_id"], "simulated": True}
-    
+
     # Create new customer
     if stripe:
         try:
@@ -107,18 +75,17 @@ async def get_or_create_stripe_customer(user_id: str, email: str, name: str = No
                 name=name,
                 metadata={"user_id": user_id}
             )
-            
-            # Save customer ID to user
+
             await db.users.update_one(
                 {"user_id": user_id},
                 {"$set": {"stripe_customer_id": customer.id}}
             )
-            
+
             return {"success": True, "customer_id": customer.id, "customer": customer}
         except Exception as e:
             logger.error(f"Failed to create Stripe customer: {e}")
             return {"success": False, "error": str(e)}
-    
+
     # Simulated mode
     simulated_id = f"cus_simulated_{user_id[:8]}"
     await db.users.update_one(
@@ -128,76 +95,122 @@ async def get_or_create_stripe_customer(user_id: str, email: str, name: str = No
     return {"success": True, "customer_id": simulated_id, "simulated": True}
 
 
-# ============ SUBSCRIPTION MANAGEMENT ============
+# ============ CUSTOM PLAN CHECKOUT ============
 
-async def create_checkout_session(
+async def create_custom_plan_checkout(
     user_id: str,
     email: str,
-    tier: str,
-    billing_period: str = "monthly",
+    monthly_credits: int,
+    monthly_price_cents: int,
+    plan_config: Dict[str, Any],
     success_url: str = None,
     cancel_url: str = None
 ) -> Dict[str, Any]:
-    """Create a Stripe Checkout session for subscription."""
-    
-    if tier == "free":
-        return {"success": False, "error": "Cannot checkout for free tier"}
-    
-    price_key = f"{tier}_{billing_period}"
-    price_id = PRICE_IDS.get(price_key)
-    
+    """Create a Stripe Checkout session for a custom plan subscription.
+
+    Uses Stripe's dynamic pricing (price_data) to create a subscription
+    at the user's calculated monthly price.
+    """
+    if monthly_price_cents <= 0:
+        return {"success": False, "error": "Invalid plan price"}
+
     if not stripe:
-        # Simulated mode - return mock session
+        # Simulated mode
+        simulated_session_id = f"cs_custom_sim_{user_id[:8]}"
+        # In simulated mode, activate the plan directly
+        await _activate_custom_plan(user_id, monthly_credits, monthly_price_cents, plan_config)
         return {
             "success": True,
             "simulated": True,
-            "checkout_url": f"/billing/simulate-success?tier={tier}&period={billing_period}",
-            "session_id": f"cs_simulated_{user_id[:8]}_{tier}",
-            "message": "Stripe not configured. Using simulated checkout."
+            "checkout_url": f"/dashboard?subscription=success",
+            "session_id": simulated_session_id,
+            "monthly_price": monthly_price_cents / 100,
+            "monthly_credits": monthly_credits,
+            "message": "Stripe not configured. Plan activated directly (simulated)."
         }
-    
-    if not price_id:
-        return {
-            "success": False, 
-            "error": f"Price ID not configured for {price_key}. Set STRIPE_PRICE_{tier.upper()}_{billing_period.upper()} in .env"
-        }
-    
+
     try:
-        # Get or create customer
         customer_result = await get_or_create_stripe_customer(user_id, email)
         if not customer_result.get("success"):
             return customer_result
-        
-        # Create checkout session
+
         session = stripe.checkout.Session.create(
             customer=customer_result["customer_id"],
             payment_method_types=["card"],
-            line_items=[{"price": price_id, "quantity": 1}],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": f"ThookAI Custom Plan — {monthly_credits} credits/mo",
+                        "description": f"{monthly_credits} credits per month with volume pricing"
+                    },
+                    "unit_amount": monthly_price_cents,
+                    "recurring": {"interval": "month"}
+                },
+                "quantity": 1
+            }],
             mode="subscription",
             success_url=success_url or f"{settings.app.frontend_url}/dashboard?subscription=success",
-            cancel_url=cancel_url or f"{settings.app.frontend_url}/settings?subscription=cancelled",
+            cancel_url=cancel_url or f"{settings.app.frontend_url}/pricing?subscription=cancelled",
             metadata={
                 "user_id": user_id,
-                "tier": tier,
-                "billing_period": billing_period
+                "type": "custom_plan",
+                "monthly_credits": str(monthly_credits),
+                "monthly_price_cents": str(monthly_price_cents),
             },
             subscription_data={
                 "metadata": {
                     "user_id": user_id,
-                    "tier": tier
+                    "type": "custom_plan",
+                    "monthly_credits": str(monthly_credits),
                 }
             }
         )
-        
+
+        # Store pending plan config (activated on webhook confirmation)
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"pending_plan_config": plan_config}}
+        )
+
         return {
             "success": True,
             "checkout_url": session.url,
-            "session_id": session.id
+            "session_id": session.id,
+            "monthly_price": monthly_price_cents / 100,
+            "monthly_credits": monthly_credits
         }
     except Exception as e:
-        logger.error(f"Failed to create checkout session: {e}")
+        logger.error(f"Failed to create custom plan checkout: {e}")
         return {"success": False, "error": str(e)}
 
+
+async def _activate_custom_plan(
+    user_id: str,
+    monthly_credits: int,
+    monthly_price_cents: int,
+    plan_config: Dict[str, Any]
+):
+    """Activate a custom plan for a user (called after successful payment)."""
+    now = datetime.now(timezone.utc)
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "subscription_tier": "custom",
+            "plan_config": plan_config,
+            "credits": monthly_credits,
+            "credit_allowance": monthly_credits,
+            "credits_last_refresh": now,
+            "subscription_status": "active",
+            "subscription_started": now,
+            "subscription_updated_at": now,
+        },
+        "$unset": {"pending_plan_config": ""}}
+    )
+    logger.info(f"Custom plan activated for user {user_id}: {monthly_credits} credits at ${monthly_price_cents / 100}/mo")
+
+
+# ============ CREDIT PURCHASE CHECKOUT ============
 
 async def create_credit_checkout(
     user_id: str,
@@ -207,14 +220,13 @@ async def create_credit_checkout(
     cancel_url: str = None
 ) -> Dict[str, Any]:
     """Create checkout session for one-time credit purchase."""
-    
+
     if package not in CREDIT_PACKAGES:
         return {"success": False, "error": f"Invalid package. Choose from: {list(CREDIT_PACKAGES.keys())}"}
-    
+
     pkg = CREDIT_PACKAGES[package]
-    
+
     if not stripe:
-        # Simulated mode
         return {
             "success": True,
             "simulated": True,
@@ -224,17 +236,15 @@ async def create_credit_checkout(
             "price": pkg["price"] / 100,
             "message": "Stripe not configured. Using simulated checkout."
         }
-    
+
     try:
         customer_result = await get_or_create_stripe_customer(user_id, email)
         if not customer_result.get("success"):
             return customer_result
-        
-        # Create one-time payment session
+
         if pkg.get("stripe_price"):
             line_items = [{"price": pkg["stripe_price"], "quantity": 1}]
         else:
-            # Dynamic pricing
             line_items = [{
                 "price_data": {
                     "currency": "usd",
@@ -246,7 +256,7 @@ async def create_credit_checkout(
                 },
                 "quantity": 1
             }]
-        
+
         session = stripe.checkout.Session.create(
             customer=customer_result["customer_id"],
             payment_method_types=["card"],
@@ -260,7 +270,7 @@ async def create_credit_checkout(
                 "credits": str(pkg["credits"])
             }
         )
-        
+
         return {
             "success": True,
             "checkout_url": session.url,
@@ -273,57 +283,65 @@ async def create_credit_checkout(
         return {"success": False, "error": str(e)}
 
 
+# ============ SUBSCRIPTION STATUS ============
+
 async def get_subscription_status(user_id: str) -> Dict[str, Any]:
     """Get current subscription status from Stripe."""
-    
-    user = await db.users.find_one({"user_id": user_id}, {"stripe_customer_id": 1, "stripe_subscription_id": 1})
-    
+
+    user = await db.users.find_one({"user_id": user_id}, {
+        "stripe_customer_id": 1, "stripe_subscription_id": 1,
+        "subscription_tier": 1, "plan_config": 1
+    })
+
     if not user or not user.get("stripe_subscription_id"):
         return {
             "has_subscription": False,
-            "tier": "free",
+            "tier": user.get("subscription_tier", "starter") if user else "starter",
             "status": "none"
         }
-    
+
     if not stripe:
         return {
             "has_subscription": True,
-            "tier": user.get("subscription_tier", "free"),
+            "tier": user.get("subscription_tier", "starter"),
             "status": "simulated",
-            "simulated": True
+            "simulated": True,
+            "plan_config": user.get("plan_config")
         }
-    
+
     try:
         subscription = stripe.Subscription.retrieve(user["stripe_subscription_id"])
         return {
             "has_subscription": True,
             "subscription_id": subscription.id,
             "status": subscription.status,
-            "tier": subscription.metadata.get("tier", "pro"),
+            "tier": user.get("subscription_tier", "custom"),
             "current_period_end": datetime.fromtimestamp(subscription.current_period_end, tz=timezone.utc).isoformat(),
-            "cancel_at_period_end": subscription.cancel_at_period_end
+            "cancel_at_period_end": subscription.cancel_at_period_end,
+            "plan_config": user.get("plan_config")
         }
     except Exception as e:
         logger.error(f"Failed to get subscription status: {e}")
         return {"has_subscription": False, "error": str(e)}
 
 
+# ============ CANCEL SUBSCRIPTION ============
+
 async def cancel_stripe_subscription(user_id: str, at_period_end: bool = True) -> Dict[str, Any]:
     """Cancel a Stripe subscription."""
-    
+
     user = await db.users.find_one({"user_id": user_id}, {"stripe_subscription_id": 1})
-    
+
     if not user or not user.get("stripe_subscription_id"):
         return {"success": False, "error": "No active subscription found"}
-    
+
     if not stripe:
-        # Simulated cancellation
         await db.users.update_one(
             {"user_id": user_id},
             {"$set": {"subscription_cancelled": True, "subscription_ends_at": datetime.now(timezone.utc).isoformat()}}
         )
         return {"success": True, "simulated": True, "message": "Subscription marked for cancellation (simulated)"}
-    
+
     try:
         if at_period_end:
             subscription = stripe.Subscription.modify(
@@ -334,15 +352,17 @@ async def cancel_stripe_subscription(user_id: str, at_period_end: bool = True) -
         else:
             subscription = stripe.Subscription.delete(user["stripe_subscription_id"])
             message = "Subscription cancelled immediately"
-        
+
         return {"success": True, "message": message, "status": subscription.status}
     except Exception as e:
         logger.error(f"Failed to cancel subscription: {e}")
         return {"success": False, "error": str(e)}
 
 
-async def modify_subscription(user_id: str, new_tier: str, billing_period: str = "monthly") -> Dict[str, Any]:
-    """Modify existing subscription (upgrade/downgrade) with proration."""
+# ============ MODIFY SUBSCRIPTION ============
+
+async def modify_subscription(user_id: str, monthly_credits: int, monthly_price_cents: int, plan_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Modify existing subscription to a new custom plan configuration."""
     user = await db.users.find_one({"user_id": user_id})
     if not user:
         return {"success": False, "error": "User not found"}
@@ -352,34 +372,36 @@ async def modify_subscription(user_id: str, new_tier: str, billing_period: str =
         return {"success": False, "error": "No active subscription to modify"}
 
     if not stripe:
-        return {"success": False, "error": "Stripe not configured"}
-
-    price_id = _get_price_id(new_tier, billing_period)
-    if not price_id:
-        return {"success": False, "error": f"Invalid tier/period: {new_tier}/{billing_period}"}
+        # Simulated mode — apply directly
+        await _activate_custom_plan(user_id, monthly_credits, monthly_price_cents, plan_config)
+        return {"success": True, "simulated": True, "monthly_credits": monthly_credits}
 
     try:
         subscription = stripe.Subscription.retrieve(subscription_id)
+
+        # Create new price for the updated plan
         updated = stripe.Subscription.modify(
             subscription_id,
-            items=[{"id": subscription["items"]["data"][0]["id"], "price": price_id}],
+            items=[{
+                "id": subscription["items"]["data"][0]["id"],
+                "price_data": {
+                    "currency": "usd",
+                    "product": subscription["items"]["data"][0]["price"]["product"],
+                    "unit_amount": monthly_price_cents,
+                    "recurring": {"interval": "month"}
+                }
+            }],
             proration_behavior="create_prorations",
-            metadata={"user_id": user_id, "tier": new_tier},
+            metadata={
+                "user_id": user_id,
+                "type": "custom_plan",
+                "monthly_credits": str(monthly_credits),
+            },
         )
 
-        # Update user tier in DB immediately
-        credits = TIER_PRICING.get(new_tier, {}).get("credits", 50)
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {
-                "subscription_tier": new_tier,
-                "credits": credits,
-                "credit_allowance": credits,
-                "updated_at": datetime.now(timezone.utc),
-            }}
-        )
+        await _activate_custom_plan(user_id, monthly_credits, monthly_price_cents, plan_config)
 
-        return {"success": True, "subscription_id": updated.id, "new_tier": new_tier}
+        return {"success": True, "subscription_id": updated.id, "monthly_credits": monthly_credits}
     except Exception as e:
         logger.error(f"Failed to modify subscription for user {user_id}: {e}")
         return {"success": False, "error": str(e)}
@@ -389,27 +411,26 @@ async def modify_subscription(user_id: str, new_tier: str, billing_period: str =
 
 async def handle_webhook_event(payload: bytes, sig_header: str) -> Dict[str, Any]:
     """Process Stripe webhook events."""
-    
+
     if not stripe:
         return {"success": False, "error": "Stripe not configured"}
-    
+
     if not STRIPE_WEBHOOK_SECRET:
         logger.warning("Stripe webhook secret not configured")
         return {"success": False, "error": "Webhook secret not configured"}
-    
+
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except ValueError:
         return {"success": False, "error": "Invalid payload"}
     except stripe.error.SignatureVerificationError:
         return {"success": False, "error": "Invalid signature"}
-    
-    # Handle specific events
+
     event_type = event["type"]
     event_data = event["data"]["object"]
-    
+
     logger.info(f"Processing Stripe webhook: {event_type}")
-    
+
     try:
         if event_type == "checkout.session.completed":
             await handle_checkout_completed(event_data)
@@ -425,7 +446,7 @@ async def handle_webhook_event(payload: bytes, sig_header: str) -> Dict[str, Any
             await handle_payment_failed(event_data)
         else:
             logger.info(f"Unhandled webhook event type: {event_type}")
-        
+
         return {"success": True, "event_type": event_type}
     except Exception as e:
         logger.error(f"Error handling webhook {event_type}: {e}")
@@ -438,9 +459,10 @@ async def handle_checkout_completed(session: Dict[str, Any]):
     if not user_id:
         logger.error("Checkout completed without user_id in metadata")
         return
-    
-    # Check if this is a credit purchase
-    if session.get("metadata", {}).get("type") == "credit_purchase":
+
+    checkout_type = session.get("metadata", {}).get("type", "")
+
+    if checkout_type == "credit_purchase":
         credits = int(session.get("metadata", {}).get("credits", 0))
         if credits > 0:
             from services.credits import add_credits
@@ -452,7 +474,6 @@ async def handle_checkout_completed(session: Dict[str, Any]):
             )
             logger.info(f"Added {credits} credits to user {user_id}")
 
-            # Record payment
             await db.payments.insert_one({
                 "payment_id": f"pay_{uuid.uuid4().hex[:12]}",
                 "user_id": user_id,
@@ -464,20 +485,24 @@ async def handle_checkout_completed(session: Dict[str, Any]):
                 "status": "succeeded",
                 "created_at": datetime.now(timezone.utc),
             })
+
+    elif checkout_type == "custom_plan":
+        # Custom plan subscription — activate from pending config
+        user = await db.users.find_one({"user_id": user_id}, {"pending_plan_config": 1})
+        if user and user.get("pending_plan_config"):
+            monthly_credits = int(session.get("metadata", {}).get("monthly_credits", 500))
+            monthly_price_cents = int(session.get("metadata", {}).get("monthly_price_cents", 0))
+            await _activate_custom_plan(user_id, monthly_credits, monthly_price_cents, user["pending_plan_config"])
+        logger.info(f"Custom plan checkout completed for user {user_id}")
     else:
-        # Subscription checkout - subscription.created event will handle tier update.
-        # Payment recording is handled by handle_payment_succeeded (invoice.payment_succeeded)
-        # to avoid duplicate payment entries.
         logger.info(f"Subscription checkout completed for user {user_id} — payment will be recorded via invoice.payment_succeeded")
 
 
 async def handle_subscription_created(subscription: Dict[str, Any]):
     """Handle new subscription creation."""
     user_id = subscription.get("metadata", {}).get("user_id")
-    tier = subscription.get("metadata", {}).get("tier", "pro")
-    
+
     if not user_id:
-        # Try to find user by customer ID
         customer_id = subscription.get("customer")
         user = await db.users.find_one({"stripe_customer_id": customer_id})
         if user:
@@ -485,27 +510,34 @@ async def handle_subscription_created(subscription: Dict[str, Any]):
         else:
             logger.error(f"Could not find user for subscription {subscription['id']}")
             return
-    
-    # Update user subscription
-    credits = TIER_PRICING.get(tier, {}).get("credits", 500)
-    await db.users.update_one(
-        {"user_id": user_id},
-        {"$set": {
-            "subscription_tier": tier,
-            "stripe_subscription_id": subscription["id"],
-            "subscription_status": subscription["status"],
-            "credits": credits,
-            "credit_allowance": credits,
-            "subscription_updated_at": datetime.now(timezone.utc)
-        }}
-    )
-    logger.info(f"User {user_id} subscribed to {tier} tier with {credits} credits")
+
+    sub_type = subscription.get("metadata", {}).get("type", "")
+    monthly_credits = int(subscription.get("metadata", {}).get("monthly_credits", 500))
+
+    now = datetime.now(timezone.utc)
+    update = {
+        "stripe_subscription_id": subscription["id"],
+        "subscription_status": subscription["status"],
+        "subscription_updated_at": now,
+    }
+
+    if sub_type == "custom_plan":
+        update["subscription_tier"] = "custom"
+        update["credits"] = monthly_credits
+        update["credit_allowance"] = monthly_credits
+    else:
+        update["subscription_tier"] = "custom"
+        update["credits"] = monthly_credits
+        update["credit_allowance"] = monthly_credits
+
+    await db.users.update_one({"user_id": user_id}, {"$set": update})
+    logger.info(f"User {user_id} subscribed: {monthly_credits} credits/mo")
 
 
 async def handle_subscription_updated(subscription: Dict[str, Any]):
-    """Handle subscription updates (upgrades, downgrades, renewals)."""
+    """Handle subscription updates (plan changes, renewals)."""
     user_id = subscription.get("metadata", {}).get("user_id")
-    
+
     if not user_id:
         customer_id = subscription.get("customer")
         user = await db.users.find_one({"stripe_customer_id": customer_id})
@@ -513,80 +545,78 @@ async def handle_subscription_updated(subscription: Dict[str, Any]):
             user_id = user["user_id"]
         else:
             return
-    
-    tier = subscription.get("metadata", {}).get("tier", "pro")
+
     status = subscription.get("status")
-    
+
     update_data = {
         "subscription_status": status,
         "subscription_updated_at": datetime.now(timezone.utc)
     }
-    
+
     if status == "active":
-        update_data["subscription_tier"] = tier
-    
+        monthly_credits = int(subscription.get("metadata", {}).get("monthly_credits", 500))
+        update_data["credit_allowance"] = monthly_credits
+
     await db.users.update_one({"user_id": user_id}, {"$set": update_data})
-    logger.info(f"Subscription updated for user {user_id}: status={status}, tier={tier}")
+    logger.info(f"Subscription updated for user {user_id}: status={status}")
 
 
 async def handle_subscription_deleted(subscription: Dict[str, Any]):
-    """Handle subscription cancellation."""
+    """Handle subscription cancellation — downgrade to starter."""
     customer_id = subscription.get("customer")
     user = await db.users.find_one({"stripe_customer_id": customer_id})
-    
+
     if not user:
         return
-    
-    # Downgrade to free tier
+
     await db.users.update_one(
         {"user_id": user["user_id"]},
         {"$set": {
-            "subscription_tier": "free",
+            "subscription_tier": "starter",
             "subscription_status": "cancelled",
             "stripe_subscription_id": None,
-            "credit_allowance": 50,  # Free tier credits
+            "plan_config": None,
+            "credit_allowance": 0,
             "subscription_updated_at": datetime.now(timezone.utc)
         }}
     )
-    logger.info(f"Subscription deleted for user {user['user_id']}, downgraded to free")
+    logger.info(f"Subscription deleted for user {user['user_id']}, downgraded to starter")
 
 
 async def handle_payment_succeeded(invoice: Dict[str, Any]):
-    """Handle successful recurring payment."""
+    """Handle successful recurring payment — refresh credits."""
     subscription_id = invoice.get("subscription")
     if not subscription_id:
         return
-    
+
     user = await db.users.find_one({"stripe_subscription_id": subscription_id})
     if not user:
         return
-    
-    # Refresh credits on successful payment
-    tier = user.get("subscription_tier", "free")
-    credits = TIER_PRICING.get(tier, {}).get("credits", 50)
+
+    monthly_credits = user.get("credit_allowance", 500)
 
     await db.users.update_one(
         {"user_id": user["user_id"]},
         {"$set": {
-            "credits": credits,
+            "credits": monthly_credits,
+            "credits_last_refresh": datetime.now(timezone.utc),
             "last_payment_at": datetime.now(timezone.utc)
         }}
     )
 
-    # Record payment
     await db.payments.insert_one({
         "payment_id": f"pay_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"],
         "stripe_invoice_id": invoice.get("id"),
         "amount_cents": invoice.get("amount_paid", 0),
         "currency": invoice.get("currency", "usd"),
-        "tier": tier,
-        "credits_granted": credits,
+        "tier": user.get("subscription_tier", "custom"),
+        "credits_granted": monthly_credits,
         "status": "succeeded",
         "created_at": datetime.now(timezone.utc),
     })
 
-    logger.info(f"Payment succeeded for user {user['user_id']}, credits reset to {credits}")
+    logger.info(f"Payment succeeded for user {user['user_id']}, credits reset to {monthly_credits}")
 
 
 async def handle_payment_failed(invoice: Dict[str, Any]):
@@ -594,12 +624,11 @@ async def handle_payment_failed(invoice: Dict[str, Any]):
     subscription_id = invoice.get("subscription")
     if not subscription_id:
         return
-    
+
     user = await db.users.find_one({"stripe_subscription_id": subscription_id})
     if not user:
         return
-    
-    # Mark payment as failed - could trigger email notification
+
     await db.users.update_one(
         {"user_id": user["user_id"]},
         {"$set": {
@@ -614,12 +643,12 @@ async def handle_payment_failed(invoice: Dict[str, Any]):
 
 async def create_customer_portal_session(user_id: str, return_url: str = None) -> Dict[str, Any]:
     """Create a Stripe Customer Portal session for self-service billing management."""
-    
+
     user = await db.users.find_one({"user_id": user_id}, {"stripe_customer_id": 1})
-    
+
     if not user or not user.get("stripe_customer_id"):
         return {"success": False, "error": "No billing account found"}
-    
+
     if not stripe:
         return {
             "success": True,
@@ -627,7 +656,7 @@ async def create_customer_portal_session(user_id: str, return_url: str = None) -
             "portal_url": "/settings",
             "message": "Stripe not configured. Customer portal simulated."
         }
-    
+
     try:
         session = stripe.billing_portal.Session.create(
             customer=user["stripe_customer_id"],
@@ -643,14 +672,18 @@ async def create_customer_portal_session(user_id: str, return_url: str = None) -
 
 def get_stripe_config() -> Dict[str, Any]:
     """Get Stripe configuration for frontend."""
+    from services.credits import VOLUME_TIERS, FEATURE_THRESHOLDS, CreditOperation
+
     return {
         "configured": is_stripe_configured(),
         "publishable_key": STRIPE_PUBLISHABLE_KEY if is_stripe_configured() else None,
-        "prices": {
-            "pro": TIER_PRICING["pro"],
-            "studio": TIER_PRICING["studio"],
-            "agency": TIER_PRICING["agency"]
+        "pricing_model": "custom_plan_builder",
+        "volume_tiers": VOLUME_TIERS,
+        "feature_thresholds": {
+            k: {"min_monthly_usd": v["min_monthly_usd"]}
+            for k, v in FEATURE_THRESHOLDS.items()
         },
+        "operation_costs": {op.name.lower(): op.value for op in CreditOperation},
         "credit_packages": {
             name: {"credits": pkg["credits"], "price": pkg["price"] / 100}
             for name, pkg in CREDIT_PACKAGES.items()

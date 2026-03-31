@@ -360,9 +360,14 @@ async def run_agent_pipeline_legacy(
             if generate_video and draft:
                 try:
                     # Tier-gate: only studio and agency users can generate video
-                    user_doc = await db.users.find_one({"user_id": user_id}, {"subscription_tier": 1})
-                    user_tier = user_doc.get("subscription_tier", "free") if user_doc else "free"
-                    if user_tier in ("studio", "agency"):
+                    user_doc = await db.users.find_one({"user_id": user_id}, {"subscription_tier": 1, "plan_config": 1})
+                    user_tier = user_doc.get("subscription_tier", "starter") if user_doc else "starter"
+                    # Allow video for custom plan users with video_enabled
+                    tier_has_video = user_tier in ("studio", "agency")
+                    if user_tier == "custom" and user_doc:
+                        plan_features = user_doc.get("plan_config", {}).get("features", {})
+                        tier_has_video = plan_features.get("video_enabled", False)
+                    if tier_has_video:
                         from tasks.media_tasks import generate_video_for_job
                         from tasks import is_redis_configured
                         if is_redis_configured():

@@ -337,7 +337,33 @@ and confirm the job reaches `reviewing` status within 60 seconds.
 
 ---
 
-## 10. PR Checklist (include in every PR description)
+## 10. Team Agent Orchestration
+
+ThookAI uses a team-based agent orchestration layer on top of GSD for autonomous development.
+
+**Your role:** When the user discusses features, architecture, or priorities, act as their **CTO-level technical partner** — brainstorm, challenge assumptions, help decompose work into phases, and identify risks.
+
+**Team commands:**
+- `/team:deploy <phase>` — Full pipeline: specialist analysis → plan → execute → verify → report
+- `/team:brief <phase>` — Run specialists only (review before committing to execution)
+- `/team:status [phase]` — Show deployment status and artifacts
+- `/team:autonomous` — Run all remaining phases with specialist analysis
+
+**Domain specialists** (spawned in parallel before planning):
+- **Backend specialist** — APIs, database, auth, server architecture analysis
+- **Frontend specialist** — Components, state, UX, responsive design analysis
+- **AI/Data specialist** — LLM integration, prompts, embeddings, pipeline analysis
+
+**How it works:** Specialists produce BRIEF.md files → GSD planner reads them as extra context → executor builds → verifier checks → TEAM-REPORT.md compiles results.
+
+**When to suggest team commands:**
+- User says "let's build this" or "implement this feature" → suggest `/team:deploy`
+- User wants to review approach first → suggest `/team:brief`
+- User says "ship it" or "execute everything" → suggest `/team:autonomous`
+
+---
+
+## 11. PR Checklist (include in every PR description)
 
 - [ ] Branch targets `dev`, not `main`
 - [ ] No secrets or API keys in code
@@ -346,3 +372,387 @@ and confirm the job reaches `reviewing` status within 60 seconds.
 - [ ] Tested locally with `uvicorn server:app --reload` from `backend/`
 - [ ] Pipeline smoke test passed (if agent files modified)
 - [ ] Described what was broken and how it is now fixed
+
+<!-- GSD:project-start source:PROJECT.md -->
+## Project
+
+**ThookAI — Stabilization & Production Readiness**
+
+ThookAI is an AI-powered content creation platform for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline. The platform handles scheduling, repurposing, analytics, billing, media generation, and multi-user workspaces. Currently deployed to Render (backend) and Vercel (frontend) but not publicly launched — multiple features are broken or partially implemented.
+
+**Core Value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
+
+### Constraints
+
+- **Branch strategy**: All work branches from `dev`, PRs target `dev`. Never commit to `main` directly.
+- **Branch naming**: `fix/short-description`, `feat/short-description`, `infra/short-description`
+- **Config pattern**: All settings via `backend/config.py` dataclasses. Never use `os.environ.get()` directly.
+- **Database pattern**: Always `from database import db` with Motor async. Never synchronous PyMongo.
+- **LLM model**: `claude-sonnet-4-20250514` (Anthropic primary)
+- **Billing changes**: Flag for human review — no auto-merge on billing code
+- **Agent pipeline**: After any change to `backend/agents/`, verify full pipeline flow
+<!-- GSD:project-end -->
+
+<!-- GSD:stack-start source:codebase/STACK.md -->
+## Technology Stack
+
+## Languages
+- Python 3.11.11 - Backend API, agents, task processing
+- JavaScript/React 18.3.1 - Frontend application (CRA + CRACO)
+- TypeScript - Frontend tooling (with ESLint plugin support)
+- HTML/CSS - Frontend via TailwindCSS 3.4.17
+- SQL/MongoDB Query Language - Database operations via Motor async driver
+## Runtime
+- Python 3.11.11 (specified in `backend/runtime.txt`)
+- Node.js 18+ (frontend uses `react-scripts` 5.0.1)
+- pip (Python) - `backend/requirements.txt` with 52 dependencies
+- npm (JavaScript) - `frontend/package.json` with 99 dependencies
+- Lockfiles: package-lock.json (frontend), pip freeze equivalent in requirements.txt
+## Frameworks
+- FastAPI 0.110.1 - REST API framework, async request handling
+- Uvicorn 0.25.0 - ASGI server for FastAPI
+- React 18.3.1 - UI framework
+- React Router DOM 7.5.1 - Client-side routing
+- React Hook Form 7.56.2 - Form state management
+- Zod 3.24.4 - TypeScript-first schema validation
+- Radix UI (33 components) - Headless component library (accordion, dialog, dropdown, etc.)
+- shadcn/ui - Composable React components built on Radix UI (referenced via `components.json`)
+- TailwindCSS 3.4.17 - Utility-first CSS framework
+- Lucide React 0.507.0 - Icon library
+- Framer Motion 12.38.0 - Animation library
+- Embla Carousel React 8.6.0 - Carousel component
+- Sonner 2.0.3 - Toast notification system
+- Celery 5.3.0 - Distributed task queue
+- Redis 7+ - Message broker and result backend
+- pytest 8.0.0 - Python test framework
+- pytest-asyncio 0.23.0 - Async test support
+- No frontend test framework detected in package.json
+- Craco 7.1.0 - CRA configuration override (webpack)
+- Black 24.1.1 - Python code formatter
+- isort 5.13.2 - Python import sorter
+- flake8 7.0.0 - Python linter
+- mypy 1.8.0 - Python type checker
+- ESLint 8.57.1 - JavaScript linter
+- TypeScript ESLint (5.62.0) - TS-aware linting
+- PostCSS 8.4.49 - CSS preprocessor (with autoprefixer)
+- Jest (via react-scripts) - JavaScript test runner (CRA default)
+## Key Dependencies
+- motor 3.3.1 - Async MongoDB driver (uses PyMongo 4.5.0 under the hood)
+- anthropic 0.34.0 - Anthropic Claude API client (primary LLM)
+- openai 1.40.0 - OpenAI API client (fallback LLM)
+- boto3 1.34.129+ - AWS S3 / Cloudflare R2 client
+- stripe 8.0.0 - Payment processing
+- google-generativeai 0.8.0 - Google Gemini support (optional)
+- langgraph 0.2.0 - LangChain-based agent orchestration
+- langchain-core 0.3.0 - LangChain framework
+- fal-client 0.10.0 - FAL.ai image generation
+- lumaai 1.0.0 - Luma Dream Machine video API
+- elevenlabs 1.50.0 - ElevenLabs voice/TTS API
+- pinecone 5.0.0 - Vector database for embeddings
+- redis 5.0.0 - Redis Python client with hiredis speedup
+- kombu 5.6.0 - Celery message transport
+- billiard 4.2.1 - Celery task execution backend
+- authlib 1.3.2 - OAuth client for Google, LinkedIn, Twitter, Instagram
+- pyjwt 2.10.1 - JWT token creation/verification
+- python-jose 3.3.0 - JOSE token support
+- bcrypt 4.1.3 - Password hashing
+- passlib 1.7.4 - Password utilities
+- cryptography 42.0.8 - Encryption (Fernet for token encryption)
+- itsdangerous 2.2.0 - Secure signing for tokens
+- pydantic 2.6.4+ - Data validation and settings management
+- email-validator 2.2.0 - Email format validation
+- python-multipart 0.0.9 - Multipart form data parsing
+- httpx 0.28.1 - HTTP client (sync+async)
+- requests 2.31.0 - HTTP client (synchronous)
+- pandas 2.2.0 - Data manipulation
+- numpy 1.26.0 - Numerical computing
+- typer 0.9.0 - CLI utilities
+- jq 1.6.0 - JSON query tool
+- python-dotenv 1.0.1 - .env file loading
+- sentry-sdk 2.0.0+ - Error tracking and performance monitoring
+- resend 2.0.0 - Transactional email service
+- tzdata 2024.2 - Timezone database
+- tzlocal 5.0 - Local timezone detection
+## Configuration
+- `DatabaseConfig` - MongoDB connection (MONGO_URL, DB_NAME, pool sizing)
+- `SecurityConfig` - JWT, CORS, rate limiting
+- `LLMConfig` - API keys for all LLM providers
+- `R2Config` - Cloudflare R2 credentials
+- `EmailConfig` - Resend email configuration
+- `GoogleConfig` - Google OAuth
+- `StripeConfig` - Stripe API keys and price IDs
+- `VideoProviderConfig` - Video generation API keys (Runway, Kling, Luma, HeyGen, D-ID, FAL)
+- `VoiceProviderConfig` - Voice/TTS API keys (Play.ht, Google TTS)
+- `PlatformOAuthConfig` - LinkedIn, Meta/Instagram, Twitter OAuth
+- `PineconeConfig` - Vector store configuration
+- `AppConfig` - Environment, debug, logging, URLs
+- Frontend: `frontend/tsconfig.json` (TypeScript config)
+- Frontend: `frontend/tailwind.config.js` - TailwindCSS customization
+- Frontend: `frontend/craco.config.js` - CRA webpack overrides
+- Frontend: `frontend/postcss.config.js` - PostCSS plugins
+- Frontend: `components.json` - shadcn/ui component configuration
+- Backend: `backend/celeryconfig.py` - Celery task routing and beat schedule
+- Backend: `pytest.ini` - Pytest configuration
+- Docker: `docker-compose.yml` - Local development services
+## Platform Requirements
+- Python 3.11+
+- Node.js 18+ (for frontend)
+- MongoDB 7.0+ (local or Atlas)
+- Redis 7+ (for Celery)
+- Git
+- API keys: At least one LLM provider (Anthropic preferred, OpenAI fallback)
+- Deployment targets: Backend on Render/Railway/Heroku (via Procfile), Frontend on Vercel
+- MongoDB Atlas (cloud managed)
+- Redis Cloud or AWS ElastiCache
+- Cloudflare R2 (media storage)
+- All external API credentials (Stripe, Resend, video/voice providers)
+- Backend: `uvicorn server:app --host 0.0.0.0 --port $PORT` (Procfile `web` process)
+- Background worker: `celery -A celery_app:celery_app worker` (Procfile `worker` process)
+- Beat scheduler: `celery -A celery_app:celery_app beat` (Procfile `beat` process)
+- Frontend: `npm start` (Vercel or local development)
+<!-- GSD:stack-end -->
+
+<!-- GSD:conventions-start source:CONVENTIONS.md -->
+## Conventions
+
+## Naming Patterns
+- Python: `snake_case.py` (e.g., `auth_utils.py`, `content_tasks.py`)
+- React/Frontend: `PascalCase.jsx` for components (e.g., `AuthContext.jsx`), `camelCase.js` for utilities
+- UI components from shadcn: `kebab-case.jsx` (e.g., `toggle-group.jsx`, `radio-group.jsx`)
+- Python: `snake_case()` for all functions and methods
+- React: `camelCase()` for all functions, `PascalCase()` for components and custom hooks
+- Custom hooks: `useXxx()` pattern (e.g., `useAuth`, `checkAuth`)
+- Handler functions: `handleXxx()` or `onXxx()` pattern in React components
+- Python: `snake_case` for all variables and constants. Module-level constants in `UPPER_CASE`
+- React/JS: `camelCase` for all variables, `UPPER_CASE` for constants
+- Environment variables: `UPPER_CASE` with underscores (e.g., `REACT_APP_BACKEND_URL`, `MONGO_URL`)
+- Python: Use type hints for all functions (PEP 484). Import from `typing` module
+- React: No TypeScript — JSDoc comments used sparingly
+- Dataclasses in Python: All config uses `@dataclass` decorator with field factories
+- MongoDB collections referenced as `db.collection_name` throughout
+- Query operations use Motor async methods: `await db.collection.find_one()`, `await db.collection.insert_one()`
+- Fields in documents use `snake_case`
+## Code Style
+- Python: Black formatter (configured in `requirements.txt`)
+- React/Frontend: No explicit formatter configured, uses React Scripts defaults
+- Line length: Implicit 88-char limit (Black default)
+- Python: 
+- React/Frontend:
+- Python order (per isort):
+- React order:
+- React: `@/*` maps to `src/*` (defined in `jsconfig.json`)
+- Backend: No path aliases, relative imports from project root
+## Error Handling
+- Use explicit exception catching: `except SpecificException as e:`
+- Always log before re-raising: `logger.warning(f"Issue: {e}")` then `raise`
+- For API routes: raise `HTTPException(status_code=xxx, detail="message")`
+- Use try/finally blocks to ensure cleanup (especially for database connections)
+- Log at appropriate levels: `logger.warning()` for recoverable issues, `logger.error()` for failures, `logger.critical()` for severe startup issues
+- Use bare `catch { }` blocks (no error object) in async operations
+- Catch errors in useEffect/useCallback but don't necessarily rethrow — often just set UI state (e.g., `setUser(null)`)
+- No formal error boundaries detected — errors logged to browser console
+## Logging
+- Python: `logging` module (standard library)
+- React: No formal logging library — uses `console` (with TODO for Sentry)
+- Python: Logger initialized per-module: `logger = logging.getLogger(__name__)`
+- Log critical startup info in `server.py` lifespan context manager: `logger.info("Starting ThookAI API...")`
+- Use structured logging with f-strings: `logger.info(f"User {user_id} registered")`
+- Security-sensitive data (passwords, tokens) NEVER logged
+- All database operations log at DEBUG level or on error at WARNING level
+## Comments
+- Comment non-obvious logic: why something is done, not what is being done
+- Document complex algorithms with docstrings
+- Mark known issues with `# TODO:` or `# FIXME:` (searchable)
+- Mark important assumptions with `# NOTE:` or `# IMPORTANT:`
+- Python: Triple-quoted docstrings on functions and classes
+- Multiline docstrings preferred for public APIs and services
+- React: JSDoc-style comments rare; prefer clear code over comments
+## Function Design
+- Python: Aim for functions under 50 lines
+- React components: Aim for under 100 lines (split larger components)
+- Complex logic extracted to helper functions
+- Python: Use type hints for all parameters
+- Python: Pass configuration via `settings` singleton, not function arguments
+- React: Props validated by usage (no PropTypes), optional props have defaults
+- Use dataclasses (Python) or objects (React) for multiple related parameters
+- Python functions should return typed values: `-> str`, `-> dict`, `-> List[str]`, `-> Optional[dict]`
+- React components return JSX
+- Async functions return the same types wrapped in a coroutine
+- Database queries return `dict` or `None` (single) or `List[dict]` (multiple)
+## Module Design
+- Python modules export functions/classes at module level (no `__all__` required but ok to use)
+- React components export as named exports: `export function Button() { }`
+- Services in `backend/services/` export a class or set of functions as the API
+- Not used in Python backend
+- React UI components in `src/components/ui/` are individual files, not re-exported from index
+## Config Pattern (Critical)
+## Database Pattern (Critical)
+<!-- GSD:conventions-end -->
+
+<!-- GSD:architecture-start source:ARCHITECTURE.md -->
+## Architecture
+
+## Pattern Overview
+- Multi-agent AI pipeline for content generation (Commander → Scout → Thinker → Writer → QC)
+- FastAPI backend with Motor async MongoDB driver and Celery task queue
+- React frontend with client-side context-based auth and REST API consumption
+- Service layer abstraction for external integrations (LLM, media storage, billing, vector embeddings)
+- Middleware-based cross-cutting concerns (security, rate limiting, performance optimization)
+## Layers
+- Purpose: Render user interfaces and handle user interactions
+- Location: `frontend/src/pages/`, `frontend/src/components/`
+- Contains: React page components (Dashboard, Onboarding, ContentStudio), UI components (shadcn/ui), page-level logic
+- Depends on: AuthContext for user state, API services for HTTP calls, custom hooks for data fetching
+- Used by: End users through the browser
+- Purpose: Manage application-level state, authentication, and client-side routing
+- Location: `frontend/src/context/AuthContext.jsx`, `frontend/src/App.js`, `frontend/src/hooks/`
+- Contains: AuthProvider (JWT + localStorage token management), custom hooks (useAuth, useAPI), React Router setup
+- Depends on: FastAPI auth endpoints, localStorage for token persistence
+- Used by: All pages and components for auth checks, user context, API access
+- Purpose: Abstract HTTP communication with the backend
+- Location: `frontend/src/lib/` (likely contains API client utilities)
+- Contains: HTTP client configuration, request/response interceptors, endpoint helpers
+- Depends on: REACT_APP_BACKEND_URL environment variable, AuthContext token
+- Used by: All components that need to call backend endpoints
+- Purpose: Handle incoming HTTP requests and orchestrate business logic
+- Location: `backend/server.py`
+- Contains: Application instantiation, middleware registration, route mounting, lifespan management (startup/shutdown)
+- Depends on: All middleware, all routers, database connection, config validation
+- Used by: Frontend clients, external webhooks, scheduled tasks
+- Purpose: Handle HTTP endpoints for specific business domains
+- Location: `backend/routes/*.py` (auth.py, content.py, persona.py, billing.py, agency.py, etc.)
+- Contains: Request validation, response serialization, authorization checks, delegation to services/agents
+- Depends on: get_current_user auth dependency, database, services, agents, Celery tasks
+- Used by: FastAPI application through router registration in server.py
+- Purpose: Orchestrate multi-stage AI content generation through specialized agents
+- Location: `backend/agents/pipeline.py`, `backend/agents/*.py` (commander, scout, thinker, writer, qc, etc.)
+- Contains: 
+- Depends on: LLM clients, vector store, database, external media providers
+- Used by: Content generation routes and background tasks
+- Purpose: Encapsulate reusable business logic and external integrations
+- Location: `backend/services/*.py`
+- Contains:
+- Depends on: Config settings, external APIs (LLM, Stripe, R2, Pinecone, etc.), database
+- Used by: Routes, agents, tasks
+- Purpose: Handle cross-cutting concerns for all HTTP requests/responses
+- Location: `backend/middleware/security.py`, `backend/middleware/performance.py`
+- Contains:
+- Depends on: Redis (optional for rate limiting), Starlette middleware base
+- Used by: FastAPI application, applied globally to all routes
+- Purpose: Database access abstraction and connection pooling
+- Location: `backend/database.py`, `backend/db_indexes.py`, `backend/auth_utils.py`
+- Contains:
+- Depends on: MongoDB (async Motor driver), config settings, FERNET_KEY for encryption
+- Used by: All routes, services, agents for data persistence
+- Purpose: Async background processing for long-running and scheduled operations
+- Location: `backend/tasks/content_tasks.py`, `backend/tasks/media_tasks.py`, `backend/celery_app.py`
+- Contains:
+- Depends on: Redis (Celery broker), database, agents, services
+- Used by: Routes for async job submission, triggered by Celery beat for scheduled tasks
+- Purpose: Centralized environment-driven configuration
+- Location: `backend/config.py`
+- Contains: Dataclass-based config objects (DatabaseConfig, SecurityConfig, LLMConfig, R2Config, StripeConfig, etc.)
+- Depends on: Environment variables from .env
+- Used by: All modules that need config (imports `from config import settings`)
+## Data Flow
+- **Frontend state:** User auth via AuthContext (JWT token in localStorage)
+- **Backend session state:** JWT claims contain user_id, derived from `get_current_user()` dependency
+- **Job state:** Stored in MongoDB (content_jobs collection) with status progression: pending → processing → reviewing → approved → scheduled/published
+- **Persona state:** Stored in MongoDB (persona_engines collection), immutable until user explicitly creates new version
+- **Credit state:** Stored in MongoDB (users.credits), updated transactionally on content generation
+- **Scheduled posts state:** Stored in MongoDB (scheduled_posts collection), polled by Celery beat task
+## Key Abstractions
+- Purpose: Unified abstraction over multiple LLM providers (Anthropic, OpenAI, Gemini)
+- Examples: `backend/services/llm_client.py`, used in all agent files
+- Pattern: Constructor takes provider key, provider name, model name; provides `async generate()` method for streaming or full responses
+- Purpose: Represents a single content generation request through its lifecycle
+- Examples: Saved to and queried from `db.content_jobs`
+- Pattern: Contains job_id, user_id, platform, status, draft, final_content, edited_content, performance_data, created_at, updated_at
+- Purpose: Represents a user's voice fingerprint and content identity
+- Examples: Saved to and queried from `db.persona_engines`
+- Pattern: Contains user_id, card (persona descriptors), voice_fingerprint, content_identity, performance_intelligence, learning_signals, uom (Unit of Measure for success)
+- Purpose: Standardize agent function signatures for pipeline composition
+- Pattern: All agents export async function like `async def run_agent(input_data, context) -> dict`
+- Examples: run_commander, run_scout, run_thinker, run_writer, run_qc in `backend/agents/*.py`
+- Purpose: Uniform interface to external APIs (Stripe, R2, Pinecone, Resend)
+- Pattern: Service classes initialize with config, expose async methods for operations
+- Examples: StripeService.create_checkout_session(), R2Storage.upload(), PineconeVectorStore.store_embedding()
+- Purpose: Composable request/response filtering
+- Pattern: Each middleware inherits BaseHTTPMiddleware, implements dispatch() async method
+- Examples: SecurityHeadersMiddleware, RateLimitMiddleware in `backend/middleware/`
+## Entry Points
+- Location: `backend/server.py` (main function, lifespan context manager)
+- Triggers: `uvicorn server:app` from Procfile
+- Responsibilities:
+- Location: `backend/routes/content.py:create_content()` endpoint
+- Triggers: `POST /api/content/create` from frontend
+- Responsibilities:
+- Location: Worker processes (defined in `backend/celery_app.py`)
+- Triggers: Celery Beat scheduler (cron-based) or explicit task.delay() calls
+- Responsibilities:
+- Location: `frontend/src/App.js` (main component)
+- Triggers: Browser navigation to frontend URL
+- Responsibilities:
+- Location: `frontend/src/context/AuthContext.jsx`
+- Triggers: App mount, manual login, Google OAuth callback
+- Responsibilities:
+## Error Handling
+- Catch request validation errors: Return `422 Unprocessable Entity` with field errors
+- Catch auth errors: Return `401 Unauthorized` if no token or token invalid
+- Catch permission errors: Return `403 Forbidden` if user lacks required role/workspace access
+- Catch not-found errors: Return `404 Not Found` if resource doesn't exist
+- Catch credit errors: Return `402 Payment Required` if insufficient credits
+- Catch Stripe errors: Return `402 Payment Required` with specific error message
+- Generic server errors: Return `500 Internal Server Error`, log full traceback with Sentry
+- LLM API failures: Log error, return default/fallback response (e.g., mock persona in onboarding)
+- Database failures: Raise exception caught by route handler, return `500`
+- External API timeouts (Perplexity, R2, Stripe): Log, return partial data or skip enrichment
+- Request too large: RateLimitMiddleware returns `429 Too Many Requests`
+- Invalid JSON: InputValidationMiddleware returns `400 Bad Request`
+- Missing security headers: SecurityHeadersMiddleware still returns OK but logs warning
+- API call fails: useAPI hook catches error, sets error state, displays toast notification
+- Auth token invalid: AuthContext logs user out, redirects to /auth
+- Network timeout: Show retry button or "offline" message
+- Form validation: Show field-level errors, disable submit until fixed
+- Sentry DSN configured in server.py if `SENTRY_DSN` env var set
+- Logs written to stdout with timestamp, level, module name, message
+- Database errors logged to database error collection (if configured)
+## Cross-Cutting Concerns
+- Approach: Python logging module configured in `backend/server.py` with standard format
+- Pattern: `logger = logging.getLogger(__name__)` at module level, log at appropriate levels (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Front-end: Browser console logging via window.console, no centralized logging yet
+- Backend: Pydantic BaseModel for request validation (declared in route handler), custom validators for complex rules (password policy, credit sufficiency)
+- Frontend: React Hook Form for form validation, client-side checks before submission
+- Backend: JWT tokens (HS256 algorithm, configurable expiry days), validated by `get_current_user()` dependency in all protected routes
+- Token payload: Contains user_id, issued_at, expiry
+- Token storage: Frontend localStorage, passed as `Authorization: Bearer <token>` header
+- Refresh: No refresh token flow yet; token expires based on JWT_EXPIRE_DAYS config
+- Backend: Role-based checks (admin, user, workspace_member) in route handlers
+- Workspace context: Some routes check user is member of workspace and has appropriate role
+- API key checks: Some routes (webhooks) verify Stripe webhook signature
+- Backend: Middleware-level compression (gzip), response caching headers
+- Frontend: Code splitting by route, lazy loading of Dashboard components
+- Database: MongoDB indexes created at startup (db_indexes.py)
+- Connection pooling: Motor async client configured with minPoolSize=10, maxPoolSize=100
+- Rate limiting: Configurable per-minute limits (RATE_LIMIT_PER_MINUTE=60, auth-specific lower limit)
+<!-- GSD:architecture-end -->
+
+<!-- GSD:workflow-start source:GSD defaults -->
+## GSD Workflow Enforcement
+
+Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+
+Use these entry points:
+- `/gsd:quick` for small fixes, doc updates, and ad-hoc tasks
+- `/gsd:debug` for investigation and bug fixing
+- `/gsd:execute-phase` for planned phase work
+
+Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
+<!-- GSD:workflow-end -->
+
+<!-- GSD:profile-start -->
+## Developer Profile
+
+> Profile not yet configured. Run `/gsd:profile-user` to generate your developer profile.
+> This section is managed by `generate-claude-profile` -- do not edit manually.
+<!-- GSD:profile-end -->
