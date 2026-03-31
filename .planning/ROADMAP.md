@@ -53,6 +53,13 @@ Plans:
   4. `docker-compose up` brings all 6 services up with no container exit errors
   5. Starting the backend with a missing required env var prints a clear error naming the missing variable and exits — not a silent crash
   6. All 59 baseline tests pass (zero regressions from Phase 1 work)
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Fix test suite and verify Celery configuration
+- [ ] 02-02-PLAN.md — Env var validation, .env.example completion, health endpoint
+- [ ] 02-03-PLAN.md — Docker setup, CORS centralization, rate limiting verification
+
 
 ### Phase 3: Auth, Onboarding & Email
 **Goal**: Users can register, log in, reset passwords, and complete onboarding — receiving a real personalized Persona Engine, not a mock fallback
@@ -125,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Git & Branch Cleanup | 0/2 | Not started | - |
-| 2. Infrastructure & Celery | 0/TBD | Not started | - |
+| 2. Infrastructure & Celery | 0/3 | Not started | - |
 | 3. Auth, Onboarding & Email | 0/TBD | Not started | - |
 | 4. Content Pipeline | 0/TBD | Not started | - |
 | 5. Publishing, Scheduling & Billing | 0/TBD | Not started | - |
