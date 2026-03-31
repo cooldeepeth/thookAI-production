@@ -72,6 +72,12 @@ Plans:
   4. A user who clicks "Forgot password" receives an email via Resend with a working reset link
   5. Completing the 7-question onboarding interview produces a persona card with real personalized voice fingerprint fields — not the generic mock fallback (verifiable by checking the LLM model used in logs: must be claude-sonnet-4-20250514)
   6. Agency workspace invitation emails send via Resend with correct join links
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Auth core: registration with credits, login, session persistence, Google OAuth
+- [ ] 03-02-PLAN.md — Email service verification and password reset flow
+- [ ] 03-03-PLAN.md — Onboarding model fix verification and persona generation quality
 
 ### Phase 4: Content Pipeline
 **Goal**: The 5-agent generation pipeline runs reliably end-to-end, producing personalized drafts using real user context — with fatigue awareness and past content memory
@@ -132,8 +138,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Git & Branch Cleanup | 0/2 | Not started | - |
-| 2. Infrastructure & Celery | 1/3 | In Progress|  |
-| 3. Auth, Onboarding & Email | 0/TBD | Not started | - |
+| 2. Infrastructure & Celery | 3/3 | Complete |  |
+| 3. Auth, Onboarding & Email | 0/3 | Not started | - |
 | 4. Content Pipeline | 0/TBD | Not started | - |
 | 5. Publishing, Scheduling & Billing | 0/TBD | Not started | - |
 | 6. Media Generation & Analytics | 0/TBD | Not started | - |
