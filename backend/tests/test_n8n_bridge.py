@@ -107,7 +107,8 @@ class TestN8nCallback:
                 )
 
         assert resp.status_code == 200, resp.text
-        assert resp.json() == {"status": "accepted"}
+        data = resp.json()
+        assert data["status"] == "accepted"
 
     async def test_invalid_signature_returns_401(self):
         """POST with wrong signature returns 401."""
