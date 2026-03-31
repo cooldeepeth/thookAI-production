@@ -92,7 +92,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Pipeline integration tests: orchestrator, UOM, fatigue shield, vector store
+- [x] 04-01-PLAN.md — Pipeline integration tests: orchestrator, UOM, fatigue shield, vector store
 - [ ] 04-02-PLAN.md — End-to-end pipeline execution and stale job cleanup verification
 
 ### Phase 5: Publishing, Scheduling & Billing
@@ -145,7 +145,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Git & Branch Cleanup | 0/2 | Not started | - |
 | 2. Infrastructure & Celery | 3/3 | Complete |  |
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
-| 4. Content Pipeline | 0/2 | Not started | - |
+| 4. Content Pipeline | 1/2 | In Progress|  |
 | 5. Publishing, Scheduling & Billing | 0/TBD | Not started | - |
 | 6. Media Generation & Analytics | 0/TBD | Not started | - |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |

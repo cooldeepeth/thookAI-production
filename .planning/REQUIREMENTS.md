@@ -26,10 +26,10 @@ Requirements for stabilization release. Each maps to roadmap phases.
 ### Content Pipeline
 
 - [ ] **PIPE-01**: Content generation request completes within 180s timeout and returns draft
-- [ ] **PIPE-02**: LangGraph orchestrator runs with debate protocol and quality loops
-- [ ] **PIPE-03**: UOM behavioral inference steers agent behavior per user profile
-- [ ] **PIPE-04**: Unified fatigue shield feeds avoidance patterns into Thinker during generation
-- [ ] **PIPE-05**: Pinecone vector store enriches Writer with past approved content examples
+- [x] **PIPE-02**: LangGraph orchestrator runs with debate protocol and quality loops
+- [x] **PIPE-03**: UOM behavioral inference steers agent behavior per user profile
+- [x] **PIPE-04**: Unified fatigue shield feeds avoidance patterns into Thinker during generation
+- [x] **PIPE-05**: Pinecone vector store enriches Writer with past approved content examples
 - [ ] **PIPE-06**: Stale jobs (stuck in processing >10min) cleaned up automatically by Celery beat
 
 ### Publishing & Scheduling
@@ -159,10 +159,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-05 | Phase 3 | Complete |
 | AUTH-06 | Phase 3 | Complete |
 | PIPE-01 | Phase 4 | Pending |
-| PIPE-02 | Phase 4 | Pending |
-| PIPE-03 | Phase 4 | Pending |
-| PIPE-04 | Phase 4 | Pending |
-| PIPE-05 | Phase 4 | Pending |
+| PIPE-02 | Phase 4 | Complete |
+| PIPE-03 | Phase 4 | Complete |
+| PIPE-04 | Phase 4 | Complete |
+| PIPE-05 | Phase 4 | Complete |
 | PIPE-06 | Phase 4 | Pending |
 | PUB-01 | Phase 5 | Pending |
 | PUB-02 | Phase 5 | Pending |
