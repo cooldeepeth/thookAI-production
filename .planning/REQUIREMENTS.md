@@ -131,71 +131,71 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| N8N-01 | — | Pending |
-| N8N-02 | — | Pending |
-| N8N-03 | — | Pending |
-| N8N-04 | — | Pending |
-| N8N-05 | — | Pending |
-| N8N-06 | — | Pending |
-| LRAG-01 | — | Pending |
-| LRAG-02 | — | Pending |
-| LRAG-03 | — | Pending |
-| LRAG-04 | — | Pending |
-| LRAG-05 | — | Pending |
-| LRAG-06 | — | Pending |
-| LRAG-07 | — | Pending |
-| MEDIA-01 | — | Pending |
-| MEDIA-02 | — | Pending |
-| MEDIA-03 | — | Pending |
-| MEDIA-04 | — | Pending |
-| MEDIA-05 | — | Pending |
-| MEDIA-06 | — | Pending |
-| MEDIA-07 | — | Pending |
-| MEDIA-08 | — | Pending |
-| MEDIA-09 | — | Pending |
-| MEDIA-10 | — | Pending |
-| MEDIA-11 | — | Pending |
-| MEDIA-12 | — | Pending |
-| MEDIA-13 | — | Pending |
-| MEDIA-14 | — | Pending |
-| STRAT-01 | — | Pending |
-| STRAT-02 | — | Pending |
-| STRAT-03 | — | Pending |
-| STRAT-04 | — | Pending |
-| STRAT-05 | — | Pending |
-| STRAT-06 | — | Pending |
-| STRAT-07 | — | Pending |
-| ANLYT-01 | — | Pending |
-| ANLYT-02 | — | Pending |
-| ANLYT-03 | — | Pending |
-| ANLYT-04 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| DASH-05 | — | Pending |
-| OBS-01 | — | Pending |
-| OBS-02 | — | Pending |
-| OBS-03 | — | Pending |
-| OBS-04 | — | Pending |
-| OBS-05 | — | Pending |
-| OBS-06 | — | Pending |
-| E2E-01 | — | Pending |
-| E2E-02 | — | Pending |
-| E2E-03 | — | Pending |
-| E2E-04 | — | Pending |
-| E2E-05 | — | Pending |
-| E2E-06 | — | Pending |
-| E2E-07 | — | Pending |
-| E2E-08 | — | Pending |
-| E2E-09 | — | Pending |
-| E2E-10 | — | Pending |
+| N8N-01 | Phase 9 | Pending |
+| N8N-02 | Phase 9 | Pending |
+| N8N-03 | Phase 9 | Pending |
+| N8N-04 | Phase 9 | Pending |
+| N8N-05 | Phase 9 | Pending |
+| N8N-06 | Phase 9 | Pending |
+| LRAG-01 | Phase 10 | Pending |
+| LRAG-02 | Phase 10 | Pending |
+| LRAG-03 | Phase 10 | Pending |
+| LRAG-04 | Phase 10 | Pending |
+| LRAG-05 | Phase 10 | Pending |
+| LRAG-06 | Phase 10 | Pending |
+| LRAG-07 | Phase 10 | Pending |
+| MEDIA-01 | Phase 11 | Pending |
+| MEDIA-02 | Phase 11 | Pending |
+| MEDIA-03 | Phase 11 | Pending |
+| MEDIA-04 | Phase 11 | Pending |
+| MEDIA-05 | Phase 11 | Pending |
+| MEDIA-06 | Phase 11 | Pending |
+| MEDIA-07 | Phase 11 | Pending |
+| MEDIA-08 | Phase 11 | Pending |
+| MEDIA-09 | Phase 11 | Pending |
+| MEDIA-10 | Phase 11 | Pending |
+| MEDIA-11 | Phase 11 | Pending |
+| MEDIA-12 | Phase 11 | Pending |
+| MEDIA-13 | Phase 11 | Pending |
+| MEDIA-14 | Phase 11 | Pending |
+| STRAT-01 | Phase 12 | Pending |
+| STRAT-02 | Phase 12 | Pending |
+| STRAT-03 | Phase 12 | Pending |
+| STRAT-04 | Phase 12 | Pending |
+| STRAT-05 | Phase 12 | Pending |
+| STRAT-06 | Phase 12 | Pending |
+| STRAT-07 | Phase 12 | Pending |
+| ANLYT-01 | Phase 13 | Pending |
+| ANLYT-02 | Phase 13 | Pending |
+| ANLYT-03 | Phase 13 | Pending |
+| ANLYT-04 | Phase 13 | Pending |
+| DASH-01 | Phase 14 | Pending |
+| DASH-02 | Phase 14 | Pending |
+| DASH-03 | Phase 14 | Pending |
+| DASH-04 | Phase 14 | Pending |
+| DASH-05 | Phase 14 | Pending |
+| OBS-01 | Phase 15 | Pending |
+| OBS-02 | Phase 15 | Pending |
+| OBS-03 | Phase 15 | Pending |
+| OBS-04 | Phase 15 | Pending |
+| OBS-05 | Phase 15 | Pending |
+| OBS-06 | Phase 15 | Pending |
+| E2E-01 | Phase 16 | Pending |
+| E2E-02 | Phase 16 | Pending |
+| E2E-03 | Phase 16 | Pending |
+| E2E-04 | Phase 16 | Pending |
+| E2E-05 | Phase 16 | Pending |
+| E2E-06 | Phase 16 | Pending |
+| E2E-07 | Phase 16 | Pending |
+| E2E-08 | Phase 16 | Pending |
+| E2E-09 | Phase 16 | Pending |
+| E2E-10 | Phase 16 | Pending |
 
 **Coverage:**
-- v2.0 requirements: 57 total
-- Mapped to phases: 0
-- Unmapped: 57
+- v2.0 requirements: 59 total (6 N8N + 7 LRAG + 14 MEDIA + 7 STRAT + 4 ANLYT + 5 DASH + 6 OBS + 10 E2E)
+- Mapped to phases: 59
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-01*
-*Last updated: 2026-04-01 after initial definition*
+*Last updated: 2026-04-01 after roadmap creation — all 59 requirements mapped to Phases 9-16*
