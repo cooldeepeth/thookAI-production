@@ -79,14 +79,26 @@ def generate_video(
             )
             
             if result.get("success"):
+                import uuid as _uuid
+                completed_at = datetime.now(timezone.utc)
                 await db.content_jobs.update_one(
                     {"job_id": job_id},
                     {"$set": {
                         "video_status": "completed",
                         "video_url": result.get("video_url"),
-                        "video_completed_at": datetime.now(timezone.utc)
+                        "video_completed_at": completed_at,
                     }}
                 )
+                # Store in media_assets so /api/media/assets shows AI-generated video
+                await db.media_assets.insert_one({
+                    "asset_id": f"asset_{_uuid.uuid4().hex[:12]}",
+                    "user_id": user_id,
+                    "job_id": job_id,
+                    "type": "video",
+                    "url": result.get("video_url"),
+                    "provider": provider,
+                    "created_at": completed_at,
+                })
                 return {"success": True, "video_url": result.get("video_url")}
             else:
                 raise Exception(result.get("error", "Video generation failed"))
@@ -151,11 +163,23 @@ def generate_image(
             )
             
             if result.get("success"):
+                import uuid as _uuid
                 # Update job with image URL
                 await db.content_jobs.update_one(
                     {"job_id": job_id},
                     {"$push": {"images": result.get("image_url")}}
                 )
+                # Store in media_assets so /api/media/assets shows AI-generated images
+                await db.media_assets.insert_one({
+                    "asset_id": f"asset_{_uuid.uuid4().hex[:12]}",
+                    "user_id": user_id,
+                    "job_id": job_id,
+                    "type": "image",
+                    "url": result.get("image_url"),
+                    "provider": provider,
+                    "prompt": prompt[:200],
+                    "created_at": datetime.now(timezone.utc),
+                })
                 return {"success": True, "image_url": result.get("image_url")}
             else:
                 raise Exception(result.get("error", "Image generation failed"))
@@ -213,10 +237,21 @@ def generate_voice(
             )
             
             if result.get("success"):
+                import uuid as _uuid
                 await db.content_jobs.update_one(
                     {"job_id": job_id},
                     {"$set": {"voice_url": result.get("audio_url")}}
                 )
+                # Store in media_assets so /api/media/assets shows AI-generated audio
+                await db.media_assets.insert_one({
+                    "asset_id": f"asset_{_uuid.uuid4().hex[:12]}",
+                    "user_id": user_id,
+                    "job_id": job_id,
+                    "type": "audio",
+                    "url": result.get("audio_url"),
+                    "provider": provider,
+                    "created_at": datetime.now(timezone.utc),
+                })
                 return {"success": True, "audio_url": result.get("audio_url")}
             else:
                 raise Exception(result.get("error", "Voice generation failed"))
@@ -285,6 +320,7 @@ def generate_carousel(
                 else:
                     logger.warning(f"Failed to generate slide {i + 1}: {result.get('error')}")
             
+            import uuid as _uuid
             # Update job
             await db.content_jobs.update_one(
                 {"job_id": job_id},
@@ -293,7 +329,20 @@ def generate_carousel(
                     "carousel_status": "completed"
                 }}
             )
-            
+
+            # Store each slide in media_assets so /api/media/assets shows carousel images
+            for img in generated_images:
+                await db.media_assets.insert_one({
+                    "asset_id": f"asset_{_uuid.uuid4().hex[:12]}",
+                    "user_id": user_id,
+                    "job_id": job_id,
+                    "type": "image",
+                    "url": img["image_url"],
+                    "provider": provider,
+                    "carousel_slide": img["slide_number"],
+                    "created_at": datetime.now(timezone.utc),
+                })
+
             return {"success": True, "slides": generated_images}
                 
         except Exception as e:
