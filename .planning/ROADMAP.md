@@ -125,7 +125,12 @@ Plans:
   4. Media assets in db.media_assets have valid R2 URLs that resolve (no dead links from /tmp fallback)
   5. The analytics dashboard shows engagement metrics sourced from real LinkedIn/X/Instagram API data for posts published in previous phases — not fabricated from job counts
   6. Optimal posting times in performance_intelligence reflect real engagement patterns from published posts (populated, not empty {})
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Async media generation verification (image, voice, video agents)
+- [ ] 06-02-PLAN.md — R2 upload path and media asset storage verification
+- [ ] 06-03-PLAN.md — Social analytics polling, optimal times, and real-data dashboard verification
 
 ### Phase 7: Platform Features, Admin & Frontend Quality
 **Goal**: Every auxiliary feature (templates, exports, campaigns, sharing, webhooks, notifications) and admin/agency tooling works end-to-end, and the frontend has no broken states
@@ -152,5 +157,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
 | 4. Content Pipeline | 2/2 | Complete   | 2026-03-31 |
 | 5. Publishing, Scheduling & Billing | 3/3 | Complete   | 2026-03-31 |
-| 6. Media Generation & Analytics | 0/TBD | Not started | - |
+| 6. Media Generation & Analytics | 0/3 | Not started | - |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |
