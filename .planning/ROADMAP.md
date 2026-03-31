@@ -36,7 +36,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. PR #30 (custom plan builder) is merged into dev with no conflicts
   3. `git log --oneline dev` shows a clean linear history with no unresolved merge artifacts
   4. main is updated from dev and matches dev HEAD for production deploy readiness
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Delete worktree-agent-* and merged stale branches
+- [ ] 01-02-PLAN.md — Merge feat/post-launch-sprint into dev, advance main, push clean
 
 ### Phase 2: Infrastructure & Celery
 **Goal**: The Celery worker and beat scheduler are running, all services are reachable, and the environment is fully documented and validated at startup
@@ -120,7 +124,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Git & Branch Cleanup | 0/TBD | Not started | - |
+| 1. Git & Branch Cleanup | 0/2 | Not started | - |
 | 2. Infrastructure & Celery | 0/TBD | Not started | - |
 | 3. Auth, Onboarding & Email | 0/TBD | Not started | - |
 | 4. Content Pipeline | 0/TBD | Not started | - |
