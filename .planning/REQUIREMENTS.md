@@ -34,11 +34,11 @@ Requirements for stabilization release. Each maps to roadmap phases.
 
 ### Publishing & Scheduling
 
-- [ ] **PUB-01**: Content publishes to LinkedIn via real OAuth token dispatch (not simulated)
-- [ ] **PUB-02**: Content publishes to X via real OAuth token dispatch
-- [ ] **PUB-03**: Content publishes to Instagram via real OAuth token dispatch
-- [ ] **PUB-04**: Scheduled posts execute via Celery beat at the correct scheduled time
-- [ ] **PUB-05**: Platform OAuth connect and disconnect flow works for LinkedIn/X/Instagram
+- [x] **PUB-01**: Content publishes to LinkedIn via real OAuth token dispatch (not simulated)
+- [x] **PUB-02**: Content publishes to X via real OAuth token dispatch
+- [x] **PUB-03**: Content publishes to Instagram via real OAuth token dispatch
+- [x] **PUB-04**: Scheduled posts execute via Celery beat at the correct scheduled time
+- [x] **PUB-05**: Platform OAuth connect and disconnect flow works for LinkedIn/X/Instagram
 
 ### Billing & Credits
 
@@ -164,11 +164,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-04 | Phase 4 | Complete |
 | PIPE-05 | Phase 4 | Complete |
 | PIPE-06 | Phase 4 | Complete |
-| PUB-01 | Phase 5 | Pending |
-| PUB-02 | Phase 5 | Pending |
-| PUB-03 | Phase 5 | Pending |
-| PUB-04 | Phase 5 | Pending |
-| PUB-05 | Phase 5 | Pending |
+| PUB-01 | Phase 5 | Complete |
+| PUB-02 | Phase 5 | Complete |
+| PUB-03 | Phase 5 | Complete |
+| PUB-04 | Phase 5 | Complete |
+| PUB-05 | Phase 5 | Complete |
 | BILL-01 | Phase 5 | Pending |
 | BILL-02 | Phase 5 | Pending |
 | BILL-03 | Phase 5 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-publishing-scheduling-billing/05-02-PLAN.md
-last_updated: "2026-03-31T06:40:24.751Z"
+stopped_at: Completed 05-publishing-scheduling-billing/05-01-PLAN.md
+last_updated: "2026-03-31T06:42:05.199Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 05 (Publishing, Scheduling & Billing) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-03-31
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P01 | 5 | 2 tasks | 1 files |
 | Phase 04-content-pipeline P02 | 3 | 2 tasks | 1 files |
 | Phase 05-publishing-scheduling-billing P02 | 4 | 2 tasks | 3 files |
+| Phase 05-publishing-scheduling-billing P01 | 6 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 04-content-pipeline]: Stale job cleanup only targets status='running' — all jobs start with this status in content routes
 - [Phase 05]: Use find_one_and_update with credits >= amount filter for atomic deduction — eliminates race condition without transactions
 - [Phase 05]: Platform restriction in route handler (not credits service) — keeps billing concerns separate from access control
+- [Phase 05-01]: Test httpx.AsyncClient (not publisher function) to verify real HTTP dispatch code path
+- [Phase 05-01]: Extracted _run_scheduled_posts_inner to module level for unit-testable scheduled post processing
 
 ### Pending Todos
 
@@ -91,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T06:40:24.748Z
-Stopped at: Completed 05-publishing-scheduling-billing/05-02-PLAN.md
+Last session: 2026-03-31T06:42:05.195Z
+Stopped at: Completed 05-publishing-scheduling-billing/05-01-PLAN.md
 Resume file: None

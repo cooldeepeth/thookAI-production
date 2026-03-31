@@ -110,7 +110,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Publishing dispatch and platform OAuth verification tests
+- [x] 05-01-PLAN.md — Publishing dispatch and platform OAuth verification tests
 - [x] 05-02-PLAN.md — Atomic credit deduction fix and starter tier restrictions
 - [ ] 05-03-PLAN.md — Stripe billing flow verification and monthly credit refresh tests
 
@@ -151,6 +151,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Infrastructure & Celery | 3/3 | Complete |  |
 | 3. Auth, Onboarding & Email | 3/3 | Complete   | 2026-03-31 |
 | 4. Content Pipeline | 2/2 | Complete   | 2026-03-31 |
-| 5. Publishing, Scheduling & Billing | 0/3 | Not started | - |
+| 5. Publishing, Scheduling & Billing | 2/3 | In Progress|  |
 | 6. Media Generation & Analytics | 0/TBD | Not started | - |
 | 7. Platform Features, Admin & Frontend Quality | 0/TBD | Not started | - |
