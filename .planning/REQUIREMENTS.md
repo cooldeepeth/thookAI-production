@@ -16,12 +16,12 @@ Requirements for stabilization release. Each maps to roadmap phases.
 
 ### Authentication & Onboarding
 
-- [x] **AUTH-01**: User can register with email/password and receives 200 starter credits
-- [x] **AUTH-02**: User can log in and session persists across browser refresh
-- [x] **AUTH-03**: Google OAuth login completes and creates/links user account
-- [x] **AUTH-04**: Password reset email sends via Resend and reset link works
-- [ ] **AUTH-05**: Onboarding interview uses correct Claude model (claude-sonnet-4-20250514, not mock fallback)
-- [ ] **AUTH-06**: Persona Engine generated from onboarding is personalized with real voice fingerprint
+- [ ] **AUTH-01**: User can register with email/password and receives 200 starter credits
+- [ ] **AUTH-02**: User can log in and session persists across browser refresh
+- [ ] **AUTH-03**: Google OAuth login completes and creates/links user account
+- [ ] **AUTH-04**: Password reset email sends via Resend and reset link works
+- [x] **AUTH-05**: Onboarding interview uses correct Claude model (claude-sonnet-4-20250514, not mock fallback)
+- [x] **AUTH-06**: Persona Engine generated from onboarding is personalized with real voice fingerprint
 
 ### Content Pipeline
 
@@ -85,13 +85,13 @@ Requirements for stabilization release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [x] **INFRA-01**: Celery worker starts with all queues (default, media, content, video) and beat runs scheduled tasks
-- [x] **INFRA-02**: All existing tests pass (baseline 59, expected to grow)
-- [x] **INFRA-03**: Docker/docker-compose builds and runs all 6 services successfully
-- [x] **INFRA-04**: Health endpoint at /health checks MongoDB, Redis, R2, LLM connectivity
-- [x] **INFRA-05**: All 35 env vars documented in .env.example and validated at startup with clear error messages
-- [x] **INFRA-06**: CORS config centralized via settings.security.cors_origins
-- [x] **INFRA-07**: Rate limiting works (Redis-backed primary, in-memory fallback)
+- [ ] **INFRA-01**: Celery worker starts with all queues (default, media, content, video) and beat runs scheduled tasks
+- [ ] **INFRA-02**: All existing tests pass (baseline 59, expected to grow)
+- [ ] **INFRA-03**: Docker/docker-compose builds and runs all 6 services successfully
+- [ ] **INFRA-04**: Health endpoint at /health checks MongoDB, Redis, R2, LLM connectivity
+- [ ] **INFRA-05**: All 35 env vars documented in .env.example and validated at startup with clear error messages
+- [ ] **INFRA-06**: CORS config centralized via settings.security.cors_origins
+- [ ] **INFRA-07**: Rate limiting works (Redis-backed primary, in-memory fallback)
 
 ### Frontend Quality
 
@@ -145,19 +145,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GIT-02 | Phase 1 | Pending |
 | GIT-03 | Phase 1 | Pending |
 | GIT-04 | Phase 1 | Pending |
-| INFRA-01 | Phase 2 | Complete |
-| INFRA-02 | Phase 2 | Complete |
-| INFRA-03 | Phase 2 | Complete |
-| INFRA-04 | Phase 2 | Complete |
-| INFRA-05 | Phase 2 | Complete |
-| INFRA-06 | Phase 2 | Complete |
-| INFRA-07 | Phase 2 | Complete |
-| AUTH-01 | Phase 3 | Complete |
-| AUTH-02 | Phase 3 | Complete |
-| AUTH-03 | Phase 3 | Complete |
-| AUTH-04 | Phase 3 | Complete |
-| AUTH-05 | Phase 3 | Pending |
-| AUTH-06 | Phase 3 | Pending |
+| INFRA-01 | Phase 2 | Pending |
+| INFRA-02 | Phase 2 | Pending |
+| INFRA-03 | Phase 2 | Pending |
+| INFRA-04 | Phase 2 | Pending |
+| INFRA-05 | Phase 2 | Pending |
+| INFRA-06 | Phase 2 | Pending |
+| INFRA-07 | Phase 2 | Pending |
+| AUTH-01 | Phase 3 | Pending |
+| AUTH-02 | Phase 3 | Pending |
+| AUTH-03 | Phase 3 | Pending |
+| AUTH-04 | Phase 3 | Pending |
+| AUTH-05 | Phase 3 | Complete |
+| AUTH-06 | Phase 3 | Complete |
 | PIPE-01 | Phase 4 | Pending |
 | PIPE-02 | Phase 4 | Pending |
 | PIPE-03 | Phase 4 | Pending |

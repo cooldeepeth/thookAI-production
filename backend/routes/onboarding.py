@@ -157,6 +157,7 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
     posts_context = f"Additional context from post analysis:\n{data.posts_analysis}" if data.posts_analysis else ""
 
     persona_card = None
+    persona_source = "smart_fallback"  # tracks whether LLM or fallback generated the persona
 
     if anthropic_available():
         try:
@@ -181,12 +182,14 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
                 if clean.startswith("json"):
                     clean = clean[4:]
             persona_card = json.loads(clean.strip())
+            persona_source = "llm"
         except Exception as e:
             logger.exception("Persona generation via LLM failed, falling back to smart generator")  # FIXED: use logger.exception for full traceback
             persona_card = None
 
     if not persona_card:
         persona_card = _generate_smart_persona(data.answers)
+        persona_source = "smart_fallback"
 
     now = datetime.now(timezone.utc)
     platforms = persona_card.get("focus_platforms", ["LinkedIn"])
@@ -228,7 +231,11 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
 
     await db.persona_engines.update_one({"user_id": user_id}, {"$set": persona_doc}, upsert=True)
     await db.users.update_one({"user_id": user_id}, {"$set": {"onboarding_completed": True}})
-    return {"persona_card": persona_card, "message": "Persona Engine activated"}
+    return {
+        "persona_card": persona_card,
+        "message": "Persona Engine activated",
+        "source": persona_source,  # "llm" or "smart_fallback" — frontend can show notice if fallback was used
+    }
 
 
 @router.post("/import-history")
