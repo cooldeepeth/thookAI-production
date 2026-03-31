@@ -366,7 +366,7 @@ class TestSSENotifications:
 
         try:
             with patch(
-                "services.notification_service.get_notifications",
+                "routes.notifications.get_notifications",
                 AsyncMock(return_value=self._NOTIF_LIST),
             ):
                 async with AsyncClient(
@@ -388,7 +388,7 @@ class TestSSENotifications:
 
         try:
             with patch(
-                "services.notification_service.mark_read",
+                "routes.notifications.mark_read",
                 AsyncMock(return_value=True),
             ):
                 async with AsyncClient(
@@ -408,7 +408,7 @@ class TestSSENotifications:
 
         try:
             with patch(
-                "services.notification_service.mark_all_read",
+                "routes.notifications.mark_all_read",
                 AsyncMock(return_value=5),
             ):
                 async with AsyncClient(
@@ -429,7 +429,7 @@ class TestSSENotifications:
 
         try:
             with patch(
-                "services.notification_service.get_unread_count",
+                "routes.notifications.get_unread_count",
                 AsyncMock(return_value=3),
             ):
                 async with AsyncClient(
@@ -446,16 +446,27 @@ class TestSSENotifications:
 
     async def test_sse_stream_returns_text_event_stream(self):
         """GET /api/notifications/stream responds with Content-Type text/event-stream."""
+        import asyncio
+
         app.dependency_overrides[get_current_user] = lambda: {"user_id": "test-notif-user"}
 
+        # The SSE generator polls every 10 s by default — we mock it to yield one
+        # heartbeat then stop so the test completes without hanging.
+        async def _fast_generator(user_id: str, request):
+            yield ": heartbeat\n\n"
+
         try:
-            async with AsyncClient(
-                transport=ASGITransport(app=app), base_url="http://test"
-            ) as client:
-                async with client.stream("GET", "/api/notifications/stream") as resp:
-                    assert resp.status_code == 200
-                    content_type = resp.headers.get("content-type", "")
-                    assert "text/event-stream" in content_type
+            with patch("routes.notifications._sse_event_generator", _fast_generator):
+                async with AsyncClient(
+                    transport=ASGITransport(app=app), base_url="http://test"
+                ) as client:
+                    async with client.stream("GET", "/api/notifications/stream") as resp:
+                        assert resp.status_code == 200
+                        content_type = resp.headers.get("content-type", "")
+                        assert "text/event-stream" in content_type
+                        # Read one chunk to allow generator to advance, then exit.
+                        async for chunk in resp.aiter_bytes():
+                            break
         finally:
             app.dependency_overrides.pop(get_current_user, None)
 
@@ -482,7 +493,7 @@ class TestOutboundWebhooks:
 
         try:
             with patch(
-                "services.webhook_service.register_webhook",
+                "routes.webhooks.register_webhook",
                 AsyncMock(return_value=self._WEBHOOK_DOC),
             ):
                 async with AsyncClient(
@@ -509,7 +520,7 @@ class TestOutboundWebhooks:
 
         try:
             with patch(
-                "services.webhook_service.list_webhooks",
+                "routes.webhooks.list_webhooks",
                 AsyncMock(return_value=[self._WEBHOOK_DOC]),
             ):
                 async with AsyncClient(
@@ -530,7 +541,7 @@ class TestOutboundWebhooks:
 
         try:
             with patch(
-                "services.webhook_service.delete_webhook",
+                "routes.webhooks.delete_webhook",
                 AsyncMock(return_value=True),
             ):
                 async with AsyncClient(
@@ -550,7 +561,7 @@ class TestOutboundWebhooks:
 
         try:
             with patch(
-                "services.webhook_service.test_webhook",
+                "routes.webhooks.test_webhook",
                 AsyncMock(return_value={"success": True, "status_code": 200}),
             ):
                 async with AsyncClient(
