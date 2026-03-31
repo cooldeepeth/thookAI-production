@@ -164,6 +164,11 @@ Plans:
   3. All frontend files use process.env.REACT_APP_BACKEND_URL exclusively — zero occurrences of import.meta.env
   4. poll_post_metrics_24h and poll_post_metrics_7d have explicit name= kwargs matching celeryconfig references
   5. All 57 requirements in REQUIREMENTS.md traceability table show correct status (no Pending drift)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Fix MEDIA-05: add db.media_assets.insert_one to Celery media tasks + Celery task naming
+- [ ] 08-02-PLAN.md — Fix frontend import.meta.env syntax and REQUIREMENTS.md doc drift
 
 ## Progress
 
@@ -179,4 +184,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Publishing, Scheduling & Billing | 3/3 | Complete   | 2026-03-31 |
 | 6. Media Generation & Analytics | 3/3 | Complete   | 2026-03-31 |
 | 7. Platform Features, Admin & Frontend Quality | 4/4 | Complete   | 2026-03-31 |
-| 8. Gap Closure & Tech Debt | 0/TBD | Not started | - |
+| 8. Gap Closure & Tech Debt | 0/2 | Not started | - |
