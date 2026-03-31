@@ -83,6 +83,84 @@ def _get_workflow_map() -> Dict[str, Optional[str]]:
 
 
 # ---------------------------------------------------------------------------
+# Workflow status notification dispatch
+# ---------------------------------------------------------------------------
+
+# Map workflow types to user-facing notification titles and body templates.
+# Cleanup tasks (cleanup-stale-jobs, cleanup-old-jobs, cleanup-expired-shares)
+# are intentionally excluded — they don't require user-visible notifications.
+WORKFLOW_NOTIFICATION_MAP = {
+    "process-scheduled-posts": {
+        "title": "Scheduled posts processed",
+        "body_template": "Published {published} post(s), {failed} failed",
+    },
+    "reset-daily-limits": {
+        "title": "Daily limits reset",
+        "body_template": "Daily content creation limits have been reset",
+    },
+    "refresh-monthly-credits": {
+        "title": "Monthly credits refreshed",
+        "body_template": "Your monthly credits have been refreshed",
+    },
+    "aggregate-daily-analytics": {
+        "title": "Daily analytics aggregated",
+        "body_template": "Analytics for yesterday have been processed",
+    },
+}
+
+
+async def _dispatch_workflow_notification(payload: dict) -> None:
+    """
+    Create workflow_status notifications for affected users.
+
+    Reads the callback payload and creates a notification for each user in
+    affected_user_ids. Cleanup tasks (not in WORKFLOW_NOTIFICATION_MAP) are
+    silently skipped. Never raises — failures are logged as warnings.
+    """
+    workflow_type = payload.get("workflow_type", "")
+    status = payload.get("status", "unknown")
+    result = payload.get("result", {})
+    affected_user_ids = payload.get("affected_user_ids", [])
+
+    config = WORKFLOW_NOTIFICATION_MAP.get(workflow_type)
+    if not config or not affected_user_ids:
+        # Cleanup tasks or workflows with no user context — skip silently
+        return
+
+    from services.notification_service import create_notification
+
+    title = config["title"]
+    if status == "failed":
+        title = f"[Failed] {title}"
+
+    try:
+        body = config["body_template"].format(**result) if result else config["body_template"]
+    except (KeyError, ValueError):
+        body = config["body_template"]
+
+    for user_id in affected_user_ids:
+        try:
+            await create_notification(
+                user_id=user_id,
+                type="workflow_status",
+                title=title,
+                body=body,
+                metadata={
+                    "workflow_type": workflow_type,
+                    "status": status,
+                    "result": result,
+                    "executed_at": payload.get("executed_at"),
+                },
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to create workflow_status notification for user %s: %s",
+                user_id,
+                e,
+            )
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -115,7 +193,13 @@ async def n8n_callback(request: Request) -> Dict[str, Any]:
     workflow_type = payload.get("workflow_type", "unknown")
     logger.info(f"n8n callback accepted: workflow_type={workflow_type}")
 
-    return {"status": "accepted"}
+    # Dispatch workflow status notifications (fire-and-forget — don't block response)
+    try:
+        await _dispatch_workflow_notification(payload)
+    except Exception as e:
+        logger.warning("Workflow notification dispatch failed: %s", e)
+
+    return {"status": "accepted", "workflow_type": workflow_type}
 
 
 @router.post("/trigger/{workflow_name}")
@@ -696,6 +780,22 @@ async def execute_process_scheduled_posts(
         failed,
         skipped,
     )
+
+    # Notify users whose posts were processed
+    for user_id in published_user_ids:
+        try:
+            from services.notification_service import create_notification
+            await create_notification(
+                user_id=user_id,
+                type="workflow_status",
+                title="Scheduled posts processed",
+                body="Your scheduled posts have been published",
+                metadata={"workflow_type": "process-scheduled-posts"},
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to create workflow notification for user %s: %s", user_id, e
+            )
 
     return {
         "status": "completed",
