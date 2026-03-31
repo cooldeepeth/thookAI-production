@@ -26,7 +26,7 @@
 **Milestone Goal:** Transform ThookAI from a reactive content generation tool into a proactive content operating system — n8n orchestrates all workflows, LightRAG builds a living knowledge graph of each user's content history, a Strategist Agent synthesizes signals into ranked daily recommendations, and a multi-model media orchestrator produces professional-grade visuals and video.
 
 - [x] **Phase 9: n8n Infrastructure + Real Publishing** - Replace Celery beat with n8n for all scheduled/external-API tasks; establish webhook bridge; hard cutover with idempotency keys (completed 2026-03-31)
-- [ ] **Phase 10: LightRAG Knowledge Graph** - Deploy per-user knowledge graph sidecar; wire Thinker agent with multi-hop retrieval; lock embedding model before first insert
+- [x] **Phase 10: LightRAG Knowledge Graph** - Deploy per-user knowledge graph sidecar; wire Thinker agent with multi-hop retrieval; lock embedding model before first insert (completed 2026-03-31)
 - [ ] **Phase 11: Multi-Model Media Orchestration** - Media Orchestrator service routing to best provider per asset type; Remotion compositions for all formats; credit ledger for partial-failure accounting
 - [ ] **Phase 12: Strategist Agent** - Nightly n8n-triggered agent synthesizing LightRAG + persona + analytics into ranked recommendation cards with cadence controls
 - [ ] **Phase 13: Analytics Feedback Loop** - Real social metrics polling 24h + 7d post-publish via n8n; performance data feeds Strategist and persona intelligence
@@ -67,7 +67,7 @@ Plans:
 Plans:
 - [x] 10-01-PLAN.md — LightRAGConfig dataclass + docker-compose sidecar + lightrag_service.py HTTP client + startup assertion
 - [x] 10-02-PLAN.md — Learning agent dual-write (Pinecone + LightRAG) + Thinker graph query injection + routing contract
-- [ ] 10-03-PLAN.md — Unit tests for lightrag_service.py + integration tests for routing contract and entity type config
+- [x] 10-03-PLAN.md — Unit tests for lightrag_service.py + integration tests for routing contract and entity type config
 
 ### Phase 11: Multi-Model Media Orchestration
 **Goal**: Users can generate professional-grade social media visuals and video in all major formats — the platform routes each asset to the optimal provider and assembles the final output via Remotion
@@ -156,7 +156,7 @@ Plans:
 | 7. Platform Features, Admin & Frontend Quality | v1.0 | 4/4 | Complete | 2026-03-31 |
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
-| 10. LightRAG Knowledge Graph | v2.0 | 2/3 | In Progress|  |
+| 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 11. Multi-Model Media Orchestration | v2.0 | 0/TBD | Not started | - |
 | 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
