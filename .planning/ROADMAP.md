@@ -79,7 +79,13 @@ Plans:
   3. User can generate a talking-head video with text/graphic overlays and a short-form reel (15-60s) with voice narration, B-roll, and music bed
   4. If any single provider fails mid-pipeline, the credit ledger records the exact stage of failure and the user is charged only for completed stages — no silent credit drain
   5. The Designer agent selects the optimal content format for the platform and content angle without user guidance — format choices are explained in the job details
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 11-01-PLAN.md — Remotion Express API service with 5 compositions + docker-compose sidecar
+- [ ] 11-02-PLAN.md — RemotionConfig + pipeline credit ledger + MediaOrchestrator core + R2 pre-staging
+- [ ] 11-03-PLAN.md — Static image orchestration (static_image, quote_card, meme, infographic)
+- [ ] 11-04-PLAN.md — Carousel + video orchestration (carousel, talking_head, short_form_video, text_on_video)
+- [ ] 11-05-PLAN.md — Designer format selection + QC media validation
 **UI hint**: yes
 
 ### Phase 12: Strategist Agent
@@ -157,7 +163,7 @@ Plans:
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
-| 11. Multi-Model Media Orchestration | v2.0 | 0/TBD | Not started | - |
+| 11. Multi-Model Media Orchestration | v2.0 | 0/5 | Planning complete | - |
 | 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
