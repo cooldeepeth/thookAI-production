@@ -217,40 +217,57 @@ app = FastAPI(
 
 @app.get("/health")
 async def health_check():
-    """Health check for Render/load balancer monitoring."""
+    """Health check for Render/load balancer monitoring.
+
+    Checks: MongoDB, Redis, R2 storage, LLM provider.
+    Returns 200 if all critical services are reachable, 503 if any critical service is down.
+    """
     from database import db
     from datetime import datetime, timezone
-    from fastapi.responses import JSONResponse
 
-    checks = {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+    checks = {
+        "status": "ok",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "services": {}
+    }
+    critical_down = False
 
-    # Check MongoDB
+    # 1. MongoDB (critical)
     try:
         await db.command("ping")
-        checks["mongodb"] = "connected"
-    except Exception:
-        checks["mongodb"] = "disconnected"
-        checks["status"] = "degraded"
+        checks["services"]["mongodb"] = {"status": "connected"}
+    except Exception as e:
+        checks["services"]["mongodb"] = {"status": "disconnected", "error": str(e)}
+        critical_down = True
 
-    # Check Redis
+    # 2. Redis (critical for task queue)
     try:
         from middleware.redis_client import get_redis
         redis = await get_redis()
         if redis:
             await redis.ping()
-            checks["redis"] = "connected"
+            checks["services"]["redis"] = {"status": "connected"}
         else:
-            checks["redis"] = "not_configured"
-    except Exception:
-        checks["redis"] = "disconnected"
+            checks["services"]["redis"] = {"status": "not_configured"}
+    except Exception as e:
+        checks["services"]["redis"] = {"status": "disconnected", "error": str(e)}
 
-    # Check R2
-    checks["r2_storage"] = "configured" if settings.r2.has_r2() else "not_configured"
+    # 3. R2 Storage
+    if settings.r2.has_r2():
+        checks["services"]["r2_storage"] = {"status": "configured"}
+    else:
+        checks["services"]["r2_storage"] = {"status": "not_configured"}
 
-    # Check LLM
-    checks["llm_provider"] = "configured" if settings.llm.has_llm_provider() else "not_configured"
+    # 4. LLM Provider
+    if settings.llm.has_llm_provider():
+        checks["services"]["llm"] = {"status": "configured"}
+    else:
+        checks["services"]["llm"] = {"status": "not_configured"}
 
-    status_code = 200 if checks["status"] == "ok" else 503
+    if critical_down:
+        checks["status"] = "unhealthy"
+
+    status_code = 200 if not critical_down else 503
     return JSONResponse(content=checks, status_code=status_code)
 
 
@@ -292,44 +309,6 @@ async def root():
         "status": "running",
         "environment": settings.app.environment
     }
-
-
-@api_router.get("/health")
-async def health():
-    """Health check endpoint for load balancers and monitoring"""
-    from database import db
-    
-    health_status = {
-        "status": "healthy",
-        "environment": settings.app.environment,
-        "checks": {}
-    }
-    
-    # Check database connectivity
-    try:
-        await db.command('ping')
-        health_status["checks"]["database"] = "ok"
-    except Exception as e:
-        health_status["checks"]["database"] = f"error: {str(e)}"
-        health_status["status"] = "degraded"
-    
-    # Check LLM provider availability
-    health_status["checks"]["llm_configured"] = settings.llm.has_llm_provider()
-
-
-    # Check media storage
-    health_status["checks"]["media_storage"] = "r2_configured" if settings.r2.has_r2() else "not_configured"
-
-    # Check Google OAuth configuration
-    health_status["checks"]["google_auth"] = "configured" if settings.google.is_configured() else "not_configured"
-
-    # Check vector store (Pinecone) configuration
-    health_status["checks"]["vector_store"] = "configured" if settings.llm.pinecone_key else "not_configured"
-
-    # Check Stripe billing configuration
-    health_status["checks"]["billing"] = "configured" if settings.stripe.is_fully_configured() else "not_configured"
-
-    return health_status
 
 
 @api_router.get("/config/status")
