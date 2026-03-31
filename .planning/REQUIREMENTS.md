@@ -9,8 +9,8 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### n8n Infrastructure
 
-- [ ] **N8N-01**: n8n self-hosted deployment with Docker (`stable` tag) + PostgreSQL 15 queue mode
-- [ ] **N8N-02**: n8n webhook bridge — FastAPI triggers n8n workflows via POST, n8n calls back via HMAC-SHA256 authenticated endpoint (`POST /api/n8n/callback`)
+- [x] **N8N-01**: n8n self-hosted deployment with Docker (`stable` tag) + PostgreSQL 15 queue mode
+- [x] **N8N-02**: n8n webhook bridge — FastAPI triggers n8n workflows via POST, n8n calls back via HMAC-SHA256 authenticated endpoint (`POST /api/n8n/callback`)
 - [ ] **N8N-03**: Celery beat tasks migrated to n8n workflows — publishing, analytics polling, credit resets, cleanup jobs, strategist trigger
 - [ ] **N8N-04**: Hard Celery→n8n cutover protocol with idempotency keys on all publish operations (no dual execution)
 - [ ] **N8N-05**: Celery retained only for Motor-coupled media generation tasks (image/video rendering)
@@ -131,8 +131,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| N8N-01 | Phase 9 | Pending |
-| N8N-02 | Phase 9 | Pending |
+| N8N-01 | Phase 9 | Complete |
+| N8N-02 | Phase 9 | Complete |
 | N8N-03 | Phase 9 | Pending |
 | N8N-04 | Phase 9 | Pending |
 | N8N-05 | Phase 9 | Pending |

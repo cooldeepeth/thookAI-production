@@ -48,7 +48,7 @@
   5. Image/video generation tasks still run via Celery (Motor-coupled) — no regression on media generation after n8n cutover
 **Plans**: 3 plans
 Plans:
-- [ ] 09-01-PLAN.md — N8nConfig dataclass + webhook bridge route (callback + trigger) + tests
+- [x] 09-01-PLAN.md — N8nConfig dataclass + webhook bridge route (callback + trigger) + tests
 - [ ] 09-02-PLAN.md — Execute endpoints + Celery beat cutover + Docker Compose n8n + idempotency
 - [ ] 09-03-PLAN.md — Workflow status notifications + n8n workflow JSON templates
 **UI hint**: yes
@@ -151,7 +151,7 @@ Plans:
 | 6. Media Generation & Analytics | v1.0 | 3/3 | Complete | 2026-03-31 |
 | 7. Platform Features, Admin & Frontend Quality | v1.0 | 4/4 | Complete | 2026-03-31 |
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
-| 9. n8n Infrastructure + Real Publishing | v2.0 | 0/3 | Planning | - |
+| 9. n8n Infrastructure + Real Publishing | v2.0 | 1/3 | In Progress|  |
 | 10. LightRAG Knowledge Graph | v2.0 | 0/TBD | Not started | - |
 | 11. Multi-Model Media Orchestration | v2.0 | 0/TBD | Not started | - |
 | 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
