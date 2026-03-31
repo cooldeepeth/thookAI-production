@@ -108,10 +108,16 @@ async def preview_repurpose(
         persona_card=persona_card
     )
     
+    # final_content may be a dict {"text": "..."} or a plain string
+    raw_content = job.get("final_content", "")
+    if isinstance(raw_content, dict):
+        raw_content = raw_content.get("text", "")
+    source_preview = (raw_content[:200] + "...") if len(raw_content) > 200 else raw_content
+
     return {
         "source_job_id": job_id,
         "source_platform": job.get("platform"),
-        "source_preview": job.get("final_content", "")[:200] + "...",
+        "source_preview": source_preview,
         "repurposed_previews": result.get("repurposed", {}),
         "is_preview": True
     }
