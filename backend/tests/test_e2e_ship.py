@@ -563,6 +563,13 @@ class TestStripeBilling:
         assert "checkout_url" in data
 
         mock_create.assert_called_once()
+        # Verify the correct args were forwarded to create_custom_plan_checkout
+        call_kwargs = mock_create.call_args.kwargs
+        assert call_kwargs["user_id"] == FAKE_USER["user_id"]
+        assert call_kwargs["monthly_credits"] > 0, "monthly_credits must be positive"
+        assert call_kwargs["monthly_price_cents"] > 0, "monthly_price_cents must be positive"
+        assert isinstance(call_kwargs["plan_config"], dict)
+        assert call_kwargs["plan_config"]["monthly_credits"] == call_kwargs["monthly_credits"]
 
     # -- b) Webhook checkout.session.completed updates tier -----------------
 
@@ -791,6 +798,7 @@ class TestFreeCredits:
         assert inserted_doc["credits"] == 200
         assert inserted_doc["subscription_tier"] == "starter"
         assert "credits_last_refresh" in inserted_doc
+        assert "credits_refreshed_at" in inserted_doc
 
     # -- b) refresh_monthly_credits includes free tier ----------------------
 
@@ -800,21 +808,25 @@ class TestFreeCredits:
 
         Starter (formerly free) tier has 0 monthly_credits — no refresh.
         Custom plan users with monthly_credits > 0 do get refreshed.
-        """
-        from services.credits import TIER_CONFIGS
 
+        Matches production logic in tasks/content_tasks.py:refresh_monthly_credits:
+        - custom tier reads monthly_credits from user.plan_config, not TIER_CONFIGS
+        - starter/free tier monthly_credits == 0, so they are skipped
+        """
         old_refresh = datetime.now(timezone.utc) - timedelta(days=35)
         custom_user = {
             "user_id": "user_custom_refresh_1",
             "subscription_tier": "custom",
             "credits": 5,
             "credits_refreshed_at": old_refresh,
+            # plan_config is required; production code reads monthly_credits from here
+            "plan_config": {"monthly_credits": 750},
         }
 
         mock_db = MagicMock()
         mock_db.users.update_one = AsyncMock()
 
-        # Replicate the refresh logic from refresh_monthly_credits
+        # Mirror production logic from tasks/content_tasks.py:refresh_monthly_credits
         threshold = datetime.now(timezone.utc) - timedelta(days=30)
         users = [custom_user]
         refreshed = 0
@@ -824,8 +836,13 @@ class TestFreeCredits:
             if last_refresh and last_refresh > threshold:
                 continue  # Already refreshed recently
             tier = user.get("subscription_tier", "starter")
-            tier_config = TIER_CONFIGS.get(tier, TIER_CONFIGS["starter"])
-            monthly_credits = tier_config["monthly_credits"]
+            if tier == "custom":
+                plan_config = user.get("plan_config", {})
+                monthly_credits = plan_config.get("monthly_credits", 0)
+            else:
+                from services.credits import TIER_CONFIGS
+                tier_config = TIER_CONFIGS.get(tier, TIER_CONFIGS["starter"])
+                monthly_credits = tier_config["monthly_credits"]
             if monthly_credits <= 0:
                 continue  # Starter has no monthly refresh
             await mock_db.users.update_one(
@@ -841,7 +858,7 @@ class TestFreeCredits:
         assert refreshed == 1
         mock_db.users.update_one.assert_called_once()
         update_set = mock_db.users.update_one.call_args[0][1]["$set"]
-        assert update_set["credits"] == 500  # custom tier monthly_credits default
+        assert update_set["credits"] == 750  # from plan_config, not TIER_CONFIGS placeholder
 
     # -- c) Refresh skips past_due paid users -------------------------------
 
@@ -902,7 +919,7 @@ class TestFreeCredits:
 
     # -- d) TIER_CONFIGS starter tier has 0 monthly_credits (200 signup credits) --
 
-    def test_tier_configs_free_has_50_credits(self):
+    def test_tier_configs_starter_has_correct_credits(self):
         """TIER_CONFIGS['starter'] defines monthly_credits as 0 (signup gives 200 one-time).
 
         'free' is kept as a backward-compat alias for 'starter'.

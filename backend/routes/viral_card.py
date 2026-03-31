@@ -46,7 +46,7 @@ async def generate_viral_card(data: ViralCardRequest):
     if data.platform not in ALLOWED_PLATFORMS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid platform '{data.platform}'. Must be one of: {sorted(ALLOWED_PLATFORMS)}",
+            detail=f"Invalid platform '{data.platform}'. Must be one of: {', '.join(sorted(ALLOWED_PLATFORMS))}",
         )
 
     posts = data.posts_text.strip()
