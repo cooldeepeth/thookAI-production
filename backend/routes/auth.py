@@ -10,9 +10,12 @@ from config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-SECRET_KEY = settings.security.jwt_secret_key or 'thook-dev-secret'
 ALGORITHM = "HS256"
-EXPIRE_DAYS = 7
+
+
+def _jwt_secret() -> str:
+    """Return JWT secret, falling back to dev default when not configured."""
+    return settings.security.jwt_secret_key or "thook-dev-secret"
 
 
 class RegisterRequest(BaseModel):
@@ -27,15 +30,21 @@ class LoginRequest(BaseModel):
 
 
 def create_jwt_token(user_id: str, email: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=EXPIRE_DAYS)
-    return jwt.encode({"sub": user_id, "email": email, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+    expire_days = settings.security.jwt_expire_days
+    expire = datetime.now(timezone.utc) + timedelta(days=expire_days)
+    return jwt.encode({"sub": user_id, "email": email, "exp": expire}, _jwt_secret(), algorithm=ALGORITHM)
 
 
 def set_auth_cookie(response: Response, token: str):
+    # Use secure=False and samesite=lax in development to allow cookies over HTTP
+    is_dev = settings.app.is_development
+    expire_days = settings.security.jwt_expire_days
     response.set_cookie(
         key="session_token", value=token,
-        httponly=True, secure=True, samesite="none",
-        max_age=EXPIRE_DAYS * 24 * 3600, path="/"
+        httponly=True,
+        secure=not is_dev,
+        samesite="lax" if is_dev else "none",
+        max_age=expire_days * 24 * 3600, path="/"
     )
 
 
