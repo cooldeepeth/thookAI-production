@@ -29,7 +29,7 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 ### Multi-Model Media Orchestration
 
 - [ ] **MEDIA-01**: Media Orchestrator service (`backend/services/media_orchestrator.py`) — decomposes MediaBrief into per-asset tasks, routes to best provider, assembles via Remotion
-- [ ] **MEDIA-02**: Remotion render service expanded with Express API (`POST /render`, `GET /render/:id/status`) and R2 upload
+- [x] **MEDIA-02**: Remotion render service expanded with Express API (`POST /render`, `GET /render/:id/status`) and R2 upload
 - [ ] **MEDIA-03**: Pipeline credit ledger (`media_pipeline_ledger` collection) — per-stage credit tracking, cost caps per job, partial-failure accounting
 - [ ] **MEDIA-04**: Static image with typography — brand-consistent social images via fal.ai/DALL-E + Remotion text overlay
 - [ ] **MEDIA-05**: Quote cards — styled text-on-background with persona branding, dynamic font/color from persona theme
@@ -145,7 +145,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LRAG-06 | Phase 10 | Complete |
 | LRAG-07 | Phase 10 | Complete |
 | MEDIA-01 | Phase 11 | Pending |
-| MEDIA-02 | Phase 11 | Pending |
+| MEDIA-02 | Phase 11 | Complete |
 | MEDIA-03 | Phase 11 | Pending |
 | MEDIA-04 | Phase 11 | Pending |
 | MEDIA-05 | Phase 11 | Pending |
