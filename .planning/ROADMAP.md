@@ -83,7 +83,7 @@ Plans:
 Plans:
 - [x] 11-01-PLAN.md — Remotion Express API service with 5 compositions + docker-compose sidecar
 - [x] 11-02-PLAN.md — RemotionConfig + pipeline credit ledger + MediaOrchestrator core + R2 pre-staging
-- [ ] 11-03-PLAN.md — Static image orchestration (static_image, quote_card, meme, infographic)
+- [x] 11-03-PLAN.md — Static image orchestration (static_image, quote_card, meme, infographic)
 - [ ] 11-04-PLAN.md — Carousel + video orchestration (carousel, talking_head, short_form_video, text_on_video)
 - [ ] 11-05-PLAN.md — Designer format selection + QC media validation
 **UI hint**: yes
@@ -163,7 +163,7 @@ Plans:
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
-| 11. Multi-Model Media Orchestration | v2.0 | 2/5 | In Progress|  |
+| 11. Multi-Model Media Orchestration | v2.0 | 3/5 | In Progress|  |
 | 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
