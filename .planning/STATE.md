@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
 status: verifying
-stopped_at: Completed 15-01-PLAN.md — ObsidianConfig + obsidian_service.py foundation
-last_updated: "2026-04-01T11:54:39.635Z"
+stopped_at: "Completed 15-03-PLAN.md — Obsidian config CRUD routes (checkpoint: human-verify)"
+last_updated: "2026-04-01T12:00:32.780Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 19
-  completed_plans: 20
+  completed_plans: 21
   percent: 0
 ---
 
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 14-strategy-dashboard-notifications P01 | 21 | 2 tasks | 3 files |
 | Phase 14-strategy-dashboard-notifications P02 | 8 | 2 tasks | 5 files |
 | Phase 15-obsidian-vault-integration P01 | 294 | 1 tasks | 4 files |
+| Phase 15 P03 | 151 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 15-obsidian-vault-integration]: PurePosixPath.parts for vault path traversal prevention — no filesystem access required, works for remote vault paths
 - [Phase 15-obsidian-vault-integration]: Per-user obsidian_config in db.users with Fernet-encrypted API key takes precedence over global env fallback
 - [Phase 15-obsidian-vault-integration]: is_configured() is synchronous (settings check only); _resolve_config() is async for accurate per-user check
+- [Phase 15]: Fernet key normalisation mirrors routes/platforms.py _get_cipher() — SHA-256 hash for non-44-byte keys ensures any FERNET_KEY value works
+- [Phase 15]: POST /api/obsidian/test returns connected=false with error message (not 500) for graceful frontend vault-unreachable state handling
 
 ### Pending Todos
 
@@ -148,6 +151,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T11:54:39.631Z
-Stopped at: Completed 15-01-PLAN.md — ObsidianConfig + obsidian_service.py foundation
+Last session: 2026-04-01T12:00:23.904Z
+Stopped at: Completed 15-03-PLAN.md — Obsidian config CRUD routes (checkpoint: human-verify)
 Resume file: None
