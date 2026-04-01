@@ -93,7 +93,7 @@ services:
     image: n8nio/n8n:stable
     restart: unless-stopped
     ports:
-      - "5678:5678"
+      - "5678:5678"  # DEV ONLY — overridden in docker-compose.prod.yml
     environment:
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres-n8n

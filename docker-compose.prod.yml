@@ -1,0 +1,79 @@
+# Production Docker Compose override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This file removes public port exposure for n8n, lightrag, and remotion.
+# All internal services are reachable only within the thookai-internal network.
+# Only backend (port 8001) and frontend (port 3000) are exposed to the host.
+
+version: "3.9"
+
+services:
+  n8n:
+    # Remove public port exposure — n8n is reachable only within Docker network
+    ports: []
+    expose:
+      - "5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+    networks:
+      - thookai-internal
+
+  n8n-worker:
+    networks:
+      - thookai-internal
+
+  lightrag:
+    # Remove public port exposure — lightrag is reachable only within Docker network
+    ports: []
+    expose:
+      - "9621"
+    networks:
+      - thookai-internal
+
+  remotion:
+    # Remove public port exposure — remotion is reachable only within Docker network
+    ports: []
+    expose:
+      - "3001"
+    networks:
+      - thookai-internal
+
+  backend:
+    networks:
+      - thookai-internal
+      - thookai-public
+
+  frontend:
+    networks:
+      - thookai-public
+
+  mongo:
+    # Remove public port exposure — mongo is internal only in production
+    ports: []
+    networks:
+      - thookai-internal
+
+  redis:
+    # Remove public port exposure — redis is internal only in production
+    ports: []
+    networks:
+      - thookai-internal
+
+  postgres-n8n:
+    # Remove public port exposure — postgres is internal only in production
+    ports: []
+    networks:
+      - thookai-internal
+
+  celery-worker:
+    networks:
+      - thookai-internal
+
+networks:
+  thookai-internal:
+    driver: bridge
+    internal: true
+  thookai-public:
+    driver: bridge
