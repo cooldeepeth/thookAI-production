@@ -288,6 +288,29 @@ class StrategistConfig:
 
 
 @dataclass
+class ObsidianConfig:
+    """Obsidian Local REST API integration configuration.
+
+    Obsidian runs on the user's local machine and exposes a REST API via the
+    "Local REST API" plugin (https://github.com/coddingtonbear/obsidian-local-rest-api).
+    For cloud-hosted ThookAI to reach it, the user must expose the API via
+    Cloudflare Tunnel or ngrok — OBSIDIAN_BASE_URL is the tunnel URL.
+
+    Per-user overrides stored in db.users.obsidian_config take precedence.
+    These env vars serve as global fallback defaults.
+    """
+    base_url: str = field(default_factory=lambda: os.environ.get('OBSIDIAN_BASE_URL', ''))
+    api_key: Optional[str] = field(default_factory=lambda: os.environ.get('OBSIDIAN_API_KEY'))
+
+    def is_configured(self) -> bool:
+        """Check if global Obsidian fallback is configured.
+
+        Requires OBSIDIAN_BASE_URL to be set and start with http.
+        """
+        return bool(self.base_url and self.base_url.startswith('http'))
+
+
+@dataclass
 class RemotionConfig:
     """Remotion video compositor sidecar configuration"""
     remotion_service_url: str = field(default_factory=lambda: os.environ.get('REMOTION_SERVICE_URL', 'http://localhost:3001'))
@@ -339,6 +362,7 @@ class Settings:
     lightrag: LightRAGConfig = field(default_factory=LightRAGConfig)
     remotion: RemotionConfig = field(default_factory=RemotionConfig)
     strategist: StrategistConfig = field(default_factory=StrategistConfig)
+    obsidian: ObsidianConfig = field(default_factory=ObsidianConfig)
 
     def validate(self) -> dict:
         """

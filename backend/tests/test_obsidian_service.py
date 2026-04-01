@@ -130,22 +130,26 @@ class TestValidateVaultPath:
 # ---------------------------------------------------------------------------
 
 class TestIsConfigured:
-    """Tests for the module-level is_configured() function."""
+    """Tests for the module-level is_configured() function.
 
-    def test_returns_false_when_no_global_config(self):
-        """With no env vars set and no user_id, is_configured() returns False."""
+    is_configured() is a synchronous check that delegates to
+    settings.obsidian.is_configured() (no DB call). We test via patching
+    the settings object used by the service.
+    """
+
+    def test_returns_false_when_settings_not_configured(self):
+        """With no OBSIDIAN_BASE_URL, is_configured() returns False."""
         from services import obsidian_service
-        with patch.object(obsidian_service, '_resolve_config', return_value=('', '', '')):
+        with patch('services.obsidian_service.settings') as mock_settings:
+            mock_settings.obsidian.is_configured.return_value = False
             result = obsidian_service.is_configured()
             assert result is False
 
-    def test_returns_true_when_global_config_set(self):
-        """With base_url configured, is_configured() returns True."""
+    def test_returns_true_when_settings_configured(self):
+        """With OBSIDIAN_BASE_URL set, is_configured() returns True."""
         from services import obsidian_service
-        with patch.object(
-            obsidian_service, '_resolve_config',
-            return_value=('https://vault.example.com', 'tok_123', 'Research')
-        ):
+        with patch('services.obsidian_service.settings') as mock_settings:
+            mock_settings.obsidian.is_configured.return_value = True
             result = obsidian_service.is_configured()
             assert result is True
 
