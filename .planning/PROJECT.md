@@ -60,11 +60,11 @@ Personalized content creation at scale — every user gets a unique voice finger
 - [x] Real publishing to LinkedIn/X/Instagram via platform APIs through n8n — Phase 9
 - [x] LightRAG knowledge graph with entity/relationship extraction from approved content — Phase 10
 - [x] Multi-hop retrieval for Thinker agent via LightRAG — Phase 10
-- [ ] Multi-model media orchestration engine (Designer plans → Orchestrator decomposes → best model per task → Remotion assembles)
-- [ ] Static image with typography generation pipeline
-- [ ] Image carousel generation pipeline
-- [ ] Talking-head with overlays generation pipeline
-- [ ] Short-form video (15-60s) generation pipeline
+- [x] Multi-model media orchestration engine (Designer plans → Orchestrator decomposes → best model per task → Remotion assembles) — Phase 11
+- [x] Static image with typography generation pipeline — Phase 11
+- [x] Image carousel generation pipeline — Phase 11
+- [x] Talking-head with overlays generation pipeline — Phase 11
+- [x] Short-form video (15-60s) generation pipeline — Phase 11
 - [ ] Strategist Agent for proactive content recommendations
 - [ ] Strategy Dashboard with recommendation cards and one-click approve
 - [ ] SSE notifications via n8n (job completion, trending topics, scheduled post published)
@@ -151,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 10 complete — LightRAG knowledge graph. Sidecar container, per-user isolation, domain entity extraction, Thinker multi-hop query, Learning dual-write, routing contract, 32 tests.*
+*Last updated: 2026-04-01 after Phase 11 complete — Multi-model media orchestration. Remotion Express service (5 compositions), MediaOrchestrator with 8 format handlers, credit ledger, Designer format selection, QC validation, 69 tests.*
