@@ -27,7 +27,7 @@
 
 - [x] **Phase 9: n8n Infrastructure + Real Publishing** - Replace Celery beat with n8n for all scheduled/external-API tasks; establish webhook bridge; hard cutover with idempotency keys (completed 2026-03-31)
 - [x] **Phase 10: LightRAG Knowledge Graph** - Deploy per-user knowledge graph sidecar; wire Thinker agent with multi-hop retrieval; lock embedding model before first insert (completed 2026-03-31)
-- [ ] **Phase 11: Multi-Model Media Orchestration** - Media Orchestrator service routing to best provider per asset type; Remotion compositions for all formats; credit ledger for partial-failure accounting
+- [x] **Phase 11: Multi-Model Media Orchestration** - Media Orchestrator service routing to best provider per asset type; Remotion compositions for all formats; credit ledger for partial-failure accounting (completed 2026-04-01)
 - [ ] **Phase 12: Strategist Agent** - Nightly n8n-triggered agent synthesizing LightRAG + persona + analytics into ranked recommendation cards with cadence controls
 - [ ] **Phase 13: Analytics Feedback Loop** - Real social metrics polling 24h + 7d post-publish via n8n; performance data feeds Strategist and persona intelligence
 - [ ] **Phase 14: Strategy Dashboard + Notifications** - New React page with SSE-driven recommendation feed; one-click approve; dismissed cards archived; strategy API routes
@@ -85,7 +85,7 @@ Plans:
 - [x] 11-02-PLAN.md — RemotionConfig + pipeline credit ledger + MediaOrchestrator core + R2 pre-staging
 - [x] 11-03-PLAN.md — Static image orchestration (static_image, quote_card, meme, infographic)
 - [x] 11-04-PLAN.md — Carousel + video orchestration (carousel, talking_head, short_form_video, text_on_video)
-- [ ] 11-05-PLAN.md — Designer format selection + QC media validation
+- [x] 11-05-PLAN.md — Designer format selection + QC media validation
 **UI hint**: yes
 
 ### Phase 12: Strategist Agent
@@ -163,7 +163,7 @@ Plans:
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
-| 11. Multi-Model Media Orchestration | v2.0 | 4/5 | In Progress|  |
+| 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete   | 2026-04-01 |
 | 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
