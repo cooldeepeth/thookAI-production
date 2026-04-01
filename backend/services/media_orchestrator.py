@@ -87,27 +87,50 @@ STAGE_COSTS: Dict[str, int] = {
 # ============================================================
 
 def _get_designer():
-    """Lazy import for designer agent."""
+    """Lazy import for designer agent (single image)."""
     from agents.designer import generate_image
     return generate_image
 
 
-def _get_voice_generator():
-    """Lazy import for voice agent."""
+def _get_carousel():
+    """Lazy import for designer agent (carousel)."""
+    from agents.designer import generate_image
+    # Carousel handler calls generate_image once per slide in parallel
+    return generate_image
+
+
+def _get_voice():
+    """Lazy import for voice narration agent."""
     from agents.voice import generate_voice_narration
     return generate_voice_narration
 
 
-def _get_video_generator():
-    """Lazy import for video agent."""
+def _get_avatar_video():
+    """Lazy import for HeyGen avatar video agent."""
+    from agents.video import generate_avatar_video
+    return generate_avatar_video
+
+
+def _get_broll_video():
+    """Lazy import for B-roll video generation agent."""
     from agents.video import generate_video
     return generate_video
 
 
+# Legacy aliases kept for backward compatibility
+def _get_voice_generator():
+    """Lazy import for voice agent (legacy alias)."""
+    return _get_voice()
+
+
+def _get_video_generator():
+    """Lazy import for video agent (legacy alias)."""
+    return _get_broll_video()
+
+
 def _get_avatar_generator():
-    """Lazy import for avatar video agent."""
-    from agents.video import generate_avatar_video
-    return generate_avatar_video
+    """Lazy import for avatar video agent (legacy alias)."""
+    return _get_avatar_video()
 
 
 # ============================================================
@@ -692,6 +715,400 @@ async def _handle_infographic(brief: MediaBrief, cost_cap: int) -> Dict[str, Any
         "url": render_result["url"],
         "render_id": render_result["render_id"],
         "media_type": "infographic",
+        "job_id": brief.job_id,
+        "credits_consumed": STAGE_COSTS["remotion_render"],
+    }
+
+
+# ============================================================
+# COMPLEX MEDIA-TYPE HANDLERS (Plan 04)
+# Carousel, talking_head, short_form_video, text_on_video
+# ============================================================
+
+async def _generate_voice_for_video(text: str, voice_id: Optional[str] = None) -> Dict[str, Any]:
+    """Generate voice narration with pcm_48000 format intent for video sync.
+
+    Wraps generate_voice_narration for use in the video pipeline.
+    The ElevenLabs output_format='pcm_48000' is the target for video sync;
+    the base function returns audio_base64 which is staged to R2.
+    Full pcm_48000 support will be added to the voice agent in a future iteration.
+    """
+    return await _get_voice()(text=text, voice_id=voice_id)
+
+
+@register_media_handler("carousel")
+async def _handle_carousel(brief: MediaBrief, cost_cap: int) -> Dict[str, Any]:
+    """Handle carousel media type.
+
+    Pipeline:
+    1. Validate slides (non-empty, <= 10)
+    2. Ledger image_generation stage (credits = per-slide cost * slide count)
+    3. Generate all slide images in parallel via asyncio.gather
+    4. Handle partial failures — continue with successful slides
+    5. Stage all slide images to R2
+    6. Check cost cap
+    7. Ledger remotion_render stage
+    8. Call Remotion ImageCarousel composition
+    9. Return result
+    """
+    if not brief.slides or len(brief.slides) < 1:
+        raise ValueError(
+            "carousel media type requires slides to be a non-empty list. "
+            f"Got: {brief.slides!r}"
+        )
+
+    # Truncate to max 10 slides
+    slides = brief.slides[:10]
+    slide_count = len(slides)
+
+    # Ledger: charge per slide
+    img_ledger_id = await _ledger_stage(
+        brief.job_id,
+        brief.user_id,
+        "image_generation",
+        "fal",
+        STAGE_COSTS["image_generation"] * slide_count,
+    )
+
+    # Generate all slide images in parallel
+    generate_image = _get_carousel()
+    slide_tasks = [
+        generate_image(
+            prompt=slide.get("text", brief.content_text),
+            style=brief.style,
+            platform=brief.platform,
+            persona_card=brief.persona_card,
+        )
+        for slide in slides
+    ]
+
+    try:
+        slide_results = await asyncio.gather(*slide_tasks, return_exceptions=True)
+        await _ledger_update(img_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(img_ledger_id, "failed", str(e))
+        await _ledger_skip_remaining(brief.job_id, f"image_generation failed: {e}")
+        raise
+
+    # Stage successful slides to R2; log and skip failed ones
+    staged_slides = []
+    for i, result in enumerate(slide_results):
+        if isinstance(result, Exception):
+            logger.warning(
+                "Carousel slide %d/%d failed generation: %s — skipping slide",
+                i + 1, slide_count, result,
+            )
+            continue
+        asset_url = result.get("image_url") or result.get("image_base64", "")
+        r2_url = await _stage_asset_to_r2(asset_url, brief.job_id, f"slide_{i}")
+        staged_slides.append({
+            "imageUrl": r2_url,
+            "text": slides[i].get("text", ""),
+            "slideNumber": i + 1,
+        })
+
+    # Check cap before remotion render
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Ledger: remotion_render
+    render_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "remotion_render", "remotion", STAGE_COSTS["remotion_render"]
+    )
+    try:
+        render_result = await _call_remotion(
+            "ImageCarousel",
+            {
+                "slides": staged_slides,
+                "brandColor": brief.brand_color,
+                "fontFamily": "Inter",
+            },
+            render_type="still",
+        )
+        await _ledger_update(render_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(render_ledger_id, "failed", str(e))
+        raise
+
+    return {
+        "url": render_result["url"],
+        "render_id": render_result["render_id"],
+        "media_type": "carousel",
+        "job_id": brief.job_id,
+        "credits_consumed": STAGE_COSTS["image_generation"] * slide_count + STAGE_COSTS["remotion_render"],
+    }
+
+
+@register_media_handler("talking_head")
+async def _handle_talking_head(brief: MediaBrief, cost_cap: int) -> Dict[str, Any]:
+    """Handle talking_head media type.
+
+    Pipeline:
+    1. Ledger avatar_generation stage
+    2. Generate HeyGen avatar video
+    3. Stage HeyGen video URL to R2 IMMEDIATELY (HeyGen URLs expire ~1h after polling)
+    4. Update ledger
+    5. Check cost cap
+    6. Ledger remotion_render stage
+    7. Call Remotion TalkingHeadOverlay composition with R2 URL
+    8. Return result
+    """
+    # Stage 1: avatar_generation
+    avatar_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "avatar_generation", "heygen", STAGE_COSTS["avatar_generation"]
+    )
+    try:
+        avatar_result = await _get_avatar_video()(
+            script=brief.content_text,
+            avatar_id=brief.avatar_id or "default",
+        )
+        # Stage HeyGen video URL to R2 IMMEDIATELY — HeyGen CDN URLs expire
+        avatar_r2_url = await _stage_asset_to_r2(
+            avatar_result.get("video_url", ""),
+            brief.job_id,
+            "avatar_video",
+        )
+        await _ledger_update(avatar_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(avatar_ledger_id, "failed", str(e))
+        await _ledger_skip_remaining(brief.job_id, f"avatar_generation failed: {e}")
+        raise
+
+    # Check cap before remotion render
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Calculate duration in frames (30fps)
+    duration_frames = int(avatar_result.get("duration", 30) * 30)
+
+    # Stage 2: remotion_render
+    render_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "remotion_render", "remotion", STAGE_COSTS["remotion_render"]
+    )
+    try:
+        render_result = await _call_remotion(
+            "TalkingHeadOverlay",
+            {
+                "videoUrl": avatar_r2_url,
+                "overlayText": "",
+                "lowerThirdName": brief.persona_card.get("name", ""),
+                "lowerThirdTitle": brief.persona_card.get("title", ""),
+                "brandColor": brief.brand_color,
+                "durationInFrames": duration_frames,
+            },
+            render_type="video",
+        )
+        await _ledger_update(render_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(render_ledger_id, "failed", str(e))
+        raise
+
+    return {
+        "url": render_result["url"],
+        "render_id": render_result["render_id"],
+        "media_type": "talking_head",
+        "job_id": brief.job_id,
+        "credits_consumed": STAGE_COSTS["avatar_generation"] + STAGE_COSTS["remotion_render"],
+    }
+
+
+@register_media_handler("short_form_video")
+async def _handle_short_form_video(brief: MediaBrief, cost_cap: int) -> Dict[str, Any]:
+    """Handle short_form_video media type.
+
+    Pipeline:
+    1. Phase 1: Parallel asset generation (voice + optional avatar + B-roll)
+       - Voice narration (always; uses pcm_48000 intent for video sync)
+       - Avatar video (only if brief.avatar_id is set)
+       - B-roll video (always)
+    2. Stage all successful assets to R2
+    3. Build Remotion segment list
+    4. Check cost cap
+    5. Ledger + call Remotion ShortFormVideo composition
+    6. Return result
+    """
+    # Phase 1: Setup ledger entries and collect tasks
+    task_list = []
+    task_keys = []
+    ledger_ids = {}
+
+    # Voice narration — critical for video sync
+    ledger_ids["voice"] = await _ledger_stage(
+        brief.job_id, brief.user_id, "voice_generation", "elevenlabs", STAGE_COSTS["voice_generation"]
+    )
+    task_keys.append("voice")
+    task_list.append(_generate_voice_for_video(text=brief.content_text, voice_id=brief.voice_id))
+
+    # Avatar (A-roll) if avatar_id provided
+    if brief.avatar_id:
+        ledger_ids["avatar"] = await _ledger_stage(
+            brief.job_id, brief.user_id, "avatar_generation", "heygen", STAGE_COSTS["avatar_generation"]
+        )
+        task_keys.append("avatar")
+        task_list.append(_get_avatar_video()(script=brief.content_text, avatar_id=brief.avatar_id))
+
+    # B-roll generation
+    ledger_ids["broll"] = await _ledger_stage(
+        brief.job_id, brief.user_id, "broll_generation", "luma", STAGE_COSTS["broll_generation"]
+    )
+    task_keys.append("broll")
+    task_list.append(_get_broll_video()(
+        prompt=f"B-roll footage for: {brief.content_text[:100]}",
+        duration=5,
+    ))
+
+    # Execute all asset generation in parallel
+    raw_results = await asyncio.gather(*task_list, return_exceptions=True)
+    results: Dict[str, Any] = dict(zip(task_keys, raw_results))
+
+    # Update ledger entries based on success/failure
+    for key, result in results.items():
+        if isinstance(result, Exception):
+            logger.warning("Short-form video asset '%s' failed: %s", key, result)
+            await _ledger_update(ledger_ids[key], "failed", str(result))
+        else:
+            await _ledger_update(ledger_ids[key], "consumed")
+
+    # Phase 2: Stage all successful assets to R2
+    staged: Dict[str, str] = {}
+    for key, result in results.items():
+        if isinstance(result, Exception):
+            continue
+        # Pick the correct URL field per asset type
+        url = (
+            result.get("video_url")
+            or result.get("audio_url")
+            or result.get("audio_base64", "")
+        )
+        if url:
+            staged[key] = await _stage_asset_to_r2(url, brief.job_id, key)
+
+    # Phase 3: Build Remotion segment list
+    segments: List[Dict[str, Any]] = []
+    if "avatar" in staged:
+        segments.append({
+            "type": "video",
+            "url": staged["avatar"],
+            "durationInFrames": 450,  # 15s at 30fps
+            "text": "",
+        })
+    if "broll" in staged:
+        segments.append({
+            "type": "video",
+            "url": staged["broll"],
+            "durationInFrames": 150,  # 5s at 30fps
+        })
+    # Fallback: text-only segment if no video assets generated
+    if not segments:
+        segments.append({
+            "type": "image",
+            "url": "",
+            "durationInFrames": 900,  # 30s at 30fps
+            "text": brief.content_text,
+        })
+
+    total_frames = sum(seg["durationInFrames"] for seg in segments)
+
+    # Phase 4: Check cap and call Remotion
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    render_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "remotion_render", "remotion", STAGE_COSTS["remotion_render"]
+    )
+    try:
+        render_result = await _call_remotion(
+            "ShortFormVideo",
+            {
+                "segments": segments,
+                "audioUrl": staged.get("voice", ""),
+                "musicUrl": brief.music_url or "",
+                "brandColor": brief.brand_color,
+                "durationInFrames": total_frames,
+            },
+            render_type="video",
+        )
+        await _ledger_update(render_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(render_ledger_id, "failed", str(e))
+        raise
+
+    # Calculate credits consumed (only successfully consumed stages)
+    credits_consumed = sum(
+        STAGE_COSTS[stage]
+        for stage, key in [
+            ("voice_generation", "voice"),
+            ("avatar_generation", "avatar"),
+            ("broll_generation", "broll"),
+        ]
+        if key in results and not isinstance(results[key], Exception)
+    ) + STAGE_COSTS["remotion_render"]
+
+    return {
+        "url": render_result["url"],
+        "render_id": render_result["render_id"],
+        "media_type": "short_form_video",
+        "job_id": brief.job_id,
+        "credits_consumed": credits_consumed,
+    }
+
+
+@register_media_handler("text_on_video")
+async def _handle_text_on_video(brief: MediaBrief, cost_cap: int) -> Dict[str, Any]:
+    """Handle text_on_video media type.
+
+    Pipeline:
+    1. Validate brief.video_url is present
+    2. Ledger remotion_render stage
+    3. Stage user-uploaded video to R2
+    4. Build single segment with user video + content_text overlay
+    5. Call Remotion ShortFormVideo composition
+    6. Return result
+    """
+    if brief.video_url is None:
+        raise ValueError("video_url required for text_on_video media type")
+
+    # Stage 1: remotion_render (single stage — user provides the video)
+    render_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "remotion_render", "remotion", STAGE_COSTS["remotion_render"]
+    )
+
+    # Stage user-uploaded video to R2 before Remotion call
+    video_r2_url = await _stage_asset_to_r2(brief.video_url, brief.job_id, "input_video")
+
+    segments = [
+        {
+            "type": "video",
+            "url": video_r2_url,
+            "durationInFrames": 900,  # 30s at 30fps default
+            "text": brief.content_text,
+        }
+    ]
+
+    try:
+        render_result = await _call_remotion(
+            "ShortFormVideo",
+            {
+                "segments": segments,
+                "audioUrl": "",
+                "musicUrl": brief.music_url or "",
+                "brandColor": brief.brand_color,
+                "durationInFrames": 900,
+            },
+            render_type="video",
+        )
+        await _ledger_update(render_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(render_ledger_id, "failed", str(e))
+        raise
+
+    return {
+        "url": render_result["url"],
+        "render_id": render_result["render_id"],
+        "media_type": "text_on_video",
         "job_id": brief.job_id,
         "credits_consumed": STAGE_COSTS["remotion_render"],
     }
