@@ -122,6 +122,15 @@ None — no external service configuration required for this plan.
 - `validate_media_output()` ready to be called from content routes after Remotion renders complete
 - Phase 11 complete — all 5 plans executed: media_orchestrator, static handlers, video handlers, carousel/talking_head handlers, format selection + QC
 
+## Self-Check: PASSED
+
+- FOUND: backend/agents/designer.py (select_media_format, PLATFORM_FORMAT_PREFERENCES, CONTENT_ANGLE_FORMAT_MAP)
+- FOUND: backend/agents/qc.py (validate_media_output, PLATFORM_MEDIA_SPECS)
+- FOUND: backend/tests/test_designer_format_selection.py (11 tests)
+- FOUND: backend/tests/test_qc_media.py (12 tests)
+- FOUND: .planning/phases/11-multi-model-media-orchestration/11-05-SUMMARY.md
+- COMMITS: 29933f6 (feat), e917849 (test), 14de39c (docs) — all verified in git log
+
 ---
 *Phase: 11-multi-model-media-orchestration*
 *Completed: 2026-04-01*

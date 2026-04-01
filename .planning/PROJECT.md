@@ -2,11 +2,11 @@
 
 ## What This Is
 
-ThookAI is an AI-powered content creation platform for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline. The platform handles scheduling, repurposing, analytics, billing, media generation, and multi-user workspaces. Deployed to Render (backend) and Vercel (frontend). v1.0 stabilization complete — all features verified end-to-end with 319+ tests.
+ThookAI is an AI-powered content operating system for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline with proactive strategy recommendations. The platform handles scheduling, repurposing, analytics, billing, multi-model media orchestration (8 formats via Remotion), knowledge graph intelligence (LightRAG), and multi-user workspaces. Deployed to Render (backend) and Vercel (frontend). v2.0 shipped — n8n orchestration, Strategist Agent, Strategy Dashboard, Obsidian vault integration, 370+ new tests.
 
 ## Core Value
 
-Personalized content creation at scale — every user gets a unique voice fingerprint that drives all content generation, with real social platform publishing and analytics feedback loops.
+Proactive, personalized content creation at scale — the platform recommends what to create, generates multi-format media, and learns from real social performance data to improve every cycle.
 
 ## Requirements
 
@@ -51,27 +51,21 @@ Personalized content creation at scale — every user gets a unique voice finger
 - ✓ Mobile responsive sidebar — existing (PR #26)
 - ✓ CI/CD (GitHub Actions, 59 tests, Docker/docker-compose) — existing
 - ✓ Production deployment guide — existing (PR #28)
+- ✓ n8n infrastructure replacing Celery beat for task orchestration — v2.0 Phase 9
+- ✓ Real publishing to social platforms via n8n workflows — v2.0 Phase 9
+- ✓ LightRAG knowledge graph with per-user isolation — v2.0 Phase 10
+- ✓ Multi-model media orchestration (8 formats, Remotion assembly) — v2.0 Phase 11
+- ✓ Strategist Agent (nightly proactive recommendations, cadence controls) — v2.0 Phase 12
+- ✓ Analytics feedback loop (real social metrics 24h+7d) — v2.0 Phase 13
+- ✓ Strategy Dashboard with SSE feed + one-click approve — v2.0 Phase 14
+- ✓ Obsidian vault integration (Scout enrichment + Strategist signal) — v2.0 Phase 15
+- ✓ E2E audit + security hardening + production ship — v2.0 Phase 16
 
 ### Active
 
-<!-- v2.0: Intelligent Content Operating System -->
+<!-- Next milestone: to be defined via /gsd:new-milestone -->
 
-- [x] n8n infrastructure replacing Celery for task orchestration and automation — Phase 9
-- [x] Real publishing to LinkedIn/X/Instagram via platform APIs through n8n — Phase 9
-- [x] LightRAG knowledge graph with entity/relationship extraction from approved content — Phase 10
-- [x] Multi-hop retrieval for Thinker agent via LightRAG — Phase 10
-- [x] Multi-model media orchestration engine (Designer plans → Orchestrator decomposes → best model per task → Remotion assembles) — Phase 11
-- [x] Static image with typography generation pipeline — Phase 11
-- [x] Image carousel generation pipeline — Phase 11
-- [x] Talking-head with overlays generation pipeline — Phase 11
-- [x] Short-form video (15-60s) generation pipeline — Phase 11
-- [x] Strategist Agent for proactive content recommendations — Phase 12
-- [x] Strategy Dashboard with recommendation cards and one-click approve — Phase 14
-- [x] SSE notifications via n8n (job completion, trending topics, scheduled post published) — Phase 14
-- [x] Analytics feedback loop (real social metrics 24h + 7d after publish) — Phase 13
-- [x] Performance intelligence from real data (optimal_posting_times) — Phase 13
-- [x] Obsidian vault integration via obsidian-cli into Scout agent — Phase 15
-- [x] E2E audit, security hardening, and production ship — Phase 16
+(To be defined in next milestone via `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -151,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 14 complete — Strategy Dashboard + Notifications. React page with SSE feed, one-click approve, History tab, sidebar nav, 13 backend tests.*
+*Last updated: 2026-04-02 after v2.0 milestone — Intelligent Content Operating System shipped. 8 phases, 27 plans, 370+ tests, 164 files changed, 41,560 insertions.*

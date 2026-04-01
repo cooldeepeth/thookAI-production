@@ -99,3 +99,10 @@ None - no external service configuration required. The `N8N_WORKFLOW_NIGHTLY_STR
 ---
 *Phase: 12-strategist-agent*
 *Completed: 2026-04-01*
+
+## Self-Check: PASSED
+
+- FOUND: `backend/routes/n8n_bridge.py`
+- FOUND: `.planning/phases/12-strategist-agent/12-03-SUMMARY.md`
+- FOUND: commit `f01015b` (Task 1)
+- FOUND: commit `74e7a60` (Task 2)
