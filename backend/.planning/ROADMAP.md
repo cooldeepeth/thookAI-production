@@ -27,10 +27,10 @@
 
 - [x] **Phase 9: n8n Infrastructure + Real Publishing** - Replace Celery beat with n8n for all scheduled/external-API tasks; establish webhook bridge; hard cutover with idempotency keys (completed 2026-03-31)
 - [x] **Phase 10: LightRAG Knowledge Graph** - Deploy per-user knowledge graph sidecar; wire Thinker agent with multi-hop retrieval; lock embedding model before first insert (completed 2026-03-31)
-- [ ] **Phase 11: Multi-Model Media Orchestration** - Media Orchestrator service routing to best provider per asset type; Remotion compositions for all formats; credit ledger for partial-failure accounting
-- [ ] **Phase 12: Strategist Agent** - Nightly n8n-triggered agent synthesizing LightRAG + persona + analytics into ranked recommendation cards with cadence controls
-- [ ] **Phase 13: Analytics Feedback Loop** - Real social metrics polling 24h + 7d post-publish via n8n; performance data feeds Strategist and persona intelligence
-- [ ] **Phase 14: Strategy Dashboard + Notifications** - New React page with SSE-driven recommendation feed; one-click approve; dismissed cards archived; strategy API routes
+- [x] **Phase 11: Multi-Model Media Orchestration** - Media Orchestrator service routing to best provider per asset type; Remotion compositions for all formats; credit ledger for partial-failure accounting (completed 2026-04-01)
+- [x] **Phase 12: Strategist Agent** - Nightly n8n-triggered agent synthesizing LightRAG + persona + analytics into ranked recommendation cards with cadence controls (completed 2026-04-01)
+- [x] **Phase 13: Analytics Feedback Loop** - Real social metrics polling 24h + 7d post-publish via n8n; performance data feeds Strategist and persona intelligence (completed 2026-04-01)
+- [x] **Phase 14: Strategy Dashboard + Notifications** - New React page with SSE-driven recommendation feed; one-click approve; dismissed cards archived; strategy API routes (completed 2026-04-01)
 - [ ] **Phase 15: Obsidian Vault Integration** - Scout enrichment from personal vault; Strategist uses vault as recommendation signal; opt-in with explicit path sandboxing
 - [ ] **Phase 16: E2E Audit + Security Hardening + Production Ship** - Full critical-path smoke testing; n8n security config; per-user graph isolation verified; load testing; dead link detection
 
@@ -81,11 +81,11 @@ Plans:
   5. The Designer agent selects the optimal content format for the platform and content angle without user guidance — format choices are explained in the job details
 **Plans**: 5 plans
 Plans:
-- [ ] 11-01-PLAN.md — Remotion Express API service with 5 compositions + docker-compose sidecar
-- [ ] 11-02-PLAN.md — RemotionConfig + pipeline credit ledger + MediaOrchestrator core + R2 pre-staging
-- [ ] 11-03-PLAN.md — Static image orchestration (static_image, quote_card, meme, infographic)
-- [ ] 11-04-PLAN.md — Carousel + video orchestration (carousel, talking_head, short_form_video, text_on_video)
-- [ ] 11-05-PLAN.md — Designer format selection + QC media validation
+- [x] 11-01-PLAN.md — Remotion Express API service with 5 compositions + docker-compose sidecar
+- [x] 11-02-PLAN.md — RemotionConfig + pipeline credit ledger + MediaOrchestrator core + R2 pre-staging
+- [x] 11-03-PLAN.md — Static image orchestration (static_image, quote_card, meme, infographic)
+- [x] 11-04-PLAN.md — Carousel + video orchestration (carousel, talking_head, short_form_video, text_on_video)
+- [x] 11-05-PLAN.md — Designer format selection + QC media validation
 **UI hint**: yes
 
 ### Phase 12: Strategist Agent
@@ -98,7 +98,12 @@ Plans:
   3. One-click approve on a card fires content generation with a pre-filled payload — no additional form fields required before generation starts
   4. Dismissing a card archives it and suppresses the same topic for 14 days — the user never sees the same topic resurface within the suppression window
   5. After 5 consecutive dismissals, the generation rate halves and a "calibrate preferences" prompt appears — the agent adapts rather than continuing to spam
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [x] 12-01-PLAN.md — StrategistConfig dataclass + N8nConfig workflow field + DB indexes + .env.example
+- [x] 12-02-PLAN.md — Strategist agent core (strategist.py) with cadence controls, LightRAG integration, dismissal tracking
+- [x] 12-03-PLAN.md — n8n bridge execute endpoint + workflow map + notification map
+- [x] 12-04-PLAN.md — Comprehensive tests for all STRAT requirements (STRAT-01 through STRAT-07)
 
 ### Phase 13: Analytics Feedback Loop
 **Goal**: Real engagement data from LinkedIn, X, and Instagram flows back into the platform 24 hours and 7 days after each published post, feeding Strategist recommendations and persona intelligence
@@ -109,7 +114,10 @@ Plans:
   2. Performance data is written to `content_jobs.performance_data` with both 24h and 7d snapshots — the content detail view shows two data points over time
   3. `persona_engines.performance_intelligence.optimal_posting_times` updates after each 7-day analytics cycle — posting time recommendations change as real data accumulates
   4. The Strategist Agent's next nightly run incorporates the latest performance data — recommendation rationales reference actual post performance ("your last 3 posts about X underperformed; try angle Y")
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [x] 13-01-PLAN.md — N8nConfig analytics fields + DB indexes + publish_results write-back to content_jobs
+- [x] 13-02-PLAN.md — poll-analytics-24h/7d execute endpoints + comprehensive ANLYT tests
 
 ### Phase 14: Strategy Dashboard + Notifications
 **Goal**: Users have a dedicated Strategy page that surfaces Strategist recommendations in real time via SSE, with one-click workflows and a complete history of past recommendations
@@ -121,7 +129,10 @@ Plans:
   3. Dismissed cards move to a History tab and are never permanently deleted — user can browse all past recommendations
   4. User receives an SSE notification when a content job completes, when a scheduled post publishes, and when a new trending topic recommendation arrives
   5. Strategy API routes (`GET /api/strategy`, `POST /api/strategy/:id/approve`, `POST /api/strategy/:id/dismiss`) respond correctly and are protected by auth middleware
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 14-01-PLAN.md — Strategy API routes (GET feed, POST approve, POST dismiss) + server registration + unit tests
+- [ ] 14-02-PLAN.md — StrategyDashboard React page + useStrategyFeed hook + sidebar nav + NotificationBell icon
 **UI hint**: yes
 
 ### Phase 15: Obsidian Vault Integration
@@ -142,7 +153,7 @@ Plans:
 **Depends on**: Phases 9-15 (all v2.0 features complete)
 **Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07, E2E-08, E2E-09, E2E-10
 **Success Criteria** (what must be TRUE):
-  1. The full critical path (signup → onboard → generate → schedule → publish → analytics → strategy recommend → one-click approve → publish again) completes without errors in a smoke test run
+  1. The full critical path (signup -> onboard -> generate -> schedule -> publish -> analytics -> strategy recommend -> one-click approve -> publish again) completes without errors in a smoke test run
   2. The n8n instance is not publicly accessible — direct HTTP requests to the n8n URL from outside the private network return 401 or connection refused; `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` is confirmed in production env
   3. LightRAG per-user graph isolation is verified: authenticated as User A, a direct query to the LightRAG API with User B's user_id returns zero results
   4. Remotion render queue handles 5 concurrent render requests without timeout or OOM — load test results documented in audit report
@@ -163,9 +174,9 @@ Plans:
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
-| 11. Multi-Model Media Orchestration | v2.0 | 0/5 | Planning complete | - |
-| 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
-| 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
-| 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
+| 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
+| 12. Strategist Agent | v2.0 | 4/4 | Complete    | 2026-04-01 |
+| 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete    | 2026-04-01 |
+| 14. Strategy Dashboard + Notifications | v2.0 | 0/2 | Complete    | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/TBD | Not started | - |
