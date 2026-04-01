@@ -65,7 +65,7 @@ Personalized content creation at scale — every user gets a unique voice finger
 - [x] Image carousel generation pipeline — Phase 11
 - [x] Talking-head with overlays generation pipeline — Phase 11
 - [x] Short-form video (15-60s) generation pipeline — Phase 11
-- [ ] Strategist Agent for proactive content recommendations
+- [x] Strategist Agent for proactive content recommendations — Phase 12
 - [ ] Strategy Dashboard with recommendation cards and one-click approve
 - [ ] SSE notifications via n8n (job completion, trending topics, scheduled post published)
 - [ ] Analytics feedback loop (real social metrics 24h + 7d after publish)
@@ -151,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 11 complete — Multi-model media orchestration. Remotion Express service (5 compositions), MediaOrchestrator with 8 format handlers, credit ledger, Designer format selection, QC validation, 69 tests.*
+*Last updated: 2026-04-01 after Phase 12 complete — Strategist Agent. Nightly synthesis engine, cadence controls, dismissal tracking, n8n bridge endpoint, 29 tests.*
