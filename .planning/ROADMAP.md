@@ -28,7 +28,7 @@
 - [x] **Phase 9: n8n Infrastructure + Real Publishing** - Replace Celery beat with n8n for all scheduled/external-API tasks; establish webhook bridge; hard cutover with idempotency keys (completed 2026-03-31)
 - [x] **Phase 10: LightRAG Knowledge Graph** - Deploy per-user knowledge graph sidecar; wire Thinker agent with multi-hop retrieval; lock embedding model before first insert (completed 2026-03-31)
 - [x] **Phase 11: Multi-Model Media Orchestration** - Media Orchestrator service routing to best provider per asset type; Remotion compositions for all formats; credit ledger for partial-failure accounting (completed 2026-04-01)
-- [ ] **Phase 12: Strategist Agent** - Nightly n8n-triggered agent synthesizing LightRAG + persona + analytics into ranked recommendation cards with cadence controls
+- [x] **Phase 12: Strategist Agent** - Nightly n8n-triggered agent synthesizing LightRAG + persona + analytics into ranked recommendation cards with cadence controls (completed 2026-04-01)
 - [ ] **Phase 13: Analytics Feedback Loop** - Real social metrics polling 24h + 7d post-publish via n8n; performance data feeds Strategist and persona intelligence
 - [ ] **Phase 14: Strategy Dashboard + Notifications** - New React page with SSE-driven recommendation feed; one-click approve; dismissed cards archived; strategy API routes
 - [ ] **Phase 15: Obsidian Vault Integration** - Scout enrichment from personal vault; Strategist uses vault as recommendation signal; opt-in with explicit path sandboxing
@@ -103,7 +103,7 @@ Plans:
 - [x] 12-01-PLAN.md — StrategistConfig dataclass + N8nConfig workflow field + DB indexes + .env.example
 - [x] 12-02-PLAN.md — Strategist agent core (strategist.py) with cadence controls, LightRAG integration, dismissal tracking
 - [x] 12-03-PLAN.md — n8n bridge execute endpoint + workflow map + notification map
-- [ ] 12-04-PLAN.md — Comprehensive tests for all STRAT requirements (STRAT-01 through STRAT-07)
+- [x] 12-04-PLAN.md — Comprehensive tests for all STRAT requirements (STRAT-01 through STRAT-07)
 
 ### Phase 13: Analytics Feedback Loop
 **Goal**: Real engagement data from LinkedIn, X, and Instagram flows back into the platform 24 hours and 7 days after each published post, feeding Strategist recommendations and persona intelligence
@@ -169,7 +169,7 @@ Plans:
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
 | 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
-| 12. Strategist Agent | v2.0 | 3/4 | In Progress|  |
+| 12. Strategist Agent | v2.0 | 4/4 | Complete   | 2026-04-01 |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
