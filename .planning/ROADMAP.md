@@ -131,7 +131,7 @@ Plans:
   5. Strategy API routes (`GET /api/strategy`, `POST /api/strategy/:id/approve`, `POST /api/strategy/:id/dismiss`) respond correctly and are protected by auth middleware
 **Plans**: 2 plans
 Plans:
-- [ ] 14-01-PLAN.md — Strategy API routes (GET feed, POST approve, POST dismiss) + server registration + unit tests
+- [x] 14-01-PLAN.md — Strategy API routes (GET feed, POST approve, POST dismiss) + server registration + unit tests
 - [ ] 14-02-PLAN.md — StrategyDashboard React page + useStrategyFeed hook + sidebar nav + NotificationBell icon
 **UI hint**: yes
 
@@ -177,6 +177,6 @@ Plans:
 | 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
 | 12. Strategist Agent | v2.0 | 4/4 | Complete    | 2026-04-01 |
 | 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete    | 2026-04-01 |
-| 14. Strategy Dashboard + Notifications | v2.0 | 0/2 | Not started | - |
+| 14. Strategy Dashboard + Notifications | v2.0 | 1/2 | In Progress|  |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/TBD | Not started | - |
