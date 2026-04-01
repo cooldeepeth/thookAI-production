@@ -490,3 +490,105 @@ def generate_video_for_job(
         return run_async(_generate())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=90 * (2 ** self.request.retries))
+
+
+# ============ MEDIA ORCHESTRATION ============
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=120)
+def orchestrate_media_job(self, brief_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Execute a multi-model media orchestration pipeline.
+
+    Accepts a serialised MediaBrief dict, reconstructs the dataclass,
+    runs the full orchestration pipeline (asset staging, provider calls,
+    Remotion render), and stores the result in media_assets.
+
+    On failure: logs error, updates content_jobs with error status.
+    Retries once after 120s for transient failures (network, Remotion).
+
+    Args:
+        brief_dict: MediaBrief.__dict__ serialised to a plain Python dict.
+    """
+    job_id = brief_dict.get("job_id", "unknown")
+    user_id = brief_dict.get("user_id", "unknown")
+    media_type = brief_dict.get("media_type", "unknown")
+
+    logger.info(
+        "Starting media orchestration task: job_id=%s media_type=%s user_id=%s",
+        job_id, media_type, user_id,
+    )
+
+    async def _orchestrate():
+        from database import db
+        from services.media_orchestrator import MediaBrief, orchestrate
+        import uuid as _uuid
+
+        # Reconstruct MediaBrief from dict
+        brief = MediaBrief(
+            job_id=brief_dict["job_id"],
+            user_id=brief_dict["user_id"],
+            media_type=brief_dict["media_type"],
+            platform=brief_dict.get("platform", "linkedin"),
+            content_text=brief_dict.get("content_text", ""),
+            persona_card=brief_dict.get("persona_card", {}),
+            style=brief_dict.get("style", "minimal"),
+            slides=brief_dict.get("slides"),
+            data_points=brief_dict.get("data_points"),
+            avatar_id=brief_dict.get("avatar_id"),
+            voice_id=brief_dict.get("voice_id"),
+            video_url=brief_dict.get("video_url"),
+            music_url=brief_dict.get("music_url"),
+            brand_color=brief_dict.get("brand_color", "#2563EB"),
+        )
+
+        try:
+            result = await orchestrate(brief)
+
+            result_url = result.get("url")
+            completed_at = __import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc
+            )
+
+            # Store in media_assets for display in /api/media/assets
+            await db.media_assets.insert_one({
+                "asset_id": f"asset_{_uuid.uuid4().hex[:12]}",
+                "user_id": user_id,
+                "job_id": job_id,
+                "type": media_type,
+                "url": result_url,
+                "render_id": result.get("render_id"),
+                "media_type": media_type,
+                "credits_consumed": result.get("credits_consumed", 0),
+                "created_at": completed_at,
+            })
+
+            logger.info(
+                "Media orchestration completed: job_id=%s url=%s credits=%d",
+                job_id, result_url, result.get("credits_consumed", 0),
+            )
+            return {"success": True, "url": result_url, "media_type": media_type}
+
+        except Exception as e:
+            logger.error("Media orchestration failed for job %s: %s", job_id, e)
+            # Update content job with error if it exists
+            try:
+                await db.content_jobs.update_one(
+                    {"job_id": job_id},
+                    {"$set": {
+                        "media_status": "failed",
+                        "media_error": str(e),
+                        "updated_at": __import__("datetime").datetime.now(
+                            __import__("datetime").timezone.utc
+                        ),
+                    }},
+                )
+            except Exception as db_err:
+                logger.warning(
+                    "Failed to update content_jobs with error for job %s: %s", job_id, db_err
+                )
+            raise
+
+    try:
+        return run_async(_orchestrate())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=120)

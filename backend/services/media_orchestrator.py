@@ -22,6 +22,7 @@ import httpx
 
 from config import settings
 from database import db
+from services.media_storage import get_r2_client
 
 logger = logging.getLogger(__name__)
 
@@ -230,8 +231,6 @@ async def _stage_asset_to_r2(asset_url: str, job_id: str, asset_key: str) -> str
     Returns:
         Public URL of the staged asset.
     """
-    from services.media_storage import get_r2_client
-
     file_bytes: bytes
     content_type: str
     ext: str
@@ -259,6 +258,7 @@ async def _stage_asset_to_r2(asset_url: str, job_id: str, asset_key: str) -> str
 
     r2_key = f"media/orchestrated/{job_id}/{asset_key}{ext}"
 
+    # get_r2_client is imported at module level for testability
     r2_client = get_r2_client()
     if r2_client is None:
         # Development fallback: save to /tmp
