@@ -63,6 +63,10 @@ INDEXES = {
         IndexModel([('scheduled_at', ASCENDING)], sparse=True, name='idx_scheduled_at'),
         IndexModel([('series_id', ASCENDING)], sparse=True, name='idx_series_id'),
         IndexModel([('is_repurposed', ASCENDING)], sparse=True, name='idx_is_repurposed'),
+        # Analytics poll queue indexes (Phase 13 — analytics feedback loop)
+        # Sparse because only published posts will have these fields set.
+        IndexModel([('analytics_24h_polled', ASCENDING), ('analytics_24h_due_at', ASCENDING)], sparse=True, name='analytics_24h_poll_queue'),
+        IndexModel([('analytics_7d_polled', ASCENDING), ('analytics_7d_due_at', ASCENDING)], sparse=True, name='analytics_7d_poll_queue'),
     ],
     
     # ========== CONTENT SERIES ==========

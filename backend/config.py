@@ -229,6 +229,8 @@ class N8nConfig:
     workflow_aggregate_daily_analytics: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_AGGREGATE_DAILY_ANALYTICS'))
     workflow_cleanup_stale_jobs: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_STALE_JOBS'))
     workflow_nightly_strategist: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_NIGHTLY_STRATEGIST'))
+    workflow_analytics_poll_24h: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_ANALYTICS_POLL_24H'))
+    workflow_analytics_poll_7d: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_ANALYTICS_POLL_7D'))
 
     def is_configured(self) -> bool:
         """Check if n8n is configured with required URL and secret."""
