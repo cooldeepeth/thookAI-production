@@ -445,3 +445,292 @@ class TestOrchestrate:
         assert asyncio.iscoroutine(coro)
         # Close to avoid warnings
         coro.close()
+
+
+# ============================================================
+# Static format handler tests (Plan 03)
+# ============================================================
+
+def _make_brief(**kwargs):
+    """Helper to create a MediaBrief with sensible defaults."""
+    from services.media_orchestrator import MediaBrief
+    defaults = {
+        "job_id": "job_test",
+        "user_id": "user_test",
+        "media_type": "static_image",
+        "platform": "linkedin",
+        "content_text": "Test content text",
+        "persona_card": {"archetype": "Thought Leader"},
+        "brand_color": "#2563EB",
+        "style": "minimal",
+    }
+    defaults.update(kwargs)
+    return MediaBrief(**defaults)
+
+
+def _make_ledger_mocks():
+    """Return AsyncMock instances for all _ledger_* functions."""
+    ledger_stage = AsyncMock(return_value="ledger_id_123")
+    ledger_update = AsyncMock(return_value=None)
+    ledger_check_cap = AsyncMock(return_value=True)
+    ledger_skip_remaining = AsyncMock(return_value=None)
+    return ledger_stage, ledger_update, ledger_check_cap, ledger_skip_remaining
+
+
+class TestStaticImageHandler:
+    """Tests for _handle_static_image and orchestrate("static_image")."""
+
+    @pytest.mark.asyncio
+    async def test_static_image_full_pipeline(self):
+        """static_image: generates image, stages to R2, calls StaticImageCard(layout=standard)."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+
+        designer_result = {"image_url": "https://cdn.fal.ai/test.png", "generated": True}
+        r2_url = "https://r2.example.com/staged.png"
+        remotion_result = {"url": "https://r2.example.com/render.png", "render_id": "r123"}
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_designer", return_value=AsyncMock(return_value=designer_result)), \
+             patch("services.media_orchestrator._stage_asset_to_r2", AsyncMock(return_value=r2_url)), \
+             patch("services.media_orchestrator._call_remotion", AsyncMock(return_value=remotion_result)):
+
+            from services.media_orchestrator import _call_remotion as mock_remotion
+            brief = _make_brief(media_type="static_image")
+            result = await orchestrate(brief)
+
+        # Verify result
+        assert result["url"] == "https://r2.example.com/render.png"
+        assert result["media_type"] == "static_image"
+        assert result["job_id"] == "job_test"
+
+        # Verify ledger was called twice (image_generation + remotion_render)
+        assert ledger_stage.call_count == 2
+        stage_calls = [call[0][2] for call in ledger_stage.call_args_list]
+        assert "image_generation" in stage_calls
+        assert "remotion_render" in stage_calls
+
+    @pytest.mark.asyncio
+    async def test_static_image_remotion_gets_standard_layout(self):
+        """static_image: _call_remotion receives layout='standard' in inputProps."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/render.png", "render_id": "r1"})
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_designer", return_value=AsyncMock(return_value={"image_url": "https://cdn.fal.ai/t.png"})), \
+             patch("services.media_orchestrator._stage_asset_to_r2", AsyncMock(return_value="https://r2.example.com/bg.png")), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            brief = _make_brief(media_type="static_image")
+            await orchestrate(brief)
+
+        # Assert _call_remotion called with StaticImageCard and layout="standard"
+        call_remotion.assert_called_once()
+        args, kwargs = call_remotion.call_args
+        assert args[0] == "StaticImageCard"
+        assert args[1]["layout"] == "standard"
+
+
+class TestQuoteCardHandler:
+    """Tests for _handle_quote_card handler."""
+
+    @pytest.mark.asyncio
+    async def test_quote_card_uses_quote_layout(self):
+        """quote_card: _call_remotion receives layout='quote' in inputProps."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/render.png", "render_id": "r2"})
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_designer", return_value=AsyncMock(return_value={"image_url": "https://cdn.fal.ai/bg.png"})), \
+             patch("services.media_orchestrator._stage_asset_to_r2", AsyncMock(return_value="https://r2.example.com/bg.png")), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            brief = _make_brief(media_type="quote_card", content_text="The best way to predict the future is to create it.")
+            await orchestrate(brief)
+
+        call_remotion.assert_called_once()
+        args, _ = call_remotion.call_args
+        assert args[0] == "StaticImageCard"
+        assert args[1]["layout"] == "quote"
+        # Quote text should be in the "text" field
+        assert args[1]["text"] == "The best way to predict the future is to create it."
+
+
+class TestMemeHandler:
+    """Tests for _handle_meme handler — including text splitting."""
+
+    @pytest.mark.asyncio
+    async def test_meme_splits_text_on_double_newline(self):
+        """meme: content_text split on double-newline into topText and bottomText."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/render.png", "render_id": "r3"})
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_designer", return_value=AsyncMock(return_value={"image_url": "https://cdn.fal.ai/meme.png"})), \
+             patch("services.media_orchestrator._stage_asset_to_r2", AsyncMock(return_value="https://r2.example.com/meme.png")), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            brief = _make_brief(media_type="meme", content_text="Top line\n\nBottom line")
+            await orchestrate(brief)
+
+        call_remotion.assert_called_once()
+        args, _ = call_remotion.call_args
+        assert args[0] == "StaticImageCard"
+        assert args[1]["layout"] == "meme"
+        assert args[1]["topText"] == "Top line"
+        assert args[1]["bottomText"] == "Bottom line"
+
+    @pytest.mark.asyncio
+    async def test_meme_single_line_no_bottom_text(self):
+        """meme: content_text without double-newline -> topText=full text, bottomText=''."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/render.png", "render_id": "r4"})
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_designer", return_value=AsyncMock(return_value={"image_url": "https://cdn.fal.ai/meme.png"})), \
+             patch("services.media_orchestrator._stage_asset_to_r2", AsyncMock(return_value="https://r2.example.com/meme.png")), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            brief = _make_brief(media_type="meme", content_text="Only top text")
+            await orchestrate(brief)
+
+        args, _ = call_remotion.call_args
+        assert args[1]["topText"] == "Only top text"
+        assert args[1]["bottomText"] == ""
+
+
+class TestInfographicHandler:
+    """Tests for _handle_infographic handler."""
+
+    @pytest.mark.asyncio
+    async def test_infographic_no_image_generation(self):
+        """infographic: designer.py is NOT called — pure Remotion composition."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/infographic.png", "render_id": "r5"})
+        designer_mock = MagicMock()  # NOT AsyncMock — should never be awaited
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_designer", designer_mock), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            brief = _make_brief(
+                media_type="infographic",
+                data_points=[{"label": "Users", "value": "1000"}, {"label": "Revenue", "value": "$50k"}],
+            )
+            await orchestrate(brief)
+
+        # designer was NOT called
+        designer_mock.assert_not_called()
+
+        # Remotion was called with Infographic composition
+        call_remotion.assert_called_once()
+        args, _ = call_remotion.call_args
+        assert args[0] == "Infographic"
+        assert args[1]["dataPoints"] == [{"label": "Users", "value": "1000"}, {"label": "Revenue", "value": "$50k"}]
+
+    @pytest.mark.asyncio
+    async def test_infographic_missing_data_points_raises_value_error(self):
+        """infographic: raises ValueError when data_points is None."""
+        from services.media_orchestrator import orchestrate
+
+        brief = _make_brief(media_type="infographic", data_points=None)
+
+        with pytest.raises(ValueError, match="data_points"):
+            await orchestrate(brief)
+
+    @pytest.mark.asyncio
+    async def test_infographic_empty_data_points_raises_value_error(self):
+        """infographic: raises ValueError when data_points is empty list."""
+        from services.media_orchestrator import orchestrate
+
+        brief = _make_brief(media_type="infographic", data_points=[])
+
+        with pytest.raises(ValueError, match="data_points"):
+            await orchestrate(brief)
+
+
+class TestCostCapEnforcement:
+    """Tests for cost cap enforcement across static handlers."""
+
+    @pytest.mark.asyncio
+    async def test_cost_cap_exceeded_raises_runtime_error(self):
+        """Cost cap exceeded: raises RuntimeError and calls _ledger_skip_remaining."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage = AsyncMock(return_value="ledger_id_123")
+        ledger_update = AsyncMock(return_value=None)
+        # Return False on first check — cap already exceeded
+        ledger_check_cap = AsyncMock(return_value=False)
+        ledger_skip = AsyncMock(return_value=None)
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip):
+
+            brief = _make_brief(media_type="static_image")
+
+            with pytest.raises(RuntimeError, match="Cost cap exceeded"):
+                await orchestrate(brief)
+
+        # _ledger_skip_remaining must be called when cap exceeded
+        ledger_skip.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_provider_failure_marks_ledger_failed(self):
+        """Provider error: _ledger_update called with status='failed' and reason."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage = AsyncMock(return_value="ledger_img_id")
+        ledger_update = AsyncMock(return_value=None)
+        ledger_check_cap = AsyncMock(return_value=True)
+        ledger_skip = AsyncMock(return_value=None)
+
+        # Designer raises an exception
+        failing_designer = AsyncMock(side_effect=Exception("Provider error"))
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_designer", return_value=failing_designer):
+
+            brief = _make_brief(media_type="static_image")
+
+            with pytest.raises(Exception, match="Provider error"):
+                await orchestrate(brief)
+
+        # Verify _ledger_update called with "failed" status and reason containing "Provider error"
+        ledger_update.assert_called_once()
+        call_args = ledger_update.call_args[0]
+        assert call_args[1] == "failed"
+        assert "Provider error" in call_args[2]
