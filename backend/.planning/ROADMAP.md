@@ -145,7 +145,11 @@ Plans:
   3. Generating content without Obsidian configured works identically to before — Scout falls back to Perplexity only with no errors or degraded output
   4. The opt-in UI shows the exact vault subdirectory path ThookAI will read before activation — user must explicitly confirm the path
   5. A path traversal attempt (configuring `OBSIDIAN_BASE_URL` with a path outside the designated subdirectory) is blocked at the service level with a logged error — no vault files outside the designated directory are ever read
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 15-01-PLAN.md — ObsidianConfig dataclass + obsidian_service.py HTTP client + path sandboxing + env vars + tests
+- [ ] 15-02-PLAN.md — Scout vault enrichment + Strategist vault signal injection + graceful degradation + tests
+- [ ] 15-03-PLAN.md — Obsidian config CRUD routes (POST/GET/DELETE) + connection test endpoint + server registration + human verify
 **UI hint**: yes
 
 ### Phase 16: E2E Audit + Security Hardening + Production Ship
@@ -178,5 +182,5 @@ Plans:
 | 12. Strategist Agent | v2.0 | 4/4 | Complete    | 2026-04-01 |
 | 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete    | 2026-04-01 |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/2 | Complete    | 2026-04-01 |
-| 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
+| 15. Obsidian Vault Integration | v2.0 | 0/3 | Planning | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/TBD | Not started | - |
