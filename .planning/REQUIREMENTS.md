@@ -39,9 +39,9 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 - [x] **MEDIA-09**: Talking-head with overlays — HeyGen avatar + text/graphic overlays via Remotion composition
 - [x] **MEDIA-10**: Short-form video (15-60s) — strategic reel with A-roll (talking-head), B-roll (stock/generated), typography overlays, voice narration (ElevenLabs), music bed
 - [x] **MEDIA-11**: Text-on-video — animated text overlays on user-uploaded or generated video clips
-- [ ] **MEDIA-12**: Designer agent plans composition by format — selects optimal content type per platform and content angle
+- [x] **MEDIA-12**: Designer agent plans composition by format — selects optimal content type per platform and content angle
 - [x] **MEDIA-13**: All external assets pre-downloaded to R2 before Remotion render (timeout prevention)
-- [ ] **MEDIA-14**: QC agent checks brand consistency, anti-AI-slop detection, and platform-specific specs on all media output
+- [x] **MEDIA-14**: QC agent checks brand consistency, anti-AI-slop detection, and platform-specific specs on all media output
 
 ### Strategist Agent
 
@@ -155,9 +155,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEDIA-09 | Phase 11 | Complete |
 | MEDIA-10 | Phase 11 | Complete |
 | MEDIA-11 | Phase 11 | Complete |
-| MEDIA-12 | Phase 11 | Pending |
+| MEDIA-12 | Phase 11 | Complete |
 | MEDIA-13 | Phase 11 | Complete |
-| MEDIA-14 | Phase 11 | Pending |
+| MEDIA-14 | Phase 11 | Complete |
 | STRAT-01 | Phase 12 | Pending |
 | STRAT-02 | Phase 12 | Pending |
 | STRAT-03 | Phase 12 | Pending |
