@@ -81,6 +81,8 @@ def _get_workflow_map() -> Dict[str, Optional[str]]:
         "aggregate-daily-analytics": settings.n8n.workflow_aggregate_daily_analytics,
         "cleanup-stale-jobs": settings.n8n.workflow_cleanup_stale_jobs,
         "nightly-strategist": settings.n8n.workflow_nightly_strategist,
+        "analytics-poll-24h": settings.n8n.workflow_analytics_poll_24h,
+        "analytics-poll-7d": settings.n8n.workflow_analytics_poll_7d,
     }
 
 
@@ -111,6 +113,14 @@ WORKFLOW_NOTIFICATION_MAP = {
     "nightly-strategist": {
         "title": "Your daily content strategy is ready",
         "body_template": "New content recommendations are waiting for your review",
+    },
+    "analytics-poll-24h": {
+        "title": "Post analytics updated (24h)",
+        "body_template": "Performance data collected for {polled} published post(s)",
+    },
+    "analytics-poll-7d": {
+        "title": "Post analytics updated (7-day)",
+        "body_template": "7-day performance data collected for {polled} published post(s)",
     },
 }
 
@@ -765,6 +775,25 @@ async def execute_process_scheduled_posts(
                 {"schedule_id": schedule_id},
                 {"$set": {"status": "published", "published_at": now}},
             )
+            # Write publish_results + analytics due-at to the linked content_job (ANLYT-02)
+            # Enables social_analytics.update_post_performance() to find the post identifier
+            # (e.g. tweet_id, linkedin_post_id) needed to call platform APIs for real metrics.
+            job_id = post.get("job_id")
+            if job_id:
+                publish_result_data = result if isinstance(result, dict) else {"success": True}
+                await db.content_jobs.update_one(
+                    {"job_id": job_id},
+                    {
+                        "$set": {
+                            f"publish_results.{platform}": publish_result_data,
+                            "published_at": now,
+                            "analytics_24h_due_at": now + timedelta(hours=24),
+                            "analytics_7d_due_at": now + timedelta(days=7),
+                            "analytics_24h_polled": False,
+                            "analytics_7d_polled": False,
+                        }
+                    },
+                )
             published += 1
             if user_id not in published_user_ids:
                 published_user_ids.append(user_id)
