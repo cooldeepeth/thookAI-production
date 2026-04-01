@@ -228,6 +228,7 @@ class N8nConfig:
     workflow_cleanup_expired_shares: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_EXPIRED_SHARES'))
     workflow_aggregate_daily_analytics: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_AGGREGATE_DAILY_ANALYTICS'))
     workflow_cleanup_stale_jobs: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_STALE_JOBS'))
+    workflow_nightly_strategist: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_NIGHTLY_STRATEGIST'))
 
     def is_configured(self) -> bool:
         """Check if n8n is configured with required URL and secret."""
@@ -261,6 +262,27 @@ class LightRAGConfig:
         assert self.embedding_dim == 1536, (
             f"LIGHTRAG_EMBEDDING_DIM must be 1536 for text-embedding-3-small, got: {self.embedding_dim}"
         )
+
+
+@dataclass
+class StrategistConfig:
+    """Strategist Agent cadence and behaviour configuration.
+
+    These are application constants — not environment-driven.
+    All fields are tuned for launch-day cadence per STRAT-04/05/06.
+    """
+    # STRAT-04: hard cap on recommendation cards delivered per user per day
+    max_cards_per_day: int = 3
+    # STRAT-05: days a dismissed topic is suppressed before re-surfacing
+    suppression_days: int = 14
+    # STRAT-06: consecutive dismissals threshold before delivery rate is halved
+    consecutive_dismissal_threshold: int = 5
+    # Minimum approved content jobs required before running strategist for a user
+    min_approved_content: int = 3
+    # LLM synthesis call timeout in seconds
+    synthesis_timeout: float = 30.0
+    # Documentation field: n8n beat runs the nightly strategist at this UTC hour
+    nightly_cron_hour_utc: int = 3
 
 
 @dataclass
@@ -314,6 +336,7 @@ class Settings:
     n8n: N8nConfig = field(default_factory=N8nConfig)
     lightrag: LightRAGConfig = field(default_factory=LightRAGConfig)
     remotion: RemotionConfig = field(default_factory=RemotionConfig)
+    strategist: StrategistConfig = field(default_factory=StrategistConfig)
 
     def validate(self) -> dict:
         """
