@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
-status: executing
-stopped_at: Completed 16-05-PLAN.md — Stripe billing E2E and OAuth flow tests
-last_updated: "2026-04-01T12:38:18.987Z"
+status: verifying
+stopped_at: Completed 16-01-PLAN.md — E2E critical path + dead link detection tests
+last_updated: "2026-04-01T12:45:10.175Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 24
-  completed_plans: 26
+  completed_plans: 27
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 Phase: 16 (e2e-audit-security-hardening-production-ship) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-01
 
 Progress: [░░░░░░░░░░] 0%
@@ -77,6 +77,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 16 P04 | 147 | 2 tasks | 2 files |
 | Phase 16 P03 | 123 | 2 tasks | 2 files |
 | Phase 16 P05 | 299 | 2 tasks | 2 files |
+| Phase 16-e2e-audit-security-hardening-production-ship P01 | 600 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 16]: Source inspection (inspect.getsource) used for SSE scoping static analysis — confirms user_id filter present without needing live DB mock
 - [Phase 16]: patch.object(google_module.settings, field) preferred over patch('config.settings') for routes that import settings at module level
 - [Phase 16]: Real stripe.error.SignatureVerificationError used as mock side_effect — MagicMock TypeError when exception hierarchy inspected
+- [Phase 16]: SSE stream test uses inspect.getsource() not client.stream() — infinite polling loop prevents sync TestClient from returning
+- [Phase 16]: Lazy import database mocking: patch('database.db') not 'routes.module.db' for n8n_bridge and notifications routes
 
 ### Pending Todos
 
@@ -162,6 +165,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T12:38:18.983Z
-Stopped at: Completed 16-05-PLAN.md — Stripe billing E2E and OAuth flow tests
+Last session: 2026-04-01T12:45:10.171Z
+Stopped at: Completed 16-01-PLAN.md — E2E critical path + dead link detection tests
 Resume file: None

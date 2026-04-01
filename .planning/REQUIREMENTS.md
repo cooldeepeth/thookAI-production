@@ -75,20 +75,20 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 - [x] **OBS-03**: `ObsidianConfig` dataclass in `backend/config.py` with `OBSIDIAN_BASE_URL` and `OBSIDIAN_API_KEY`
 - [x] **OBS-04**: Feature fully degrades when Obsidian not configured — Scout falls back to Perplexity only
 - [x] **OBS-05**: Strict path sandboxing — user designates specific subdirectory, all reads validated against vault root
-- [ ] **OBS-06**: Opt-in UI with explicit "ThookAI will read files from: [path]" display before activation
+- [x] **OBS-06**: Opt-in UI with explicit "ThookAI will read files from: [path]" display before activation
 
 ### E2E Audit + Security Hardening
 
-- [ ] **E2E-01**: Full E2E smoke testing across all user flows (signup → onboard → generate → schedule → publish → analytics → strategy)
-- [ ] **E2E-02**: n8n instance behind private VPC or basic auth, `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` in production
-- [ ] **E2E-03**: LightRAG per-user graph namespace enforcement verified (no cross-user data leakage)
-- [ ] **E2E-04**: SSE event user-id scoping verified (no cross-user notification leakage)
-- [ ] **E2E-05**: Load test confirming Remotion render queue handles 5+ concurrent requests
-- [ ] **E2E-06**: Stripe billing verification with test keys across all plan types
-- [ ] **E2E-07**: OAuth flow testing for all connected platforms (LinkedIn, X, Instagram, Google)
-- [ ] **E2E-08**: API rate limit verification under concurrent load
-- [ ] **E2E-09**: n8n execution history pruning configured (`EXECUTIONS_DATA_MAX_AGE=336`, `EXECUTIONS_DATA_PRUNE_MAX_COUNT=10000`)
-- [ ] **E2E-10**: Dead link detection across all media URLs and API endpoints
+- [x] **E2E-01**: Full E2E smoke testing across all user flows (signup → onboard → generate → schedule → publish → analytics → strategy)
+- [x] **E2E-02**: n8n instance behind private VPC or basic auth, `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` in production
+- [x] **E2E-03**: LightRAG per-user graph namespace enforcement verified (no cross-user data leakage)
+- [x] **E2E-04**: SSE event user-id scoping verified (no cross-user notification leakage)
+- [x] **E2E-05**: Load test confirming Remotion render queue handles 5+ concurrent requests
+- [x] **E2E-06**: Stripe billing verification with test keys across all plan types
+- [x] **E2E-07**: OAuth flow testing for all connected platforms (LinkedIn, X, Instagram, Google)
+- [x] **E2E-08**: API rate limit verification under concurrent load
+- [x] **E2E-09**: n8n execution history pruning configured (`EXECUTIONS_DATA_MAX_AGE=336`, `EXECUTIONS_DATA_PRUNE_MAX_COUNT=10000`)
+- [x] **E2E-10**: Dead link detection across all media URLs and API endpoints
 
 ## Future Requirements
 
@@ -179,17 +179,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBS-03 | Phase 15 | Complete |
 | OBS-04 | Phase 15 | Complete |
 | OBS-05 | Phase 15 | Complete |
-| OBS-06 | Phase 15 | Pending |
-| E2E-01 | Phase 16 | Pending |
-| E2E-02 | Phase 16 | Pending |
-| E2E-03 | Phase 16 | Pending |
-| E2E-04 | Phase 16 | Pending |
-| E2E-05 | Phase 16 | Pending |
-| E2E-06 | Phase 16 | Pending |
-| E2E-07 | Phase 16 | Pending |
-| E2E-08 | Phase 16 | Pending |
-| E2E-09 | Phase 16 | Pending |
-| E2E-10 | Phase 16 | Pending |
+| OBS-06 | Phase 15 | Complete |
+| E2E-01 | Phase 16 | Complete |
+| E2E-02 | Phase 16 | Complete |
+| E2E-03 | Phase 16 | Complete |
+| E2E-04 | Phase 16 | Complete |
+| E2E-05 | Phase 16 | Complete |
+| E2E-06 | Phase 16 | Complete |
+| E2E-07 | Phase 16 | Complete |
+| E2E-08 | Phase 16 | Complete |
+| E2E-09 | Phase 16 | Complete |
+| E2E-10 | Phase 16 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 59 total (6 N8N + 7 LRAG + 14 MEDIA + 7 STRAT + 4 ANLYT + 5 DASH + 6 OBS + 10 E2E)

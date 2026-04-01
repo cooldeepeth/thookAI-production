@@ -32,7 +32,7 @@
 - [x] **Phase 13: Analytics Feedback Loop** - Real social metrics polling 24h + 7d post-publish via n8n; performance data feeds Strategist and persona intelligence (completed 2026-04-01)
 - [x] **Phase 14: Strategy Dashboard + Notifications** - New React page with SSE-driven recommendation feed; one-click approve; dismissed cards archived; strategy API routes (completed 2026-04-01)
 - [ ] **Phase 15: Obsidian Vault Integration** - Scout enrichment from personal vault; Strategist uses vault as recommendation signal; opt-in with explicit path sandboxing
-- [ ] **Phase 16: E2E Audit + Security Hardening + Production Ship** - Full critical-path smoke testing; n8n security config; per-user graph isolation verified; load testing; dead link detection
+- [x] **Phase 16: E2E Audit + Security Hardening + Production Ship** - Full critical-path smoke testing; n8n security config; per-user graph isolation verified; load testing; dead link detection (completed 2026-04-01)
 
 ## Phase Details
 
@@ -160,7 +160,7 @@ Plans:
   5. All Stripe billing flows, OAuth platform connections, and API rate limits work correctly under concurrent load — no silent failures
 **Plans**: 5 plans
 Plans:
-- [ ] 16-01-PLAN.md — E2E critical path smoke test + dead link detection
+- [x] 16-01-PLAN.md — E2E critical path smoke test + dead link detection
 - [x] 16-02-PLAN.md — n8n security hardening (production Docker Compose + verification tests)
 - [x] 16-03-PLAN.md — LightRAG per-user isolation + SSE notification scoping verification
 - [x] 16-04-PLAN.md — Remotion load test + API rate limit concurrent verification
@@ -185,4 +185,4 @@ Plans:
 | 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete    | 2026-04-01 |
 | 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete   | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
-| 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 4/5 | In Progress|  |
+| 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete   | 2026-04-01 |
