@@ -161,9 +161,9 @@ Plans:
 **Plans**: 5 plans
 Plans:
 - [ ] 16-01-PLAN.md — E2E critical path smoke test + dead link detection
-- [ ] 16-02-PLAN.md — n8n security hardening (production Docker Compose + verification tests)
-- [ ] 16-03-PLAN.md — LightRAG per-user isolation + SSE notification scoping verification
-- [ ] 16-04-PLAN.md — Remotion load test + API rate limit concurrent verification
+- [x] 16-02-PLAN.md — n8n security hardening (production Docker Compose + verification tests)
+- [x] 16-03-PLAN.md — LightRAG per-user isolation + SSE notification scoping verification
+- [x] 16-04-PLAN.md — Remotion load test + API rate limit concurrent verification
 - [ ] 16-05-PLAN.md — Stripe billing E2E + OAuth flow verification for all platforms
 
 ## Progress
@@ -185,4 +185,4 @@ Plans:
 | 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete    | 2026-04-01 |
 | 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete   | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
-| 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/5 | Planning | - |
+| 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 3/5 | In Progress|  |

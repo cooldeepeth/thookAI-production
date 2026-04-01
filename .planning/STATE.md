@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
-status: verifying
-stopped_at: "Completed 15-03-PLAN.md — Obsidian config CRUD routes (checkpoint: human-verify)"
-last_updated: "2026-04-01T12:00:32.780Z"
+status: executing
+stopped_at: Completed 16-03-PLAN.md — LightRAG isolation and SSE scoping tests
+last_updated: "2026-04-01T12:35:02.842Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
   completed_phases: 6
-  total_plans: 19
-  completed_plans: 21
+  total_plans: 24
+  completed_plans: 25
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Personalized content creation at scale — every user gets a unique voice fingerprint that drives all content generation, with real social platform publishing and analytics feedback loops.
-**Current focus:** Phase 13 — analytics-feedback-loop
+**Current focus:** Phase 16 — e2e-audit-security-hardening-production-ship
 
 ## Current Position
 
-Phase: 14
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 16 (e2e-audit-security-hardening-production-ship) — EXECUTING
+Plan: 4 of 5
+Status: Ready to execute
 Last activity: 2026-04-01
 
 Progress: [░░░░░░░░░░] 0%
@@ -73,6 +73,9 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 14-strategy-dashboard-notifications P02 | 8 | 2 tasks | 5 files |
 | Phase 15-obsidian-vault-integration P01 | 294 | 1 tasks | 4 files |
 | Phase 15 P03 | 151 | 1 tasks | 3 files |
+| Phase 16 P02 | 3 | 2 tasks | 4 files |
+| Phase 16 P04 | 147 | 2 tasks | 2 files |
+| Phase 16 P03 | 123 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -137,6 +140,11 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 15-obsidian-vault-integration]: is_configured() is synchronous (settings check only); _resolve_config() is async for accurate per-user check
 - [Phase 15]: Fernet key normalisation mirrors routes/platforms.py _get_cipher() — SHA-256 hash for non-44-byte keys ensures any FERNET_KEY value works
 - [Phase 15]: POST /api/obsidian/test returns connected=false with error message (not 500) for graceful frontend vault-unreachable state handling
+- [Phase 16]: Production docker-compose.prod.yml uses ports:[] to remove host-published ports for n8n, lightrag, remotion, mongo, redis, postgres-n8n — defence-in-depth beyond plan spec
+- [Phase 16]: thookai-internal network uses internal:true to block external routing at Docker daemon level — structural isolation not just firewall rules
+- [Phase 16]: Two-mode test design for Remotion: unit tests mock HTTP and always run in CI; integration tests require REMOTION_URL env var
+- [Phase 16]: _poll_until_done helper extracted as reusable coroutine for both unit mock polling and integration real polling
+- [Phase 16]: Source inspection (inspect.getsource) used for SSE scoping static analysis — confirms user_id filter present without needing live DB mock
 
 ### Pending Todos
 
@@ -151,6 +159,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T12:00:23.904Z
-Stopped at: Completed 15-03-PLAN.md — Obsidian config CRUD routes (checkpoint: human-verify)
+Last session: 2026-04-01T12:35:02.834Z
+Stopped at: Completed 16-03-PLAN.md — LightRAG isolation and SSE scoping tests
 Resume file: None
