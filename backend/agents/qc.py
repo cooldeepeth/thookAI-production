@@ -5,7 +5,7 @@ import uuid
 import logging
 from typing import Any, Dict, List, Optional
 from services.llm_client import LlmChat, UserMessage
-from services.llm_keys import chat_constructor_key, openai_available
+from services.llm_keys import chat_constructor_key, openai_available, anthropic_available
 
 logger = logging.getLogger(__name__)
 
@@ -260,7 +260,6 @@ async def validate_media_output(
     # If Anthropic vision is available, use Claude to check for AI artifacts.
     # Otherwise pass gracefully with a note.
     try:
-        from services.llm_keys import anthropic_available
         vision_available = anthropic_available()
     except Exception:
         vision_available = False
