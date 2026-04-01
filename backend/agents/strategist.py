@@ -63,7 +63,7 @@ Each recommendation object MUST have ALL of these keys:
   "hook_options": ["hook 1", "hook 2", "hook 3"],
   "platform": "linkedin|x|instagram",
   "why_now": "Why now: <clear rationale linking signal to timing>",
-  "signal_source": "persona|performance|knowledge_graph|trending",
+  "signal_source": "persona|performance|knowledge_graph|trending|vault",
   "generate_payload": {
     "content_type": "post|carousel|thread|story|reel",
     "raw_input": "Full content brief — topic, angle, hook direction, persona notes"
@@ -74,6 +74,7 @@ Guidance on why_now:
 - Reference performance data when available: "Why now: Your last 3 posts on [topic] averaged 2x your usual engagement"
 - Reference knowledge gaps: "Why now: Your knowledge graph shows [entity] is frequently referenced but never directly covered"
 - Reference timing/context: "Why now: This topic aligns with your persona pillar [pillar] and you haven't posted on it in 14+ days"
+- Reference vault notes: "Why now: You just added a research note on [topic] to your vault — this is fresh context for a timely post"
 - Be specific, not generic.
 """
 
@@ -234,11 +235,20 @@ async def _gather_user_context(user_id: str) -> dict:
 
     knowledge_gaps = await _query_content_gaps(user_id)
 
+    # Obsidian vault signals (OBS-02) — lazy import, non-fatal
+    vault_notes: list = []
+    try:
+        from services.obsidian_service import get_recent_notes  # noqa: PLC0415
+        vault_notes = await get_recent_notes(user_id=user_id, hours=24, max_results=10)
+    except Exception as e:
+        logger.warning("Obsidian recent notes fetch failed for %s (non-fatal): %s", user_id, e)
+
     return {
         "persona": persona,
         "recent_content": recent_jobs,
         "performance_signals": performance_signals,
         "knowledge_gaps": knowledge_gaps,
+        "vault_notes": vault_notes,
     }
 
 
@@ -279,6 +289,20 @@ async def _build_synthesis_prompt(context: dict, suppressed_topics: List[str]) -
     else:
         kg_section = knowledge_gaps[:800]  # cap to avoid bloating LLM context
 
+    # Vault signals (OBS-02) — cap to 5 notes × 200 chars to avoid LLM context bloat
+    vault_notes = context.get("vault_notes", [])
+    if vault_notes:
+        vault_lines = [
+            f"- {n.get('title', 'Untitled')} (modified: {n.get('modified', 'unknown')})"
+            for n in vault_notes[:5]
+        ]
+        vault_section = (
+            "VAULT SIGNALS (new research notes — strong recommendation triggers):\n"
+            + "\n".join(vault_lines)
+        )
+    else:
+        vault_section = ""
+
     # Suppressed topics
     if suppressed_topics:
         suppressed_section = "SUPPRESSED TOPICS (do NOT recommend these):\n" + "\n".join(
@@ -286,6 +310,8 @@ async def _build_synthesis_prompt(context: dict, suppressed_topics: List[str]) -
         )
     else:
         suppressed_section = "No topics currently suppressed."
+
+    vault_block = f"\n{vault_section}\n" if vault_section else ""
 
     return f"""CREATOR PROFILE:
 {persona_summary}
@@ -298,7 +324,7 @@ PERFORMANCE SIGNALS:
 
 KNOWLEDGE GRAPH GAPS:
 {kg_section}
-
+{vault_block}
 {suppressed_section}
 
 Generate 1–3 high-value recommendation cards for this creator. Follow the JSON schema exactly.

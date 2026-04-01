@@ -291,7 +291,7 @@ async def run_agent_pipeline_legacy(
         research_needed = commander_output.get("research_needed", True)
         if research_needed:
             scout_output = await asyncio.wait_for(
-                run_scout(raw_input, commander_output.get("research_query", raw_input), platform), timeout=25.0
+                run_scout(raw_input, commander_output.get("research_query", raw_input), platform, user_id=user_id), timeout=25.0
             )
         else:
             scout_output = {"findings": "No external research required for this content.", "citations": [], "sources_found": 0}
