@@ -4,13 +4,14 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, PenLine, Brain, Calendar, BarChart2,
   RefreshCw, Link2, BookOpen, Settings, Zap, LogOut, ChevronRight,
-  Building2, LayoutTemplate, CreditCard, FolderOpen, ShieldCheck
+  Building2, LayoutTemplate, CreditCard, FolderOpen, ShieldCheck, Lightbulb
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/dashboard/strategy", label: "Strategy", icon: Lightbulb, badge: "New" },
   { to: "/dashboard/studio", label: "Content Studio", icon: PenLine },
   { to: "/dashboard/persona", label: "Persona Engine", icon: Brain },
   { to: "/dashboard/repurpose", label: "Repurpose Agent", icon: RefreshCw },

@@ -18,6 +18,7 @@ import Campaigns from "./Campaigns";
 import ComingSoon from "./ComingSoon";
 import Admin from "./Admin";
 import AdminUsers from "./AdminUsers";
+import StrategyDashboard from "./StrategyDashboard";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,6 +29,7 @@ export default function Dashboard() {
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
         <Routes>
           <Route path="/" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Dashboard" /><DashboardHome /></>} />
+          <Route path="/strategy" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Strategy" /><StrategyDashboard /></>} />
           <Route path="/studio" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Content Studio" /><ContentStudio /></>} />
           <Route path="/persona" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Persona Engine" /><PersonaEngine /></>} />
           <Route path="/repurpose" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Repurpose Agent" /><RepurposeAgent /></>} />
