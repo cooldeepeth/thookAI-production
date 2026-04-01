@@ -29,7 +29,7 @@
 - [x] **Phase 10: LightRAG Knowledge Graph** - Deploy per-user knowledge graph sidecar; wire Thinker agent with multi-hop retrieval; lock embedding model before first insert (completed 2026-03-31)
 - [x] **Phase 11: Multi-Model Media Orchestration** - Media Orchestrator service routing to best provider per asset type; Remotion compositions for all formats; credit ledger for partial-failure accounting (completed 2026-04-01)
 - [x] **Phase 12: Strategist Agent** - Nightly n8n-triggered agent synthesizing LightRAG + persona + analytics into ranked recommendation cards with cadence controls (completed 2026-04-01)
-- [ ] **Phase 13: Analytics Feedback Loop** - Real social metrics polling 24h + 7d post-publish via n8n; performance data feeds Strategist and persona intelligence
+- [x] **Phase 13: Analytics Feedback Loop** - Real social metrics polling 24h + 7d post-publish via n8n; performance data feeds Strategist and persona intelligence (completed 2026-04-01)
 - [ ] **Phase 14: Strategy Dashboard + Notifications** - New React page with SSE-driven recommendation feed; one-click approve; dismissed cards archived; strategy API routes
 - [ ] **Phase 15: Obsidian Vault Integration** - Scout enrichment from personal vault; Strategist uses vault as recommendation signal; opt-in with explicit path sandboxing
 - [ ] **Phase 16: E2E Audit + Security Hardening + Production Ship** - Full critical-path smoke testing; n8n security config; per-user graph isolation verified; load testing; dead link detection
@@ -117,7 +117,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 13-01-PLAN.md — N8nConfig analytics fields + DB indexes + publish_results write-back to content_jobs
-- [ ] 13-02-PLAN.md — poll-analytics-24h/7d execute endpoints + comprehensive ANLYT tests
+- [x] 13-02-PLAN.md — poll-analytics-24h/7d execute endpoints + comprehensive ANLYT tests
 
 ### Phase 14: Strategy Dashboard + Notifications
 **Goal**: Users have a dedicated Strategy page that surfaces Strategist recommendations in real time via SSE, with one-click workflows and a complete history of past recommendations
@@ -173,7 +173,7 @@ Plans:
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
 | 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
 | 12. Strategist Agent | v2.0 | 4/4 | Complete    | 2026-04-01 |
-| 13. Analytics Feedback Loop | v2.0 | 1/2 | In Progress|  |
+| 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete   | 2026-04-01 |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/TBD | Not started | - |
