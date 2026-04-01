@@ -55,10 +55,10 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### Analytics Feedback Loop
 
-- [ ] **ANLYT-01**: Real social metrics polling (24h + 7d after publish) via n8n workflows for LinkedIn, X, and Instagram
-- [ ] **ANLYT-02**: Performance data written to `content_jobs.performance_data` with engagement, reach, impressions per platform
-- [ ] **ANLYT-03**: Aggregated performance intelligence updates `persona_engines.performance_intelligence` with real optimal_posting_times
-- [ ] **ANLYT-04**: Analytics data feeds into Strategist Agent for smarter recommendations (each publish cycle improves output)
+- [x] **ANLYT-01**: Real social metrics polling (24h + 7d after publish) via n8n workflows for LinkedIn, X, and Instagram
+- [x] **ANLYT-02**: Performance data written to `content_jobs.performance_data` with engagement, reach, impressions per platform
+- [x] **ANLYT-03**: Aggregated performance intelligence updates `persona_engines.performance_intelligence` with real optimal_posting_times
+- [x] **ANLYT-04**: Analytics data feeds into Strategist Agent for smarter recommendations (each publish cycle improves output)
 
 ### Strategy Dashboard
 
@@ -165,10 +165,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STRAT-05 | Phase 12 | Complete |
 | STRAT-06 | Phase 12 | Complete |
 | STRAT-07 | Phase 12 | Complete |
-| ANLYT-01 | Phase 13 | Pending |
-| ANLYT-02 | Phase 13 | Pending |
-| ANLYT-03 | Phase 13 | Pending |
-| ANLYT-04 | Phase 13 | Pending |
+| ANLYT-01 | Phase 13 | Complete |
+| ANLYT-02 | Phase 13 | Complete |
+| ANLYT-03 | Phase 13 | Complete |
+| ANLYT-04 | Phase 13 | Complete |
 | DASH-01 | Phase 14 | Pending |
 | DASH-02 | Phase 14 | Pending |
 | DASH-03 | Phase 14 | Pending |
