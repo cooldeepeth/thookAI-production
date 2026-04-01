@@ -102,7 +102,7 @@ Plans:
 Plans:
 - [x] 12-01-PLAN.md — StrategistConfig dataclass + N8nConfig workflow field + DB indexes + .env.example
 - [ ] 12-02-PLAN.md — Strategist agent core (strategist.py) with cadence controls, LightRAG integration, dismissal tracking
-- [ ] 12-03-PLAN.md — n8n bridge execute endpoint + workflow map + notification map
+- [x] 12-03-PLAN.md — n8n bridge execute endpoint + workflow map + notification map
 - [ ] 12-04-PLAN.md — Comprehensive tests for all STRAT requirements (STRAT-01 through STRAT-07)
 
 ### Phase 13: Analytics Feedback Loop
@@ -169,7 +169,7 @@ Plans:
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
 | 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
-| 12. Strategist Agent | v2.0 | 1/4 | In Progress|  |
+| 12. Strategist Agent | v2.0 | 2/4 | In Progress|  |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |

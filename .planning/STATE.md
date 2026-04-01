@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
 status: executing
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-04-01T06:29:48.341Z"
+stopped_at: Completed 12-03-PLAN.md
+last_updated: "2026-04-01T06:33:34.995Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 12 (strategist-agent) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-01
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 11 P04 | 5 | 2 tasks | 2 files |
 | Phase 11 P05 | 399 | 2 tasks | 4 files |
 | Phase 12 P01 | 1 | 2 tasks | 3 files |
+| Phase 12-strategist-agent P03 | 2 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,7 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 12]: StrategistConfig fields are application constants (not env-driven) — cadence parameters are launch-tuned values, not operator config
 - [Phase 12]: Compound index (user_id, topic, status) on strategy_recommendations is MANDATORY — enables STRAT-05 14-day suppression as a single indexed query
 - [Phase 12]: strategist_state has unique user_id index — one state document per user, upserted by nightly runner
+- [Phase 12-strategist-agent]: nightly-strategist (without run- prefix) is the workflow map key; /execute/run-nightly-strategist (with run- prefix) is the endpoint path — matching existing n8n_bridge.py patterns
 
 ### Pending Todos
 
@@ -121,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T06:29:48.337Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-04-01T06:33:34.991Z
+Stopped at: Completed 12-03-PLAN.md
 Resume file: None
