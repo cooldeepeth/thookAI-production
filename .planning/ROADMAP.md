@@ -98,7 +98,12 @@ Plans:
   3. One-click approve on a card fires content generation with a pre-filled payload — no additional form fields required before generation starts
   4. Dismissing a card archives it and suppresses the same topic for 14 days — the user never sees the same topic resurface within the suppression window
   5. After 5 consecutive dismissals, the generation rate halves and a "calibrate preferences" prompt appears — the agent adapts rather than continuing to spam
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 12-01-PLAN.md — StrategistConfig dataclass + N8nConfig workflow field + DB indexes + .env.example
+- [ ] 12-02-PLAN.md — Strategist agent core (strategist.py) with cadence controls, LightRAG integration, dismissal tracking
+- [ ] 12-03-PLAN.md — n8n bridge execute endpoint + workflow map + notification map
+- [ ] 12-04-PLAN.md — Comprehensive tests for all STRAT requirements (STRAT-01 through STRAT-07)
 
 ### Phase 13: Analytics Feedback Loop
 **Goal**: Real engagement data from LinkedIn, X, and Instagram flows back into the platform 24 hours and 7 days after each published post, feeding Strategist recommendations and persona intelligence
@@ -164,7 +169,7 @@ Plans:
 | 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
 | 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
-| 12. Strategist Agent | v2.0 | 0/TBD | Not started | - |
+| 12. Strategist Agent | v2.0 | 0/4 | Planning complete | - |
 | 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
