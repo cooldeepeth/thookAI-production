@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
 status: verifying
-stopped_at: "Completed 14-02-PLAN.md — checkpoint:human-verify Task 3"
-last_updated: "2026-04-01T10:11:02.995Z"
+stopped_at: Completed 15-01-PLAN.md — ObsidianConfig + obsidian_service.py foundation
+last_updated: "2026-04-01T11:54:39.635Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 19
-  completed_plans: 19
+  completed_plans: 20
   percent: 0
 ---
 
@@ -71,6 +71,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 13 P02 | 285 | 2 tasks | 2 files |
 | Phase 14-strategy-dashboard-notifications P01 | 21 | 2 tasks | 3 files |
 | Phase 14-strategy-dashboard-notifications P02 | 8 | 2 tasks | 5 files |
+| Phase 15-obsidian-vault-integration P01 | 294 | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 14-strategy-dashboard-notifications]: DismissRequest body is Optional — dismiss endpoint works with or without a reason body
 - [Phase 14-strategy-dashboard-notifications]: handleApprove validates generate_payload fields before firing /api/content/create to surface backend errors early
 - [Phase 14-strategy-dashboard-notifications]: SSE refresh uses useRef seenNotifIds set to prevent stale closure re-fires on already-seen notifications
+- [Phase 15-obsidian-vault-integration]: PurePosixPath.parts for vault path traversal prevention — no filesystem access required, works for remote vault paths
+- [Phase 15-obsidian-vault-integration]: Per-user obsidian_config in db.users with Fernet-encrypted API key takes precedence over global env fallback
+- [Phase 15-obsidian-vault-integration]: is_configured() is synchronous (settings check only); _resolve_config() is async for accurate per-user check
 
 ### Pending Todos
 
@@ -144,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T10:11:02.991Z
-Stopped at: Completed 14-02-PLAN.md — checkpoint:human-verify Task 3
+Last session: 2026-04-01T11:54:39.631Z
+Stopped at: Completed 15-01-PLAN.md — ObsidianConfig + obsidian_service.py foundation
 Resume file: None

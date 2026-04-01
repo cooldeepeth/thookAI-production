@@ -62,19 +62,19 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### Strategy Dashboard
 
-- [ ] **DASH-01**: New React page with SSE-driven recommendation card feed (max 3 active cards shown)
-- [ ] **DASH-02**: One-click "Approve" button fires `POST /api/content/generate` with pre-filled payload from card
-- [ ] **DASH-03**: Dismissed cards archived to History tab (not deleted)
-- [ ] **DASH-04**: SSE notifications for job completion, trending topic alerts, scheduled post published
-- [ ] **DASH-05**: Strategy routes (`GET /api/strategy`, `POST /api/strategy/:id/approve`, `POST /api/strategy/:id/dismiss`)
+- [x] **DASH-01**: New React page with SSE-driven recommendation card feed (max 3 active cards shown)
+- [x] **DASH-02**: One-click "Approve" button fires `POST /api/content/generate` with pre-filled payload from card
+- [x] **DASH-03**: Dismissed cards archived to History tab (not deleted)
+- [x] **DASH-04**: SSE notifications for job completion, trending topic alerts, scheduled post published
+- [x] **DASH-05**: Strategy routes (`GET /api/strategy`, `POST /api/strategy/:id/approve`, `POST /api/strategy/:id/dismiss`)
 
 ### Obsidian Vault Integration
 
 - [ ] **OBS-01**: Scout agent enriched with Obsidian vault search results during content research phase
 - [ ] **OBS-02**: Strategist uses recent vault files as recommendation trigger signal (new notes → new content ideas)
-- [ ] **OBS-03**: `ObsidianConfig` dataclass in `backend/config.py` with `OBSIDIAN_BASE_URL` and `OBSIDIAN_API_KEY`
-- [ ] **OBS-04**: Feature fully degrades when Obsidian not configured — Scout falls back to Perplexity only
-- [ ] **OBS-05**: Strict path sandboxing — user designates specific subdirectory, all reads validated against vault root
+- [x] **OBS-03**: `ObsidianConfig` dataclass in `backend/config.py` with `OBSIDIAN_BASE_URL` and `OBSIDIAN_API_KEY`
+- [x] **OBS-04**: Feature fully degrades when Obsidian not configured — Scout falls back to Perplexity only
+- [x] **OBS-05**: Strict path sandboxing — user designates specific subdirectory, all reads validated against vault root
 - [ ] **OBS-06**: Opt-in UI with explicit "ThookAI will read files from: [path]" display before activation
 
 ### E2E Audit + Security Hardening
@@ -169,16 +169,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ANLYT-02 | Phase 13 | Complete |
 | ANLYT-03 | Phase 13 | Complete |
 | ANLYT-04 | Phase 13 | Complete |
-| DASH-01 | Phase 14 | Pending |
-| DASH-02 | Phase 14 | Pending |
-| DASH-03 | Phase 14 | Pending |
-| DASH-04 | Phase 14 | Pending |
-| DASH-05 | Phase 14 | Pending |
+| DASH-01 | Phase 14 | Complete |
+| DASH-02 | Phase 14 | Complete |
+| DASH-03 | Phase 14 | Complete |
+| DASH-04 | Phase 14 | Complete |
+| DASH-05 | Phase 14 | Complete |
 | OBS-01 | Phase 15 | Pending |
 | OBS-02 | Phase 15 | Pending |
-| OBS-03 | Phase 15 | Pending |
-| OBS-04 | Phase 15 | Pending |
-| OBS-05 | Phase 15 | Pending |
+| OBS-03 | Phase 15 | Complete |
+| OBS-04 | Phase 15 | Complete |
+| OBS-05 | Phase 15 | Complete |
 | OBS-06 | Phase 15 | Pending |
 | E2E-01 | Phase 16 | Pending |
 | E2E-02 | Phase 16 | Pending |
