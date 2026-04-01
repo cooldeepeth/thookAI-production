@@ -114,7 +114,10 @@ Plans:
   2. Performance data is written to `content_jobs.performance_data` with both 24h and 7d snapshots — the content detail view shows two data points over time
   3. `persona_engines.performance_intelligence.optimal_posting_times` updates after each 7-day analytics cycle — posting time recommendations change as real data accumulates
   4. The Strategist Agent's next nightly run incorporates the latest performance data — recommendation rationales reference actual post performance ("your last 3 posts about X underperformed; try angle Y")
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 13-01-PLAN.md — N8nConfig analytics fields + DB indexes + publish_results write-back to content_jobs
+- [ ] 13-02-PLAN.md — poll-analytics-24h/7d execute endpoints + comprehensive ANLYT tests
 
 ### Phase 14: Strategy Dashboard + Notifications
 **Goal**: Users have a dedicated Strategy page that surfaces Strategist recommendations in real time via SSE, with one-click workflows and a complete history of past recommendations
@@ -170,7 +173,7 @@ Plans:
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
 | 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
 | 12. Strategist Agent | v2.0 | 4/4 | Complete    | 2026-04-01 |
-| 13. Analytics Feedback Loop | v2.0 | 0/TBD | Not started | - |
+| 13. Analytics Feedback Loop | v2.0 | 0/2 | Not started | - |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/TBD | Not started | - |
