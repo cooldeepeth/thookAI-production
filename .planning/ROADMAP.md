@@ -158,7 +158,13 @@ Plans:
   3. LightRAG per-user graph isolation is verified: authenticated as User A, a direct query to the LightRAG API with User B's user_id returns zero results
   4. Remotion render queue handles 5 concurrent render requests without timeout or OOM — load test results documented in audit report
   5. All Stripe billing flows, OAuth platform connections, and API rate limits work correctly under concurrent load — no silent failures
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 16-01-PLAN.md — E2E critical path smoke test + dead link detection
+- [ ] 16-02-PLAN.md — n8n security hardening (production Docker Compose + verification tests)
+- [ ] 16-03-PLAN.md — LightRAG per-user isolation + SSE notification scoping verification
+- [ ] 16-04-PLAN.md — Remotion load test + API rate limit concurrent verification
+- [ ] 16-05-PLAN.md — Stripe billing E2E + OAuth flow verification for all platforms
 
 ## Progress
 
@@ -179,4 +185,4 @@ Plans:
 | 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete    | 2026-04-01 |
 | 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete   | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
-| 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/TBD | Not started | - |
+| 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/5 | Planning | - |
