@@ -129,7 +129,10 @@ Plans:
   3. Dismissed cards move to a History tab and are never permanently deleted — user can browse all past recommendations
   4. User receives an SSE notification when a content job completes, when a scheduled post publishes, and when a new trending topic recommendation arrives
   5. Strategy API routes (`GET /api/strategy`, `POST /api/strategy/:id/approve`, `POST /api/strategy/:id/dismiss`) respond correctly and are protected by auth middleware
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 14-01-PLAN.md — Strategy API routes (GET feed, POST approve, POST dismiss) + server registration + unit tests
+- [ ] 14-02-PLAN.md — StrategyDashboard React page + useStrategyFeed hook + sidebar nav + NotificationBell icon
 **UI hint**: yes
 
 ### Phase 15: Obsidian Vault Integration
@@ -150,7 +153,7 @@ Plans:
 **Depends on**: Phases 9-15 (all v2.0 features complete)
 **Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07, E2E-08, E2E-09, E2E-10
 **Success Criteria** (what must be TRUE):
-  1. The full critical path (signup → onboard → generate → schedule → publish → analytics → strategy recommend → one-click approve → publish again) completes without errors in a smoke test run
+  1. The full critical path (signup -> onboard -> generate -> schedule -> publish -> analytics -> strategy recommend -> one-click approve -> publish again) completes without errors in a smoke test run
   2. The n8n instance is not publicly accessible — direct HTTP requests to the n8n URL from outside the private network return 401 or connection refused; `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` is confirmed in production env
   3. LightRAG per-user graph isolation is verified: authenticated as User A, a direct query to the LightRAG API with User B's user_id returns zero results
   4. Remotion render queue handles 5 concurrent render requests without timeout or OOM — load test results documented in audit report
@@ -174,6 +177,6 @@ Plans:
 | 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
 | 12. Strategist Agent | v2.0 | 4/4 | Complete    | 2026-04-01 |
 | 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete    | 2026-04-01 |
-| 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
+| 14. Strategy Dashboard + Notifications | v2.0 | 0/2 | Not started | - |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/TBD | Not started | - |
