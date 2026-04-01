@@ -163,7 +163,7 @@ class OrchestrateRequest(BaseModel):
     @field_validator("media_type")
     @classmethod
     def validate_media_type(cls, v: str) -> str:
-        valid_types = set(MEDIA_TYPE_COST_CAPS.keys())
+        valid_types = set(MEDIA_TYPE_COST_CAPS.keys()) | {"auto"}
         if v not in valid_types:
             raise ValueError(
                 f"Invalid media_type '{v}'. Must be one of: {', '.join(sorted(valid_types))}"
@@ -215,11 +215,27 @@ async def orchestrate_media(
     # Generate or use provided job_id
     job_id = request.job_id or f"media_{uuid.uuid4().hex[:16]}"
 
+    # Auto-select format if media_type is "auto" (MEDIA-12)
+    media_type = request.media_type
+    if media_type == "auto":
+        from agents.designer import select_media_format
+        format_result = select_media_format(
+            platform=request.platform,
+            content_text=request.content_text,
+            has_data_points=bool(request.data_points),
+            has_avatar=bool(request.avatar_id),
+        )
+        media_type = format_result["media_type"]
+        logger.info(
+            "Auto-selected media format: %s (reason: %s, confidence: %s)",
+            media_type, format_result.get("reason"), format_result.get("confidence"),
+        )
+
     # Build MediaBrief
     brief = MediaBrief(
         job_id=job_id,
         user_id=user_id,
-        media_type=request.media_type,
+        media_type=media_type,
         platform=request.platform,
         content_text=request.content_text,
         persona_card=persona_card,

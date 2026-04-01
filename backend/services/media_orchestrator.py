@@ -372,9 +372,9 @@ async def _call_remotion(
             response = await client.post(
                 f"{base_url}/render",
                 json={
-                    "composition": composition_id,
-                    "inputProps": input_props,
-                    "renderType": render_type,
+                    "composition_id": composition_id,
+                    "input_props": input_props,
+                    "render_type": render_type,
                 },
             )
             response.raise_for_status()
@@ -1158,8 +1158,28 @@ async def orchestrate(brief: MediaBrief) -> Dict[str, Any]:
 
     result = await handler(brief, cost_cap)
 
+    # Run QC media validation (MEDIA-14) — non-fatal
+    output_url = result.get("url")
+    if output_url:
+        try:
+            from agents.qc import validate_media_output
+            qc_result = validate_media_output(
+                media_url=output_url,
+                media_type=brief.media_type,
+                platform=brief.platform,
+                persona_card=brief.persona_card,
+            )
+            if not qc_result.get("passed", True):
+                logger.warning(
+                    "QC media validation failed for job %s: %s",
+                    brief.job_id,
+                    [c for c in qc_result.get("checks", []) if not c.get("passed")],
+                )
+        except Exception as e:
+            logger.warning("QC media validation error (non-fatal): %s", e)
+
     return {
-        "url": result.get("url"),
+        "url": output_url,
         "render_id": result.get("render_id"),
         "media_type": brief.media_type,
         "job_id": brief.job_id,
