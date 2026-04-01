@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
 status: executing
-stopped_at: Completed 16-03-PLAN.md — LightRAG isolation and SSE scoping tests
-last_updated: "2026-04-01T12:35:02.842Z"
+stopped_at: Completed 16-05-PLAN.md — Stripe billing E2E and OAuth flow tests
+last_updated: "2026-04-01T12:38:18.987Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 24
-  completed_plans: 25
+  completed_plans: 26
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 16 (e2e-audit-security-hardening-production-ship) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-01
 
@@ -76,6 +76,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 16 P02 | 3 | 2 tasks | 4 files |
 | Phase 16 P04 | 147 | 2 tasks | 2 files |
 | Phase 16 P03 | 123 | 2 tasks | 2 files |
+| Phase 16 P05 | 299 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 16]: Two-mode test design for Remotion: unit tests mock HTTP and always run in CI; integration tests require REMOTION_URL env var
 - [Phase 16]: _poll_until_done helper extracted as reusable coroutine for both unit mock polling and integration real polling
 - [Phase 16]: Source inspection (inspect.getsource) used for SSE scoping static analysis — confirms user_id filter present without needing live DB mock
+- [Phase 16]: patch.object(google_module.settings, field) preferred over patch('config.settings') for routes that import settings at module level
+- [Phase 16]: Real stripe.error.SignatureVerificationError used as mock side_effect — MagicMock TypeError when exception hierarchy inspected
 
 ### Pending Todos
 
@@ -159,6 +162,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T12:35:02.834Z
-Stopped at: Completed 16-03-PLAN.md — LightRAG isolation and SSE scoping tests
+Last session: 2026-04-01T12:38:18.983Z
+Stopped at: Completed 16-05-PLAN.md — Stripe billing E2E and OAuth flow tests
 Resume file: None
