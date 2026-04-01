@@ -13,6 +13,7 @@ Endpoints:
   POST /api/n8n/execute/refresh-monthly-credits  — Refresh monthly credits for users
   POST /api/n8n/execute/aggregate-daily-analytics — Aggregate daily analytics stats
   POST /api/n8n/execute/process-scheduled-posts  — Publish due scheduled posts via real publisher
+  POST /api/n8n/execute/run-nightly-strategist   — Run Strategist agent for all eligible users
 
 Security:
   - Callback endpoint verifies X-ThookAI-Signature header using HMAC-SHA256
@@ -811,4 +812,27 @@ async def execute_process_scheduled_posts(
             "published_user_ids": published_user_ids,
         },
         "executed_at": now.isoformat(),
+    }
+
+
+@router.post("/execute/run-nightly-strategist")
+async def execute_run_nightly_strategist(
+    request: Request,
+    _payload: dict = Depends(_verify_n8n_request),
+) -> Dict[str, Any]:
+    """
+    Run the nightly Strategist agent for all eligible users.
+    Called by n8n at 03:00 UTC daily.
+
+    Synthesizes LightRAG + analytics + persona signals into ranked
+    recommendation cards written to db.strategy_recommendations.
+    Never triggers content generation directly.
+    """
+    from agents.strategist import run_strategist_for_all_users
+
+    result = await run_strategist_for_all_users()
+    return {
+        "status": "completed",
+        "result": result,
+        "executed_at": datetime.now(timezone.utc).isoformat(),
     }
