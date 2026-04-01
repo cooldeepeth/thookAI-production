@@ -68,8 +68,8 @@ Personalized content creation at scale — every user gets a unique voice finger
 - [x] Strategist Agent for proactive content recommendations — Phase 12
 - [ ] Strategy Dashboard with recommendation cards and one-click approve
 - [ ] SSE notifications via n8n (job completion, trending topics, scheduled post published)
-- [ ] Analytics feedback loop (real social metrics 24h + 7d after publish)
-- [ ] Performance intelligence from real data (optimal_posting_times)
+- [x] Analytics feedback loop (real social metrics 24h + 7d after publish) — Phase 13
+- [x] Performance intelligence from real data (optimal_posting_times) — Phase 13
 - [ ] Obsidian vault integration via obsidian-cli into Scout agent
 - [ ] E2E audit, security hardening, and production ship
 
@@ -151,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 12 complete — Strategist Agent. Nightly synthesis engine, cadence controls, dismissal tracking, n8n bridge endpoint, 29 tests.*
+*Last updated: 2026-04-01 after Phase 13 complete — Analytics Feedback Loop. Real social metrics polling (24h+7d), publish_results write-back, optimal_posting_times updates, 20 tests.*
