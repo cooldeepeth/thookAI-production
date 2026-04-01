@@ -417,6 +417,287 @@ def register_media_handler(media_type: str):
 
 
 # ============================================================
+# STATIC IMAGE HANDLERS (Plan 03)
+# ============================================================
+
+@register_media_handler("static_image")
+async def _handle_static_image(brief: MediaBrief, cost_cap: int) -> Dict[str, Any]:
+    """Handle static_image media type.
+
+    Pipeline:
+    1. Check cost cap
+    2. Ledger image_generation stage (pending)
+    3. Generate image via designer.py
+    4. Update ledger (consumed or failed)
+    5. Stage generated image to R2
+    6. Check cost cap again
+    7. Ledger remotion_render stage (pending)
+    8. Call Remotion StaticImageCard composition with layout="standard"
+    9. Update ledger (consumed)
+    10. Return result dict
+    """
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Stage 1: image_generation
+    img_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "image_generation", "fal", STAGE_COSTS["image_generation"]
+    )
+    try:
+        generate_image = _get_designer()
+        img_result = await generate_image(
+            prompt=brief.content_text,
+            style=brief.style,
+            platform=brief.platform,
+            persona_card=brief.persona_card,
+            job_id=brief.job_id,
+        )
+        await _ledger_update(img_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(img_ledger_id, "failed", str(e))
+        await _ledger_skip_remaining(brief.job_id, f"image_generation failed: {e}")
+        raise
+
+    # Stage image to R2 (use image_url if available, else image_base64)
+    asset_url = img_result.get("image_url") or img_result.get("image_base64", "")
+    r2_url = await _stage_asset_to_r2(asset_url, brief.job_id, "background_image")
+
+    # Check cap before remotion render
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Stage 2: remotion_render
+    render_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "remotion_render", "remotion", STAGE_COSTS["remotion_render"]
+    )
+    try:
+        render_result = await _call_remotion(
+            "StaticImageCard",
+            {
+                "imageUrl": r2_url,
+                "text": brief.content_text,
+                "brandColor": brief.brand_color,
+                "fontFamily": "Inter",
+                "platform": brief.platform,
+                "layout": "standard",
+            },
+            render_type="still",
+        )
+        await _ledger_update(render_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(render_ledger_id, "failed", str(e))
+        raise
+
+    return {
+        "url": render_result["url"],
+        "render_id": render_result["render_id"],
+        "media_type": "static_image",
+        "job_id": brief.job_id,
+        "credits_consumed": STAGE_COSTS["image_generation"] + STAGE_COSTS["remotion_render"],
+    }
+
+
+@register_media_handler("quote_card")
+async def _handle_quote_card(brief: MediaBrief, cost_cap: int) -> Dict[str, Any]:
+    """Handle quote_card media type.
+
+    Same pipeline as static_image but:
+    - Image prompt is an abstract background (not content text directly)
+    - Remotion layout is "quote" instead of "standard"
+    """
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Stage 1: image_generation — abstract background for the quote
+    img_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "image_generation", "fal", STAGE_COSTS["image_generation"]
+    )
+    try:
+        generate_image = _get_designer()
+        img_result = await generate_image(
+            prompt=f"Abstract background for quote card. Style: {brief.style}. Colors: {brief.brand_color}",
+            style=brief.style,
+            platform=brief.platform,
+            persona_card=brief.persona_card,
+            job_id=brief.job_id,
+        )
+        await _ledger_update(img_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(img_ledger_id, "failed", str(e))
+        await _ledger_skip_remaining(brief.job_id, f"image_generation failed: {e}")
+        raise
+
+    # Stage image to R2
+    asset_url = img_result.get("image_url") or img_result.get("image_base64", "")
+    r2_url = await _stage_asset_to_r2(asset_url, brief.job_id, "background_image")
+
+    # Check cap before remotion render
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Stage 2: remotion_render with quote layout
+    render_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "remotion_render", "remotion", STAGE_COSTS["remotion_render"]
+    )
+    try:
+        render_result = await _call_remotion(
+            "StaticImageCard",
+            {
+                "imageUrl": r2_url,
+                "text": brief.content_text,
+                "brandColor": brief.brand_color,
+                "fontFamily": "Inter",
+                "platform": brief.platform,
+                "layout": "quote",
+            },
+            render_type="still",
+        )
+        await _ledger_update(render_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(render_ledger_id, "failed", str(e))
+        raise
+
+    return {
+        "url": render_result["url"],
+        "render_id": render_result["render_id"],
+        "media_type": "quote_card",
+        "job_id": brief.job_id,
+        "credits_consumed": STAGE_COSTS["image_generation"] + STAGE_COSTS["remotion_render"],
+    }
+
+
+@register_media_handler("meme")
+async def _handle_meme(brief: MediaBrief, cost_cap: int) -> Dict[str, Any]:
+    """Handle meme media type.
+
+    Same pipeline as static_image but:
+    - Image prompt is meme-friendly background
+    - content_text is split on first double-newline into topText + bottomText
+    - Remotion layout is "meme"
+    """
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Split content_text for meme top/bottom text
+    if "\n\n" in brief.content_text:
+        top_text, bottom_text = brief.content_text.split("\n\n", 1)
+    else:
+        top_text = brief.content_text
+        bottom_text = ""
+
+    # Stage 1: image_generation — meme background
+    img_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "image_generation", "fal", STAGE_COSTS["image_generation"]
+    )
+    try:
+        generate_image = _get_designer()
+        img_result = await generate_image(
+            prompt=f"Meme background image for: {brief.content_text[:100]}. Style: meme-friendly, clear subject",
+            style=brief.style,
+            platform=brief.platform,
+            persona_card=brief.persona_card,
+            job_id=brief.job_id,
+        )
+        await _ledger_update(img_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(img_ledger_id, "failed", str(e))
+        await _ledger_skip_remaining(brief.job_id, f"image_generation failed: {e}")
+        raise
+
+    # Stage image to R2
+    asset_url = img_result.get("image_url") or img_result.get("image_base64", "")
+    r2_url = await _stage_asset_to_r2(asset_url, brief.job_id, "background_image")
+
+    # Check cap before remotion render
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Stage 2: remotion_render with meme layout
+    render_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "remotion_render", "remotion", STAGE_COSTS["remotion_render"]
+    )
+    try:
+        render_result = await _call_remotion(
+            "StaticImageCard",
+            {
+                "imageUrl": r2_url,
+                "topText": top_text,
+                "bottomText": bottom_text,
+                "brandColor": brief.brand_color,
+                "fontFamily": "Impact",
+                "platform": brief.platform,
+                "layout": "meme",
+            },
+            render_type="still",
+        )
+        await _ledger_update(render_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(render_ledger_id, "failed", str(e))
+        raise
+
+    return {
+        "url": render_result["url"],
+        "render_id": render_result["render_id"],
+        "media_type": "meme",
+        "job_id": brief.job_id,
+        "credits_consumed": STAGE_COSTS["image_generation"] + STAGE_COSTS["remotion_render"],
+    }
+
+
+@register_media_handler("infographic")
+async def _handle_infographic(brief: MediaBrief, cost_cap: int) -> Dict[str, Any]:
+    """Handle infographic media type.
+
+    No image generation — pure Remotion composition using data_points.
+    Only one stage: remotion_render with the Infographic composition.
+    """
+    # Validate data_points before any ledger entries
+    if not brief.data_points:
+        raise ValueError(
+            "infographic media type requires data_points to be a non-empty list. "
+            f"Got: {brief.data_points!r}"
+        )
+
+    if not await _ledger_check_cap(brief.job_id, cost_cap):
+        await _ledger_skip_remaining(brief.job_id, "cost cap exceeded")
+        raise RuntimeError("Cost cap exceeded")
+
+    # Stage 1: remotion_render (no image generation for infographics)
+    render_ledger_id = await _ledger_stage(
+        brief.job_id, brief.user_id, "remotion_render", "remotion", STAGE_COSTS["remotion_render"]
+    )
+    try:
+        render_result = await _call_remotion(
+            "Infographic",
+            {
+                "title": brief.content_text,
+                "dataPoints": brief.data_points,
+                "brandColor": brief.brand_color,
+                "style": brief.style,
+            },
+            render_type="still",
+        )
+        await _ledger_update(render_ledger_id, "consumed")
+    except Exception as e:
+        await _ledger_update(render_ledger_id, "failed", str(e))
+        raise
+
+    return {
+        "url": render_result["url"],
+        "render_id": render_result["render_id"],
+        "media_type": "infographic",
+        "job_id": brief.job_id,
+        "credits_consumed": STAGE_COSTS["remotion_render"],
+    }
+
+
+# ============================================================
 # MAIN ORCHESTRATE FUNCTION
 # ============================================================
 
