@@ -66,11 +66,11 @@ Personalized content creation at scale — every user gets a unique voice finger
 - [x] Talking-head with overlays generation pipeline — Phase 11
 - [x] Short-form video (15-60s) generation pipeline — Phase 11
 - [x] Strategist Agent for proactive content recommendations — Phase 12
-- [ ] Strategy Dashboard with recommendation cards and one-click approve
-- [ ] SSE notifications via n8n (job completion, trending topics, scheduled post published)
+- [x] Strategy Dashboard with recommendation cards and one-click approve — Phase 14
+- [x] SSE notifications via n8n (job completion, trending topics, scheduled post published) — Phase 14
 - [x] Analytics feedback loop (real social metrics 24h + 7d after publish) — Phase 13
 - [x] Performance intelligence from real data (optimal_posting_times) — Phase 13
-- [ ] Obsidian vault integration via obsidian-cli into Scout agent
+- [x] Obsidian vault integration via obsidian-cli into Scout agent — Phase 15
 - [ ] E2E audit, security hardening, and production ship
 
 ### Out of Scope
@@ -151,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 13 complete — Analytics Feedback Loop. Real social metrics polling (24h+7d), publish_results write-back, optimal_posting_times updates, 20 tests.*
+*Last updated: 2026-04-01 after Phase 14 complete — Strategy Dashboard + Notifications. React page with SSE feed, one-click approve, History tab, sidebar nav, 13 backend tests.*
