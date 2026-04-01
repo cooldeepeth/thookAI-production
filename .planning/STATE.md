@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
-status: verifying
-stopped_at: Completed 11-05-PLAN.md
-last_updated: "2026-04-01T05:28:16.979Z"
+status: executing
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-04-01T06:29:48.341Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 15
+  completed_plans: 12
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Personalized content creation at scale — every user gets a unique voice fingerprint that drives all content generation, with real social platform publishing and analytics feedback loops.
-**Current focus:** Phase 11 — multi-model-media-orchestration
+**Current focus:** Phase 12 — strategist-agent
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 12 (strategist-agent) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-04-01
 
 Progress: [░░░░░░░░░░] 0%
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 11 P03 | 135 | 2 tasks | 2 files |
 | Phase 11 P04 | 5 | 2 tasks | 2 files |
 | Phase 11 P05 | 399 | 2 tasks | 4 files |
+| Phase 12 P01 | 1 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 11]: select_media_format is deterministic (no LLM call) — scoring table gives stable, explainable results without API cost
 - [Phase 11]: anthropic_available imported at qc.py module level (not inside validate_media_output) so unit tests can patch it via unittest.mock.patch
 - [Phase 11]: validate_media_output anti_slop check gracefully passes when Anthropic key unavailable — QC does not block delivery
+- [Phase 12]: StrategistConfig fields are application constants (not env-driven) — cadence parameters are launch-tuned values, not operator config
+- [Phase 12]: Compound index (user_id, topic, status) on strategy_recommendations is MANDATORY — enables STRAT-05 14-day suppression as a single indexed query
+- [Phase 12]: strategist_state has unique user_id index — one state document per user, upserted by nightly runner
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T05:08:20.431Z
-Stopped at: Completed 11-05-PLAN.md
+Last session: 2026-04-01T06:29:48.337Z
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
