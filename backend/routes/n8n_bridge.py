@@ -79,6 +79,7 @@ def _get_workflow_map() -> Dict[str, Optional[str]]:
         "cleanup-expired-shares": settings.n8n.workflow_cleanup_expired_shares,
         "aggregate-daily-analytics": settings.n8n.workflow_aggregate_daily_analytics,
         "cleanup-stale-jobs": settings.n8n.workflow_cleanup_stale_jobs,
+        "nightly-strategist": settings.n8n.workflow_nightly_strategist,
     }
 
 
@@ -105,6 +106,10 @@ WORKFLOW_NOTIFICATION_MAP = {
     "aggregate-daily-analytics": {
         "title": "Daily analytics aggregated",
         "body_template": "Analytics for yesterday have been processed",
+    },
+    "nightly-strategist": {
+        "title": "Your daily content strategy is ready",
+        "body_template": "New content recommendations are waiting for your review",
     },
 }
 
