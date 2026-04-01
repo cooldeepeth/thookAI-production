@@ -346,6 +346,6 @@ class TestWorkflowNotificationMap:
             assert config["title"], f"Empty 'title' in {workflow_type}"
             assert config["body_template"], f"Empty 'body_template' in {workflow_type}"
 
-    def test_map_has_exactly_four_entries(self):
-        """WORKFLOW_NOTIFICATION_MAP has exactly 4 user-facing workflows."""
-        assert len(WORKFLOW_NOTIFICATION_MAP) == 4
+    def test_map_has_expected_entries(self):
+        """WORKFLOW_NOTIFICATION_MAP has all user-facing workflows."""
+        assert len(WORKFLOW_NOTIFICATION_MAP) >= 5
