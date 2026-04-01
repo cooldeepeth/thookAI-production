@@ -50,6 +50,7 @@ from routes.uom import router as uom_router
 from routes.viral_card import router as viral_card_router
 from routes.n8n_bridge import router as n8n_bridge_router
 from routes.strategy import router as strategy_router
+from routes.obsidian import router as obsidian_router
 
 
 # Setup logging
@@ -311,6 +312,7 @@ api_router.include_router(uom_router)
 api_router.include_router(viral_card_router)
 api_router.include_router(n8n_bridge_router)
 api_router.include_router(strategy_router)
+api_router.include_router(obsidian_router)
 
 # Admin dashboard — hidden from Swagger, requires admin role
 app.include_router(admin_router, prefix="/api/admin", include_in_schema=False)
