@@ -208,6 +208,26 @@ INDEXES = {
         IndexModel([('user_id', ASCENDING), ('created_at', DESCENDING)], name='idx_user_created'),
         IndexModel([('status', ASCENDING), ('created_at', ASCENDING)], name='idx_status_created'),
     ],
+
+    # ========== STRATEGY RECOMMENDATIONS (Phase 12 — Strategist Agent) ==========
+    # Proactive content recommendation cards delivered to users.
+    # Compound (user_id, topic, status) index is MANDATORY for 14-day suppression check (STRAT-05).
+    'strategy_recommendations': [
+        IndexModel([('recommendation_id', ASCENDING)], unique=True, name='idx_recommendation_id'),
+        IndexModel([('user_id', ASCENDING)], name='idx_user_id'),
+        IndexModel([('user_id', ASCENDING), ('status', ASCENDING)], name='idx_user_status'),
+        IndexModel([('user_id', ASCENDING), ('created_at', DESCENDING)], name='idx_user_created'),
+        IndexModel([('user_id', ASCENDING), ('topic', ASCENDING), ('status', ASCENDING)], name='idx_user_topic_status'),
+        IndexModel([('created_at', DESCENDING)], name='idx_created_at'),
+    ],
+
+    # ========== STRATEGIST STATE (Phase 12 — Strategist Agent) ==========
+    # Per-user state for the Strategist nightly runner (last run, halved-rate flag, etc.).
+    'strategist_state': [
+        IndexModel([('user_id', ASCENDING)], unique=True, name='idx_user_id'),
+        IndexModel([('last_run_at', DESCENDING)], name='idx_last_run'),
+        IndexModel([('halved_rate', ASCENDING)], name='idx_halved_rate'),
+    ],
 }
 
 
