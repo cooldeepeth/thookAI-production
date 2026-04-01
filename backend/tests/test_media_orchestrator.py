@@ -734,3 +734,304 @@ class TestCostCapEnforcement:
         call_args = ledger_update.call_args[0]
         assert call_args[1] == "failed"
         assert "Provider error" in call_args[2]
+
+
+# ============================================================
+# Carousel handler tests (Plan 04)
+# ============================================================
+
+class TestCarouselHandler:
+    """Tests for _handle_carousel handler."""
+
+    @pytest.mark.asyncio
+    async def test_carousel_parallel_generation(self):
+        """carousel: generates 5 slide images in parallel, calls ImageCarousel composition."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        designer_result = {"image_url": "https://cdn.fal.ai/slide.png"}
+        designer_mock = AsyncMock(return_value=designer_result)
+        r2_urls = [f"https://r2.example.com/slide_{i}.png" for i in range(5)]
+        r2_call_count = [0]
+
+        async def mock_stage(url, job_id, key):
+            idx = r2_call_count[0]
+            r2_call_count[0] += 1
+            return r2_urls[idx] if idx < len(r2_urls) else "https://r2.example.com/fallback.png"
+
+        remotion_result = {"url": "https://r2.example.com/carousel.png", "render_id": "r456"}
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_carousel", return_value=designer_mock), \
+             patch("services.media_orchestrator._get_designer", return_value=designer_mock), \
+             patch("services.media_orchestrator._stage_asset_to_r2", side_effect=mock_stage), \
+             patch("services.media_orchestrator._call_remotion", AsyncMock(return_value=remotion_result)) as mock_remotion:
+
+            brief = _make_brief(
+                media_type="carousel",
+                slides=[{"text": f"Slide {i}"} for i in range(5)],
+            )
+            result = await orchestrate(brief)
+
+        # designer was called 5 times (once per slide)
+        assert designer_mock.call_count == 5
+        # Remotion called with ImageCarousel
+        mock_remotion.assert_called_once()
+        args, _ = mock_remotion.call_args
+        assert args[0] == "ImageCarousel"
+        assert len(args[1]["slides"]) == 5
+        assert result["media_type"] == "carousel"
+
+    @pytest.mark.asyncio
+    async def test_carousel_max_10_slides(self):
+        """carousel: truncates to max 10 slides when 15 are provided."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        designer_mock = AsyncMock(return_value={"image_url": "https://cdn.fal.ai/s.png"})
+        stage_call_count = [0]
+
+        async def mock_stage(url, job_id, key):
+            stage_call_count[0] += 1
+            return f"https://r2.example.com/{key}.png"
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_carousel", return_value=designer_mock), \
+             patch("services.media_orchestrator._get_designer", return_value=designer_mock), \
+             patch("services.media_orchestrator._stage_asset_to_r2", side_effect=mock_stage), \
+             patch("services.media_orchestrator._call_remotion", AsyncMock(return_value={"url": "https://r2.example.com/out.png", "render_id": "r1"})):
+
+            brief = _make_brief(
+                media_type="carousel",
+                slides=[{"text": f"S{i}"} for i in range(15)],
+            )
+            await orchestrate(brief)
+
+        # designer was called exactly 10 times (truncated from 15)
+        assert designer_mock.call_count == 10
+
+    @pytest.mark.asyncio
+    async def test_carousel_missing_slides_raises_value_error(self):
+        """carousel: raises ValueError when slides is None."""
+        from services.media_orchestrator import orchestrate
+
+        brief = _make_brief(media_type="carousel", slides=None)
+
+        with pytest.raises(ValueError):
+            await orchestrate(brief)
+
+
+# ============================================================
+# Talking-head handler tests (Plan 04)
+# ============================================================
+
+class TestTalkingHeadHandler:
+    """Tests for _handle_talking_head handler."""
+
+    @pytest.mark.asyncio
+    async def test_talking_head_stages_immediately(self):
+        """talking_head: HeyGen video URL is staged to R2 before Remotion call."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        heygen_url = "https://cdn.heygen.com/video.mp4"
+        r2_staged_url = "https://r2.example.com/avatar_video.mp4"
+        avatar_result = {"video_url": heygen_url, "duration": 30, "generated": True}
+
+        stage_calls = []
+
+        async def mock_stage(url, job_id, key):
+            stage_calls.append((url, key))
+            return r2_staged_url
+
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/render.mp4", "render_id": "r100"})
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_avatar_video", return_value=AsyncMock(return_value=avatar_result)), \
+             patch("services.media_orchestrator._stage_asset_to_r2", side_effect=mock_stage), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            brief = _make_brief(media_type="talking_head", avatar_id="avatar_001")
+            await orchestrate(brief)
+
+        # _stage_asset_to_r2 was called with the HeyGen URL
+        assert any(url == heygen_url for url, _ in stage_calls), \
+            f"Expected HeyGen URL to be staged. stage_calls={stage_calls}"
+
+        # _call_remotion called with TalkingHeadOverlay and render_type="video"
+        call_remotion.assert_called_once()
+        args, kwargs = call_remotion.call_args
+        assert args[0] == "TalkingHeadOverlay"
+        assert kwargs.get("render_type") == "video" or args[2] == "video"
+
+        # Remotion received the R2 URL (not the original HeyGen URL)
+        assert args[1]["videoUrl"] == r2_staged_url
+
+
+# ============================================================
+# Short-form video handler tests (Plan 04)
+# ============================================================
+
+class TestShortFormVideoHandler:
+    """Tests for _handle_short_form_video handler."""
+
+    @pytest.mark.asyncio
+    async def test_short_form_video_parallel_assets(self):
+        """short_form_video: voice + avatar + B-roll generated in parallel."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        voice_result = {"audio_base64": "base64data", "audio_url": "data:audio/mpeg;base64,xyz", "duration_estimate": 30}
+        avatar_result = {"video_url": "https://cdn.heygen.com/v.mp4", "duration": 30, "generated": True}
+        broll_result = {"video_url": "https://cdn.luma.ai/broll.mp4", "generated": True}
+
+        stage_calls = []
+
+        async def mock_stage(url, job_id, key):
+            stage_calls.append(key)
+            return f"https://r2.example.com/{key}.bin"
+
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/sfv.mp4", "render_id": "r200"})
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_voice", return_value=AsyncMock(return_value=voice_result)), \
+             patch("services.media_orchestrator._get_avatar_video", return_value=AsyncMock(return_value=avatar_result)), \
+             patch("services.media_orchestrator._get_broll_video", return_value=AsyncMock(return_value=broll_result)), \
+             patch("services.media_orchestrator._stage_asset_to_r2", side_effect=mock_stage), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            brief = _make_brief(
+                media_type="short_form_video",
+                avatar_id="test_avatar",
+            )
+            result = await orchestrate(brief)
+
+        # Voice, avatar, and broll were all staged to R2
+        assert "voice" in stage_calls
+        assert "avatar" in stage_calls
+        assert "broll" in stage_calls
+
+        # Remotion called with ShortFormVideo and render_type="video"
+        call_remotion.assert_called_once()
+        args, kwargs = call_remotion.call_args
+        assert args[0] == "ShortFormVideo"
+        assert kwargs.get("render_type") == "video" or args[2] == "video"
+        # inputProps contains audioUrl and segments
+        assert "audioUrl" in args[1]
+        assert "segments" in args[1]
+        assert result["media_type"] == "short_form_video"
+
+    @pytest.mark.asyncio
+    async def test_short_form_video_without_avatar(self):
+        """short_form_video: no avatar_id -> avatar not generated; B-roll segment still included."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        voice_result = {"audio_base64": "base64data", "audio_url": "data:audio/mpeg;base64,xyz"}
+        broll_result = {"video_url": "https://cdn.luma.ai/broll.mp4"}
+
+        # avatar mock — should NOT be called
+        avatar_mock = AsyncMock(return_value={"video_url": "https://cdn.heygen.com/v.mp4"})
+
+        async def mock_stage(url, job_id, key):
+            return f"https://r2.example.com/{key}.bin"
+
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/sfv.mp4", "render_id": "r201"})
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._get_voice", return_value=AsyncMock(return_value=voice_result)), \
+             patch("services.media_orchestrator._get_avatar_video", return_value=avatar_mock), \
+             patch("services.media_orchestrator._get_broll_video", return_value=AsyncMock(return_value=broll_result)), \
+             patch("services.media_orchestrator._stage_asset_to_r2", side_effect=mock_stage), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            # avatar_id=None — no avatar generation
+            brief = _make_brief(media_type="short_form_video", avatar_id=None)
+            await orchestrate(brief)
+
+        # Avatar mock was NOT called
+        avatar_mock.assert_not_called()
+
+        # Remotion was still called (B-roll segment present)
+        call_remotion.assert_called_once()
+        args, _ = call_remotion.call_args
+        assert args[0] == "ShortFormVideo"
+        segments = args[1]["segments"]
+        assert len(segments) >= 1  # At least B-roll
+
+
+# ============================================================
+# Text-on-video handler tests (Plan 04)
+# ============================================================
+
+class TestTextOnVideoHandler:
+    """Tests for _handle_text_on_video handler."""
+
+    @pytest.mark.asyncio
+    async def test_text_on_video_stages_user_video(self):
+        """text_on_video: user-uploaded video is staged to R2 before Remotion call."""
+        from services.media_orchestrator import orchestrate
+
+        ledger_stage, ledger_update, ledger_check_cap, ledger_skip = _make_ledger_mocks()
+        user_video_url = "https://user.example.com/video.mp4"
+        r2_video_url = "https://r2.example.com/input_video.mp4"
+        stage_calls = []
+
+        async def mock_stage(url, job_id, key):
+            stage_calls.append((url, key))
+            return r2_video_url
+
+        call_remotion = AsyncMock(return_value={"url": "https://r2.example.com/tov.mp4", "render_id": "r300"})
+
+        with patch("services.media_orchestrator._ledger_stage", ledger_stage), \
+             patch("services.media_orchestrator._ledger_update", ledger_update), \
+             patch("services.media_orchestrator._ledger_check_cap", ledger_check_cap), \
+             patch("services.media_orchestrator._ledger_skip_remaining", ledger_skip), \
+             patch("services.media_orchestrator._stage_asset_to_r2", side_effect=mock_stage), \
+             patch("services.media_orchestrator._call_remotion", call_remotion):
+
+            brief = _make_brief(
+                media_type="text_on_video",
+                video_url=user_video_url,
+                content_text="Overlay text content",
+            )
+            result = await orchestrate(brief)
+
+        # User video URL was staged to R2
+        assert any(url == user_video_url for url, _ in stage_calls), \
+            f"Expected user video URL to be staged. stage_calls={stage_calls}"
+
+        # Remotion called with ShortFormVideo
+        call_remotion.assert_called_once()
+        args, kwargs = call_remotion.call_args
+        assert args[0] == "ShortFormVideo"
+        # Segment contains the content_text overlay
+        segments = args[1]["segments"]
+        assert len(segments) == 1
+        assert "Overlay text content" in segments[0].get("text", "")
+        assert result["media_type"] == "text_on_video"
+
+    @pytest.mark.asyncio
+    async def test_text_on_video_missing_url_raises_value_error(self):
+        """text_on_video: raises ValueError when video_url is None."""
+        from services.media_orchestrator import orchestrate
+
+        brief = _make_brief(media_type="text_on_video", video_url=None)
+
+        with pytest.raises(ValueError, match="video_url required"):
+            await orchestrate(brief)
