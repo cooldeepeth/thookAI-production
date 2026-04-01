@@ -45,13 +45,13 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### Strategist Agent
 
-- [ ] **STRAT-01**: Strategist Agent (`backend/agents/strategist.py`) — nightly n8n-triggered, synthesizes LightRAG + analytics + Obsidian + persona memory
-- [ ] **STRAT-02**: Recommendation cards written to `db.strategy_recommendations` with `status: "pending_approval"` — never triggers generation directly
-- [ ] **STRAT-03**: Every card includes "Why now: [signal]" rationale explaining the recommendation source
-- [ ] **STRAT-04**: Cadence controls — max 3 new cards per user per day, hard cap enforced
-- [ ] **STRAT-05**: Dismissal tracking — 14-day topic suppression on dismiss, dismissal rate monitored per user
-- [ ] **STRAT-06**: If 5 consecutive dismissals, halve generation rate and surface "calibrate preferences" prompt
-- [ ] **STRAT-07**: Recommendation cards include pre-filled `generate_payload` for one-click content generation
+- [x] **STRAT-01**: Strategist Agent (`backend/agents/strategist.py`) — nightly n8n-triggered, synthesizes LightRAG + analytics + Obsidian + persona memory
+- [x] **STRAT-02**: Recommendation cards written to `db.strategy_recommendations` with `status: "pending_approval"` — never triggers generation directly
+- [x] **STRAT-03**: Every card includes "Why now: [signal]" rationale explaining the recommendation source
+- [x] **STRAT-04**: Cadence controls — max 3 new cards per user per day, hard cap enforced
+- [x] **STRAT-05**: Dismissal tracking — 14-day topic suppression on dismiss, dismissal rate monitored per user
+- [x] **STRAT-06**: If 5 consecutive dismissals, halve generation rate and surface "calibrate preferences" prompt
+- [x] **STRAT-07**: Recommendation cards include pre-filled `generate_payload` for one-click content generation
 
 ### Analytics Feedback Loop
 
@@ -158,13 +158,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEDIA-12 | Phase 11 | Complete |
 | MEDIA-13 | Phase 11 | Complete |
 | MEDIA-14 | Phase 11 | Complete |
-| STRAT-01 | Phase 12 | Pending |
-| STRAT-02 | Phase 12 | Pending |
-| STRAT-03 | Phase 12 | Pending |
-| STRAT-04 | Phase 12 | Pending |
-| STRAT-05 | Phase 12 | Pending |
-| STRAT-06 | Phase 12 | Pending |
-| STRAT-07 | Phase 12 | Pending |
+| STRAT-01 | Phase 12 | Complete |
+| STRAT-02 | Phase 12 | Complete |
+| STRAT-03 | Phase 12 | Complete |
+| STRAT-04 | Phase 12 | Complete |
+| STRAT-05 | Phase 12 | Complete |
+| STRAT-06 | Phase 12 | Complete |
+| STRAT-07 | Phase 12 | Complete |
 | ANLYT-01 | Phase 13 | Pending |
 | ANLYT-02 | Phase 13 | Pending |
 | ANLYT-03 | Phase 13 | Pending |
