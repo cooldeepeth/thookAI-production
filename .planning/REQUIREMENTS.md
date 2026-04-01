@@ -28,19 +28,19 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### Multi-Model Media Orchestration
 
-- [ ] **MEDIA-01**: Media Orchestrator service (`backend/services/media_orchestrator.py`) — decomposes MediaBrief into per-asset tasks, routes to best provider, assembles via Remotion
+- [x] **MEDIA-01**: Media Orchestrator service (`backend/services/media_orchestrator.py`) — decomposes MediaBrief into per-asset tasks, routes to best provider, assembles via Remotion
 - [x] **MEDIA-02**: Remotion render service expanded with Express API (`POST /render`, `GET /render/:id/status`) and R2 upload
-- [ ] **MEDIA-03**: Pipeline credit ledger (`media_pipeline_ledger` collection) — per-stage credit tracking, cost caps per job, partial-failure accounting
-- [ ] **MEDIA-04**: Static image with typography — brand-consistent social images via fal.ai/DALL-E + Remotion text overlay
-- [ ] **MEDIA-05**: Quote cards — styled text-on-background with persona branding, dynamic font/color from persona theme
-- [ ] **MEDIA-06**: Meme format — image + top/bottom text overlay with trending template support
-- [ ] **MEDIA-07**: Image carousel — multi-slide compositions (up to 10 slides) for LinkedIn/Instagram via Remotion
-- [ ] **MEDIA-08**: Infographic — data-driven visual with stats, icons, and structured layout via Remotion composition
-- [ ] **MEDIA-09**: Talking-head with overlays — HeyGen avatar + text/graphic overlays via Remotion composition
-- [ ] **MEDIA-10**: Short-form video (15-60s) — strategic reel with A-roll (talking-head), B-roll (stock/generated), typography overlays, voice narration (ElevenLabs), music bed
-- [ ] **MEDIA-11**: Text-on-video — animated text overlays on user-uploaded or generated video clips
+- [x] **MEDIA-03**: Pipeline credit ledger (`media_pipeline_ledger` collection) — per-stage credit tracking, cost caps per job, partial-failure accounting
+- [x] **MEDIA-04**: Static image with typography — brand-consistent social images via fal.ai/DALL-E + Remotion text overlay
+- [x] **MEDIA-05**: Quote cards — styled text-on-background with persona branding, dynamic font/color from persona theme
+- [x] **MEDIA-06**: Meme format — image + top/bottom text overlay with trending template support
+- [x] **MEDIA-07**: Image carousel — multi-slide compositions (up to 10 slides) for LinkedIn/Instagram via Remotion
+- [x] **MEDIA-08**: Infographic — data-driven visual with stats, icons, and structured layout via Remotion composition
+- [x] **MEDIA-09**: Talking-head with overlays — HeyGen avatar + text/graphic overlays via Remotion composition
+- [x] **MEDIA-10**: Short-form video (15-60s) — strategic reel with A-roll (talking-head), B-roll (stock/generated), typography overlays, voice narration (ElevenLabs), music bed
+- [x] **MEDIA-11**: Text-on-video — animated text overlays on user-uploaded or generated video clips
 - [ ] **MEDIA-12**: Designer agent plans composition by format — selects optimal content type per platform and content angle
-- [ ] **MEDIA-13**: All external assets pre-downloaded to R2 before Remotion render (timeout prevention)
+- [x] **MEDIA-13**: All external assets pre-downloaded to R2 before Remotion render (timeout prevention)
 - [ ] **MEDIA-14**: QC agent checks brand consistency, anti-AI-slop detection, and platform-specific specs on all media output
 
 ### Strategist Agent
@@ -144,19 +144,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LRAG-05 | Phase 10 | Complete |
 | LRAG-06 | Phase 10 | Complete |
 | LRAG-07 | Phase 10 | Complete |
-| MEDIA-01 | Phase 11 | Pending |
+| MEDIA-01 | Phase 11 | Complete |
 | MEDIA-02 | Phase 11 | Complete |
-| MEDIA-03 | Phase 11 | Pending |
-| MEDIA-04 | Phase 11 | Pending |
-| MEDIA-05 | Phase 11 | Pending |
-| MEDIA-06 | Phase 11 | Pending |
-| MEDIA-07 | Phase 11 | Pending |
-| MEDIA-08 | Phase 11 | Pending |
-| MEDIA-09 | Phase 11 | Pending |
-| MEDIA-10 | Phase 11 | Pending |
-| MEDIA-11 | Phase 11 | Pending |
+| MEDIA-03 | Phase 11 | Complete |
+| MEDIA-04 | Phase 11 | Complete |
+| MEDIA-05 | Phase 11 | Complete |
+| MEDIA-06 | Phase 11 | Complete |
+| MEDIA-07 | Phase 11 | Complete |
+| MEDIA-08 | Phase 11 | Complete |
+| MEDIA-09 | Phase 11 | Complete |
+| MEDIA-10 | Phase 11 | Complete |
+| MEDIA-11 | Phase 11 | Complete |
 | MEDIA-12 | Phase 11 | Pending |
-| MEDIA-13 | Phase 11 | Pending |
+| MEDIA-13 | Phase 11 | Complete |
 | MEDIA-14 | Phase 11 | Pending |
 | STRAT-01 | Phase 12 | Pending |
 | STRAT-02 | Phase 12 | Pending |

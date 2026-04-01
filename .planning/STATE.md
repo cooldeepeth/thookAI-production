@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Intelligent Content Operating System
 status: executing
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-04-01T00:17:02.856Z"
+stopped_at: Completed 11-04-PLAN.md
+last_updated: "2026-04-01T04:41:45.080Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 11 (multi-model-media-orchestration) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-01
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 11 P01 | 233 | 2 tasks | 14 files |
 | Phase 11 P02 | 328 | 2 tasks | 8 files |
 | Phase 11 P03 | 135 | 2 tasks | 2 files |
+| Phase 11 P04 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 11]: orchestrate_media_job max_retries=1: media orchestration is expensive/long-running, one retry sufficient
 - [Phase 11]: Meme handler splits content_text on first double-newline into topText/bottomText; single-line -> bottomText=''
 - [Phase 11]: Infographic validates data_points before any ledger entry — ValueError raised early, no orphaned pending ledger records
+- [Phase 11]: Carousel truncates to max 10 slides via brief.slides[:10] before any ledger entry — no orphaned pending records
+- [Phase 11]: HeyGen video URL staged to R2 immediately after avatar generation (inside try block) before ledger consumed update — prevents CDN URL expiry
+- [Phase 11]: _generate_voice_for_video wrapper isolates pcm_48000 intent without modifying shared generate_voice_narration function
 
 ### Pending Todos
 
@@ -109,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T00:17:02.852Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-04-01T04:41:45.077Z
+Stopped at: Completed 11-04-PLAN.md
 Resume file: None
