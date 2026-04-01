@@ -199,6 +199,15 @@ INDEXES = {
         IndexModel([('card_id', ASCENDING)], unique=True, name='idx_card_id'),
         IndexModel([('created_at', ASCENDING)], expireAfterSeconds=2592000, name='idx_ttl_30d'),
     ],
+
+    # ========== MEDIA PIPELINE LEDGER ==========
+    # Tracks per-stage credits for every orchestrated media job.
+    # Every provider call is preceded by a pending entry here — no silent credit drain.
+    'media_pipeline_ledger': [
+        IndexModel([('job_id', ASCENDING)], name='idx_job_id'),
+        IndexModel([('user_id', ASCENDING), ('created_at', DESCENDING)], name='idx_user_created'),
+        IndexModel([('status', ASCENDING), ('created_at', ASCENDING)], name='idx_status_created'),
+    ],
 }
 
 

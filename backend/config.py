@@ -264,6 +264,17 @@ class LightRAGConfig:
 
 
 @dataclass
+class RemotionConfig:
+    """Remotion video compositor sidecar configuration"""
+    remotion_service_url: str = field(default_factory=lambda: os.environ.get('REMOTION_SERVICE_URL', 'http://localhost:3001'))
+    remotion_license_key: str = field(default_factory=lambda: os.environ.get('REMOTION_LICENSE_KEY', ''))
+
+    def is_configured(self) -> bool:
+        """Check if Remotion sidecar is reachable (URL is non-default or REMOTION_SERVICE_URL is set)."""
+        return bool(os.environ.get('REMOTION_SERVICE_URL'))
+
+
+@dataclass
 class AppConfig:
     """Application configuration"""
     environment: str = field(default_factory=lambda: os.environ.get('ENVIRONMENT', 'development'))
@@ -302,6 +313,7 @@ class Settings:
     pinecone: PineconeConfig = field(default_factory=PineconeConfig)
     n8n: N8nConfig = field(default_factory=N8nConfig)
     lightrag: LightRAGConfig = field(default_factory=LightRAGConfig)
+    remotion: RemotionConfig = field(default_factory=RemotionConfig)
 
     def validate(self) -> dict:
         """

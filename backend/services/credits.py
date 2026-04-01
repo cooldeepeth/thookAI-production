@@ -36,6 +36,7 @@ class CreditOperation(Enum):
     CONTENT_REGENERATE = 4   # Regenerate existing content (~80% margin)
     IMAGE_GENERATE = 8       # Single image generation (~74% margin)
     CAROUSEL_GENERATE = 15   # Multi-image carousel (~59% margin)
+    MEDIA_ORCHESTRATION = 25  # Media orchestration pipeline (base + per-stage costs via ledger)
     VOICE_NARRATION = 12     # Text-to-speech (~45% margin)
     VIDEO_GENERATE = 50      # Video creation (~45% margin)
     REPURPOSE = 3            # Repurpose to another platform (~88% margin)
