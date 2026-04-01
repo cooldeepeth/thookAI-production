@@ -116,7 +116,7 @@ Plans:
   4. The Strategist Agent's next nightly run incorporates the latest performance data — recommendation rationales reference actual post performance ("your last 3 posts about X underperformed; try angle Y")
 **Plans**: 2 plans
 Plans:
-- [ ] 13-01-PLAN.md — N8nConfig analytics fields + DB indexes + publish_results write-back to content_jobs
+- [x] 13-01-PLAN.md — N8nConfig analytics fields + DB indexes + publish_results write-back to content_jobs
 - [ ] 13-02-PLAN.md — poll-analytics-24h/7d execute endpoints + comprehensive ANLYT tests
 
 ### Phase 14: Strategy Dashboard + Notifications
@@ -173,7 +173,7 @@ Plans:
 | 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
 | 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
 | 12. Strategist Agent | v2.0 | 4/4 | Complete    | 2026-04-01 |
-| 13. Analytics Feedback Loop | v2.0 | 0/2 | Not started | - |
+| 13. Analytics Feedback Loop | v2.0 | 1/2 | In Progress|  |
 | 14. Strategy Dashboard + Notifications | v2.0 | 0/TBD | Not started | - |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 0/TBD | Not started | - |
