@@ -14,6 +14,8 @@ Endpoints:
   POST /api/n8n/execute/aggregate-daily-analytics — Aggregate daily analytics stats
   POST /api/n8n/execute/process-scheduled-posts  — Publish due scheduled posts via real publisher
   POST /api/n8n/execute/run-nightly-strategist   — Run Strategist agent for all eligible users
+  POST /api/n8n/execute/poll-analytics-24h       — Poll 24h post analytics from social platforms
+  POST /api/n8n/execute/poll-analytics-7d        — Poll 7-day post analytics from social platforms
 
 Security:
   - Callback endpoint verifies X-ThookAI-Signature header using HMAC-SHA256
@@ -864,4 +866,226 @@ async def execute_run_nightly_strategist(
         "status": "completed",
         "result": result,
         "executed_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.post("/execute/poll-analytics-24h")
+async def execute_poll_analytics_24h(
+    request: Request,
+    _payload: dict = Depends(_verify_n8n_request),
+) -> Dict[str, Any]:
+    """
+    Poll 24h analytics for published posts with analytics_24h_due_at <= now.
+
+    Called by n8n every 15 minutes. For each due job, calls
+    update_post_performance() per platform in publish_results, then
+    calculate_optimal_posting_times() once per affected user.
+
+    Per-user rate limit: max 5 jobs per user per run to respect
+    platform API rate limits. Deferred jobs are picked up in the next run.
+
+    Always marks analytics_24h_polled=True after an attempt — never retries
+    indefinitely. Errors are logged and counted but do not block other jobs.
+    """
+    from collections import defaultdict
+    from database import db
+    from services.social_analytics import update_post_performance
+    from services.persona_refinement import calculate_optimal_posting_times
+
+    logger.info("Executing poll-analytics-24h via n8n")
+
+    now = datetime.now(timezone.utc)
+    MAX_JOBS_PER_USER = 5
+
+    cursor = db.content_jobs.find({
+        "analytics_24h_polled": False,
+        "analytics_24h_due_at": {"$lte": now},
+        "status": "published",
+        "publish_results": {"$exists": True},
+    })
+    jobs = await cursor.to_list(length=200)
+
+    polled = 0
+    errors = 0
+    deferred = 0
+    affected_user_ids: set = set()
+    user_job_counts: dict = defaultdict(int)
+
+    for job in jobs:
+        job_id = job["job_id"]
+        user_id = job["user_id"]
+
+        # Per-user rate limit to respect platform API rate limits
+        if user_job_counts[user_id] >= MAX_JOBS_PER_USER:
+            logger.info("Per-user limit reached for %s — deferring remaining jobs", user_id)
+            deferred += 1
+            continue
+
+        publish_results = job.get("publish_results", {})
+        job_had_error = False
+        for platform in publish_results.keys():
+            try:
+                success = await update_post_performance(job_id, user_id, platform)
+                if success:
+                    polled += 1
+                    affected_user_ids.add(user_id)
+                else:
+                    errors += 1
+                    job_had_error = True
+            except Exception as e:
+                logger.error(
+                    "update_post_performance failed for job %s platform %s: %s",
+                    job_id, platform, e,
+                )
+                errors += 1
+                job_had_error = True
+
+        # Mark as polled regardless of success (prevent infinite retry loops)
+        update_fields: Dict[str, Any] = {
+            "analytics_24h_polled": True,
+            "analytics_24h_polled_at": now,
+        }
+        if job_had_error:
+            update_fields["analytics_24h_error"] = True
+        await db.content_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": update_fields},
+        )
+
+        user_job_counts[user_id] += 1
+
+    # Recalculate optimal posting times once per affected user (ANLYT-03)
+    for user_id in affected_user_ids:
+        try:
+            await calculate_optimal_posting_times(user_id)
+        except Exception as e:
+            logger.error(
+                "calculate_optimal_posting_times failed for user %s: %s", user_id, e
+            )
+
+    logger.info(
+        "poll-analytics-24h complete: %d polled, %d errors, %d deferred, %d users updated",
+        polled, errors, deferred, len(affected_user_ids),
+    )
+
+    return {
+        "status": "completed",
+        "result": {
+            "polled": polled,
+            "errors": errors,
+            "deferred": deferred,
+            "users_updated": len(affected_user_ids),
+        },
+        "executed_at": now.isoformat(),
+    }
+
+
+@router.post("/execute/poll-analytics-7d")
+async def execute_poll_analytics_7d(
+    request: Request,
+    _payload: dict = Depends(_verify_n8n_request),
+) -> Dict[str, Any]:
+    """
+    Poll 7-day analytics for published posts with analytics_7d_due_at <= now.
+
+    Called by n8n every 15 minutes. For each due job, calls
+    update_post_performance() per platform in publish_results, then
+    calculate_optimal_posting_times() once per affected user.
+
+    Per-user rate limit: max 5 jobs per user per run to respect
+    platform API rate limits. Deferred jobs are picked up in the next run.
+
+    Always marks analytics_7d_polled=True after an attempt — never retries
+    indefinitely. Errors are logged and counted but do not block other jobs.
+    """
+    from collections import defaultdict
+    from database import db
+    from services.social_analytics import update_post_performance
+    from services.persona_refinement import calculate_optimal_posting_times
+
+    logger.info("Executing poll-analytics-7d via n8n")
+
+    now = datetime.now(timezone.utc)
+    MAX_JOBS_PER_USER = 5
+
+    cursor = db.content_jobs.find({
+        "analytics_7d_polled": False,
+        "analytics_7d_due_at": {"$lte": now},
+        "status": "published",
+        "publish_results": {"$exists": True},
+    })
+    jobs = await cursor.to_list(length=200)
+
+    polled = 0
+    errors = 0
+    deferred = 0
+    affected_user_ids: set = set()
+    user_job_counts: dict = defaultdict(int)
+
+    for job in jobs:
+        job_id = job["job_id"]
+        user_id = job["user_id"]
+
+        # Per-user rate limit to respect platform API rate limits
+        if user_job_counts[user_id] >= MAX_JOBS_PER_USER:
+            logger.info("Per-user limit reached for %s — deferring remaining jobs", user_id)
+            deferred += 1
+            continue
+
+        publish_results = job.get("publish_results", {})
+        job_had_error = False
+        for platform in publish_results.keys():
+            try:
+                success = await update_post_performance(job_id, user_id, platform)
+                if success:
+                    polled += 1
+                    affected_user_ids.add(user_id)
+                else:
+                    errors += 1
+                    job_had_error = True
+            except Exception as e:
+                logger.error(
+                    "update_post_performance failed for job %s platform %s: %s",
+                    job_id, platform, e,
+                )
+                errors += 1
+                job_had_error = True
+
+        # Mark as polled regardless of success (prevent infinite retry loops)
+        update_fields: Dict[str, Any] = {
+            "analytics_7d_polled": True,
+            "analytics_7d_polled_at": now,
+        }
+        if job_had_error:
+            update_fields["analytics_7d_error"] = True
+        await db.content_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": update_fields},
+        )
+
+        user_job_counts[user_id] += 1
+
+    # Recalculate optimal posting times once per affected user (ANLYT-03)
+    for user_id in affected_user_ids:
+        try:
+            await calculate_optimal_posting_times(user_id)
+        except Exception as e:
+            logger.error(
+                "calculate_optimal_posting_times failed for user %s: %s", user_id, e
+            )
+
+    logger.info(
+        "poll-analytics-7d complete: %d polled, %d errors, %d deferred, %d users updated",
+        polled, errors, deferred, len(affected_user_ids),
+    )
+
+    return {
+        "status": "completed",
+        "result": {
+            "polled": polled,
+            "errors": errors,
+            "deferred": deferred,
+            "users_updated": len(affected_user_ids),
+        },
+        "executed_at": now.isoformat(),
     }
