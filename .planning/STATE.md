@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v2.1
+milestone_name: Production Hardening — 50x Testing Sprint
 status: executing
-stopped_at: Completed 06-media-generation-analytics/06-03-PLAN.md
-last_updated: "2026-03-31T10:55:00.958Z"
-last_activity: 2026-03-31
+stopped_at: Completed 17-test-foundation-billing-payments/17-03-PLAN.md
+last_updated: "2026-04-03T03:26:25.142Z"
+last_activity: 2026-04-03
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 20
-  completed_plans: 17
+  total_phases: 12
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 07 (Platform Features, Admin & Frontend Quality) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
-Last activity: 2026-03-31
+Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-media-generation-analytics P01 | 3 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
+| Phase 17-test-foundation-billing-payments P03 | 2 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 06-02]: Use app.dependency_overrides[get_current_user] (not patch) for auth bypass in FastAPI route tests
 - [Phase 06-02]: Mount upload router at root (no prefix) in TestClient apps to avoid double-prefix path issues
 - [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
+- [Phase 17-03]: Billing CI job uses continue-on-error=true until Phase 17 billing tests satisfy the 95% coverage gate
+- [Phase 17-03]: CI matrix uses 4 domain-specific jobs (billing 95%, security 85%, pipeline 85%, general no gate) for fast feedback and domain-isolated failure
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T07:31:15.460Z
-Stopped at: Completed 06-media-generation-analytics/06-03-PLAN.md
+Last session: 2026-04-03T03:26:25.139Z
+Stopped at: Completed 17-test-foundation-billing-payments/17-03-PLAN.md
 Resume file: None
