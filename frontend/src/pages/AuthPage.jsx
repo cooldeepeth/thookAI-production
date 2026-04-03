@@ -106,10 +106,8 @@ export default function AuthPage() {
         }
       }
 
-      // Success - log user in (persist JWT for endpoints that use Bearer)
-      if (data.token) {
-        localStorage.setItem("thook_token", data.token);
-      }
+      // Success — session_token and csrf_token cookies are set by the backend.
+      // Browser stores cookies automatically via credentials: "include".
       login(data);
       navigate("/dashboard", { replace: true });
     } catch (err) {
