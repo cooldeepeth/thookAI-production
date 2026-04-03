@@ -365,6 +365,8 @@ class TestSSENotifications:
         app.dependency_overrides[get_current_user] = lambda: {"user_id": "test-notif-user"}
 
         try:
+            # routes/notifications.py does 'from services.notification_service import get_notifications'
+            # so we must patch the name as it lives in routes.notifications
             with patch(
                 "routes.notifications.get_notifications",
                 AsyncMock(return_value=self._NOTIF_LIST),
@@ -492,6 +494,8 @@ class TestOutboundWebhooks:
         app.dependency_overrides[get_current_user] = lambda: {"user_id": "test-webhook-user"}
 
         try:
+            # routes/webhooks.py does 'from services.webhook_service import register_webhook'
+            # so patch the name as it lives in routes.webhooks
             with patch(
                 "routes.webhooks.register_webhook",
                 AsyncMock(return_value=self._WEBHOOK_DOC),

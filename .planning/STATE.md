@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Production Hardening — 50x Testing Sprint
+milestone: v1.0
+milestone_name: milestone
 status: executing
-stopped_at: Completed 17-01-PLAN.md — Green CI baseline, coverage infrastructure, conftest fixtures
-last_updated: "2026-04-03T03:21:49.397Z"
-last_activity: 2026-04-03
+stopped_at: Completed 06-media-generation-analytics/06-03-PLAN.md
+last_updated: "2026-03-31T10:55:00.958Z"
+last_activity: 2026-03-31
 progress:
-  total_phases: 12
-  completed_phases: 0
-  total_plans: 5
-  completed_plans: 1
+  total_phases: 7
+  completed_phases: 6
+  total_plans: 20
+  completed_plans: 17
   percent: 0
 ---
 
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-03)
+See: .planning/PROJECT.md (updated 2026-03-31)
 
-**Core value:** Zero P0 failures before public launch — every revenue path, auth flow, and content pipeline verified with automated tests.
-**Current focus:** Phase 17 — test-foundation-billing-payments
+**Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
+**Current focus:** Phase 07 — Platform Features, Admin & Frontend Quality
 
 ## Current Position
 
-Phase: 17 (test-foundation-billing-payments) — EXECUTING
-Plan: 2 of 5
+Phase: 07 (Platform Features, Admin & Frontend Quality) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-04-03
+Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 0 (v2.1)
+- Total plans completed: 0
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -52,22 +52,44 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
-| Phase 17 P01 | 15 minutes | 2 tasks | 9 files |
+| Phase 03 P03 | 8 | 2 tasks | 2 files |
+| Phase 04 P01 | 5 | 2 tasks | 1 files |
+| Phase 04-content-pipeline P02 | 3 | 2 tasks | 1 files |
+| Phase 05-publishing-scheduling-billing P02 | 4 | 2 tasks | 3 files |
+| Phase 05-publishing-scheduling-billing P01 | 6 | 2 tasks | 4 files |
+| Phase 05-publishing-scheduling-billing P03 | 2 | 2 tasks | 2 files |
+| Phase 06-media-generation-analytics P01 | 3 | 2 tasks | 1 files |
+| Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
+| Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
 ### Decisions
 
-- v2.1 ordering is non-negotiable: Phase 17 (foundation + billing P0 fixes) must complete before Phase 18 (security) — testing an insecure system is misleading
-- TDD discipline: write failing test first, observe failure, then fix production code — never fix code without a failing test driving it
-- Branch coverage from day one: `--cov-branch` configured in Phase 17 so all subsequent phases are measured correctly; retroactive application requires test rewrites
-- mongomock-motor (not AsyncMock) required for credit atomicity tests — AsyncMock cannot verify MongoDB filter/operation semantics
-- pytest-mock for automatic mock cleanup — eliminates ordering-dependent failures at 1,000-test scale
-- Playwright deferred to Phase 20: E2E against broken auth/billing (pre-Phase 17 fixes) would produce green results for wrong reasons
-- Phase 17 baseline first: delete/update 3 broken CI tests and fix 6 unawaited coroutine warnings before writing any new tests
-- [Phase 17]: Skip beat_schedule tests (n8n owns scheduling since Phase 8) — beat_schedule is intentionally empty
-- [Phase 17]: asyncio.create_task mocks must consume coroutines via side_effect=lambda coro: coro.close() to prevent RuntimeWarning
-- [Phase 17]: filterwarnings = error::RuntimeWarning in pytest.ini enforces no unawaited coroutines on every run including local
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- Stabilization milestone: Fix existing features before building new ones — no new features until everything works
+- Git strategy: All work branches from dev; PRs target dev; never commit to main directly
+- PR #30 included: Custom plan builder (pricing pivot) is final direction, merge into dev in Phase 1
+- Billing changes: Flag for human review — no auto-merge on billing code
+- Verification standard: Manual E2E + automated tests required — 59 existing tests missed real bugs
+- [Phase 03]: AUTH-05 verified: claude-sonnet-4-20250514 is correct model name in both analyze-posts and generate-persona endpoints
+- [Phase 03]: AUTH-06 verified: Persona Engine has voice_fingerprint, content_identity, uom, learning_signals; smart fallback produces archetype-specific non-generic personas
+- [Phase 03]: Source transparency: generate-persona returns source field (llm|smart_fallback) so frontend can show notice when fallback used
+- [Phase 04]: Mock langgraph.graph at sys.modules level to allow testing orchestrator pure functions in envs without langgraph installed
+- [Phase 04-content-pipeline]: Stale job cleanup only targets status='running' — all jobs start with this status in content routes
+- [Phase 05]: Use find_one_and_update with credits >= amount filter for atomic deduction — eliminates race condition without transactions
+- [Phase 05]: Platform restriction in route handler (not credits service) — keeps billing concerns separate from access control
+- [Phase 05-01]: Test httpx.AsyncClient (not publisher function) to verify real HTTP dispatch code path
+- [Phase 05-01]: Extracted _run_scheduled_posts_inner to module level for unit-testable scheduled post processing
+- [Phase 05-publishing-scheduling-billing]: validate_stripe_config runs on module import so startup warnings appear in logs immediately
+- [Phase 05-publishing-scheduling-billing]: Task 2 regression check required zero test file changes — all 222 tests passed cleanly
+- [Phase 06-01]: Pre-existing test_uploads_media_storage.py failures (7 tests) are out of scope — confirmed pre-existing before this plan's changes
+- [Phase 06-01]: TDD approach: wrote all 28 tests before any agent code changes — all passed immediately because agents already implemented correctly
+- [Phase 06-02]: Use app.dependency_overrides[get_current_user] (not patch) for auth bypass in FastAPI route tests
+- [Phase 06-02]: Mount upload router at root (no prefix) in TestClient apps to avoid double-prefix path issues
+- [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
 
 ### Pending Todos
 
@@ -75,13 +97,14 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 17]: Stripe Test Clock method signatures need verification against `stripe==8.0.0` SDK before implementing Test Clock tests — HIGH complexity per research
-- [Phase 19]: LangGraph `asyncio_mode = auto` interaction with LangGraph internal task group needs investigation before writing node isolation tests
-- [Phase 20]: Playwright + CRA dev server startup time may exceed 120s CI timeout — validate before committing to `webServer` config
-- [Phase 20]: Playwright recommends Node 20+, CI uses Node 18 — add separate Node 20 setup step for playwright-e2e CI job only
+- CONCERNS.md documents race condition in credit deduction (credits.py) — fix required in Phase 5
+- Celery files exist (celery_app.py, celeryconfig.py) but Procfile missing worker/beat entries — confirm in Phase 2
+- Publishing placeholder in content_tasks.py fallback path — must be replaced in Phase 5
+- 20+ worktree-agent-* branches must be deleted before any new branches are created — Phase 1 prerequisite
+- Stripe Price IDs are blank in .env.example — owner must create Stripe products; flag in Phase 5
 
 ## Session Continuity
 
-Last session: 2026-04-03T03:21:49.394Z
-Stopped at: Completed 17-01-PLAN.md — Green CI baseline, coverage infrastructure, conftest fixtures
+Last session: 2026-03-31T07:31:15.460Z
+Stopped at: Completed 06-media-generation-analytics/06-03-PLAN.md
 Resume file: None
