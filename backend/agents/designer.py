@@ -614,3 +614,155 @@ def get_available_styles() -> List[Dict[str, str]]:
         {"id": key, "name": key.replace("-", " ").title(), "description": val["description"]}
         for key, val in STYLE_PRESETS.items()
     ]
+
+
+# ============ FORMAT SELECTION ============
+
+# Platform-specific media format preference table.
+# "preferred" formats score +3, "good" scores +1, "avoid" scores -2.
+PLATFORM_FORMAT_PREFERENCES: Dict[str, Dict[str, List[str]]] = {
+    "linkedin": {
+        "preferred": ["carousel", "infographic", "static_image", "quote_card"],
+        "good": ["talking_head", "short_form_video"],
+        "avoid": ["meme"],  # LinkedIn is professional
+    },
+    "instagram": {
+        "preferred": ["short_form_video", "carousel", "static_image"],
+        "good": ["quote_card", "meme", "talking_head"],
+        "avoid": ["infographic"],  # Too data-heavy for IG
+    },
+    "x": {
+        "preferred": ["static_image", "meme", "quote_card"],
+        "good": ["short_form_video", "text_on_video"],
+        "avoid": ["carousel", "infographic"],  # X doesn't support native carousel
+    },
+}
+
+# Content angle to candidate format mapping — ordered by preference for that angle.
+CONTENT_ANGLE_FORMAT_MAP: Dict[str, List[str]] = {
+    "thought_leadership": ["quote_card", "carousel", "static_image"],
+    "how_to": ["carousel", "infographic", "short_form_video"],
+    "storytelling": ["short_form_video", "talking_head", "carousel"],
+    "data_insight": ["infographic", "static_image", "carousel"],
+    "contrarian": ["meme", "quote_card", "static_image"],
+    "personal": ["talking_head", "quote_card", "static_image"],
+    "trending": ["meme", "short_form_video", "static_image"],
+    "educational": ["carousel", "infographic", "short_form_video"],
+}
+
+# All known media types — used as the universe of candidates when scoring.
+_ALL_MEDIA_TYPES: List[str] = [
+    "static_image",
+    "quote_card",
+    "meme",
+    "carousel",
+    "infographic",
+    "talking_head",
+    "short_form_video",
+    "text_on_video",
+]
+
+
+async def select_media_format(
+    platform: str,
+    content_text: str,
+    content_angle: str = "thought_leadership",
+    persona_card: Optional[Dict[str, Any]] = None,
+    has_data_points: bool = False,
+    has_avatar: bool = False,
+) -> Dict[str, Any]:
+    """Select the optimal media format for a given platform and content angle.
+
+    Uses platform format preferences, content angle mapping, and available
+    capabilities (data points, avatar) to pick the best media_type.
+    The selection is deterministic — no LLM call required.
+
+    Args:
+        platform: Target social platform ("linkedin", "instagram", "x")
+        content_text: The content draft (used for length heuristic)
+        content_angle: Content strategy angle (e.g. "how_to", "storytelling")
+        persona_card: Optional persona dict (reserved for future style hints)
+        has_data_points: True if content includes numeric data points
+        has_avatar: True if user has a HeyGen/avatar ID configured
+
+    Returns:
+        {
+            "media_type": str,        # Best format recommendation
+            "reason": str,            # Human-readable explanation
+            "alternatives": List[str],  # Other viable formats (top 2)
+            "confidence": float,      # Normalised 0-1 confidence score
+        }
+    """
+    # Resolve platform preferences (fall back to linkedin for unknown platforms)
+    platform_prefs = PLATFORM_FORMAT_PREFERENCES.get(platform, PLATFORM_FORMAT_PREFERENCES["linkedin"])
+
+    # Resolve angle candidates (fall back to static_image for unknown angles)
+    angle_candidates = CONTENT_ANGLE_FORMAT_MAP.get(content_angle, ["static_image"])
+
+    # Score every known media type
+    scores: Dict[str, int] = {}
+    for media_type in _ALL_MEDIA_TYPES:
+        score = 0
+
+        # Platform preference bonus/penalty
+        if media_type in platform_prefs.get("preferred", []):
+            score += 3
+        elif media_type in platform_prefs.get("good", []):
+            score += 1
+        elif media_type in platform_prefs.get("avoid", []):
+            score -= 2
+
+        # Angle candidate bonus — position-weighted (first = most preferred)
+        if media_type in angle_candidates:
+            idx = angle_candidates.index(media_type)
+            score += max(1, 3 - idx)  # First → +3, second → +2, third → +1
+
+        # Capability bonuses
+        if media_type == "infographic" and has_data_points:
+            score += 2
+        if media_type == "talking_head" and has_avatar:
+            score += 2
+        if media_type == "short_form_video" and len(content_text) > 500:
+            score += 1
+
+        scores[media_type] = score
+
+    # Sort by score descending, then alphabetically for deterministic tiebreaking
+    ranked = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
+
+    best_type, best_score = ranked[0]
+    alternatives = [fmt for fmt, _ in ranked[1:3]]  # Top 2 alternatives
+
+    # Compute normalised confidence — map best score to 0-1 range
+    all_scores = list(scores.values())
+    score_range = max(all_scores) - min(all_scores)
+    if score_range > 0:
+        confidence = round((best_score - min(all_scores)) / score_range, 2)
+    else:
+        confidence = 0.5
+
+    # Build human-readable reason
+    reason_parts: List[str] = []
+    if best_type in platform_prefs.get("preferred", []):
+        reason_parts.append(f"{platform} strongly prefers {best_type}")
+    elif best_type in platform_prefs.get("good", []):
+        reason_parts.append(f"{platform} supports {best_type} well")
+    if best_type in angle_candidates:
+        reason_parts.append(f"effective for {content_angle} content")
+    if best_type == "infographic" and has_data_points:
+        reason_parts.append("data points detected — infographic maximises clarity")
+    if best_type == "talking_head" and has_avatar:
+        reason_parts.append("avatar available — talking head adds authenticity")
+    if best_type == "short_form_video" and len(content_text) > 500:
+        reason_parts.append("long-form content benefits from video narrative")
+
+    reason = f"Selected {best_type} for {platform}: " + (
+        "; ".join(reason_parts) if reason_parts else "best overall platform fit"
+    )
+
+    return {
+        "media_type": best_type,
+        "reason": reason,
+        "alternatives": alternatives,
+        "confidence": confidence,
+    }

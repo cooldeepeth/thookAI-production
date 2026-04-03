@@ -1,12 +1,12 @@
-# ThookAI — Stabilization & Production Readiness
+# ThookAI — Production Ready
 
 ## What This Is
 
-ThookAI is an AI-powered content creation platform for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline. The platform handles scheduling, repurposing, analytics, billing, media generation, and multi-user workspaces. Currently deployed to Render (backend) and Vercel (frontend) but not publicly launched — multiple features are broken or partially implemented.
+ThookAI is an AI-powered content operating system for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline with proactive strategy recommendations. The platform handles scheduling, repurposing, analytics, billing, multi-model media orchestration (8 formats via Remotion), knowledge graph intelligence (LightRAG), and multi-user workspaces. Deployed to Render (backend) and Vercel (frontend). v2.0 shipped — n8n orchestration, Strategist Agent, Strategy Dashboard, Obsidian vault integration, 370+ new tests.
 
 ## Core Value
 
-Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
+Proactive, personalized content creation at scale — the platform recommends what to create, generates multi-format media, and learns from real social performance data to improve every cycle.
 
 ## Requirements
 
@@ -51,46 +51,56 @@ Every feature that exists in the codebase must actually work end-to-end — a us
 - ✓ Mobile responsive sidebar — existing (PR #26)
 - ✓ CI/CD (GitHub Actions, 59 tests, Docker/docker-compose) — existing
 - ✓ Production deployment guide — existing (PR #28)
+- ✓ n8n infrastructure replacing Celery beat for task orchestration — v2.0 Phase 9
+- ✓ Real publishing to social platforms via n8n workflows — v2.0 Phase 9
+- ✓ LightRAG knowledge graph with per-user isolation — v2.0 Phase 10
+- ✓ Multi-model media orchestration (8 formats, Remotion assembly) — v2.0 Phase 11
+- ✓ Strategist Agent (nightly proactive recommendations, cadence controls) — v2.0 Phase 12
+- ✓ Analytics feedback loop (real social metrics 24h+7d) — v2.0 Phase 13
+- ✓ Strategy Dashboard with SSE feed + one-click approve — v2.0 Phase 14
+- ✓ Obsidian vault integration (Scout enrichment + Strategist signal) — v2.0 Phase 15
+- ✓ E2E audit + security hardening + production ship — v2.0 Phase 16
 
 ### Active
 
-<!-- This milestone: verify every validated item actually works, fix what's broken, clean up branches -->
+<!-- Next milestone: to be defined via /gsd:new-milestone -->
 
-- [ ] Audit all "fixed" bugs — verify against actual codebase, not PR descriptions
-- [ ] Fix all confirmed broken features with E2E verification per fix
-- [ ] Update/add tests for each fixed feature (improve 59-test baseline)
-- [ ] Clean up 20+ abandoned worktree-agent-* branches
-- [ ] Merge PR #30 (custom plan builder) into dev cleanly
-- [ ] Reconcile dev and main branches for production deploy
-- [ ] Update CLAUDE.md to reflect actual current state (remove stale bug list)
-- [ ] Verify full user journey: signup → onboard → generate → schedule → publish → pay
-- [ ] Verify all auxiliary flows: analytics, admin, agency, webhooks, templates, exports
-- [ ] Ensure Render/Vercel deployment works with all 35 env vars configured
+(To be defined in next milestone via `/gsd:new-milestone`)
 
 ### Out of Scope
 
-- M4: Interactive Onboarding redesign — deferred to next milestone
-- M5: Content DNA Fingerprinting — deferred to next milestone
-- M6: Trend Prediction Engine — deferred to next milestone
-- M7: Full Media Pipeline expansion — deferred to next milestone
-- M8: Multi-Language Engine — deferred to next milestone
-- M9: Intelligence & Analytics v2 — deferred to next milestone
-- M10: Platform-Native UX Shells — deferred to next milestone
-- M11: Extraordinary Features — deferred to next milestone
-- New feature development — no new features until existing ones work
-- UI/UX redesign — stabilize current UI, don't redesign
+- M4: Interactive Onboarding redesign — deferred to future milestone
+- M5: Content DNA Fingerprinting — subsumed by Strategist Agent + LightRAG
+- M8: Multi-Language Engine (Sarvam AI, regional languages) — deferred to v3.0
+- M10: Platform-Native UX Shells (mobile apps) — deferred to v3.0
+- M11: Extraordinary Features — deferred to future milestone
+- Full UI/UX redesign — incremental improvements only (Strategy Dashboard is new, rest evolves)
+- Real-time collaboration — not needed for solo creators / small agencies yet
+
+## Current Milestone: v2.0 Intelligent Content Operating System
+
+**Goal:** Transform ThookAI from a reactive content generation tool into a proactive content operating system with multi-model orchestrated media generation.
+
+**Target features:**
+- n8n infrastructure replacing Celery for task orchestration + real publishing
+- LightRAG knowledge graph for entity/relationship extraction and multi-hop retrieval
+- Multi-model media orchestration engine (Designer plans → best model per task → Remotion assembles)
+- Strategist Agent for proactive content recommendations (Obsidian + LightRAG + n8n + persona)
+- Strategy Dashboard with recommendation cards, SSE notifications, one-click approve
+- Analytics feedback loop (real social metrics → Strategist + persona intelligence)
+- Obsidian vault integration into Scout agent for research-grounded content
+- E2E audit + security hardening + production ship
+
+**Key architectural principle:** Intelligence is in planning and assembly, not single-model generation. Anti-generic, anti-AI-slop content by design.
 
 ## Context
 
-- **30 PRs merged in ~5 days** by previous Claude Code sessions — speed over depth caused bugs marked as fixed that aren't actually fixed
-- **Codebase mapper (2026-03-31)** found the same bugs from CLAUDE.md still present in code — fixes may be incomplete, superficial, or lost in branch divergence
-- **20+ worktree-agent-* branches** left behind by abandoned parallel agent runs — need cleanup
-- **dev is 28+ PRs ahead of main** — main has never been updated
-- **PR #30 (open)** adds custom plan builder pricing pivot — user wants this included
-- **Current branch: feat/post-launch-sprint** — 5 commits ahead of dev with pricing changes
-- **Deployed but broken** on Render (backend) + Vercel (frontend) — not publicly launched
-- **59 existing tests** but real bugs slipped through — tests need strengthening
-- **Audit report (2026-03-28)** documented 38 bot-flagged issues as fixed — need re-verification
+- **v1.0 Stabilization shipped** — 8 phases, 22 plans, 57 requirements, all verified, 319+ tests
+- **Stable foundation**: Auth, onboarding, content pipeline, publishing, billing, media, analytics, workspaces all working E2E
+- **Tech stack evolving**: FastAPI + Motor + n8n (replacing Celery) + Redis + React + TailwindCSS + shadcn/ui
+- **New integrations for v2.0**: n8n (self-hosted), LightRAG, Obsidian CLI, Remotion (compositor), multi-model routing
+- **Deployed** to Render (backend) and Vercel (frontend)
+- **Existing media providers**: fal.ai, Luma, Runway, HeyGen, ElevenLabs, DALL-E — all to be orchestrated
 
 ## Constraints
 
@@ -106,11 +116,16 @@ Every feature that exists in the codebase must actually work end-to-end — a us
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Stabilize before building new features | Previous rapid development created unreliable foundation — bugs marked fixed but still broken | — Pending |
-| Include custom plan builder (PR #30) in stabilization | Pricing pivot is final direction, not experimental | — Pending |
-| Start from dev branch | Has all 28 merged PRs — better to audit and fix than reapply from main | — Pending |
-| GSD workflow for granular task decomposition | Previous approach shipped fast but without per-fix verification, causing compounding bugs | — Pending |
-| Manual E2E + automated tests for verification | 59 existing tests missed real bugs — need both layers | — Pending |
+| Stabilize before building new features | Previous rapid development created unreliable foundation | ✓ Good — all 57 requirements verified |
+| Include custom plan builder (PR #30) in stabilization | Pricing pivot is final direction, not experimental | ✓ Good — atomic credits + custom tiers working |
+| Start from dev branch | Has all 28 merged PRs — better to audit and fix than reapply from main | ✓ Good — avoided rebase complexity |
+| GSD workflow for granular task decomposition | Previous approach shipped fast but without per-fix verification | ✓ Good — 22 plans with verification loops caught real bugs |
+| TDD-first approach for phases 3-8 | Write failing tests → fix code → verify | ✓ Good — 319+ tests, 0 failures, caught JWT bug and race condition |
+| Parallel agent execution per wave | Independent plans run simultaneously | ✓ Good — significant time savings, merge conflicts minimal |
+| Replace Celery with n8n | Celery was fragile, n8n provides visual workflow orchestration + webhook triggers | — Pending |
+| Multi-model orchestration over single-model generation | Professional production approach — intelligence in planning/assembly | — Pending |
+| LightRAG complements Pinecone | Vector store for similarity, knowledge graph for relationships | — Pending |
+| Strategist Agent as breakthrough differentiator | No competitor has proactive content intelligence from user's own vault | — Pending |
 
 ## Evolution
 
@@ -130,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 after initialization*
+*Last updated: 2026-04-02 after v2.0 milestone — Intelligent Content Operating System shipped. 8 phases, 27 plans, 370+ tests, 164 files changed, 41,560 insertions.*

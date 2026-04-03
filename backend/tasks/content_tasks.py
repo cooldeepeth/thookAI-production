@@ -97,185 +97,189 @@ def run_content_pipeline(
 
 # ============ SCHEDULED POSTS ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.process_scheduled_posts')
 def process_scheduled_posts() -> Dict[str, Any]:
     """
     Process posts scheduled for publishing.
-    
+
     Runs every 5 minutes via Celery Beat.
+    Delegates to _run_scheduled_posts_inner for the async logic.
     """
     logger.info("Processing scheduled posts...")
-    
-    async def _process():
-        from database import db
-        
-        now = datetime.now(timezone.utc)
-        
-        # Find posts due for publishing
-        due_posts = await db.scheduled_posts.find({
-            "status": "scheduled",
-            "scheduled_at": {"$lte": now}
-        }).to_list(length=100)
-        
-        published = 0
-        failed = 0
-        
-        for post in due_posts:
-            try:
-                # Get user's platform tokens
-                user_id = post["user_id"]
-                platform = post["platform"]
-                
-                token = await db.platform_tokens.find_one({
-                    "user_id": user_id,
-                    "platform": platform
-                })
-                
-                if not token:
-                    # Mark as failed - no platform connection
-                    await db.scheduled_posts.update_one(
-                        {"schedule_id": post["schedule_id"]},
-                        {"$set": {
-                            "status": "failed",
-                            "error": "Platform not connected",
-                            "processed_at": now
-                        }}
-                    )
-                    failed += 1
-                    # Fire outbound webhook for post.failed (no token)
-                    try:
-                        from services.webhook_service import fire_webhook
-                        await fire_webhook(user_id, "post.failed", {
-                            "schedule_id": post.get("schedule_id"),
-                            "job_id": post.get("job_id"),
-                            "platform": platform,
-                            "error": "Platform not connected",
-                        })
-                    except Exception as wh_err:
-                        logger.warning(
-                            "Failed to fire post.failed webhook for schedule %s: %s",
-                            post.get("schedule_id"), wh_err,
-                        )
-                    continue
-                
-                # Publish via real platform APIs (production) or simulation (dev)
-                success = await _publish_to_platform(
-                    platform=platform,
-                    content=post.get("content"),
-                    token=token
+    return run_async(_run_scheduled_posts_inner())
+
+
+async def _run_scheduled_posts_inner(db_handle=None) -> dict:
+    """Testable async core of process_scheduled_posts.
+
+    Accepts an optional ``db_handle`` for unit tests that pass in a mock DB
+    object.  When called from the Celery task the real DB is imported
+    inside the function.
+    """
+    if db_handle is None:
+        from database import db as db_handle  # type: ignore[assignment]
+
+    now = datetime.now(timezone.utc)
+
+    due_posts = await db_handle.scheduled_posts.find({
+        "status": "scheduled",
+        "scheduled_at": {"$lte": now}
+    }).to_list(length=100)
+
+    published = 0
+    failed = 0
+
+    for post in due_posts:
+        try:
+            user_id = post["user_id"]
+            platform = post["platform"]
+
+            token = await db_handle.platform_tokens.find_one({
+                "user_id": user_id,
+                "platform": platform
+            })
+
+            if not token:
+                await db_handle.scheduled_posts.update_one(
+                    {"schedule_id": post["schedule_id"]},
+                    {"$set": {
+                        "status": "failed",
+                        "error": "Platform not connected",
+                        "processed_at": now
+                    }}
                 )
-                
-                if success:
-                    await db.scheduled_posts.update_one(
-                        {"schedule_id": post["schedule_id"]},
-                        {"$set": {
-                            "status": "published",
-                            "published_at": now,
-                            "processed_at": now
-                        }}
-                    )
-                    published += 1
-
-                    # Fire notification to user — never crash the publishing flow
-                    try:
-                        from services.notification_service import create_notification
-
-                        content_preview = (post.get("content") or "")[:100]
-                        if len(post.get("content") or "") > 100:
-                            content_preview += "..."
-                        await create_notification(
-                            user_id=user_id,
-                            type="post_published",
-                            title=f"Your {platform} post was published",
-                            body=content_preview,
-                            metadata={
-                                "platform": platform,
-                                "schedule_id": post.get("schedule_id"),
-                                "job_id": post.get("job_id"),
-                            },
-                        )
-                    except Exception as notif_err:
-                        logger.warning(
-                            "Failed to create publish notification for schedule %s: %s",
-                            post.get("schedule_id"),
-                            notif_err,
-                        )
-
-                    # Schedule follow-up analytics polling
-                    job_id = post.get("job_id", post.get("schedule_id"))
-                    if job_id:
-                        try:
-                            poll_post_metrics_24h.apply_async(
-                                args=[job_id, user_id, platform],
-                                countdown=86400,  # 24 hours
-                            )
-                            poll_post_metrics_7d.apply_async(
-                                args=[job_id, user_id, platform],
-                                countdown=604800,  # 7 days
-                            )
-                        except Exception as poll_err:
-                            logger.warning(
-                                "Failed to schedule metrics polling for job %s: %s",
-                                job_id,
-                                poll_err,
-                            )
-
-                    # Fire outbound webhook for post.published
-                    try:
-                        from services.webhook_service import fire_webhook
-                        await fire_webhook(user_id, "post.published", {
-                            "schedule_id": post.get("schedule_id"),
-                            "job_id": post.get("job_id"),
-                            "platform": platform,
-                            "published_at": now.isoformat(),
-                        })
-                    except Exception as wh_err:
-                        logger.warning(
-                            "Failed to fire post.published webhook for schedule %s: %s",
-                            post.get("schedule_id"), wh_err,
-                        )
-                else:
-                    await db.scheduled_posts.update_one(
-                        {"schedule_id": post["schedule_id"]},
-                        {"$set": {
-                            "status": "failed",
-                            "error": "Publishing failed",
-                            "processed_at": now
-                        }}
-                    )
-                    failed += 1
-
-                    # Fire outbound webhook for post.failed
-                    try:
-                        from services.webhook_service import fire_webhook
-                        await fire_webhook(user_id, "post.failed", {
-                            "schedule_id": post.get("schedule_id"),
-                            "job_id": post.get("job_id"),
-                            "platform": platform,
-                            "error": "Publishing failed",
-                        })
-                    except Exception as wh_err:
-                        logger.warning(
-                            "Failed to fire post.failed webhook for schedule %s: %s",
-                            post.get("schedule_id"), wh_err,
-                        )
-                    
-            except Exception as e:
-                logger.error(f"Failed to process scheduled post {post.get('schedule_id')}: {e}")
                 failed += 1
-        
-        logger.info(f"Processed scheduled posts: {published} published, {failed} failed")
-        return {"published": published, "failed": failed}
-    
-    return run_async(_process())
+                try:
+                    from services.webhook_service import fire_webhook
+                    await fire_webhook(user_id, "post.failed", {
+                        "schedule_id": post.get("schedule_id"),
+                        "job_id": post.get("job_id"),
+                        "platform": platform,
+                        "error": "Platform not connected",
+                    })
+                except Exception as wh_err:
+                    logger.warning(
+                        "Failed to fire post.failed webhook for schedule %s: %s",
+                        post.get("schedule_id"), wh_err,
+                    )
+                continue
+
+            success = await _publish_to_platform(
+                platform=platform,
+                content=post.get("content"),
+                token=token
+            )
+
+            if success:
+                await db_handle.scheduled_posts.update_one(
+                    {"schedule_id": post["schedule_id"]},
+                    {"$set": {
+                        "status": "published",
+                        "published_at": now,
+                        "processed_at": now
+                    }}
+                )
+                published += 1
+
+                try:
+                    from services.notification_service import create_notification
+                    content_preview = (post.get("content") or "")[:100]
+                    if len(post.get("content") or "") > 100:
+                        content_preview += "..."
+                    await create_notification(
+                        user_id=user_id,
+                        type="post_published",
+                        title=f"Your {platform} post was published",
+                        body=content_preview,
+                        metadata={
+                            "platform": platform,
+                            "schedule_id": post.get("schedule_id"),
+                            "job_id": post.get("job_id"),
+                        },
+                    )
+                except Exception as notif_err:
+                    logger.warning(
+                        "Failed to create publish notification for schedule %s: %s",
+                        post.get("schedule_id"),
+                        notif_err,
+                    )
+
+                job_id = post.get("job_id", post.get("schedule_id"))
+                if job_id:
+                    try:
+                        poll_post_metrics_24h.apply_async(
+                            args=[job_id, user_id, platform],
+                            countdown=86400,
+                        )
+                        poll_post_metrics_7d.apply_async(
+                            args=[job_id, user_id, platform],
+                            countdown=604800,
+                        )
+                    except Exception as poll_err:
+                        logger.warning(
+                            "Failed to schedule metrics polling for job %s: %s",
+                            job_id,
+                            poll_err,
+                        )
+
+                try:
+                    from services.webhook_service import fire_webhook
+                    await fire_webhook(user_id, "post.published", {
+                        "schedule_id": post.get("schedule_id"),
+                        "job_id": post.get("job_id"),
+                        "platform": platform,
+                        "published_at": now.isoformat(),
+                    })
+                except Exception as wh_err:
+                    logger.warning(
+                        "Failed to fire post.published webhook for schedule %s: %s",
+                        post.get("schedule_id"), wh_err,
+                    )
+            else:
+                await db_handle.scheduled_posts.update_one(
+                    {"schedule_id": post["schedule_id"]},
+                    {"$set": {
+                        "status": "failed",
+                        "error": "Publishing failed",
+                        "processed_at": now
+                    }}
+                )
+                failed += 1
+
+                try:
+                    from services.webhook_service import fire_webhook
+                    await fire_webhook(user_id, "post.failed", {
+                        "schedule_id": post.get("schedule_id"),
+                        "job_id": post.get("job_id"),
+                        "platform": platform,
+                        "error": "Publishing failed",
+                    })
+                except Exception as wh_err:
+                    logger.warning(
+                        "Failed to fire post.failed webhook for schedule %s: %s",
+                        post.get("schedule_id"), wh_err,
+                    )
+
+        except Exception as e:
+            logger.error(f"Failed to process scheduled post {post.get('schedule_id')}: {e}")
+            failed += 1
+
+    logger.info(f"Processed scheduled posts: {published} published, {failed} failed")
+    return {"published": published, "failed": failed}
 
 
-async def _publish_to_platform(platform: str, content: str, token: dict) -> bool:
+async def _publish_to_platform(
+    platform: str,
+    content: str,
+    token: dict,
+    media_assets: Optional[List[Dict[str, Any]]] = None,
+) -> bool:
     """
     Publish content to a social platform.
 
     In production: delegates to the real publisher agent.  Never simulates.
-    In dev/test: falls back to simulation if the publisher module is missing.
+    In dev/test: tries real publisher, falls back to simulation only if
+    the publisher module is not importable (i.e. missing dep).
     Returns False on any error (never raises).
     """
     from config import settings
@@ -303,6 +307,7 @@ async def _publish_to_platform(platform: str, content: str, token: dict) -> bool
                     content=content,
                     access_token=access_token,
                     user_id=user_id,
+                    media_assets=media_assets,
                 )
             except Exception as pub_exc:
                 logger.error(
@@ -332,6 +337,7 @@ async def _publish_to_platform(platform: str, content: str, token: dict) -> bool
                 content=content,
                 access_token=access_token,
                 user_id=user_id,
+                media_assets=media_assets,
             )
             if isinstance(result, dict):
                 if not result.get("success"):
@@ -360,7 +366,7 @@ async def _publish_to_platform(platform: str, content: str, token: dict) -> bool
 
 # ============ DAILY LIMITS ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.reset_daily_limits')
 def reset_daily_limits() -> Dict[str, Any]:
     """
     Reset daily content creation counters for all users.
@@ -385,7 +391,7 @@ def reset_daily_limits() -> Dict[str, Any]:
 
 # ============ CREDIT REFRESH ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.refresh_monthly_credits')
 def refresh_monthly_credits() -> Dict[str, Any]:
     """
     Refresh monthly credits for subscribed users.
@@ -451,7 +457,7 @@ def refresh_monthly_credits() -> Dict[str, Any]:
 
 # ============ CLEANUP TASKS ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.cleanup_old_jobs')
 def cleanup_old_jobs() -> Dict[str, Any]:
     """
     Clean up old content jobs and temporary data.
@@ -495,7 +501,7 @@ def cleanup_old_jobs() -> Dict[str, Any]:
     return run_async(_cleanup())
 
 
-@shared_task
+@shared_task(name='tasks.content_tasks.cleanup_expired_shares')
 def cleanup_expired_shares() -> Dict[str, Any]:
     """
     Deactivate expired persona share links.
@@ -552,7 +558,7 @@ def update_performance_intelligence(user_id: str) -> Dict[str, Any]:
 
 # ============ ANALYTICS AGGREGATION ============
 
-@shared_task
+@shared_task(name='tasks.content_tasks.aggregate_daily_analytics')
 def aggregate_daily_analytics() -> Dict[str, Any]:
     """
     Aggregate daily analytics for reporting.
@@ -609,7 +615,7 @@ def aggregate_daily_analytics() -> Dict[str, Any]:
 
 # ============ SOCIAL ANALYTICS POLLING ============
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=300)
+@shared_task(bind=True, name='tasks.content_tasks.poll_post_metrics_24h', max_retries=2, default_retry_delay=300)
 def poll_post_metrics_24h(self, job_id: str, user_id: str, platform: str) -> Dict[str, Any]:
     """Poll post metrics 24 hours after publishing.
 
@@ -635,7 +641,7 @@ def poll_post_metrics_24h(self, job_id: str, user_id: str, platform: str) -> Dic
         raise self.retry(exc=exc, countdown=300 * (2 ** self.request.retries))
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=300)
+@shared_task(bind=True, name='tasks.content_tasks.poll_post_metrics_7d', max_retries=2, default_retry_delay=300)
 def poll_post_metrics_7d(self, job_id: str, user_id: str, platform: str) -> Dict[str, Any]:
     """Poll post metrics 7 days after publishing.
 

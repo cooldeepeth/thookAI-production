@@ -4,7 +4,7 @@ Targeted E2E Backend Testing for specific failing areas
 """
 
 import asyncio
-import aiohttp
+import httpx
 import json
 import time
 from datetime import datetime
@@ -23,7 +23,7 @@ class TargetedTestRunner:
         self.user_id = None
         
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
+        self.session = httpx.AsyncClient()
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -55,14 +55,14 @@ class TargetedTestRunner:
             request_headers["Authorization"] = f"Bearer {self.auth_token}"
         
         try:
-            async with self.session.request(
+            response = await self.session.request(
                 method, url, json=data, headers=request_headers, timeout=30
-            ) as response:
-                try:
-                    response_data = await response.json()
-                except Exception:
-                    response_data = {"error": "Invalid JSON response", "text": await response.text()}
-                return response.status, response_data
+            )
+            try:
+                response_data = response.json()
+            except Exception:
+                response_data = {"error": "Invalid JSON response", "text": response.text}
+            return response.status_code, response_data
         except Exception as e:
             return 500, {"error": f"Request failed: {str(e)}"}
     

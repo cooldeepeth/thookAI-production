@@ -215,6 +215,113 @@ class PineconeConfig:
 
 
 @dataclass
+class N8nConfig:
+    """n8n workflow orchestration configuration"""
+    n8n_url: str = field(default_factory=lambda: os.environ.get('N8N_URL', 'http://n8n:5678'))
+    webhook_secret: str = field(default_factory=lambda: os.environ.get('N8N_WEBHOOK_SECRET', ''))
+    api_key: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_API_KEY'))
+    backend_callback_url: str = field(default_factory=lambda: os.environ.get('N8N_BACKEND_CALLBACK_URL', 'http://backend:8001'))
+    workflow_scheduled_posts: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_SCHEDULED_POSTS'))
+    workflow_reset_daily_limits: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_RESET_DAILY_LIMITS'))
+    workflow_refresh_monthly_credits: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_REFRESH_MONTHLY_CREDITS'))
+    workflow_cleanup_old_jobs: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_OLD_JOBS'))
+    workflow_cleanup_expired_shares: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_EXPIRED_SHARES'))
+    workflow_aggregate_daily_analytics: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_AGGREGATE_DAILY_ANALYTICS'))
+    workflow_cleanup_stale_jobs: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_CLEANUP_STALE_JOBS'))
+    workflow_nightly_strategist: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_NIGHTLY_STRATEGIST'))
+    workflow_analytics_poll_24h: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_ANALYTICS_POLL_24H'))
+    workflow_analytics_poll_7d: Optional[str] = field(default_factory=lambda: os.environ.get('N8N_WORKFLOW_ANALYTICS_POLL_7D'))
+
+    def is_configured(self) -> bool:
+        """Check if n8n is configured with required URL and secret."""
+        return bool(self.n8n_url and self.webhook_secret)
+
+
+@dataclass
+class LightRAGConfig:
+    """LightRAG knowledge graph sidecar configuration.
+
+    CRITICAL: embedding_model and embedding_dim are FROZEN after first document insert.
+    Changing them requires full index rebuild (delete all NanoVectorDB files + re-ingest).
+    """
+    url: str = field(default_factory=lambda: os.environ.get('LIGHTRAG_URL', 'http://lightrag:9621'))
+    api_key: Optional[str] = field(default_factory=lambda: os.environ.get('LIGHTRAG_API_KEY'))
+    embedding_model: str = field(default_factory=lambda: os.environ.get('LIGHTRAG_EMBEDDING_MODEL', 'text-embedding-3-small'))
+    embedding_dim: int = field(default_factory=lambda: int(os.environ.get('LIGHTRAG_EMBEDDING_DIM', '1536')))
+
+    def is_configured(self) -> bool:
+        """Check if LightRAG sidecar URL is set."""
+        return bool(self.url)
+
+    def assert_embedding_config(self) -> None:
+        """Fail loudly if embedding config diverges from locked decision.
+
+        Must match NanoVectorDB stored dimension. Called once at FastAPI startup.
+        """
+        assert self.embedding_model == "text-embedding-3-small", (
+            f"LIGHTRAG_EMBEDDING_MODEL must be 'text-embedding-3-small', got: {self.embedding_model}"
+        )
+        assert self.embedding_dim == 1536, (
+            f"LIGHTRAG_EMBEDDING_DIM must be 1536 for text-embedding-3-small, got: {self.embedding_dim}"
+        )
+
+
+@dataclass
+class StrategistConfig:
+    """Strategist Agent cadence and behaviour configuration.
+
+    These are application constants — not environment-driven.
+    All fields are tuned for launch-day cadence per STRAT-04/05/06.
+    """
+    # STRAT-04: hard cap on recommendation cards delivered per user per day
+    max_cards_per_day: int = 3
+    # STRAT-05: days a dismissed topic is suppressed before re-surfacing
+    suppression_days: int = 14
+    # STRAT-06: consecutive dismissals threshold before delivery rate is halved
+    consecutive_dismissal_threshold: int = 5
+    # Minimum approved content jobs required before running strategist for a user
+    min_approved_content: int = 3
+    # LLM synthesis call timeout in seconds
+    synthesis_timeout: float = 30.0
+    # Documentation field: n8n beat runs the nightly strategist at this UTC hour
+    nightly_cron_hour_utc: int = 3
+
+
+@dataclass
+class ObsidianConfig:
+    """Obsidian Local REST API integration configuration.
+
+    Obsidian runs on the user's local machine and exposes a REST API via the
+    "Local REST API" plugin (https://github.com/coddingtonbear/obsidian-local-rest-api).
+    For cloud-hosted ThookAI to reach it, the user must expose the API via
+    Cloudflare Tunnel or ngrok — OBSIDIAN_BASE_URL is the tunnel URL.
+
+    Per-user overrides stored in db.users.obsidian_config take precedence.
+    These env vars serve as global fallback defaults.
+    """
+    base_url: str = field(default_factory=lambda: os.environ.get('OBSIDIAN_BASE_URL', ''))
+    api_key: Optional[str] = field(default_factory=lambda: os.environ.get('OBSIDIAN_API_KEY'))
+
+    def is_configured(self) -> bool:
+        """Check if global Obsidian fallback is configured.
+
+        Requires OBSIDIAN_BASE_URL to be set and start with http.
+        """
+        return bool(self.base_url and self.base_url.startswith('http'))
+
+
+@dataclass
+class RemotionConfig:
+    """Remotion video compositor sidecar configuration"""
+    remotion_service_url: str = field(default_factory=lambda: os.environ.get('REMOTION_SERVICE_URL', 'http://localhost:3001'))
+    remotion_license_key: str = field(default_factory=lambda: os.environ.get('REMOTION_LICENSE_KEY', ''))
+
+    def is_configured(self) -> bool:
+        """Check if Remotion sidecar is reachable (URL is non-default or REMOTION_SERVICE_URL is set)."""
+        return bool(os.environ.get('REMOTION_SERVICE_URL'))
+
+
+@dataclass
 class AppConfig:
     """Application configuration"""
     environment: str = field(default_factory=lambda: os.environ.get('ENVIRONMENT', 'development'))
@@ -251,6 +358,11 @@ class Settings:
     voice: VoiceProviderConfig = field(default_factory=VoiceProviderConfig)
     platforms: PlatformOAuthConfig = field(default_factory=PlatformOAuthConfig)
     pinecone: PineconeConfig = field(default_factory=PineconeConfig)
+    n8n: N8nConfig = field(default_factory=N8nConfig)
+    lightrag: LightRAGConfig = field(default_factory=LightRAGConfig)
+    remotion: RemotionConfig = field(default_factory=RemotionConfig)
+    strategist: StrategistConfig = field(default_factory=StrategistConfig)
+    obsidian: ObsidianConfig = field(default_factory=ObsidianConfig)
 
     def validate(self) -> dict:
         """
@@ -329,6 +441,54 @@ class Settings:
 def get_settings() -> Settings:
     """Get cached settings instance"""
     return Settings()
+
+
+def validate_required_env_vars() -> list:
+    """
+    Check that critical environment variables are set.
+    Returns list of missing variable names.
+
+    Required in ALL environments:
+      MONGO_URL, DB_NAME, JWT_SECRET_KEY, FERNET_KEY
+
+    Required in production (ENVIRONMENT=production):
+      REDIS_URL, ANTHROPIC_API_KEY (or OPENAI_API_KEY),
+      R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL,
+      STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+      ENCRYPTION_KEY
+    """
+    missing = []
+
+    # Always required
+    always_required = ["MONGO_URL", "DB_NAME", "JWT_SECRET_KEY", "FERNET_KEY"]
+    for var in always_required:
+        val = os.environ.get(var, "").strip()
+        if not val or val in ("change_this_to_a_random_64_char_string", "your_fernet_key_here"):
+            missing.append(var)
+
+    env = os.environ.get("ENVIRONMENT", "development")
+    if env == "production":
+        prod_required = [
+            "REDIS_URL",
+            "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY",
+            "R2_BUCKET_NAME", "R2_PUBLIC_URL",
+            "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
+            "ENCRYPTION_KEY",
+        ]
+        for var in prod_required:
+            val = os.environ.get(var, "").strip()
+            if not val:
+                missing.append(var)
+
+        # At least one LLM provider required in production
+        has_llm = any(
+            os.environ.get(k, "").strip()
+            for k in ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "EMERGENT_LLM_KEY"]
+        )
+        if not has_llm:
+            missing.append("ANTHROPIC_API_KEY (or OPENAI_API_KEY or EMERGENT_LLM_KEY)")
+
+    return missing
 
 
 # Convenience function for quick access

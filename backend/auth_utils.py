@@ -124,10 +124,12 @@ def decode_token(token: str) -> dict:
     """
     Decode and validate a JWT token.
     Raises JWTError if invalid.
+    Uses the same fallback key as create_jwt_token in routes/auth.py.
     """
+    secret = settings.security.jwt_secret_key or "thook-dev-secret"
     return jwt.decode(
         token,
-        settings.security.jwt_secret_key,
+        secret,
         algorithms=[settings.security.jwt_algorithm]
     )
 

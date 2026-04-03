@@ -28,6 +28,36 @@ def is_stripe_configured() -> bool:
     return bool(STRIPE_SECRET_KEY and not STRIPE_SECRET_KEY.startswith('placeholder'))
 
 
+def validate_stripe_config():
+    """Log warnings for missing Stripe configuration in production."""
+    if not is_stripe_configured():
+        logger.warning("STRIPE: Secret key not configured. Payment features will use simulated mode.")
+        return
+
+    missing_prices = []
+    credit_prices = [
+        ("STRIPE_PRICE_CREDITS_100", settings.stripe.price_credits_100),
+        ("STRIPE_PRICE_CREDITS_500", settings.stripe.price_credits_500),
+        ("STRIPE_PRICE_CREDITS_1000", settings.stripe.price_credits_1000),
+    ]
+    for name, value in credit_prices:
+        if not value or value.startswith("placeholder"):
+            missing_prices.append(name)
+
+    if missing_prices:
+        logger.warning(
+            "STRIPE: Credit package Price IDs not configured: %s. "
+            "Credit package checkout will use dynamic pricing.",
+            ", ".join(missing_prices),
+        )
+
+    if not STRIPE_WEBHOOK_SECRET:
+        logger.error(
+            "STRIPE: STRIPE_WEBHOOK_SECRET not configured. "
+            "Webhook signature verification will fail in production."
+        )
+
+
 # Initialize Stripe if available
 stripe = None
 if is_stripe_configured():
@@ -40,6 +70,9 @@ if is_stripe_configured():
         logger.warning("Stripe library not installed. Run: pip install stripe")
 else:
     logger.warning("Stripe not configured. Payment features will be simulated.")
+
+# Run validation on module import
+validate_stripe_config()
 
 
 # ============ CREDIT PACKAGES (one-time purchases) ============

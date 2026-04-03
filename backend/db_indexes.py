@@ -63,6 +63,10 @@ INDEXES = {
         IndexModel([('scheduled_at', ASCENDING)], sparse=True, name='idx_scheduled_at'),
         IndexModel([('series_id', ASCENDING)], sparse=True, name='idx_series_id'),
         IndexModel([('is_repurposed', ASCENDING)], sparse=True, name='idx_is_repurposed'),
+        # Analytics poll queue indexes (Phase 13 — analytics feedback loop)
+        # Sparse because only published posts will have these fields set.
+        IndexModel([('analytics_24h_polled', ASCENDING), ('analytics_24h_due_at', ASCENDING)], sparse=True, name='analytics_24h_poll_queue'),
+        IndexModel([('analytics_7d_polled', ASCENDING), ('analytics_7d_due_at', ASCENDING)], sparse=True, name='analytics_7d_poll_queue'),
     ],
     
     # ========== CONTENT SERIES ==========
@@ -198,6 +202,35 @@ INDEXES = {
     'viral_cards': [
         IndexModel([('card_id', ASCENDING)], unique=True, name='idx_card_id'),
         IndexModel([('created_at', ASCENDING)], expireAfterSeconds=2592000, name='idx_ttl_30d'),
+    ],
+
+    # ========== MEDIA PIPELINE LEDGER ==========
+    # Tracks per-stage credits for every orchestrated media job.
+    # Every provider call is preceded by a pending entry here — no silent credit drain.
+    'media_pipeline_ledger': [
+        IndexModel([('job_id', ASCENDING)], name='idx_job_id'),
+        IndexModel([('user_id', ASCENDING), ('created_at', DESCENDING)], name='idx_user_created'),
+        IndexModel([('status', ASCENDING), ('created_at', ASCENDING)], name='idx_status_created'),
+    ],
+
+    # ========== STRATEGY RECOMMENDATIONS (Phase 12 — Strategist Agent) ==========
+    # Proactive content recommendation cards delivered to users.
+    # Compound (user_id, topic, status) index is MANDATORY for 14-day suppression check (STRAT-05).
+    'strategy_recommendations': [
+        IndexModel([('recommendation_id', ASCENDING)], unique=True, name='idx_recommendation_id'),
+        IndexModel([('user_id', ASCENDING)], name='idx_user_id'),
+        IndexModel([('user_id', ASCENDING), ('status', ASCENDING)], name='idx_user_status'),
+        IndexModel([('user_id', ASCENDING), ('created_at', DESCENDING)], name='idx_user_created'),
+        IndexModel([('user_id', ASCENDING), ('topic', ASCENDING), ('status', ASCENDING)], name='idx_user_topic_status'),
+        IndexModel([('created_at', DESCENDING)], name='idx_created_at'),
+    ],
+
+    # ========== STRATEGIST STATE (Phase 12 — Strategist Agent) ==========
+    # Per-user state for the Strategist nightly runner (last run, halved-rate flag, etc.).
+    'strategist_state': [
+        IndexModel([('user_id', ASCENDING)], unique=True, name='idx_user_id'),
+        IndexModel([('last_run_at', DESCENDING)], name='idx_last_run'),
+        IndexModel([('halved_rate', ASCENDING)], name='idx_halved_rate'),
     ],
 }
 

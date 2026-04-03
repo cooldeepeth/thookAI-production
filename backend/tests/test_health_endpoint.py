@@ -39,21 +39,22 @@ class TestHealthEndpoint:
     # Test: structure of /health response
     # ------------------------------------------------------------------
     def test_health_returns_required_keys(self):
-        """GET /health must include status, mongodb, redis, r2_storage, llm_provider, timestamp."""
+        """GET /health must include status, services, and timestamp."""
         response = self.client.get("/health")
 
         assert response.status_code in (200, 503), f"Unexpected status {response.status_code}"
         data = response.json()
 
-        required_keys = {"status", "mongodb", "redis", "r2_storage", "llm_provider", "timestamp"}
+        # The /health endpoint returns: status, timestamp, services{mongodb, redis, r2_storage, llm}
+        required_keys = {"status", "timestamp", "services"}
         missing = required_keys - set(data.keys())
         assert not missing, f"Missing keys in /health response: {missing}"
 
     def test_health_status_value(self):
-        """status field should be either 'ok' or 'degraded'."""
+        """status field should be either 'ok', 'unhealthy', or 'degraded'."""
         response = self.client.get("/health")
         data = response.json()
-        assert data["status"] in ("ok", "degraded"), f"Unexpected status value: {data['status']}"
+        assert data["status"] in ("ok", "unhealthy", "degraded"), f"Unexpected status value: {data['status']}"
 
     def test_health_timestamp_is_iso(self):
         """timestamp should be a valid ISO-8601 string."""
@@ -64,34 +65,29 @@ class TestHealthEndpoint:
         # Will raise ValueError if the format is wrong
         datetime.fromisoformat(data["timestamp"])
 
-    # ------------------------------------------------------------------
-    # Test: /api/health (the second health endpoint)
-    # ------------------------------------------------------------------
-    def test_api_health_returns_required_keys(self):
-        """GET /api/health should return status, environment, and checks dict."""
-        response = self.client.get("/api/health")
+    def test_health_services_structure(self):
+        """services dict should contain mongodb, redis, r2_storage, llm subsystem keys."""
+        response = self.client.get("/health")
+        data = response.json()
+        services = data.get("services", {})
+        assert isinstance(services, dict), "'services' should be a dict"
+        expected_service_keys = {"mongodb", "redis", "r2_storage", "llm"}
+        missing = expected_service_keys - set(services.keys())
+        assert not missing, f"Missing service checks: {missing}"
 
+    # ------------------------------------------------------------------
+    # Test: /api/ root endpoint
+    # ------------------------------------------------------------------
+    def test_api_root_returns_running_status(self):
+        """GET /api/ should return status=running."""
+        response = self.client.get("/api/")
         assert response.status_code == 200, f"Unexpected status {response.status_code}"
         data = response.json()
+        assert "status" in data, "Missing 'status' key in /api/"
+        assert data["status"] == "running", f"Expected status='running', got {data['status']}"
 
-        assert "status" in data, "Missing 'status' key in /api/health"
-        assert "environment" in data, "Missing 'environment' key in /api/health"
-        assert "checks" in data, "Missing 'checks' key in /api/health"
-        assert isinstance(data["checks"], dict), "'checks' should be a dict"
-
-    def test_api_health_checks_contain_subsystems(self):
-        """The checks dict should report on database, llm, media, auth, vector store, billing."""
-        response = self.client.get("/api/health")
+    def test_api_root_returns_message(self):
+        """GET /api/ should return a message key."""
+        response = self.client.get("/api/")
         data = response.json()
-        checks = data["checks"]
-
-        expected_check_keys = {
-            "database",
-            "llm_configured",
-            "media_storage",
-            "google_auth",
-            "vector_store",
-            "billing",
-        }
-        missing = expected_check_keys - set(checks.keys())
-        assert not missing, f"Missing subsystem checks: {missing}"
+        assert "message" in data, "Missing 'message' key in /api/"

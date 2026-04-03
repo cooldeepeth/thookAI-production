@@ -13,6 +13,7 @@ import math
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 from enum import Enum
+from pymongo import ReturnDocument
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class CreditOperation(Enum):
     CONTENT_REGENERATE = 4   # Regenerate existing content (~80% margin)
     IMAGE_GENERATE = 8       # Single image generation (~74% margin)
     CAROUSEL_GENERATE = 15   # Multi-image carousel (~59% margin)
+    MEDIA_ORCHESTRATION = 25  # Media orchestration pipeline (base + per-stage costs via ledger)
     VOICE_NARRATION = 12     # Text-to-speech (~45% margin)
     VIDEO_GENERATE = 50      # Video creation (~45% margin)
     REPURPOSE = 3            # Repurpose to another platform (~88% margin)
@@ -366,7 +368,11 @@ async def deduct_credits(
     description: str = None,
     metadata: Dict = None
 ) -> Dict[str, Any]:
-    """Deduct credits for an operation.
+    """Deduct credits for an operation atomically.
+
+    Uses MongoDB find_one_and_update with a credits >= amount filter to prevent
+    race conditions where concurrent requests could both read the same balance
+    and both succeed, producing a negative credit balance.
 
     For starter users, also enforces hard caps on video/carousel.
     """
@@ -374,6 +380,7 @@ async def deduct_credits(
 
     amount = operation.value
 
+    # Read user once to check existence, tier, and starter caps
     user = await db.users.find_one({"user_id": user_id})
     if not user:
         return {"success": False, "error": "User not found"}
@@ -381,7 +388,7 @@ async def deduct_credits(
     tier = user.get("subscription_tier", "starter")
     current_credits = user.get("credits", 0)
 
-    # Enforce starter hard caps
+    # Enforce starter hard caps (count query — doesn't need atomicity)
     if tier in ("starter", "free"):
         cap_error = await _check_starter_caps(user_id, operation)
         if cap_error:
@@ -392,8 +399,18 @@ async def deduct_credits(
                 "operation": operation.name
             }
 
-    # Check if enough credits
-    if current_credits < amount:
+    # Atomic deduction: filter ensures credits >= amount before decrementing.
+    # If two concurrent requests race, only one will match the filter; the other
+    # gets None back and returns the "not enough credits" error — balance never
+    # goes negative.
+    result = await db.users.find_one_and_update(
+        {"user_id": user_id, "credits": {"$gte": amount}},
+        {"$inc": {"credits": -amount}},
+        return_document=ReturnDocument.AFTER
+    )
+
+    if result is None:
+        # Either user not found or insufficient credits
         return {
             "success": False,
             "error": f"Not enough credits. This operation requires {amount} credits but you only have {current_credits} available.",
@@ -403,14 +420,8 @@ async def deduct_credits(
             "upgrade_required": tier in ("starter", "free")
         }
 
-    # Deduct credits
-    new_balance = current_credits - amount
+    new_balance = result.get("credits", 0)
     now = datetime.now(timezone.utc)
-
-    await db.users.update_one(
-        {"user_id": user_id},
-        {"$set": {"credits": new_balance}}
-    )
 
     # Record transaction
     transaction = {

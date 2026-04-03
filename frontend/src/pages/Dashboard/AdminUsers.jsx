@@ -24,8 +24,7 @@ import {
   ArrowLeft, CreditCard, Ban, CheckCircle2, RefreshCw
 } from "lucide-react";
 
-const BACKEND_URL =
-  import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const TIER_COLORS = {
   free: "bg-zinc-700 text-zinc-300",

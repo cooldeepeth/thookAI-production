@@ -23,6 +23,24 @@ from services.persona_refinement import get_pattern_fatigue_shield
 
 logger = logging.getLogger(__name__)
 
+# ============================================================================
+# RETRIEVAL ROUTING CONTRACT (Phase 10 — LightRAG Knowledge Graph)
+#
+# Thinker agent: READS from LightRAG (query_knowledge_graph)
+#                NEVER writes to LightRAG
+#                NEVER calls Pinecone
+#
+# Writer agent:  READS from Pinecone (find_similar_content)
+#                NEVER imports lightrag_service
+#                NEVER calls LightRAG
+#
+# Learning agent: WRITES to both Pinecone AND LightRAG on approval
+#                 NEVER reads from either during the write path
+#
+# This contract prevents context bleeding between agents.
+# Violation = code review rejection.
+# ============================================================================
+
 
 def _extract_title_and_text(html: str) -> tuple[str, str]:
     m = re.search(
@@ -273,7 +291,7 @@ async def run_agent_pipeline_legacy(
         research_needed = commander_output.get("research_needed", True)
         if research_needed:
             scout_output = await asyncio.wait_for(
-                run_scout(raw_input, commander_output.get("research_query", raw_input), platform), timeout=25.0
+                run_scout(raw_input, commander_output.get("research_query", raw_input), platform, user_id=user_id), timeout=25.0
             )
         else:
             scout_output = {"findings": "No external research required for this content.", "citations": [], "sources_found": 0}

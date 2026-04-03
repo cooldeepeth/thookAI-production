@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { LinkedInShell, XShell, InstagramShell } from "./Shells";
 
-const API_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 function QCBadge({ label, value, max, isRisk = false }) {
   const pct = (value / max) * 100;

@@ -270,6 +270,7 @@ class TestPublishing:
             content="Test post",
             access_token="enc_token_abc",
             user_id="user_pub_1",
+            media_assets=None,
         )
 
     @pytest.mark.asyncio

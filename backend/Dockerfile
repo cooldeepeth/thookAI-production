@@ -16,4 +16,8 @@ COPY . .
 
 EXPOSE 8001
 
+# Health check via Python stdlib — no curl/wget needed in slim image
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8001}/health')" || exit 1
+
 CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8001} --workers 2

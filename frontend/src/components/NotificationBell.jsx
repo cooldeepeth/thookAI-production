@@ -6,6 +6,7 @@ const TYPE_ICONS = {
   post_published: "📤",
   job_completed: "✅",
   billing_event: "💳",
+  workflow_status: "🎯",
   system: "🔔",
 };
 

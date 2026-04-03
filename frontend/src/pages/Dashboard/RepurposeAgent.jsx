@@ -10,7 +10,7 @@ import {
   Loader2, Sparkles, Eye, ChevronDown, ChevronUp, Zap, Copy
 } from "lucide-react";
 
-const BACKEND_URL = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const PLATFORM_CONFIG = {
   linkedin: { name: "LinkedIn", icon: Linkedin, color: "bg-blue-600", textColor: "text-blue-400" },
