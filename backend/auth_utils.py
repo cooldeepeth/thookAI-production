@@ -123,10 +123,15 @@ def create_access_token(user_id: str, expires_days: int = None) -> str:
 def decode_token(token: str) -> dict:
     """
     Decode and validate a JWT token.
-    Raises JWTError if invalid.
-    Uses the same fallback key as create_jwt_token in routes/auth.py.
+    Raises JWTError if invalid or if JWT_SECRET_KEY is not configured.
+
+    SECURITY: Never falls back to a hardcoded secret. If JWT_SECRET_KEY is
+    not configured, raises JWTError immediately — do not silently accept tokens
+    signed with a default dev key in production (BILL-06).
     """
-    secret = settings.security.jwt_secret_key or "thook-dev-secret"
+    secret = settings.security.jwt_secret_key
+    if not secret:
+        raise JWTError("JWT secret key not configured")
     return jwt.decode(
         token,
         secret,
