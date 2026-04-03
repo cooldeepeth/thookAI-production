@@ -53,3 +53,21 @@ def make_valid_jwt(user_id: str, email: str) -> str:
         TEST_JWT_SECRET,
         algorithm="HS256",
     )
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """
+    Auto-use fixture that clears the in-memory rate limiter state before each test.
+
+    The RateLimiter in middleware/security.py is a module-level singleton whose
+    in-memory store accumulates across tests. When auth endpoints are hit many
+    times in a test session, the rate limit triggers (429) before the actual
+    validation logic. This fixture resets the state so each test starts fresh.
+    """
+    import middleware.security as sec_module
+    # Clear the in-memory request store on the global rate limiter instance
+    sec_module._rate_limiter._mem_requests.clear()
+    yield
+    # Also clear after each test for cleanliness
+    sec_module._rate_limiter._mem_requests.clear()
