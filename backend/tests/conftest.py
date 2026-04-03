@@ -12,6 +12,9 @@ is not set, so `pytest` can always exit 0 in a local dev environment.
 import os
 import pytest
 from unittest.mock import AsyncMock, patch
+from faker import Faker
+from mongomock_motor import AsyncMongoMockClient
+import respx as _respx
 
 # ---------------------------------------------------------------------------
 # Exclude live E2E integration scripts from pytest collection.
@@ -75,3 +78,55 @@ def mock_settings():
     """Mock settings for unit tests."""
     with patch("config.settings") as mock:
         yield mock
+
+
+# ---------------------------------------------------------------------------
+# Standardized test infrastructure fixtures (Phase 17)
+# ---------------------------------------------------------------------------
+
+fake = Faker()
+
+
+@pytest.fixture
+def make_user():
+    """Factory fixture for user documents. Call with kwargs to override defaults."""
+    def _make(**kwargs) -> dict:
+        defaults = {
+            "user_id": f"user_{fake.uuid4()[:8]}",
+            "email": fake.email(),
+            "subscription_tier": "starter",
+            "credits": 200,
+            "credit_allowance": 0,
+            "onboarding_completed": True,
+        }
+        defaults.update(kwargs)
+        return defaults
+    return _make
+
+
+@pytest.fixture
+def mongomock_db():
+    """In-memory Motor DB with real query semantics. Function-scoped for isolation."""
+    client = AsyncMongoMockClient()
+    db = client["thookai_test"]
+    yield db
+
+
+@pytest.fixture
+def mock_db_atomic(mongomock_db):
+    """Patch database.db with mongomock for tests needing real $inc/$set semantics."""
+    with patch("database.db", mongomock_db):
+        yield mongomock_db
+
+
+@pytest.fixture
+def respx_mock():
+    """respx transport-level mock for outbound httpx calls. Function-scoped."""
+    with _respx.mock() as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_current_user(make_user):
+    """Pre-built mock user for auth dependency override."""
+    return make_user(user_id="test_user_001", email="test@thookai.com")
