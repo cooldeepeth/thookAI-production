@@ -25,7 +25,7 @@
 - [x] **API-02**: Add automatic retry (1 retry on 5xx, exponential backoff) to apiFetch
 - [x] **API-03**: Add global error handler — 401 redirects to /auth, 403 shows permission error, 5xx shows toast
 - [x] **API-04**: Create `frontend/src/lib/constants.js` — API base URL, feature flags, app config
-- [ ] **API-05**: Replace all 41 raw `fetch()` calls across frontend with `apiFetch()`
+- [x] **API-05**: Replace all 41 raw `fetch()` calls across frontend with `apiFetch()`
 - [ ] **API-06**: Zero raw `fetch()` calls remain in `frontend/src/` (grep verification)
 
 ### Frontend Tests
@@ -86,7 +86,7 @@
 | API-02 | Phase 22 | Complete |
 | API-03 | Phase 22 | Complete |
 | API-04 | Phase 22 | Complete |
-| API-05 | Phase 22 | Pending |
+| API-05 | Phase 22 | Complete |
 | API-06 | Phase 22 | Pending |
 | TEST-01 | Phase 23 | Pending |
 | TEST-02 | Phase 23 | Pending |

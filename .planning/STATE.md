@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v2.2
+milestone_name: Frontend Hardening & Production Ship
 status: executing
-stopped_at: Completed 06-media-generation-analytics/06-03-PLAN.md
-last_updated: "2026-03-31T10:55:00.958Z"
-last_activity: 2026-03-31
+stopped_at: Completed 22-apifetch-migration-error-handling/22-02-PLAN.md
+last_updated: "2026-04-03T21:28:06.731Z"
+last_activity: 2026-04-03
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 20
-  completed_plans: 17
+  total_phases: 17
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 07 (Platform Features, Admin & Frontend Quality) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
-Last activity: 2026-03-31
+Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-media-generation-analytics P01 | 3 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
+| Phase 22 P02 | 525528 | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 06-02]: Use app.dependency_overrides[get_current_user] (not patch) for auth bypass in FastAPI route tests
 - [Phase 06-02]: Mount upload router at root (no prefix) in TestClient apps to avoid double-prefix path issues
 - [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
+- [Phase 22-02]: XHR kept in MediaUploader for upload progress tracking — apiFetch wraps fetch() which doesn't expose upload progress events
+- [Phase 22-02]: getCsrfTokenFromCookie removed from AuthContext exports — no consumers found; CSRF handled internally by apiFetch
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T07:31:15.460Z
-Stopped at: Completed 06-media-generation-analytics/06-03-PLAN.md
+Last session: 2026-04-03T21:28:06.728Z
+Stopped at: Completed 22-apifetch-migration-error-handling/22-02-PLAN.md
 Resume file: None
