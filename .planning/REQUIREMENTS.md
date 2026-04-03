@@ -50,9 +50,9 @@
 ### Frontend E2E & Integration
 
 - [x] **E2E-01**: Playwright setup — install, configure for CRA + FastAPI dual webServer, CI integration
-- [ ] **E2E-02**: Critical path E2E — signup → onboard → generate → schedule → publish → analytics → strategy → approve
-- [ ] **E2E-03**: Billing E2E — plan selection → checkout → subscription active → credit usage → upgrade
-- [ ] **E2E-04**: Agency workspace E2E — create workspace → invite member → switch context → generate as member
+- [x] **E2E-02**: Critical path E2E — signup → onboard → generate → schedule → publish → analytics → strategy → approve
+- [x] **E2E-03**: Billing E2E — plan selection → checkout → subscription active → credit usage → upgrade
+- [x] **E2E-04**: Agency workspace E2E — create workspace → invite member → switch context → generate as member
 - [x] **E2E-05**: Load testing — Locust concurrent user simulation, API response time thresholds, connection pool behavior
 - [x] **E2E-06**: Docker Compose integration smoke — full stack startup, health checks pass, cross-service connectivity
 - [x] **E2E-07**: Dead link detection — all media URLs resolve, all API endpoints respond, no broken internal routes
@@ -116,9 +116,9 @@ Deferred beyond v2.1.
 | CORE-09 | Phase 19 | Complete |
 | CORE-10 | Phase 19 | Complete |
 | E2E-01 | Phase 20 | Complete |
-| E2E-02 | Phase 20 | Pending |
-| E2E-03 | Phase 20 | Pending |
-| E2E-04 | Phase 20 | Pending |
+| E2E-02 | Phase 20 | Complete |
+| E2E-03 | Phase 20 | Complete |
+| E2E-04 | Phase 20 | Complete |
 | E2E-05 | Phase 20 | Complete |
 | E2E-06 | Phase 20 | Complete |
 | E2E-07 | Phase 20 | Complete |

@@ -43,7 +43,7 @@
 - [x] **Phase 17: Test Foundation + Billing & Payments** - Clean CI baseline, coverage infrastructure, standardized fixtures, CI matrix, then 255 billing tests with TDD fixes for 3 P0 bugs (completed 2026-04-03)
 - [x] **Phase 18: Security & Auth** - 100 tests covering JWT, OAuth (all 4 platforms), rate limiting, security headers, input validation, RBAC, and OWASP Top 10 (completed 2026-04-03)
 - [x] **Phase 19: Core Features** - 240 tests covering content pipeline, LangGraph orchestrator, media orchestration, n8n bridge, LightRAG, Strategist Agent, analytics, Obsidian, with LightRAG lambda TDD fix (completed 2026-04-03)
-- [ ] **Phase 20: Frontend E2E & Integration** - Playwright setup, critical path E2E, billing E2E, agency workspace E2E, load testing, Docker Compose smoke, dead link detection
+- [x] **Phase 20: Frontend E2E & Integration** - Playwright setup, critical path E2E, billing E2E, agency workspace E2E, load testing, Docker Compose smoke, dead link detection (completed 2026-04-03)
 
 ## Phase Details
 
@@ -245,7 +245,7 @@ Plans:
 Plans:
 - [x] 20-01-PLAN.md — Playwright setup + dual webServer config + CI workflow (E2E-01)
 - [x] 20-02-PLAN.md — Locust load test (50 users) + Docker Compose smoke (E2E-05, E2E-06)
-- [ ] 20-03-PLAN.md — Critical path E2E: signup -> onboard -> generate -> schedule -> publish -> analytics -> strategy -> approve (E2E-02)
+- [x] 20-03-PLAN.md — Critical path E2E: signup -> onboard -> generate -> schedule -> publish -> analytics -> strategy -> approve (E2E-02)
 - [x] 20-04-PLAN.md — Billing E2E + Agency workspace E2E (E2E-03, E2E-04)
 - [x] 20-05-PLAN.md — Dead link detection: static analysis + dynamic API route liveness (E2E-07)
 
@@ -272,4 +272,4 @@ Plans:
 | 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
 | 18. Security & Auth | v2.1 | 3/4 | Complete    | 2026-04-03 |
 | 19. Core Features | v2.1 | 5/5 | Complete    | 2026-04-03 |
-| 20. Frontend E2E & Integration | v2.1 | 4/5 | In Progress|  |
+| 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete   | 2026-04-03 |

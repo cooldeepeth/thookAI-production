@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
-status: executing
-stopped_at: Completed 20-frontend-e2e-integration/20-04-PLAN.md
-last_updated: "2026-04-03T08:17:04.917Z"
+status: verifying
+stopped_at: Completed 20-frontend-e2e-integration/20-03-PLAN.md
+last_updated: "2026-04-03T08:19:22.843Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 19
-  completed_plans: 18
+  completed_plans: 19
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 Phase: 20 (frontend-e2e-integration) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P01 | 5 | 2 tasks | 10 files |
 | Phase 20-frontend-e2e-integration P05 | 8 | 2 tasks | 2 files |
 | Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
+| Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Recent decisions affecting current work:
 - [Phase 20-frontend-e2e-integration]: Used isolated FastAPI app (no lifespan) with ASGITransport for route liveness tests to avoid real DB/Redis connections; dual-patched database.db and routes.<mod>.db for lazy vs module-level imports
 - [Phase 20-frontend-e2e-integration]: fetchBillingApi helper: passes API base URL as serialized arg to page.evaluate() — process.env not available in browser context
 - [Phase 20-frontend-e2e-integration]: LIFO route ordering: mockWorkspaceContext must be applied after mockAgencyEndpoints to override overlapping workspaces route
+- [Phase 20-03]: Serial test.describe used for critical path steps — each step depends on shared mock auth state from previous steps
+- [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
 
 ### Pending Todos
 
@@ -106,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T08:17:04.914Z
-Stopped at: Completed 20-frontend-e2e-integration/20-04-PLAN.md
+Last session: 2026-04-03T08:19:22.840Z
+Stopped at: Completed 20-frontend-e2e-integration/20-03-PLAN.md
 Resume file: None
