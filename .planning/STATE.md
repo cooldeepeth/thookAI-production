@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Roadmap created, REQUIREMENTS.md traceability updated, STATE.md initialized
-last_updated: "2026-03-31T01:50:52.468Z"
-last_activity: 2026-03-31 -- Phase 01 execution started
+stopped_at: Completed 18-security-auth/18-04-PLAN.md
+last_updated: "2026-04-03T06:50:58.072Z"
+last_activity: 2026-04-03
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 01 (git-branch-cleanup) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 01
-Last activity: 2026-03-31 -- Phase 01 execution started
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Recent decisions affecting current work:
 - PR #30 included: Custom plan builder (pricing pivot) is final direction, merge into dev in Phase 1
 - Billing changes: Flag for human review — no auto-merge on billing code
 - Verification standard: Manual E2E + automated tests required — 59 existing tests missed real bugs
+- [Phase 18-04]: Patch 'database.db' (not 'auth_utils.db') for auth_utils lazy db imports; patch 'routes.X.db' for module-level imports
+- [Phase 18-04]: Agency router self-declares prefix — mount at '/api' not '/api/agency' in test apps to avoid double prefix
 
 ### Pending Todos
 
@@ -80,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31
-Stopped at: Roadmap created, REQUIREMENTS.md traceability updated, STATE.md initialized
+Last session: 2026-04-03T06:50:58.069Z
+Stopped at: Completed 18-security-auth/18-04-PLAN.md
 Resume file: None
