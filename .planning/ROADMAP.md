@@ -206,7 +206,12 @@ Plans:
   4. Every route in the application returns the expected CSP, HSTS, X-Frame-Options, and X-Content-Type-Options headers — no route is missing a required security header
   5. A NoSQL injection payload (`{"$gt": ""}`) in any user-facing input field does not return unauthorized data — input validation middleware blocks it at the boundary
   6. An authenticated non-admin user calling any admin-only route receives 403 — workspace member role enforcement is verified for viewer/editor/owner boundaries
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 18-01-PLAN.md — Security test directory + conftest.py + JWT lifecycle tests + security headers tests (SEC-01, SEC-04)
+- [ ] 18-02-PLAN.md — OAuth state forgery + token encryption + rate limiting hardening (SEC-02, SEC-03)
+- [ ] 18-03-PLAN.md — Input validation (NoSQL injection, XSS, path traversal) + OWASP Top 10 (SEC-05, SEC-07)
+- [ ] 18-04-PLAN.md — Admin authorization + workspace RBAC enforcement (SEC-06)
 
 ### Phase 19: Core Features
 **Goal**: Every agent in the content pipeline, every v2.0 subsystem (LangGraph, media orchestration, n8n bridge, LightRAG, Strategist, analytics, Obsidian), and the LightRAG lambda cross-user bug are all verified with 240 tests using deterministic mocks — 85%+ branch coverage enforced globally
@@ -253,6 +258,6 @@ Plans:
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
 | 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
-| 18. Security & Auth | v2.1 | 0/TBD | Not started | - |
+| 18. Security & Auth | v2.1 | 0/4 | In progress | - |
 | 19. Core Features | v2.1 | 0/TBD | Not started | - |
 | 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
