@@ -1,16 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '@/lib/api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const AuthContext = createContext(null);
-
-/**
- * Read the csrf_token from the JS-readable cookie set by the backend.
- * The httpOnly session_token cookie is sent automatically by the browser.
- */
-function getCsrfTokenFromCookie() {
-  const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -18,11 +9,9 @@ export function AuthProvider({ children }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      // session_token cookie is sent automatically via credentials: "include"
+      // session_token cookie is sent automatically via credentials: 'include' (apiFetch default)
       // No Authorization header — cookie is the source of truth
-      const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
-        credentials: "include",
-      });
+      const res = await apiFetch('/api/auth/me');
       if (!res.ok) {
         setUser(null);
         return;
@@ -30,6 +19,7 @@ export function AuthProvider({ children }) {
       const data = await res.json();
       setUser(data);
     } catch {
+      // apiFetch may redirect to /auth on 401 before we get here — that's correct behavior
       setUser(null);
     } finally {
       setLoading(false);
@@ -38,7 +28,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    const token = params.get('token');
     if (token) {
       // Google OAuth callback: token param present.
       // The Google OAuth callback handler already set the session_token cookie
@@ -47,14 +37,13 @@ export function AuthProvider({ children }) {
       // The cookie (set by the backend) is the session source of truth.
       (async () => {
         try {
-          const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+          const res = await apiFetch('/api/auth/me', {
             headers: { Authorization: `Bearer ${token}` },
-            credentials: "include",
           });
-          if (!res.ok) throw new Error("Invalid token");
+          if (!res.ok) throw new Error('Invalid token');
           const userData = await res.json();
           setUser(userData);
-          window.history.replaceState({}, "", "/dashboard");
+          window.history.replaceState({}, '', '/dashboard');
         } catch {
           setUser(null);
         } finally {
@@ -70,12 +59,12 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     // Backend clears session_token and csrf_token cookies
-    await fetch(`${BACKEND_URL}/api/auth/logout`, { method: "POST", credentials: "include" });
+    await apiFetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth, getCsrfTokenFromCookie }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );
@@ -83,6 +72,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }

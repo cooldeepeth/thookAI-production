@@ -17,8 +17,7 @@ import {
   Flame,
   Share2,
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from "@/lib/api";
 
 // ─── Archetype styling maps ──────────────────────────────
 const ARCHETYPE_CONFIG = {
@@ -491,9 +490,7 @@ export default function ViralCard() {
     if (!routeCardId) return;
     (async () => {
       try {
-        const res = await fetch(
-          `${BACKEND_URL}/api/viral-card/${routeCardId}`
-        );
+        const res = await apiFetch(`/api/viral-card/${routeCardId}`);
         if (!res.ok) {
           setError("Card not found or expired");
           return;
@@ -521,9 +518,8 @@ export default function ViralCard() {
     setError(null);
     setAnalyzing(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/viral-card/analyze`, {
+      const res = await apiFetch('/api/viral-card/analyze', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           posts_text: postsText,
           platform,

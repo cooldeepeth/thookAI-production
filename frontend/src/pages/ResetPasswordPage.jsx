@@ -1,44 +1,42 @@
-import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { motion } from "framer-motion";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { apiFetch } from '@/lib/api';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token") || "";
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState("");
+  const token = searchParams.get('token') || '';
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError('Password must be at least 8 characters');
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match");
+      setError('Passwords do not match');
       return;
     }
     if (!token) {
-      setError("Missing reset token. Open the link from your email.");
+      setError('Missing reset token. Open the link from your email.');
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await apiFetch('/api/auth/reset-password', {
+        method: 'POST',
         body: JSON.stringify({ token, new_password: password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const d = data.detail;
-        const msg = typeof d === "string" ? d : d?.message || "Reset failed";
+        const msg = typeof d === 'string' ? d : d?.message || 'Reset failed';
         throw new Error(msg);
       }
       setSuccess(true);
@@ -106,7 +104,7 @@ export default function ResetPasswordPage() {
                   disabled={loading}
                   className="w-full btn-primary py-3 text-sm disabled:opacity-60"
                 >
-                  {loading ? "Updating…" : "Reset password"}
+                  {loading ? 'Updating…' : 'Reset password'}
                 </button>
               </form>
               <p className="text-center mt-4">

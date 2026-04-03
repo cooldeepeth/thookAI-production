@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { motion, AnimatePresence } from "framer-motion";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '@/lib/api';
+import { API_BASE_URL } from '@/lib/constants';
 
 export default function AuthPage() {
-  const [tab, setTab] = useState("login");
-  const [form, setForm] = useState({ email: "", password: "", name: "" });
-  const [error, setError] = useState("");
+  const [tab, setTab] = useState('login');
+  const [form, setForm] = useState({ email: '', password: '', name: '' });
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const navigate = useNavigate();
@@ -19,27 +19,24 @@ export default function AuthPage() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    if (user) navigate("/dashboard", { replace: true });
-    if (searchParams.get("error")) setError("Authentication failed. Please try again.");
-    if (searchParams.get("expired") === "1") setError("Your session has expired. Please sign in again.");
+    if (user) navigate('/dashboard', { replace: true });
+    if (searchParams.get('error')) setError('Authentication failed. Please try again.');
+    if (searchParams.get('expired') === '1') setError('Your session has expired. Please sign in again.');
   }, [user, navigate, searchParams]);
 
   const handleGoogleAuth = () => {
-    window.location.href = `${BACKEND_URL}/api/auth/google`;
+    window.location.href = `${API_BASE_URL}/api/auth/google`;
   };
 
   const handleForgotSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setForgotLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      await apiFetch('/api/auth/forgot-password', {
+        method: 'POST',
         body: JSON.stringify({ email: forgotEmail }),
       });
-      await res.json().catch(() => ({}));
       setForgotSent(true);
     } catch {
       setForgotSent(true);
@@ -50,23 +47,21 @@ export default function AuthPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
     try {
-      const endpoint = tab === "register" ? "/api/auth/register" : "/api/auth/login";
-      const body = tab === "register"
+      const endpoint = tab === 'register' ? '/api/auth/register' : '/api/auth/login';
+      const body = tab === 'register'
         ? { email: form.email, password: form.password, name: form.name }
         : { email: form.email, password: form.password };
 
-      const res = await fetch(`${BACKEND_URL}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      const res = await apiFetch(endpoint, {
+        method: 'POST',
         body: JSON.stringify(body),
       });
 
       let data = {};
-      
+
       // Try to read response body, but handle cases where it's already consumed
       try {
         const text = await res.text();
@@ -81,12 +76,12 @@ export default function AuthPage() {
         // Body already consumed by browser/proxy - use status-based error messages
         if (!res.ok) {
           const statusErrors = {
-            400: tab === "register" ? "Email already registered" : "Invalid request",
-            401: "Invalid email or password",
-            409: "Email already registered",
-            500: "Server error. Please try again later."
+            400: tab === 'register' ? 'Email already registered' : 'Invalid request',
+            401: 'Invalid email or password',
+            409: 'Email already registered',
+            500: 'Server error. Please try again later.',
           };
-          throw new Error(statusErrors[res.status] || "Something went wrong");
+          throw new Error(statusErrors[res.status] || 'Something went wrong');
         }
       }
 
@@ -97,19 +92,19 @@ export default function AuthPage() {
           throw new Error(data.detail || data.message);
         } else {
           const statusErrors = {
-            400: tab === "register" ? "Email already registered" : "Invalid request",
-            401: "Invalid email or password",
-            409: "Email already registered",
-            500: "Server error. Please try again later."
+            400: tab === 'register' ? 'Email already registered' : 'Invalid request',
+            401: 'Invalid email or password',
+            409: 'Email already registered',
+            500: 'Server error. Please try again later.',
           };
-          throw new Error(statusErrors[res.status] || "Something went wrong");
+          throw new Error(statusErrors[res.status] || 'Something went wrong');
         }
       }
 
       // Success — session_token and csrf_token cookies are set by the backend.
-      // Browser stores cookies automatically via credentials: "include".
+      // Browser stores cookies automatically via credentials: 'include'.
       login(data);
-      navigate("/dashboard", { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -152,7 +147,7 @@ export default function AuthPage() {
                   <p className="text-zinc-300 text-sm text-center">Check your email for a reset link.</p>
                   <button
                     type="button"
-                    onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}
+                    onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(''); }}
                     className="w-full text-center text-xs text-zinc-500 hover:text-lime transition-colors"
                   >
                     Back to sign in
@@ -173,11 +168,11 @@ export default function AuthPage() {
                     disabled={forgotLoading}
                     className="w-full btn-primary py-3 text-sm disabled:opacity-60"
                   >
-                    {forgotLoading ? "Sending…" : "Send reset link"}
+                    {forgotLoading ? 'Sending…' : 'Send reset link'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setShowForgot(false); setForgotEmail(""); setError(""); }}
+                    onClick={() => { setShowForgot(false); setForgotEmail(''); setError(''); }}
                     className="w-full text-center text-xs text-zinc-500 hover:text-lime transition-colors"
                   >
                     Back to sign in
@@ -189,16 +184,16 @@ export default function AuthPage() {
             <>
               {/* Tabs */}
               <div className="flex gap-1 bg-[#18181B] rounded-lg p-1 mb-6" data-testid="auth-tabs">
-                {["login", "register"].map((t) => (
+                {['login', 'register'].map((t) => (
                   <button
                     key={t}
-                    onClick={() => { setTab(t); setError(""); setShowForgot(false); }}
+                    onClick={() => { setTab(t); setError(''); setShowForgot(false); }}
                     data-testid={`tab-${t}`}
                     className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                      tab === t ? "bg-[#27272A] text-white" : "text-zinc-500 hover:text-zinc-300"
+                      tab === t ? 'bg-[#27272A] text-white' : 'text-zinc-500 hover:text-zinc-300'
                     }`}
                   >
-                    {t === "login" ? "Sign In" : "Create Account"}
+                    {t === 'login' ? 'Sign In' : 'Create Account'}
                   </button>
                 ))}
               </div>
@@ -227,10 +222,10 @@ export default function AuthPage() {
               {/* Email/Password Form */}
               <form onSubmit={handleSubmit} data-testid="auth-form" className="space-y-3">
                 <AnimatePresence>
-                  {tab === "register" && (
+                  {tab === 'register' && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
+                      animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.2 }}
                     >
@@ -240,7 +235,7 @@ export default function AuthPage() {
                         value={form.name}
                         onChange={(e) => setForm({ ...form, name: e.target.value })}
                         data-testid="input-name"
-                        required={tab === "register"}
+                        required={tab === 'register'}
                         className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                       />
                     </motion.div>
@@ -266,7 +261,7 @@ export default function AuthPage() {
                   className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                 />
 
-                {tab === "login" && (
+                {tab === 'login' && (
                   <div className="text-right">
                     <button
                       type="button"
@@ -291,10 +286,10 @@ export default function AuthPage() {
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                      {tab === "register" ? "Creating account..." : "Signing in..."}
+                      {tab === 'register' ? 'Creating account...' : 'Signing in...'}
                     </span>
                   ) : (
-                    tab === "register" ? "Create Account" : "Sign In"
+                    tab === 'register' ? 'Create Account' : 'Sign In'
                   )}
                 </button>
               </form>
