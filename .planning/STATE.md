@@ -4,7 +4,7 @@ milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
 status: verifying
 stopped_at: Completed 21-03-PLAN.md — frontend cookie auth migration complete
-last_updated: "2026-04-03T20:54:47.785Z"
+last_updated: "2026-04-03T20:55:38.039Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 17
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Phase: 21 (ci-strictness-httponly-cookie-auth) — EXECUTING
-Plan: 3 of 3
+Phase: 22
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 

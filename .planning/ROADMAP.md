@@ -355,7 +355,7 @@ Plans:
 | 18. Security & Auth | v2.1 | 3/4 | Complete | 2026-04-03 |
 | 19. Core Features | v2.1 | 5/5 | Complete | 2026-04-03 |
 | 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete | 2026-04-03 |
-| 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 3/3 | Complete   | 2026-04-03 |
+| 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 3/3 | Complete    | 2026-04-03 |
 | 22. apiFetch Migration + Error Handling | v2.2 | 0/TBD | Not started | - |
 | 23. Frontend Unit Test Suite | v2.2 | 0/TBD | Not started | - |
 | 24. Content Download + Redirect-to-Platform | v2.2 | 0/TBD | Not started | - |
