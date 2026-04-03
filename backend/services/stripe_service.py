@@ -490,19 +490,19 @@ async def handle_webhook_event(payload: bytes, sig_header: str) -> Dict[str, Any
     event_data = event["data"]["object"]
 
     # Webhook idempotency guard — BILL-08
-    # Stripe retries failed webhooks up to 3 days. Without this guard, duplicate
-    # deliveries cause double credit additions, double subscription activations, etc.
+    # Race-safe: attempt insert first, catch DuplicateKeyError.
+    # The stripe_events collection has a unique index on event_id.
+    from pymongo.errors import DuplicateKeyError
     event_id = event["id"]
-    existing = await db.stripe_events.find_one({"event_id": event_id})
-    if existing:
-        logger.info(f"Duplicate Stripe event {event_id} — skipping")
+    try:
+        await db.stripe_events.insert_one({
+            "event_id": event_id,
+            "event_type": event_type,
+            "processed_at": datetime.now(timezone.utc)
+        })
+    except DuplicateKeyError:
+        logger.info(f"Duplicate Stripe event {event_id} — skipping (concurrent dedup)")
         return {"success": True, "event_type": event_type, "duplicate": True}
-
-    await db.stripe_events.insert_one({
-        "event_id": event_id,
-        "event_type": event_type,
-        "processed_at": datetime.now(timezone.utc)
-    })
 
     logger.info(f"Processing Stripe webhook: {event_type}")
 

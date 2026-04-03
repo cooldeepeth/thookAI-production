@@ -35,8 +35,6 @@ jobs:
   backend-test-billing:
     name: Backend Tests — Billing (95% coverage gate)
     runs-on: ubuntu-latest
-    # TODO: remove continue-on-error after Phase 17 billing tests are complete
-    continue-on-error: true
 
     services:
       mongo:
