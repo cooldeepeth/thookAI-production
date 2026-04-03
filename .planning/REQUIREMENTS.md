@@ -10,19 +10,19 @@
 - [x] **FOUND-01**: Clean test baseline — fix 3 existing failures, enforce `filterwarnings = error::RuntimeWarning`, add `pytest-randomly`
 - [x] **FOUND-02**: Coverage infrastructure — `pytest-cov` with `.coveragerc` (`concurrency = greenlet,thread`), branch coverage enabled, `--cov-branch` flag
 - [x] **FOUND-03**: Standardized test fixtures in root `conftest.py` — async client factory, mock DB factory, mock user factory, respx mock factory
-- [ ] **FOUND-04**: CI matrix configuration — separate jobs per domain (billing, security, pipeline, e2e) with per-domain coverage thresholds
+- [x] **FOUND-04**: CI matrix configuration — separate jobs per domain (billing, security, pipeline, e2e) with per-domain coverage thresholds
 
 ### Billing & Payments
 
-- [ ] **BILL-01**: Stripe checkout flow tests — custom plan builder, credit packages (small/medium/large), checkout session creation, success/cancel URLs
-- [ ] **BILL-02**: Subscription lifecycle tests — create, upgrade, downgrade, cancel, reactivate, webhook-driven state transitions
-- [ ] **BILL-03**: Credit atomicity tests — `find_one_and_update` atomic deduction verified, race condition under concurrent requests, negative balance prevention
-- [ ] **BILL-04**: Webhook idempotency tests — duplicate event handling, signature verification, retry behavior, event ordering
-- [ ] **BILL-05**: Volume pricing tests — tier boundary calculations, proration, add-on credits
-- [ ] **BILL-06**: TDD bug fix: JWT fallback secret — failing test exposing auth bypass, then fix
-- [ ] **BILL-07**: TDD bug fix: non-atomic `add_credits` — failing test exposing race condition, then fix
-- [ ] **BILL-08**: TDD bug fix: missing webhook deduplication — failing test exposing double-activation, then fix
-- [ ] **BILL-09**: 95%+ branch coverage on `services/credits.py`, `services/stripe_service.py`, `routes/billing.py`
+- [x] **BILL-01**: Stripe checkout flow tests — custom plan builder, credit packages (small/medium/large), checkout session creation, success/cancel URLs
+- [x] **BILL-02**: Subscription lifecycle tests — create, upgrade, downgrade, cancel, reactivate, webhook-driven state transitions
+- [x] **BILL-03**: Credit atomicity tests — `find_one_and_update` atomic deduction verified, race condition under concurrent requests, negative balance prevention
+- [x] **BILL-04**: Webhook idempotency tests — duplicate event handling, signature verification, retry behavior, event ordering
+- [x] **BILL-05**: Volume pricing tests — tier boundary calculations, proration, add-on credits
+- [x] **BILL-06**: TDD bug fix: JWT fallback secret — failing test exposing auth bypass, then fix
+- [x] **BILL-07**: TDD bug fix: non-atomic `add_credits` — failing test exposing race condition, then fix
+- [x] **BILL-08**: TDD bug fix: missing webhook deduplication — failing test exposing double-activation, then fix
+- [x] **BILL-09**: 95%+ branch coverage on `services/credits.py`, `services/stripe_service.py`, `routes/billing.py`
 
 ### Security & Auth
 
@@ -88,16 +88,16 @@ Deferred beyond v2.1.
 | FOUND-01 | Phase 17 | Complete |
 | FOUND-02 | Phase 17 | Complete |
 | FOUND-03 | Phase 17 | Complete |
-| FOUND-04 | Phase 17 | Pending |
-| BILL-01 | Phase 17 | Pending |
-| BILL-02 | Phase 17 | Pending |
-| BILL-03 | Phase 17 | Pending |
-| BILL-04 | Phase 17 | Pending |
-| BILL-05 | Phase 17 | Pending |
-| BILL-06 | Phase 17 | Pending |
-| BILL-07 | Phase 17 | Pending |
-| BILL-08 | Phase 17 | Pending |
-| BILL-09 | Phase 17 | Pending |
+| FOUND-04 | Phase 17 | Complete |
+| BILL-01 | Phase 17 | Complete |
+| BILL-02 | Phase 17 | Complete |
+| BILL-03 | Phase 17 | Complete |
+| BILL-04 | Phase 17 | Complete |
+| BILL-05 | Phase 17 | Complete |
+| BILL-06 | Phase 17 | Complete |
+| BILL-07 | Phase 17 | Complete |
+| BILL-08 | Phase 17 | Complete |
+| BILL-09 | Phase 17 | Complete |
 | SEC-01 | Phase 18 | Pending |
 | SEC-02 | Phase 18 | Pending |
 | SEC-03 | Phase 18 | Pending |

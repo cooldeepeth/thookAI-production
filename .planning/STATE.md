@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
 status: verifying
-stopped_at: Completed 17-test-foundation-billing-payments/17-04-PLAN.md
-last_updated: "2026-04-03T03:44:41.229Z"
+stopped_at: Completed 17-test-foundation-billing-payments/17-05-PLAN.md
+last_updated: "2026-04-03T03:48:12.340Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 17-test-foundation-billing-payments P03 | 2 | 1 tasks | 1 files |
 | Phase 17-test-foundation-billing-payments P02 | 9 | 2 tasks | 10 files |
 | Phase 17 P04 | 7 | 2 tasks | 3 files |
+| Phase 17-test-foundation-billing-payments P05 | 666 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase 17-02]: _TEST_JWT_SECRET constant in test helpers after removing fallback secret; tests patch auth_utils.settings.security to match
 - [Phase 17-04]: Patching both 'services.stripe_service.db' and 'database.db' required because stripe_service binds db at import time and credits.py uses lazy import inside functions
 - [Phase 17-04]: Separated sync pure-function tests from async DB tests into distinct classes to avoid PytestWarning about async marks on sync methods
+- [Phase 17-05]: mongomock serializes coroutines — concurrent deduction tests assert balance never negative rather than exact success count
+- [Phase 17-05]: period_start normalization in get_credit_balance to handle string-type credits_last_refresh from MongoDB
 
 ### Pending Todos
 
@@ -115,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T03:44:41.225Z
-Stopped at: Completed 17-test-foundation-billing-payments/17-04-PLAN.md
+Last session: 2026-04-03T03:48:12.337Z
+Stopped at: Completed 17-test-foundation-billing-payments/17-05-PLAN.md
 Resume file: None
