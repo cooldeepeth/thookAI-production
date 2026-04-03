@@ -241,7 +241,13 @@ Plans:
   3. `docker compose up` starts all services (FastAPI, MongoDB, Redis, n8n, LightRAG, Remotion) and all health checks pass within 120 seconds
   4. Locust reports p95 response time under 500ms for the content generation endpoint under 50 concurrent users — credit deduction atomicity holds at load (no negative balance observed in Locust run)
   5. Dead link scan confirms all media asset URLs resolve and all internal API routes return expected status codes — no broken links exist in the deployed build
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 20-01-PLAN.md — Playwright setup + dual webServer config + CI workflow (E2E-01)
+- [ ] 20-02-PLAN.md — Locust load test (50 users) + Docker Compose smoke (E2E-05, E2E-06)
+- [ ] 20-03-PLAN.md — Critical path E2E: signup -> onboard -> generate -> schedule -> publish -> analytics -> strategy -> approve (E2E-02)
+- [ ] 20-04-PLAN.md — Billing E2E + Agency workspace E2E (E2E-03, E2E-04)
+- [ ] 20-05-PLAN.md — Dead link detection: static analysis + dynamic API route liveness (E2E-07)
 
 ## Progress
 
@@ -266,4 +272,4 @@ Plans:
 | 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
 | 18. Security & Auth | v2.1 | 3/4 | Complete    | 2026-04-03 |
 | 19. Core Features | v2.1 | 5/5 | Complete    | 2026-04-03 |
-| 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
+| 20. Frontend E2E & Integration | v2.1 | 0/5 | Not started | - |
