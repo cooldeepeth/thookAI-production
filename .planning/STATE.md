@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
 status: executing
-stopped_at: Completed 20-frontend-e2e-integration/20-02-PLAN.md
-last_updated: "2026-04-03T08:02:08.322Z"
+stopped_at: Completed 20-frontend-e2e-integration/20-01-PLAN.md
+last_updated: "2026-04-03T08:04:19.187Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 19
-  completed_plans: 15
+  completed_plans: 16
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 20 (frontend-e2e-integration) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 19-core-features P04 | 6 | 2 tasks | 2 files |
 | Phase 19-core-features P05 | 824 | 2 tasks | 3 files |
 | Phase 20-frontend-e2e-integration P02 | 4 | 2 tasks | 5 files |
+| Phase 20-frontend-e2e-integration P01 | 5 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 19-05]: CORE-10 85% gate applies to core v2.0 modules (strategist 87.4%, obsidian_service 92.4%, lightrag 100%, strategy routes 100%) — overall 49.78% depressed by untested media/viral/uom modules outside sprint scope
 - [Phase 20-02]: Locust excluded from requirements.txt — installed separately as dev/CI tool (pip install locust>=2.43.4)
 - [Phase 20-02]: norecursedirs used (not collect_ignore_glob) to exclude tests/load from pytest collection — collect_ignore_glob caused PytestConfigWarning
+- [Phase 20-01]: Chromium-only Playwright install to reduce CI download time and keep setup fast
+- [Phase 20-01]: Node 20 in CI for Playwright (18+ recommended, 20 best supported)
+- [Phase 20-01]: reuseExistingServer in local mode so devs don't need to restart servers for each test run
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T08:02:08.318Z
-Stopped at: Completed 20-frontend-e2e-integration/20-02-PLAN.md
+Last session: 2026-04-03T08:04:19.183Z
+Stopped at: Completed 20-frontend-e2e-integration/20-01-PLAN.md
 Resume file: None

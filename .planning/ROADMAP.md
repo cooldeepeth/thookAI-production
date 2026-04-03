@@ -243,7 +243,7 @@ Plans:
   5. Dead link scan confirms all media asset URLs resolve and all internal API routes return expected status codes — no broken links exist in the deployed build
 **Plans**: 5 plans
 Plans:
-- [ ] 20-01-PLAN.md — Playwright setup + dual webServer config + CI workflow (E2E-01)
+- [x] 20-01-PLAN.md — Playwright setup + dual webServer config + CI workflow (E2E-01)
 - [x] 20-02-PLAN.md — Locust load test (50 users) + Docker Compose smoke (E2E-05, E2E-06)
 - [ ] 20-03-PLAN.md — Critical path E2E: signup -> onboard -> generate -> schedule -> publish -> analytics -> strategy -> approve (E2E-02)
 - [ ] 20-04-PLAN.md — Billing E2E + Agency workspace E2E (E2E-03, E2E-04)
@@ -272,4 +272,4 @@ Plans:
 | 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
 | 18. Security & Auth | v2.1 | 3/4 | Complete    | 2026-04-03 |
 | 19. Core Features | v2.1 | 5/5 | Complete    | 2026-04-03 |
-| 20. Frontend E2E & Integration | v2.1 | 1/5 | In Progress|  |
+| 20. Frontend E2E & Integration | v2.1 | 2/5 | In Progress|  |
