@@ -271,7 +271,11 @@ Plans:
   3. A subsequent page reload after login shows the user as authenticated without any JavaScript reading from localStorage — the session is established purely via cookie
   4. A request to any protected API route with a forged CSRF token (or missing CSRF token) is rejected with 403 — the double-submit or synchronizer token pattern blocks cross-site request forgery
   5. Existing Authorization header-based auth (for non-browser API clients) continues to work alongside cookie auth — no regression for direct API consumers
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 21-01-PLAN.md — Remove all continue-on-error from ci.yml and e2e.yml (CI-01, CI-02, CI-03)
+- [ ] 21-02-PLAN.md — CSRF middleware + auth cookie CSRF token setup + tests (AUTH-01, AUTH-02, AUTH-05)
+- [ ] 21-03-PLAN.md — Frontend AuthContext + AuthPage + api.js cookie auth migration (AUTH-03, AUTH-04)
 **UI hint**: yes
 
 ### Phase 22: apiFetch Migration + Error Handling
@@ -351,7 +355,7 @@ Plans:
 | 18. Security & Auth | v2.1 | 3/4 | Complete | 2026-04-03 |
 | 19. Core Features | v2.1 | 5/5 | Complete | 2026-04-03 |
 | 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete | 2026-04-03 |
-| 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 0/TBD | Not started | - |
+| 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 0/3 | In Progress | - |
 | 22. apiFetch Migration + Error Handling | v2.2 | 0/TBD | Not started | - |
 | 23. Frontend Unit Test Suite | v2.2 | 0/TBD | Not started | - |
 | 24. Content Download + Redirect-to-Platform | v2.2 | 0/TBD | Not started | - |
