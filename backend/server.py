@@ -24,6 +24,7 @@ from config import settings, get_settings
 # Import middleware
 from middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware, InputValidationMiddleware
 from middleware.performance import CompressionMiddleware, CacheMiddleware, TimingMiddleware
+from middleware.csrf import CSRFMiddleware
 
 # Import routes
 from routes.auth import router as auth_router
@@ -352,6 +353,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 1.5. CSRF protection (double-submit cookie) — after CORS, before security headers
+# Enforces X-CSRF-Token header for all state-changing cookie-authenticated requests.
+app.add_middleware(CSRFMiddleware)
 
 # 2. Security headers
 app.add_middleware(SecurityHeadersMiddleware)
