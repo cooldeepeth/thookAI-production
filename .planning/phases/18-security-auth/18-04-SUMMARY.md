@@ -122,3 +122,12 @@ None — this plan delivers tests only, no application logic.
 ---
 *Phase: 18-security-auth*
 *Completed: 2026-04-03*
+
+## Self-Check: PASSED
+
+- FOUND: backend/tests/security/test_admin_rbac.py (494 lines, 15 tests)
+- FOUND: backend/tests/security/__init__.py
+- FOUND: .planning/phases/18-security-auth/18-04-SUMMARY.md
+- FOUND: commit 6d64ce5 (test file)
+- FOUND: commit e321a36 (STATE.md)
+- All 15 tests pass: `python3 -m pytest tests/security/test_admin_rbac.py -v` exits 0
