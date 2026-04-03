@@ -61,6 +61,13 @@ Proactive, personalized content creation at scale — the platform recommends wh
 - ✓ Obsidian vault integration (Scout enrichment + Strategist signal) — v2.0 Phase 15
 - ✓ E2E audit + security hardening + production ship — v2.0 Phase 16
 
+- ✓ Billing & payments test suite (324 tests) + 3 P0 TDD fixes — v2.1 Phase 17
+- ✓ Security & auth test suite (126 tests) — JWT, OAuth, OWASP Top 10, RBAC — v2.1 Phase 18
+- ✓ Core features test suite (240 tests) + LightRAG lambda TDD fix — v2.1 Phase 19
+- ✓ Frontend E2E + integration tests (74+ tests) — Playwright, Locust, Docker smoke — v2.1 Phase 20
+- ✓ 95%+ billing coverage, 85%+ core coverage achieved — v2.1 Phase 17-19
+- ✓ 4 P0 bugs fixed via TDD (JWT fallback, atomic credits, webhook dedup, LightRAG lambda) — v2.1
+
 ### Active
 
 <!-- Next milestone: to be defined via /gsd:new-milestone -->
@@ -77,21 +84,9 @@ Proactive, personalized content creation at scale — the platform recommends wh
 - Full UI/UX redesign — incremental improvements only (Strategy Dashboard is new, rest evolves)
 - Real-time collaboration — not needed for solo creators / small agencies yet
 
-## Current Milestone: v2.0 Intelligent Content Operating System
+## Current State
 
-**Goal:** Transform ThookAI from a reactive content generation tool into a proactive content operating system with multi-model orchestrated media generation.
-
-**Target features:**
-- n8n infrastructure replacing Celery for task orchestration + real publishing
-- LightRAG knowledge graph for entity/relationship extraction and multi-hop retrieval
-- Multi-model media orchestration engine (Designer plans → best model per task → Remotion assembles)
-- Strategist Agent for proactive content recommendations (Obsidian + LightRAG + n8n + persona)
-- Strategy Dashboard with recommendation cards, SSE notifications, one-click approve
-- Analytics feedback loop (real social metrics → Strategist + persona intelligence)
-- Obsidian vault integration into Scout agent for research-grounded content
-- E2E audit + security hardening + production ship
-
-**Key architectural principle:** Intelligence is in planning and assembly, not single-model generation. Anti-generic, anti-AI-slop content by design.
+**v2.1 Production Hardening shipped** — 764+ net new tests, 4 P0 TDD bug fixes, 95%+ billing coverage, Playwright E2E, Locust load testing. Platform ready for public launch.
 
 ## Context
 
@@ -145,4 +140,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-02 after v2.0 milestone — Intelligent Content Operating System shipped. 8 phases, 27 plans, 370+ tests, 164 files changed, 41,560 insertions.*
+*Last updated: 2026-04-03 after v2.1 milestone — Production Hardening shipped. 4 phases, 19 plans, 764+ new tests, 4 P0 TDD fixes, 95%+ billing coverage, Playwright E2E.*

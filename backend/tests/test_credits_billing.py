@@ -343,16 +343,17 @@ async def test_custom_tier_no_platform_restriction():
 
 @pytest.mark.asyncio
 async def test_add_credits_success():
-    """add_credits correctly increases user balance."""
+    """add_credits correctly increases user balance using atomic $inc."""
     from services.credits import add_credits
 
     user_id = f"user_{uuid.uuid4().hex[:8]}"
     user = make_user(user_id, credits=50)
+    # find_one_and_update returns the document AFTER the $inc (new balance = 150)
     updated_user = {**user, "credits": 150}
 
     mock_db = MagicMock()
-    mock_db.users.find_one = AsyncMock(return_value=user)
-    mock_db.users.update_one = AsyncMock(return_value=MagicMock())
+    # add_credits now uses find_one_and_update($inc), not find_one + update_one($set)
+    mock_db.users.find_one_and_update = AsyncMock(return_value=updated_user)
     mock_db.credit_transactions.insert_one = AsyncMock(return_value=MagicMock())
 
     with patch("database.db", mock_db):
@@ -362,9 +363,11 @@ async def test_add_credits_success():
     assert result["new_balance"] == 150
     assert result["credits_added"] == 100
 
-    # Verify update_one called with correct new balance
-    call_args = mock_db.users.update_one.call_args
-    assert call_args[0][1]["$set"]["credits"] == 150
+    # Verify atomic update was used (find_one_and_update with $inc, not update_one with $set)
+    mock_db.users.find_one_and_update.assert_called_once()
+    call_args = mock_db.users.find_one_and_update.call_args
+    assert "$inc" in call_args[0][1]
+    assert call_args[0][1]["$inc"]["credits"] == 100
 
 
 # ---------------------------------------------------------------------------

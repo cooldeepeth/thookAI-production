@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from pydantic import BaseModel, EmailStr
 from jose import jwt
@@ -8,14 +10,19 @@ from database import db
 from auth_utils import hash_password, verify_password, get_current_user
 from config import settings
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 ALGORITHM = "HS256"
 
 
 def _jwt_secret() -> str:
-    """Return JWT secret, falling back to dev default when not configured."""
-    return settings.security.jwt_secret_key or "thook-dev-secret"
+    """Return JWT secret. Raises if not configured — never fall back to a default."""
+    secret = settings.security.jwt_secret_key
+    if not secret:
+        raise ValueError("JWT_SECRET_KEY not configured — refusing to start with no secret")
+    return secret
 
 
 class RegisterRequest(BaseModel):
@@ -80,8 +87,10 @@ async def register(data: RegisterRequest, response: Response):
 async def login(data: LoginRequest, response: Response):
     user = await db.users.find_one({"email": data.email}, {"_id": 0})
     if not user or user.get("auth_method") == "google":
+        logger.warning("Failed login attempt: email=%s (user not found or wrong auth method)", data.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not verify_password(data.password, user.get("hashed_password", "")):
+        logger.warning("Failed login attempt: email=%s (wrong password)", data.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_jwt_token(user["user_id"], data.email)
     set_auth_cookie(response, token)

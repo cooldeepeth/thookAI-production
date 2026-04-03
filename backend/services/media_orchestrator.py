@@ -1163,7 +1163,7 @@ async def orchestrate(brief: MediaBrief) -> Dict[str, Any]:
     if output_url:
         try:
             from agents.qc import validate_media_output
-            qc_result = validate_media_output(
+            qc_result = await validate_media_output(
                 media_url=output_url,
                 media_type=brief.media_type,
                 platform=brief.platform,

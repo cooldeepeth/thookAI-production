@@ -219,6 +219,7 @@ class TestWebhookSignatureVerification:
 
         user_id = _user_id()
         mock_event = {
+            "id": "evt_valid_001",  # Required for BILL-08 idempotency guard
             "type": "checkout.session.completed",
             "data": {
                 "object": {
@@ -235,11 +236,17 @@ class TestWebhookSignatureVerification:
         mock_stripe.Webhook.construct_event.return_value = mock_event
         mock_stripe.error = MagicMock()
 
+        updated_user = {**make_user(user_id), "credits": 300}
         mock_db = MagicMock()
         mock_db.users.find_one = AsyncMock(return_value=make_user(user_id))
+        # BILL-07: add_credits uses atomic find_one_and_update($inc)
+        mock_db.users.find_one_and_update = AsyncMock(return_value=updated_user)
         mock_db.users.update_one = AsyncMock(return_value=MagicMock())
         mock_db.credit_transactions.insert_one = AsyncMock(return_value=MagicMock())
         mock_db.payments.insert_one = AsyncMock(return_value=MagicMock())
+        # BILL-08: stripe_events dedup guard — return None for first delivery (not a duplicate)
+        mock_db.stripe_events.find_one = AsyncMock(return_value=None)
+        mock_db.stripe_events.insert_one = AsyncMock(return_value=MagicMock())
 
         with patch("services.stripe_service.stripe", mock_stripe), \
              patch("services.stripe_service.STRIPE_WEBHOOK_SECRET", "whsec_test_secret"), \
@@ -309,15 +316,13 @@ class TestSubscriptionLifecycleWebhooks:
             "invoice": None,
         }
 
-        captured_update = {}
-
-        async def fake_update_one(filter_q, update_doc, *args, **kwargs):
-            captured_update.update(update_doc.get("$set", {}))
-            return MagicMock(modified_count=1)
+        updated_user = {**make_user(user_id), "credits": 300}
 
         mock_db = MagicMock()
         mock_db.users.find_one = AsyncMock(return_value=make_user(user_id))
-        mock_db.users.update_one = AsyncMock(side_effect=fake_update_one)
+        # BILL-07: add_credits uses atomic find_one_and_update($inc), not update_one($set)
+        mock_db.users.find_one_and_update = AsyncMock(return_value=updated_user)
+        mock_db.users.update_one = AsyncMock(return_value=MagicMock(modified_count=1))
         mock_db.credit_transactions.insert_one = AsyncMock(return_value=MagicMock())
         mock_db.payments.insert_one = AsyncMock(return_value=MagicMock())
 
@@ -518,14 +523,14 @@ class TestMissingStripeConfig:
         """is_stripe_configured() is False when key starts with 'placeholder'."""
         from services.stripe_service import is_stripe_configured
 
-        with patch("services.stripe_service.STRIPE_SECRET_KEY", "placeholder_sk_test_xxx"):
+        with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_51ngLef4k3"):
             assert is_stripe_configured() is False
 
     def test_is_stripe_configured_true_for_real_key(self):
         """is_stripe_configured() is True for a real-looking test key."""
         from services.stripe_service import is_stripe_configured
 
-        with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_realkey123abc"):
+        with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_51ngLef4k3"):
             assert is_stripe_configured() is True
 
     def test_validate_stripe_config_callable(self):
@@ -638,6 +643,7 @@ class TestStripeWebhookRoute:
 
         # Mock event to be returned by construct_event
         mock_event = {
+            "id": "evt_route_001",  # Required for BILL-08 idempotency guard
             "type": "checkout.session.completed",
             "data": {
                 "object": {
@@ -654,11 +660,17 @@ class TestStripeWebhookRoute:
         mock_stripe.Webhook.construct_event.return_value = mock_event
         mock_stripe.error = real_stripe.error
 
+        updated_user = {**make_user("user_route_001"), "credits": 300}
         mock_db = MagicMock()
         mock_db.users.find_one = AsyncMock(return_value=make_user("user_route_001"))
+        # BILL-07: add_credits uses atomic find_one_and_update($inc)
+        mock_db.users.find_one_and_update = AsyncMock(return_value=updated_user)
         mock_db.users.update_one = AsyncMock(return_value=MagicMock())
         mock_db.credit_transactions.insert_one = AsyncMock(return_value=MagicMock())
         mock_db.payments.insert_one = AsyncMock(return_value=MagicMock())
+        # BILL-08: dedup guard — return None for first delivery (not a duplicate)
+        mock_db.stripe_events.find_one = AsyncMock(return_value=None)
+        mock_db.stripe_events.insert_one = AsyncMock(return_value=MagicMock())
 
         with patch("services.stripe_service.stripe", mock_stripe), \
              patch("services.stripe_service.STRIPE_WEBHOOK_SECRET", "whsec_test"), \

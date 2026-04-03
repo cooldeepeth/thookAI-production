@@ -232,6 +232,16 @@ INDEXES = {
         IndexModel([('last_run_at', DESCENDING)], name='idx_last_run'),
         IndexModel([('halved_rate', ASCENDING)], name='idx_halved_rate'),
     ],
+
+    # ========== STRIPE EVENTS (webhook idempotency — BILL-08) ==========
+    # Stores processed Stripe event IDs to prevent double-processing on retry.
+    # unique index on event_id gives O(1) duplicate check at the DB level.
+    # TTL index auto-expires records after 7 days — Stripe retries within 3 days,
+    # so 7 days provides ample buffer without growing the collection unboundedly.
+    'stripe_events': [
+        IndexModel([('event_id', ASCENDING)], unique=True, name='idx_event_id'),
+        IndexModel([('processed_at', ASCENDING)], expireAfterSeconds=604800, name='idx_processed_ttl'),  # TTL 7 days
+    ],
 }
 
 

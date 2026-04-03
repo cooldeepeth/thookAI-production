@@ -330,7 +330,14 @@ async def get_credit_balance(user_id: str) -> Dict[str, Any]:
                 )
 
     # Calculate usage this period
-    period_start = user.get("credits_last_refresh", now - timedelta(days=30))
+    # Normalize period_start to a timezone-aware datetime for consistent arithmetic.
+    _raw_period_start = user.get("credits_last_refresh", now - timedelta(days=30))
+    if isinstance(_raw_period_start, str):
+        period_start = datetime.fromisoformat(_raw_period_start)
+    else:
+        period_start = _raw_period_start
+    if isinstance(period_start, datetime) and period_start.tzinfo is None:
+        period_start = period_start.replace(tzinfo=timezone.utc)
     usage_cursor = db.credit_transactions.find({
         "user_id": user_id,
         "created_at": {"$gte": period_start},
@@ -454,21 +461,26 @@ async def add_credits(
     source: str,
     description: str = None
 ) -> Dict[str, Any]:
-    """Add credits to user account."""
+    """Add credits to user account atomically.
+
+    Uses MongoDB find_one_and_update with $inc to avoid the read-modify-write
+    race condition present in the previous find_one + update_one($set) pattern.
+    Concurrent calls on the same user always produce the correct total (BILL-07).
+    """
     from database import db
 
-    user = await db.users.find_one({"user_id": user_id})
-    if not user:
-        return {"success": False, "error": "User not found"}
-
-    current_credits = user.get("credits", 0)
-    new_balance = current_credits + amount
     now = datetime.now(timezone.utc)
 
-    await db.users.update_one(
+    result = await db.users.find_one_and_update(
         {"user_id": user_id},
-        {"$set": {"credits": new_balance}}
+        {"$inc": {"credits": amount}},
+        return_document=ReturnDocument.AFTER
     )
+
+    if result is None:
+        return {"success": False, "error": "User not found"}
+
+    new_balance = result.get("credits", 0)
 
     transaction = {
         "transaction_id": str(uuid.uuid4()),

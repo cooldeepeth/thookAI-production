@@ -161,9 +161,13 @@ async def test_handle_checkout_completed_credit_purchase():
     }
 
     user = make_user(user_id, credits=50)
+    # add_credits now uses find_one_and_update($inc) — return user with updated credits
+    updated_user = {**user, "credits": 150}
 
     mock_db = MagicMock()
     mock_db.users.find_one = AsyncMock(return_value=user)
+    # BILL-07: add_credits uses atomic find_one_and_update($inc), not update_one($set)
+    mock_db.users.find_one_and_update = AsyncMock(return_value=updated_user)
     mock_db.users.update_one = AsyncMock(return_value=MagicMock(modified_count=1))
     mock_db.credit_transactions.insert_one = AsyncMock(return_value=MagicMock())
     mock_db.payments.insert_one = AsyncMock(return_value=MagicMock())
@@ -491,7 +495,7 @@ def test_is_stripe_configured_true_when_set():
     """is_stripe_configured returns True for a real-looking key."""
     from services.stripe_service import is_stripe_configured
 
-    with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_realkey123"):
+    with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_51ngLef4k3"):
         assert is_stripe_configured() is True
 
 

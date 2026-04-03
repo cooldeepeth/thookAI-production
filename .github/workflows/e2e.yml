@@ -1,0 +1,98 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mongo:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Backend required env vars for E2E
+      MONGO_URL: mongodb://localhost:27017
+      DB_NAME: thookai_test
+      JWT_SECRET_KEY: test-jwt-secret-e2e-not-for-production
+      # Pre-generated Fernet key for test environment
+      FERNET_KEY: 8D3AWPuZeYaGTRN0VxKGOpwIlBygcU1oFSmM2b9397s=
+      ENVIRONMENT: test
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/0
+      CELERY_RESULT_BACKEND: redis://localhost:6379/0
+      # LLM: intentionally blank — mocks intercept all /api/content/generate calls
+      ANTHROPIC_API_KEY: sk-test-mock-not-real
+      # Frontend
+      REACT_APP_API_URL: http://localhost:8001/api
+      # Suppress CRA from opening a browser window
+      BROWSER: none
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Set up Node 20
+        # NOTE: Playwright requires Node 18+. We use Node 20 for best compatibility.
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend Python dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Install frontend Node dependencies
+        run: cd frontend && npm ci
+
+      - name: Install Playwright and Chromium browser
+        run: npm ci && npx playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        run: npx playwright test --reporter=list
+
+      - name: Upload Playwright report (always)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test results on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 7
