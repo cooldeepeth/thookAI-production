@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
-status: executing
-stopped_at: Completed 17-test-foundation-billing-payments/17-02-PLAN.md
-last_updated: "2026-04-03T03:34:33.746Z"
+status: verifying
+stopped_at: Completed 17-test-foundation-billing-payments/17-04-PLAN.md
+last_updated: "2026-04-03T03:44:41.229Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 Phase: 07 (Platform Features, Admin & Frontend Quality) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
 | Phase 17-test-foundation-billing-payments P03 | 2 | 1 tasks | 1 files |
 | Phase 17-test-foundation-billing-payments P02 | 9 | 2 tasks | 10 files |
+| Phase 17 P04 | 7 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [Phase 17-02]: TDD RED commit before GREEN fix: each P0 bug got a failing test committed before the production fix
 - [Phase 17-02]: stripe_events collection with unique event_id index provides O(1) webhook dedup; 7d TTL prevents unbounded growth
 - [Phase 17-02]: _TEST_JWT_SECRET constant in test helpers after removing fallback secret; tests patch auth_utils.settings.security to match
+- [Phase 17-04]: Patching both 'services.stripe_service.db' and 'database.db' required because stripe_service binds db at import time and credits.py uses lazy import inside functions
+- [Phase 17-04]: Separated sync pure-function tests from async DB tests into distinct classes to avoid PytestWarning about async marks on sync methods
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T03:34:33.742Z
-Stopped at: Completed 17-test-foundation-billing-payments/17-02-PLAN.md
+Last session: 2026-04-03T03:44:41.225Z
+Stopped at: Completed 17-test-foundation-billing-payments/17-04-PLAN.md
 Resume file: None
