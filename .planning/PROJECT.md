@@ -63,9 +63,14 @@ Proactive, personalized content creation at scale — the platform recommends wh
 
 ### Active
 
-<!-- Next milestone: to be defined via /gsd:new-milestone -->
+<!-- v2.1: Production Hardening — 50x Testing Sprint -->
 
-(To be defined in next milestone via `/gsd:new-milestone`)
+- [ ] Billing & payments comprehensive test suite (255 tests) + TDD bug fixes
+- [ ] Security & auth test suite (100 tests) — JWT, OAuth, rate limiting, OWASP Top 10
+- [ ] Core features comprehensive test suite (240 tests) — pipeline, media, v2.0 features
+- [ ] Frontend E2E + integration tests (105 tests) — Playwright, load testing, Docker smoke
+- [ ] 85%+ line coverage, 95%+ billing coverage
+- [ ] Zero P0 failures before ship
 
 ### Out of Scope
 
@@ -77,21 +82,15 @@ Proactive, personalized content creation at scale — the platform recommends wh
 - Full UI/UX redesign — incremental improvements only (Strategy Dashboard is new, rest evolves)
 - Real-time collaboration — not needed for solo creators / small agencies yet
 
-## Current Milestone: v2.0 Intelligent Content Operating System
+## Current Milestone: v2.1 Production Hardening — 50x Testing Sprint
 
-**Goal:** Transform ThookAI from a reactive content generation tool into a proactive content operating system with multi-model orchestrated media generation.
+**Goal:** Comprehensive testing before public launch. 700+ net new tests, TDD approach: write failing tests to expose bugs, then fix. Target 1,050+ total tests, 85%+ line coverage, 95%+ billing coverage, zero P0 failures.
 
 **Target features:**
-- n8n infrastructure replacing Celery for task orchestration + real publishing
-- LightRAG knowledge graph for entity/relationship extraction and multi-hop retrieval
-- Multi-model media orchestration engine (Designer plans → best model per task → Remotion assembles)
-- Strategist Agent for proactive content recommendations (Obsidian + LightRAG + n8n + persona)
-- Strategy Dashboard with recommendation cards, SSE notifications, one-click approve
-- Analytics feedback loop (real social metrics → Strategist + persona intelligence)
-- Obsidian vault integration into Scout agent for research-grounded content
-- E2E audit + security hardening + production ship
-
-**Key architectural principle:** Intelligence is in planning and assembly, not single-model generation. Anti-generic, anti-AI-slop content by design.
+- Billing & payments test suite (255 tests) + TDD fixes for critical bugs (JWT fallback, non-atomic credits, webhook dedup, LightRAG lambda)
+- Security & auth test suite (100 tests) — JWT, OAuth, rate limiting, OWASP Top 10
+- Core features test suite (240 tests) — pipeline, media orchestration, v2.0 features
+- Frontend E2E + integration tests (105 tests) — Playwright, load testing, Docker smoke
 
 ## Context
 
