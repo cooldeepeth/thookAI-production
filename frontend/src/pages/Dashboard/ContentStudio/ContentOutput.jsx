@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { LinkedInShell, XShell, InstagramShell } from "./Shells";
 import { apiFetch } from '@/lib/api';
+import { ExportActionsBar } from './ExportActionsBar';
 
 function QCBadge({ label, value, max, isRisk = false }) {
   const pct = (value / max) * 100;
@@ -581,6 +582,11 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
 
       {/* Video generation status */}
       {job.video_status && <VideoStatusBadge job={job} />}
+
+      {/* Export & Redirect Actions — visible whenever content text exists */}
+      {bodyText && (
+        <ExportActionsBar job={job} contentText={bodyText} />
+      )}
 
       {/* Publish Panel (for approved content) */}
       {isApproved && job.status !== "published" && job.status !== "scheduled" && (
