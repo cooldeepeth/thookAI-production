@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
-status: executing
-stopped_at: Completed 21-02-PLAN.md — CSRF protection active
-last_updated: "2026-04-03T20:49:56.213Z"
+status: verifying
+stopped_at: Completed 21-03-PLAN.md — frontend cookie auth migration complete
+last_updated: "2026-04-03T20:54:47.785Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 17
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 Phase: 21 (ci-strictness-httponly-cookie-auth) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
 | Phase 21-ci-strictness-httponly-cookie-auth P01 | 525599 | 2 tasks | 2 files |
 | Phase 21-ci-strictness-httponly-cookie-auth P02 | 8 | 1 tasks | 4 files |
+| Phase 21-ci-strictness-httponly-cookie-auth P03 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [Phase 21-ci-strictness-httponly-cookie-auth]: Removed all 4 continue-on-error directives from CI workflows — any test failure now causes hard red CI status
 - [Phase 21-ci-strictness-httponly-cookie-auth]: Pre-existing event loop closure failure in test_api_routes_alive.py documented but not fixed in plan 01 — will correctly block CI going forward
 - [Phase 21-02]: CSRF double-submit cookie: Bearer auth bypasses; no session_token cookie = no CSRF check; csrf_token cookie httpOnly=False intentionally
+- [Phase 21-ci-strictness-httponly-cookie-auth]: Google OAuth token param flow kept for backward compat but token no longer saved to browser storage — session_token cookie set by backend callback is the session source of truth
+- [Phase 21-ci-strictness-httponly-cookie-auth]: apiFetch CSRF pattern: getCsrfToken() reads csrf_token cookie; injects X-CSRF-Token header on POST/PUT/PATCH/DELETE; GET/HEAD excluded per spec
+- [Phase 21-ci-strictness-httponly-cookie-auth]: Dashboard component localStorage cleanup deferred to Phase 22 apiFetch migration — backend get_current_user accepts both Bearer+cookie for backward compat
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T20:49:56.210Z
-Stopped at: Completed 21-02-PLAN.md — CSRF protection active
+Last session: 2026-04-03T20:54:47.773Z
+Stopped at: Completed 21-03-PLAN.md — frontend cookie auth migration complete
 Resume file: None
