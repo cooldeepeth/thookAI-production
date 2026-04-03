@@ -223,7 +223,13 @@ Plans:
   3. All 8 media format handlers (static_image, quote_card, meme, infographic, carousel, talking_head, short_form_video, text_on_video) route correctly through MediaOrchestrator — partial provider failure triggers correct credit ledger behavior
   4. An n8n bridge execute endpoint called with a tampered HMAC signature returns 401 — all n8n contract tests pass without a live n8n instance (respx transport mocking)
   5. `pytest --cov --cov-branch agents/ services/ routes/` reports 85%+ branch coverage — the global coverage gate enforced in CI passes
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 19-01-PLAN.md — Pipeline agent isolated tests (Commander/Scout/Thinker/Writer/QC) + LangGraph orchestrator node tests (CORE-01, CORE-02)
+- [ ] 19-02-PLAN.md — Media orchestrator comprehensive tests: all 8 format handlers + credit ledger partial failure (CORE-03)
+- [ ] 19-03-PLAN.md — TDD LightRAG lambda injection fix + comprehensive isolation tests (CORE-05, CORE-09)
+- [ ] 19-04-PLAN.md — n8n bridge contract tests for all execute endpoints + analytics feedback loop tests (CORE-04, CORE-07)
+- [ ] 19-05-PLAN.md — Strategist cadence/dismissal/throttle tests + Obsidian path sandboxing + 85% coverage gate (CORE-06, CORE-08, CORE-10)
 
 ### Phase 20: Frontend E2E & Integration
 **Goal**: The full user journey is verified end-to-end via Playwright, the system holds under 50-concurrent-user load, Docker Compose brings all services to healthy, and every URL in the platform resolves — the platform is ready for public announcement
@@ -259,5 +265,5 @@ Plans:
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
 | 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
 | 18. Security & Auth | v2.1 | 3/4 | Complete    | 2026-04-03 |
-| 19. Core Features | v2.1 | 0/TBD | Not started | - |
+| 19. Core Features | v2.1 | 0/5 | Not started | - |
 | 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
