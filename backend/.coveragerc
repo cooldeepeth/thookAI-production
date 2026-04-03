@@ -1,7 +1,6 @@
 [run]
 branch = true
 concurrency = thread
-source = .
 omit =
     tests/*
     conftest.py

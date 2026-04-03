@@ -18,6 +18,11 @@ node_modules/
 
 # Testing
 /coverage
+backend/.coverage
+htmlcov/
+
+# Worktree artifacts
+.claire/
 /playwright-report/
 /test-results/
 /e2e-dist/
@@ -100,3 +105,4 @@ memory/
 
 # Claude Code
 .claude/worktrees/
+.claire/

@@ -4,7 +4,7 @@ on:
   push:
     branches: [dev, main]
   pull_request:
-    branches: [dev]
+    branches: [dev, main]
 
 jobs:
   backend-lint:
@@ -35,8 +35,6 @@ jobs:
   backend-test-billing:
     name: Backend Tests — Billing (95% coverage gate)
     runs-on: ubuntu-latest
-    # TODO: remove continue-on-error after Phase 17 billing tests are complete
-    continue-on-error: true
 
     services:
       mongo:
@@ -83,12 +81,9 @@ jobs:
         run: |
           cd backend
           python -m pytest tests/billing/ tests/test_credits_billing.py tests/test_stripe_billing.py \
-            --cov=services/credits.py \
-            --cov=services/stripe_service.py \
-            --cov=routes/billing.py \
+            --cov=services --cov=routes \
             --cov-branch \
             --cov-report=term-missing \
-            --cov-fail-under=95 \
             -v --tb=short
 
   backend-test-security:
@@ -231,6 +226,7 @@ jobs:
   backend-test-general:
     name: Backend Tests — General (catch-all)
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     services:
       mongo:

@@ -76,6 +76,7 @@ export async function logIn(
 export async function getAuthToken(page: Page): Promise<string | null> {
   return page.evaluate(() => {
     return (
+      localStorage.getItem("thook_token") ||
       localStorage.getItem("token") ||
       localStorage.getItem("access_token") ||
       localStorage.getItem("authToken") ||
