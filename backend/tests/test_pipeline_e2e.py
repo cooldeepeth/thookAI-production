@@ -180,7 +180,7 @@ class TestLegacyPipelineCallsAllAgents:
              patch("agents.pipeline.get_anti_repetition_context", side_effect=mock_anti_rep_context), \
              patch("agents.pipeline.build_anti_repetition_prompt", return_value=""), \
              patch("agents.pipeline.get_pattern_fatigue_shield", side_effect=mock_fatigue_shield), \
-             patch("agents.pipeline.asyncio.create_task", return_value=None):
+             patch("agents.pipeline.asyncio.create_task", side_effect=lambda coro: coro.close()):
 
             from agents.pipeline import run_agent_pipeline_legacy
             await run_agent_pipeline_legacy(
@@ -232,7 +232,7 @@ class TestLegacyPipelineSuccessMarksCompleted:
              patch("agents.pipeline.get_anti_repetition_context", new_callable=AsyncMock) as mar, \
              patch("agents.pipeline.build_anti_repetition_prompt", return_value=""), \
              patch("agents.pipeline.get_pattern_fatigue_shield", new_callable=AsyncMock) as mfs, \
-             patch("agents.pipeline.asyncio.create_task", return_value=None):
+             patch("agents.pipeline.asyncio.create_task", side_effect=lambda coro: coro.close()):
 
             mc.return_value = {"primary_angle": "angle", "research_needed": False, "research_query": "q"}
             ms.return_value = {"findings": "none", "citations": [], "sources_found": 0}
@@ -327,9 +327,14 @@ class TestStaleJobCleanupMarksOldRunningJobs:
         mock_result = MagicMock()
         mock_result.modified_count = 3
 
-        with patch("tasks.content_tasks.run_async") as mock_run_async:
-            mock_run_async.return_value = {"stale_jobs_cleaned": 3}
+        def _consume_and_return(coro):
+            """Close the coroutine to avoid 'never awaited' RuntimeWarning, return mocked result."""
+            import inspect
+            if inspect.iscoroutine(coro):
+                coro.close()
+            return {"stale_jobs_cleaned": 3}
 
+        with patch("tasks.content_tasks.run_async", side_effect=_consume_and_return):
             result = cleanup_stale_running_jobs()
 
         assert result["stale_jobs_cleaned"] == 3
@@ -426,6 +431,7 @@ class TestStaleJobCleanupIgnoresCompletedJobs:
 class TestBeatScheduleHasCleanupStaleJobs:
     """PIPE-06: celeryconfig.py schedules the stale cleanup task every 10 minutes."""
 
+    @pytest.mark.skip(reason="n8n handles scheduling since Phase 8 -- beat_schedule intentionally empty")
     def test_beat_schedule_has_cleanup_stale_jobs(self):
         """beat_schedule includes 'cleanup-stale-jobs' task scheduled every 10 minutes."""
         import celeryconfig
@@ -441,6 +447,7 @@ class TestBeatScheduleHasCleanupStaleJobs:
             "Task name must be 'tasks.content_tasks.cleanup_stale_running_jobs'"
         )
 
+    @pytest.mark.skip(reason="n8n handles scheduling since Phase 8 -- beat_schedule intentionally empty")
     def test_all_six_periodic_tasks_are_scheduled(self):
         """All 6 required periodic tasks are present in beat_schedule."""
         import celeryconfig
@@ -482,9 +489,14 @@ class TestCleanupReturnsCount:
         """The return value of cleanup_stale_running_jobs contains 'stale_jobs_cleaned' key."""
         from tasks.content_tasks import cleanup_stale_running_jobs
 
-        with patch("tasks.content_tasks.run_async") as mock_run_async:
-            mock_run_async.return_value = {"stale_jobs_cleaned": 0}
+        def _consume_and_return(coro):
+            """Close the coroutine to avoid 'never awaited' RuntimeWarning, return mocked result."""
+            import inspect
+            if inspect.iscoroutine(coro):
+                coro.close()
+            return {"stale_jobs_cleaned": 0}
 
+        with patch("tasks.content_tasks.run_async", side_effect=_consume_and_return):
             result = cleanup_stale_running_jobs()
 
         assert "stale_jobs_cleaned" in result, (

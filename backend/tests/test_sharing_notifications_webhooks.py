@@ -258,11 +258,11 @@ class TestViralCard:
 
         llm_mock = self._make_llm_mock()
 
-        with patch("database.db", mock_db), patch(
-            "services.llm_client.LlmChat", llm_mock
-        ), patch("services.llm_keys.anthropic_available", return_value=True), patch(
-            "services.llm_keys.chat_constructor_key", return_value="fake-key"
-        ):
+        with patch("database.db", mock_db), \
+             patch("routes.viral_card.db", mock_db), \
+             patch("services.llm_client.LlmChat", llm_mock), \
+             patch("services.llm_keys.anthropic_available", return_value=True), \
+             patch("services.llm_keys.chat_constructor_key", return_value="fake-key"):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as client:

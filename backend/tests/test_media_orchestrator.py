@@ -325,9 +325,14 @@ class TestCallRemotion:
         mock_client.post = AsyncMock(return_value=mock_post_resp)
         mock_client.get = AsyncMock(return_value=mock_poll_resp)
 
+        async def _wait_for_timeout(coro, timeout):
+            """Consume and close the coroutine to avoid 'never awaited' warning, then raise TimeoutError."""
+            coro.close()
+            raise asyncio.TimeoutError()
+
         with patch("httpx.AsyncClient") as mock_httpx, \
              patch("asyncio.sleep", new=AsyncMock()), \
-             patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()), \
+             patch("asyncio.wait_for", side_effect=_wait_for_timeout), \
              patch("services.media_orchestrator.settings") as mock_settings:
 
             mock_settings.remotion.remotion_service_url = "http://localhost:3001"

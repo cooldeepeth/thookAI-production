@@ -156,13 +156,21 @@ class TestOpenAIProviderTimeout:
     @pytest.mark.asyncio
     async def test_openai_timeout_returns_generation_timeout_error(self):
         """Test 3 (provider-level) — asyncio.TimeoutError in _generate_openai gives 'generation_timeout'."""
+        import inspect
+
+        async def _wait_for_timeout(coro, timeout):
+            """Consume and close the coroutine to avoid 'never awaited' warning, then raise TimeoutError."""
+            if inspect.iscoroutine(coro):
+                coro.close()
+            raise asyncio.TimeoutError()
+
         mock_client = MagicMock()
         mock_client.images.generate = AsyncMock(side_effect=asyncio.TimeoutError())
 
         with patch("agents.designer._env_value_for_config", return_value="sk-real-key"), patch(
             "agents.designer._valid_key", return_value=True
         ), patch("openai.AsyncOpenAI", return_value=mock_client), patch(
-            "asyncio.wait_for", side_effect=asyncio.TimeoutError()
+            "asyncio.wait_for", side_effect=_wait_for_timeout
         ):
             from agents.designer import _generate_openai
 
@@ -174,9 +182,17 @@ class TestOpenAIProviderTimeout:
     @pytest.mark.asyncio
     async def test_fal_timeout_returns_generation_timeout_error(self):
         """Test 3 (fal-level) — asyncio.TimeoutError in _generate_fal gives 'generation_timeout'."""
+        import inspect
+
+        async def _wait_for_timeout(coro, timeout):
+            """Consume and close the coroutine to avoid 'never awaited' warning, then raise TimeoutError."""
+            if inspect.iscoroutine(coro):
+                coro.close()
+            raise asyncio.TimeoutError()
+
         with patch("agents.designer._env_value_for_config", return_value="fal-real-key"), patch(
             "agents.designer._valid_key", return_value=True
-        ), patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
+        ), patch("asyncio.wait_for", side_effect=_wait_for_timeout):
             import fal_client as fal_mod
 
             with patch.object(fal_mod, "submit_async", new=AsyncMock(return_value=MagicMock())):
