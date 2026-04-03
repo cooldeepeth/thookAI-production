@@ -161,9 +161,13 @@ async def test_handle_checkout_completed_credit_purchase():
     }
 
     user = make_user(user_id, credits=50)
+    # add_credits now uses find_one_and_update($inc) — return user with updated credits
+    updated_user = {**user, "credits": 150}
 
     mock_db = MagicMock()
     mock_db.users.find_one = AsyncMock(return_value=user)
+    # BILL-07: add_credits uses atomic find_one_and_update($inc), not update_one($set)
+    mock_db.users.find_one_and_update = AsyncMock(return_value=updated_user)
     mock_db.users.update_one = AsyncMock(return_value=MagicMock(modified_count=1))
     mock_db.credit_transactions.insert_one = AsyncMock(return_value=MagicMock())
     mock_db.payments.insert_one = AsyncMock(return_value=MagicMock())

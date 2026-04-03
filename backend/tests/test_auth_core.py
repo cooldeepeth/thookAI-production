@@ -49,26 +49,34 @@ def _make_user(email: str, auth_method: str = "email") -> dict:
     return user
 
 
+# Fixed test JWT secret — used in all test token helpers so decode_token
+# sees the same secret as the token was signed with. After BILL-06 fix,
+# decode_token raises JWTError when jwt_secret_key is empty, so tests must
+# patch auth_utils.settings.security.jwt_secret_key to _TEST_JWT_SECRET.
+_TEST_JWT_SECRET = "test-secret-key-for-unit-tests-32-chars!!"
+
+
 def _make_valid_jwt(user_id: str, email: str) -> str:
-    """Create a valid JWT using the same secret as auth.py."""
-    from config import settings
-    secret = settings.security.jwt_secret_key or "thook-dev-secret"
+    """Create a valid JWT using the test secret.
+
+    NOTE: Tests that use this token must also patch auth_utils settings so
+    decode_token uses _TEST_JWT_SECRET (not the empty string from env).
+    See test_me_with_valid_bearer_token_returns_user_data for the pattern.
+    """
     expire = datetime.now(timezone.utc) + timedelta(days=7)
     return jwt.encode(
         {"sub": user_id, "email": email, "exp": expire},
-        secret,
+        _TEST_JWT_SECRET,
         algorithm="HS256",
     )
 
 
 def _make_expired_jwt(user_id: str, email: str) -> str:
-    """Create an expired JWT."""
-    from config import settings
-    secret = settings.security.jwt_secret_key or "thook-dev-secret"
+    """Create an expired JWT using the test secret."""
     expire = datetime.now(timezone.utc) - timedelta(days=1)
     return jwt.encode(
         {"sub": user_id, "email": email, "exp": expire},
-        secret,
+        _TEST_JWT_SECRET,
         algorithm="HS256",
     )
 
@@ -275,8 +283,16 @@ class TestSessionPersistence:
         user = _make_user(email)
         jwt_token = _make_valid_jwt(user["user_id"], email)
 
+        # Patch JWT secret so decode_token uses _TEST_JWT_SECRET (BILL-06 fix:
+        # decode_token now raises JWTError when jwt_secret_key is empty, so tests
+        # must provide a matching secret for both encode and decode).
+        mock_security = MagicMock()
+        mock_security.jwt_secret_key = _TEST_JWT_SECRET
+        mock_security.jwt_algorithm = "HS256"
+
         # auth_utils imports db inside the function body, so patch database.db
-        with patch("database.db") as mock_db:
+        with patch("auth_utils.settings.security", mock_security), \
+             patch("database.db") as mock_db:
             mock_db.users.find_one = AsyncMock(return_value=user)
 
             resp = await client.get(
