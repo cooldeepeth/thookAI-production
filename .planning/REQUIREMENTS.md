@@ -55,7 +55,7 @@
 - [ ] **E2E-04**: Agency workspace E2E — create workspace → invite member → switch context → generate as member
 - [x] **E2E-05**: Load testing — Locust concurrent user simulation, API response time thresholds, connection pool behavior
 - [x] **E2E-06**: Docker Compose integration smoke — full stack startup, health checks pass, cross-service connectivity
-- [ ] **E2E-07**: Dead link detection — all media URLs resolve, all API endpoints respond, no broken internal routes
+- [x] **E2E-07**: Dead link detection — all media URLs resolve, all API endpoints respond, no broken internal routes
 
 ## Future Requirements
 
@@ -121,7 +121,7 @@ Deferred beyond v2.1.
 | E2E-04 | Phase 20 | Pending |
 | E2E-05 | Phase 20 | Complete |
 | E2E-06 | Phase 20 | Complete |
-| E2E-07 | Phase 20 | Pending |
+| E2E-07 | Phase 20 | Complete |
 
 **Coverage:**
 - v2.1 requirements: 37 total
