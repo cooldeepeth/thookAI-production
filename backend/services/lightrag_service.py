@@ -10,6 +10,7 @@ RETRIEVAL ROUTING CONTRACT:
 """
 
 import logging
+import re
 from typing import Optional
 
 import httpx
@@ -120,8 +121,21 @@ async def query_knowledge_graph(
     if not settings.lightrag.is_configured():
         return ""
 
+    # SECURITY: Validate user_id before any string interpolation.
+    # Reject user_ids containing characters that could escape the lambda string literal
+    # or inject code (quotes, semicolons, spaces, parentheses, etc.).
+    # Only alphanumeric, underscore, and hyphen are permitted.
+    safe_uid = re.sub(r"[^a-zA-Z0-9_-]", "", user_id)
+    if safe_uid != user_id:
+        logger.warning(
+            "LightRAG query rejected: user_id contains unsafe characters (original=%r, safe=%r)",
+            user_id,
+            safe_uid,
+        )
+        return ""
+
     query = (
-        f"For creator {user_id}: What topic domains, hook archetypes, and emotional tones "
+        f"For creator {safe_uid}: What topic domains, hook archetypes, and emotional tones "
         f"have already been used when writing about '{topic}'? "
         f"What angles, framings, and approaches have NOT been explored yet?"
     )
@@ -135,7 +149,10 @@ async def query_knowledge_graph(
                         "mode": mode,
                         "top_k": 20,
                         "ids": None,
-                        "doc_filter_func": f"lambda meta: meta.get('user_id') == '{user_id}'",
+                        # SECURITY FIX: safe_uid is validated to [a-zA-Z0-9_-] only —
+                        # no quote, semicolon, or operator characters can escape the string.
+                        # Previously used raw user_id which allowed injection via single quotes.
+                        "doc_filter_func": f"lambda meta: meta.get('user_id') == '{safe_uid}'",
                     },
                 },
                 headers={"X-API-Key": LIGHTRAG_API_KEY} if LIGHTRAG_API_KEY else {},
@@ -143,5 +160,5 @@ async def query_knowledge_graph(
         resp.raise_for_status()
         return resp.json().get("response", "")
     except Exception as e:
-        logger.warning("LightRAG query failed for user %s (non-fatal): %s", user_id, e)
+        logger.warning("LightRAG query failed for user %s (non-fatal): %s", safe_uid, e)
         return ""
