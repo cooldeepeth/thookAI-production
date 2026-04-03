@@ -41,7 +41,7 @@
 **Milestone Goal:** Comprehensive testing before public launch. 700+ net new tests using TDD approach: write failing tests to expose bugs first, then fix. Target 1,050+ total tests, 85%+ line/branch coverage globally, 95%+ branch coverage on billing, zero P0 failures.
 
 - [x] **Phase 17: Test Foundation + Billing & Payments** - Clean CI baseline, coverage infrastructure, standardized fixtures, CI matrix, then 255 billing tests with TDD fixes for 3 P0 bugs (completed 2026-04-03)
-- [ ] **Phase 18: Security & Auth** - 100 tests covering JWT, OAuth (all 4 platforms), rate limiting, security headers, input validation, RBAC, and OWASP Top 10
+- [x] **Phase 18: Security & Auth** - 100 tests covering JWT, OAuth (all 4 platforms), rate limiting, security headers, input validation, RBAC, and OWASP Top 10 (completed 2026-04-03)
 - [ ] **Phase 19: Core Features** - 240 tests covering content pipeline, LangGraph orchestrator, media orchestration, n8n bridge, LightRAG, Strategist Agent, analytics, Obsidian, with LightRAG lambda TDD fix
 - [ ] **Phase 20: Frontend E2E & Integration** - Playwright setup, critical path E2E, billing E2E, agency workspace E2E, load testing, Docker Compose smoke, dead link detection
 
@@ -258,6 +258,6 @@ Plans:
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
 | 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
-| 18. Security & Auth | v2.1 | 3/4 | In Progress|  |
+| 18. Security & Auth | v2.1 | 3/4 | Complete    | 2026-04-03 |
 | 19. Core Features | v2.1 | 0/TBD | Not started | - |
 | 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
