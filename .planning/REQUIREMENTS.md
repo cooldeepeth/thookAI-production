@@ -85,49 +85,49 @@ Deferred beyond v2.1.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | — | Pending |
-| FOUND-02 | — | Pending |
-| FOUND-03 | — | Pending |
-| FOUND-04 | — | Pending |
-| BILL-01 | — | Pending |
-| BILL-02 | — | Pending |
-| BILL-03 | — | Pending |
-| BILL-04 | — | Pending |
-| BILL-05 | — | Pending |
-| BILL-06 | — | Pending |
-| BILL-07 | — | Pending |
-| BILL-08 | — | Pending |
-| BILL-09 | — | Pending |
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
-| SEC-04 | — | Pending |
-| SEC-05 | — | Pending |
-| SEC-06 | — | Pending |
-| SEC-07 | — | Pending |
-| CORE-01 | — | Pending |
-| CORE-02 | — | Pending |
-| CORE-03 | — | Pending |
-| CORE-04 | — | Pending |
-| CORE-05 | — | Pending |
-| CORE-06 | — | Pending |
-| CORE-07 | — | Pending |
-| CORE-08 | — | Pending |
-| CORE-09 | — | Pending |
-| CORE-10 | — | Pending |
-| E2E-01 | — | Pending |
-| E2E-02 | — | Pending |
-| E2E-03 | — | Pending |
-| E2E-04 | — | Pending |
-| E2E-05 | — | Pending |
-| E2E-06 | — | Pending |
-| E2E-07 | — | Pending |
+| FOUND-01 | Phase 17 | Pending |
+| FOUND-02 | Phase 17 | Pending |
+| FOUND-03 | Phase 17 | Pending |
+| FOUND-04 | Phase 17 | Pending |
+| BILL-01 | Phase 17 | Pending |
+| BILL-02 | Phase 17 | Pending |
+| BILL-03 | Phase 17 | Pending |
+| BILL-04 | Phase 17 | Pending |
+| BILL-05 | Phase 17 | Pending |
+| BILL-06 | Phase 17 | Pending |
+| BILL-07 | Phase 17 | Pending |
+| BILL-08 | Phase 17 | Pending |
+| BILL-09 | Phase 17 | Pending |
+| SEC-01 | Phase 18 | Pending |
+| SEC-02 | Phase 18 | Pending |
+| SEC-03 | Phase 18 | Pending |
+| SEC-04 | Phase 18 | Pending |
+| SEC-05 | Phase 18 | Pending |
+| SEC-06 | Phase 18 | Pending |
+| SEC-07 | Phase 18 | Pending |
+| CORE-01 | Phase 19 | Pending |
+| CORE-02 | Phase 19 | Pending |
+| CORE-03 | Phase 19 | Pending |
+| CORE-04 | Phase 19 | Pending |
+| CORE-05 | Phase 19 | Pending |
+| CORE-06 | Phase 19 | Pending |
+| CORE-07 | Phase 19 | Pending |
+| CORE-08 | Phase 19 | Pending |
+| CORE-09 | Phase 19 | Pending |
+| CORE-10 | Phase 19 | Pending |
+| E2E-01 | Phase 20 | Pending |
+| E2E-02 | Phase 20 | Pending |
+| E2E-03 | Phase 20 | Pending |
+| E2E-04 | Phase 20 | Pending |
+| E2E-05 | Phase 20 | Pending |
+| E2E-06 | Phase 20 | Pending |
+| E2E-07 | Phase 20 | Pending |
 
 **Coverage:**
 - v2.1 requirements: 37 total
-- Mapped to phases: 0
-- Unmapped: 37
+- Mapped to phases: 37
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-03*
-*Last updated: 2026-04-03 after initial definition*
+*Last updated: 2026-04-03 — Traceability complete, all 37 requirements mapped to Phases 17-20*

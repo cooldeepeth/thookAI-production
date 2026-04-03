@@ -3,7 +3,8 @@
 ## Milestones
 
 - v1.0 ThookAI Stabilization — Phases 1-8 (shipped 2026-04-01) — [archive](milestones/v1.0-ROADMAP.md)
-- v2.0 Intelligent Content Operating System — Phases 9-16 (in progress)
+- v2.0 Intelligent Content Operating System — Phases 9-16 (shipped 2026-04-01)
+- v2.1 Production Hardening — 50x Testing Sprint — Phases 17-20 (in progress)
 
 ## Phases
 
@@ -21,9 +22,8 @@
 
 </details>
 
-### v2.0 Intelligent Content Operating System (In Progress)
-
-**Milestone Goal:** Transform ThookAI from a reactive content generation tool into a proactive content operating system — n8n orchestrates all workflows, LightRAG builds a living knowledge graph of each user's content history, a Strategist Agent synthesizes signals into ranked daily recommendations, and a multi-model media orchestrator produces professional-grade visuals and video.
+<details>
+<summary>v2.0 Intelligent Content Operating System (Phases 9-16) — SHIPPED 2026-04-01</summary>
 
 - [x] **Phase 9: n8n Infrastructure + Real Publishing** - Replace Celery beat with n8n for all scheduled/external-API tasks; establish webhook bridge; hard cutover with idempotency keys (completed 2026-03-31)
 - [x] **Phase 10: LightRAG Knowledge Graph** - Deploy per-user knowledge graph sidecar; wire Thinker agent with multi-hop retrieval; lock embedding model before first insert (completed 2026-03-31)
@@ -33,6 +33,17 @@
 - [x] **Phase 14: Strategy Dashboard + Notifications** - New React page with SSE-driven recommendation feed; one-click approve; dismissed cards archived; strategy API routes (completed 2026-04-01)
 - [x] **Phase 15: Obsidian Vault Integration** - Scout enrichment from personal vault; Strategist uses vault as recommendation signal; opt-in with explicit path sandboxing (completed 2026-04-01)
 - [x] **Phase 16: E2E Audit + Security Hardening + Production Ship** - Full critical-path smoke testing; n8n security config; per-user graph isolation verified; load testing; dead link detection (completed 2026-04-01)
+
+</details>
+
+### v2.1 Production Hardening — 50x Testing Sprint (In Progress)
+
+**Milestone Goal:** Comprehensive testing before public launch. 700+ net new tests using TDD approach: write failing tests to expose bugs first, then fix. Target 1,050+ total tests, 85%+ line/branch coverage globally, 95%+ branch coverage on billing, zero P0 failures.
+
+- [ ] **Phase 17: Test Foundation + Billing & Payments** - Clean CI baseline, coverage infrastructure, standardized fixtures, CI matrix, then 255 billing tests with TDD fixes for 3 P0 bugs
+- [ ] **Phase 18: Security & Auth** - 100 tests covering JWT, OAuth (all 4 platforms), rate limiting, security headers, input validation, RBAC, and OWASP Top 10
+- [ ] **Phase 19: Core Features** - 240 tests covering content pipeline, LangGraph orchestrator, media orchestration, n8n bridge, LightRAG, Strategist Agent, analytics, Obsidian, with LightRAG lambda TDD fix
+- [ ] **Phase 20: Frontend E2E & Integration** - Playwright setup, critical path E2E, billing E2E, agency workspace E2E, load testing, Docker Compose smoke, dead link detection
 
 ## Phase Details
 
@@ -166,6 +177,55 @@ Plans:
 - [x] 16-04-PLAN.md — Remotion load test + API rate limit concurrent verification
 - [x] 16-05-PLAN.md — Stripe billing E2E + OAuth flow verification for all platforms
 
+### Phase 17: Test Foundation + Billing & Payments
+**Goal**: A clean, reliable CI baseline exists with branch coverage enforcement, then every revenue path in billing is verified with 255 tests and 3 P0 bugs fixed via TDD — no revenue can be double-charged, skipped, or bypassed before Phase 18 begins
+**Depends on**: Phase 16 (v2.0 complete)
+**Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07, BILL-08, BILL-09
+**Success Criteria** (what must be TRUE):
+  1. `pytest -q` exits 0 with zero failures and zero RuntimeWarning-as-error emissions — the 3 previously broken CI tests are resolved and the 6 known unawaited coroutine warnings are fixed
+  2. Running `pytest --cov --cov-branch` on billing modules reports 95%+ branch coverage for `services/credits.py`, `services/stripe_service.py`, and `routes/billing.py`
+  3. A Stripe webhook delivered twice with the same event ID activates a subscription exactly once — no double-activation occurs in the test suite under mongomock-motor
+  4. Two concurrent requests to deduct credits from the same user account never produce a negative balance — the atomic `find_one_and_update` contract is verified with `asyncio.gather` under mongomock-motor
+  5. The JWT fallback path that previously accepted malformed tokens now returns 401 — a failing test exposes the bug before the production fix lands
+**Plans**: TBD
+
+### Phase 18: Security & Auth
+**Goal**: Every auth boundary and security control across the platform is verified — JWT lifecycle, all 4 OAuth platform flows, rate limiting thresholds, security headers, injection prevention, and RBAC are all tested to the OWASP Top 10 standard
+**Depends on**: Phase 17 (clean baseline, JWT bug fixed, coverage infrastructure in place)
+**Requirements**: SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06, SEC-07
+**Success Criteria** (what must be TRUE):
+  1. A malformed, expired, or algorithm-confused JWT token returns 401 on all protected routes — not a 500 or silent grant of access
+  2. OAuth flows for LinkedIn, X/Twitter PKCE, Instagram, and Google all complete with state parameter validation — a forged state parameter is rejected with 400
+  3. Sending 100 auth requests per second to `/api/auth/login` triggers a 429 response — the rate limiter threshold is verified under concurrent load
+  4. Every route in the application returns the expected CSP, HSTS, X-Frame-Options, and X-Content-Type-Options headers — no route is missing a required security header
+  5. A NoSQL injection payload (`{"$gt": ""}`) in any user-facing input field does not return unauthorized data — input validation middleware blocks it at the boundary
+  6. An authenticated non-admin user calling any admin-only route receives 403 — workspace member role enforcement is verified for viewer/editor/owner boundaries
+**Plans**: TBD
+
+### Phase 19: Core Features
+**Goal**: Every agent in the content pipeline, every v2.0 subsystem (LangGraph, media orchestration, n8n bridge, LightRAG, Strategist, analytics, Obsidian), and the LightRAG lambda cross-user bug are all verified with 240 tests using deterministic mocks — 85%+ branch coverage enforced globally
+**Depends on**: Phase 17 (clean baseline, coverage gates active), Phase 18 (security contracts verified)
+**Requirements**: CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, CORE-06, CORE-07, CORE-08, CORE-09, CORE-10
+**Success Criteria** (what must be TRUE):
+  1. Each LangGraph agent node (Commander, Scout, Thinker, Writer, QC) is testable in isolation — a deterministic LLM mock fixture replaces `LlmChat.generate()` and the node's output contract is verified without network calls
+  2. User A's LightRAG query never returns documents belonging to User B — the per-user isolation bug (lambda-scoped client leaking connection state) is fixed via TDD: failing test written first, production fix applied second
+  3. All 8 media format handlers (static_image, quote_card, meme, infographic, carousel, talking_head, short_form_video, text_on_video) route correctly through MediaOrchestrator — partial provider failure triggers correct credit ledger behavior
+  4. An n8n bridge execute endpoint called with a tampered HMAC signature returns 401 — all n8n contract tests pass without a live n8n instance (respx transport mocking)
+  5. `pytest --cov --cov-branch agents/ services/ routes/` reports 85%+ branch coverage — the global coverage gate enforced in CI passes
+**Plans**: TBD
+
+### Phase 20: Frontend E2E & Integration
+**Goal**: The full user journey is verified end-to-end via Playwright, the system holds under 50-concurrent-user load, Docker Compose brings all services to healthy, and every URL in the platform resolves — the platform is ready for public announcement
+**Depends on**: Phases 17-19 (all backend test contracts verified and P0 bugs fixed)
+**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07
+**Success Criteria** (what must be TRUE):
+  1. Playwright executes the full critical path (signup → onboard → generate → schedule → publish → analytics → strategy → approve) against the live dev stack and all steps pass in CI
+  2. The billing E2E flow (plan selection → Stripe checkout → subscription active → credit usage → upgrade) completes without errors — Stripe Test Clock compresses the lifecycle to seconds
+  3. `docker compose up` starts all services (FastAPI, MongoDB, Redis, n8n, LightRAG, Remotion) and all health checks pass within 120 seconds
+  4. Locust reports p95 response time under 500ms for the content generation endpoint under 50 concurrent users — credit deduction atomicity holds at load (no negative balance observed in Locust run)
+  5. Dead link scan confirms all media asset URLs resolve and all internal API routes return expected status codes — no broken links exist in the deployed build
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -178,11 +238,15 @@ Plans:
 | 6. Media Generation & Analytics | v1.0 | 3/3 | Complete | 2026-03-31 |
 | 7. Platform Features, Admin & Frontend Quality | v1.0 | 4/4 | Complete | 2026-03-31 |
 | 8. Gap Closure & Tech Debt | v1.0 | 2/2 | Complete | 2026-04-01 |
-| 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete   | 2026-03-31 |
-| 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete    | 2026-03-31 |
-| 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete    | 2026-04-01 |
-| 12. Strategist Agent | v2.0 | 4/4 | Complete    | 2026-04-01 |
-| 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete    | 2026-04-01 |
-| 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete   | 2026-04-01 |
+| 9. n8n Infrastructure + Real Publishing | v2.0 | 3/3 | Complete | 2026-03-31 |
+| 10. LightRAG Knowledge Graph | v2.0 | 3/3 | Complete | 2026-03-31 |
+| 11. Multi-Model Media Orchestration | v2.0 | 5/5 | Complete | 2026-04-01 |
+| 12. Strategist Agent | v2.0 | 4/4 | Complete | 2026-04-01 |
+| 13. Analytics Feedback Loop | v2.0 | 2/2 | Complete | 2026-04-01 |
+| 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
-| 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete   | 2026-04-01 |
+| 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
+| 17. Test Foundation + Billing & Payments | v2.1 | 0/TBD | Not started | - |
+| 18. Security & Auth | v2.1 | 0/TBD | Not started | - |
+| 19. Core Features | v2.1 | 0/TBD | Not started | - |
+| 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |

@@ -378,9 +378,9 @@ ThookAI uses a team-based agent orchestration layer on top of GSD for autonomous
 
 **ThookAI — Production Ready**
 
-ThookAI is an AI-powered content creation platform for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline. The platform handles scheduling, repurposing, analytics, billing, media generation, and multi-user workspaces. Deployed to Render (backend) and Vercel (frontend). v1.0 stabilization complete — all features verified end-to-end with 319+ tests.
+ThookAI is an AI-powered content operating system for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline with proactive strategy recommendations. The platform handles scheduling, repurposing, analytics, billing, multi-model media orchestration (8 formats via Remotion), knowledge graph intelligence (LightRAG), and multi-user workspaces. Deployed to Render (backend) and Vercel (frontend). v2.0 shipped — n8n orchestration, Strategist Agent, Strategy Dashboard, Obsidian vault integration, 370+ new tests.
 
-**Core Value:** Personalized content creation at scale — every user gets a unique voice fingerprint that drives all content generation, with real social platform publishing and analytics feedback loops.
+**Core Value:** Proactive, personalized content creation at scale — the platform recommends what to create, generates multi-format media, and learns from real social performance data to improve every cycle.
 
 ### Constraints
 
