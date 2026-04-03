@@ -30,9 +30,9 @@
 - [ ] **SEC-02**: OAuth flow tests — all 4 platforms (LinkedIn, X/Twitter PKCE, Instagram, Google), state parameter validation, token storage encryption
 - [ ] **SEC-03**: Rate limiting tests — per-IP counting, threshold enforcement, concurrent request behavior, auth-specific lower limits
 - [ ] **SEC-04**: Security headers tests — CSP, HSTS, X-Frame-Options, X-Content-Type-Options on all routes
-- [ ] **SEC-05**: Input validation tests — NoSQL injection prevention, XSS in user input, path traversal in file operations, request size limits
+- [x] **SEC-05**: Input validation tests — NoSQL injection prevention, XSS in user input, path traversal in file operations, request size limits
 - [ ] **SEC-06**: Admin authorization tests — admin-only routes reject non-admin users, workspace role enforcement
-- [ ] **SEC-07**: OWASP Top 10 verification — automated checks for the 10 most critical web application security risks
+- [x] **SEC-07**: OWASP Top 10 verification — automated checks for the 10 most critical web application security risks
 
 ### Core Features
 
@@ -102,9 +102,9 @@ Deferred beyond v2.1.
 | SEC-02 | Phase 18 | Pending |
 | SEC-03 | Phase 18 | Pending |
 | SEC-04 | Phase 18 | Pending |
-| SEC-05 | Phase 18 | Pending |
+| SEC-05 | Phase 18 | Complete |
 | SEC-06 | Phase 18 | Pending |
-| SEC-07 | Phase 18 | Pending |
+| SEC-07 | Phase 18 | Complete |
 | CORE-01 | Phase 19 | Pending |
 | CORE-02 | Phase 19 | Pending |
 | CORE-03 | Phase 19 | Pending |

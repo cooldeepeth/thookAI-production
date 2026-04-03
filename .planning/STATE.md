@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
 status: executing
-stopped_at: Completed 06-media-generation-analytics/06-03-PLAN.md
-last_updated: "2026-04-03T03:49:00.403Z"
+stopped_at: Completed 18-security-auth/18-03-PLAN.md
+last_updated: "2026-04-03T06:51:19.650Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 9
+  completed_plans: 8
   percent: 0
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 07 — Platform Features, Admin & Frontend Quality
+**Current focus:** Phase 18 — security-auth
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
+Phase: 18 (security-auth) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-media-generation-analytics P01 | 3 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
+| Phase 18-security-auth P03 | 50 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 06-02]: Use app.dependency_overrides[get_current_user] (not patch) for auth bypass in FastAPI route tests
 - [Phase 06-02]: Mount upload router at root (no prefix) in TestClient apps to avoid double-prefix path issues
 - [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
+- [Phase 18-security-auth]: routes/auth.py binds db at module import time — tests must patch both database.db and routes.auth.db to mock auth correctly
+- [Phase 18-security-auth]: autouse pytest fixture resets in-memory RateLimiter._mem_requests between tests to prevent cross-test rate limit contamination
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T07:31:15.460Z
-Stopped at: Completed 06-media-generation-analytics/06-03-PLAN.md
+Last session: 2026-04-03T06:51:19.646Z
+Stopped at: Completed 18-security-auth/18-03-PLAN.md
 Resume file: None
