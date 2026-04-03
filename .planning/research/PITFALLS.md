@@ -1,364 +1,714 @@
-# Pitfalls Research
+# Domain Pitfalls: v2.1 Production Hardening — Testing Sprint
 
-**Domain:** AI content operating system — n8n orchestration, knowledge graph (LightRAG), multi-model media orchestration, proactive strategy agents, analytics feedback loops
+**Domain:** Large-scale TDD testing sprint on an existing FastAPI + Motor + Celery/n8n codebase
 **Researched:** 2026-04-01
-**Confidence:** MEDIUM-HIGH — n8n queue mode issues and LightRAG initialization constraints verified via official docs + community. Multi-model orchestration patterns from fal.ai official documentation. Celery→n8n migration patterns inferred from architecture knowledge (no direct migration case studies found — treat as MEDIUM confidence).
+**Overall confidence:** HIGH — grounded in live codebase inspection (781 tests collected, 3 active failures
+observed, unawaited coroutine warnings catalogued) plus verified external sources.
+
+---
+
+## Preface: What Makes This Sprint Different
+
+This is not greenfield TDD. You are writing 700+ net new tests against code that already exists and runs in
+production. That inversion creates a specific failure mode profile:
+
+- Tests expose bugs that were invisible — and fixing the bug can silently break adjacent tests.
+- Mocks written to match current broken behavior become anti-tests after the fix.
+- Coverage numbers can rise while real confidence falls if the wrong things are measured.
+- The test suite itself can become a source of ordering-dependent failures that mask real regressions.
+
+The pitfalls below are organized from most critical (cause test suite to lie to you) to moderate (waste sprint
+velocity) to minor (create noise).
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Celery Beat and n8n Schedule Running Simultaneously — Duplicate Job Execution
+Mistakes that cause the test suite to give false signals — passing when broken or failing when correct.
+
+---
+
+### Pitfall 1: Ordering-Dependent Test Failures From Shared Mock State
 
 **What goes wrong:**
-During migration, both Celery beat (existing) and n8n schedule triggers run concurrently. `process_scheduled_posts` fires from both systems. A single post gets published twice to LinkedIn/X. `reset_daily_limits` runs twice, potentially resetting credits at wrong intervals. `aggregate_daily_analytics` writes duplicate records, corrupting analytics history.
+A test passes in isolation but fails when run after certain other tests. The root cause is that a previous
+test patches a module-level object, fixture, or global variable and the patch leaks into the subsequent test.
+In Python's unittest.mock, `patch()` calls in session-scoped fixtures or `autouse` fixtures with wrong scope
+produce unreverted patches. The next test runs against the contaminated module state.
+
+**Evidence from this codebase:**
+`tests/test_sharing_notifications_webhooks.py::TestViralCard::test_analyze_returns_card_with_id_and_share_url`
+passes in isolation and passes when its file runs alone (20/20 pass), but fails when the full 781-test suite
+runs. The failure is an `ExceptionGroup` from Starlette's middleware task group — a sign that an async
+resource (likely an httpx client or Motor connection) was patched by an earlier test and left in a broken
+state. This is a live, confirmed ordering-dependent failure in the current codebase.
 
 **Why it happens:**
-Teams migrate workflow-by-workflow to reduce risk, but forget that the migration window creates a dual-execution period. n8n schedule triggers activate the moment a workflow is published (not when Celery is turned off). There is no deduplication layer between the two systems since they write to the same MongoDB collections independently.
+- `session`-scoped or `module`-scoped fixtures that use `patch()` or `MagicMock()` do not revert between tests
+- `with patch(...)` context managers used at module import time (not inside test functions)
+- FastAPI `TestClient` or `AsyncClient` instances shared across tests in a class without per-test reset
+- Module-level singletons (like the `db` object, `settings`, or LLM clients) partially patched by one test
+  remain patched for subsequent tests because Python caches module objects
 
-**How to avoid:**
-Adopt a hard-cutover strategy per job category, not gradual migration. Before activating any n8n schedule trigger for a job that already exists in Celery beat, disable the corresponding Celery beat schedule entry first. Add an idempotency key on all scheduled-post publishing operations — check `last_published_at` within a 2-minute window before executing. Never run `Procfile` worker + beat processes while n8n schedule workflows are active for the same domain.
+**Consequences:**
+- Tests fail only in CI (full suite) but pass locally (partial suite) — creates trust erosion in CI
+- Fix appears to work locally but CI reports failure — blocks merge and wastes engineer hours
+- A real regression gets masked by a persistent ordering-dependent failure
 
-**Warning signs:**
-- Duplicate entries in `db.content_jobs` or `db.scheduled_posts` with identical `job_id` and timestamps within seconds of each other
-- Users report seeing posts published twice on LinkedIn/X
-- `db.users.credits` shows double-deduction in audit logs
+**Prevention:**
+- Use `function` scope for all mock fixtures. Never use `session` or `module` scope with mutable mock objects.
+- Always use `unittest.mock.patch` as a context manager within the test body, or as a `@pytest.fixture` with
+  `yield` and explicit function scope.
+- Run `pytest --randomly-seed=12345` (with `pytest-randomly`) regularly to expose ordering sensitivity.
+  Different seeds surface different ordering bugs. Run the full suite with at least 3 different seeds before
+  declaring a batch of tests "clean".
+- The `conftest.py` in this codebase already applies `collect_ignore` for live server scripts — extend this
+  pattern to any fixture that touches real infrastructure objects.
 
-**Phase to address:**
-n8n infrastructure phase (Phase 1). Must define the cutover protocol and idempotency keys before any n8n schedule trigger is published.
+**Detection:**
+- Test passes with `pytest path/to/test.py` but fails with `pytest tests/`
+- Error is a Starlette `ExceptionGroup` or event loop error in an otherwise unrelated test class
+- `pytest --lf --tb=short` shows the failure disappears when only failed tests re-run
+
+**Phase mapping:** Every phase. Treat as Day 1 hygiene. Run `pytest --randomly-seed=0 tests/` after every
+wave of new tests before declaring the wave done.
 
 ---
 
-### Pitfall 2: n8n Worker Not Entering Queue Mode — All Webhooks Silently Stuck
+### Pitfall 2: TDD Bug Fix Breaks Existing Tests Written Against the Old (Broken) Behavior
 
 **What goes wrong:**
-n8n is deployed in queue mode with Redis, but webhook-triggered workflows never execute. Jobs successfully enqueue in Redis (the main n8n process confirms receipt), but the worker container never dequeues them. The symptom looks identical to a Redis connectivity failure but the root cause is the worker process not recognizing its role despite environment variables being set.
+You write a failing test that exposes BUG-X. You fix the code to make the test pass. But now 3 existing tests
+fail — they were written to match the old broken behavior and implicitly asserted that broken behavior was
+correct. You now face a dilemma: are those 3 tests wrong, or did your fix introduce a regression?
+
+**Concrete example for this codebase:**
+The credit non-atomic deduction bug (BUG: race condition in `services/credits.py`) means that concurrent
+requests can each read the same credit balance and both deduct from it. Existing tests may mock `find_one` to
+return a balance, then mock `update_one`, asserting that `update_one` was called with a specific delta. After
+the fix (adding MongoDB `$inc` with `find_one_and_update` and a minimum balance check), those tests will fail
+because `find_one` and `update_one` are no longer called — `find_one_and_update` is. The tests were testing
+the broken implementation, not the contract.
 
 **Why it happens:**
-On Render/Railway (where ThookAI is deployed), environment variables can fail to propagate to worker containers if the service type is copied from the main n8n service without explicitly setting `N8N_PROCESS_TYPE=worker`. The worker starts, passes health checks, but never connects to the Bull/BullMQ queue. Manual triggers bypass the queue and succeed, creating false confidence that the deployment is healthy.
+When tests are written after the fact (retrofitting), they tend to test "how the code works" (implementation
+tests) rather than "what the code does" (contract tests). Implementation tests are brittle by definition —
+they break on any internal refactor, including the refactor needed to fix the bug.
 
-**How to avoid:**
-After deploying n8n workers, add an explicit health probe: hit `GET /healthz` and separately verify Redis LLEN on the Bull queue key. If the queue depth grows but worker active count stays zero, the worker is not initialized correctly. Add a startup log assertion in the n8n worker service that confirms `EXECUTIONS_MODE=queue` and `N8N_PROCESS_TYPE=worker` are both set. Require PostgreSQL (not SQLite) — queue mode is unsupported with SQLite.
+**Consequences:**
+- Sprint velocity collapses as each bug fix creates a cascade of test updates
+- Engineers stop being sure whether a newly failing test means "regression" or "was testing wrong behavior"
+- The distinction between "test needs updating" and "bug introduced" becomes opaque
 
-**Warning signs:**
-- n8n executions view shows workflows in "Queued" or "Starting soon" indefinitely
-- Redis Bull queue depth increases but worker metrics show zero active jobs
-- Manual executions succeed but webhook-triggered ones do not
+**Prevention:**
+- Before fixing a bug, audit every existing test that touches the affected function. Classify each as
+  "implementation test" (tests how) or "contract test" (tests what). Update implementation tests to contract
+  tests before making the production code change.
+- Write the new failing test first (TDD). Fix the code. Run the full suite. For each newly-failing existing
+  test, explicitly decide: (a) this test was wrong — update it to test behavior not implementation, or (b)
+  this test was correct — my fix introduced a regression, revert and re-examine.
+- Never delete a failing existing test without understanding why it failed. Document the decision in the PR
+  description.
 
-**Phase to address:**
-n8n infrastructure phase (Phase 1). Must be verified with a smoke test before any business logic is migrated.
+**Detection:**
+- After a production code fix, more than 2-3 previously passing tests now fail
+- The failing tests all mock the same internal function that was refactored
+- Test failure message says "expected call to `update_one`" but production code now calls
+  `find_one_and_update`
+
+**Phase mapping:** Billing & Security phases (BUG: JWT fallback, non-atomic credits, webhook dedup). These
+fixes touch heavily-mocked code paths. Highest risk of this pattern.
 
 ---
 
-### Pitfall 3: LightRAG Embedding Model Lock-In — Cannot Switch Models After Initial Index
+### Pitfall 3: Unawaited Coroutine Warnings Are Silent Test Bugs
 
 **What goes wrong:**
-LightRAG locks the embedding model at index creation time. The vector dimension is baked into the storage schema (especially on PostgreSQL with pgvector). If the team starts with `text-embedding-ada-002` (1536 dims) and later wants to switch to a better model (e.g., `text-embedding-3-large` at 3072 dims), the entire index must be dropped and rebuilt from scratch. All extracted entities and relationships are lost and must be re-extracted — a costly LLM operation that re-processes every approved content item.
+`RuntimeWarning: coroutine 'X' was never awaited` appears in test output and is ignored as "just a warning."
+In reality, each unawaited coroutine means an async function was called but its body never ran. The test
+passed because the assertion checked a return value from a mock, not the actual execution of the async logic.
+The test is green but testing nothing.
+
+**Evidence from this codebase:**
+The current suite produces at minimum 6 distinct unawaited coroutine warnings:
+
+```
+RuntimeWarning: coroutine 'fire_webhook' was never awaited
+RuntimeWarning: coroutine 'cleanup_stale_running_jobs.<locals>._cleanup' was never awaited
+RuntimeWarning: coroutine '_call_remotion.<locals>._do_render' was never awaited
+RuntimeWarning: coroutine 'validate_media_output' was never awaited
+RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+```
+
+Each of these represents a test that passes while the async function under test silently did nothing. When
+`fire_webhook` is never awaited, the webhook firing path is untested — the test only verifies the code that
+calls `fire_webhook`, not that the webhook actually fires.
 
 **Why it happens:**
-LightRAG documentation buries the embedding model constraint. Teams choose "whatever OpenAI embedding model is handy" during initial setup, not realizing the decision is permanent without full re-ingestion. The storage schema creation happens on first `insert()` call, not at configuration time, so the lock-in is invisible until switching is attempted.
+- `MagicMock()` used instead of `AsyncMock()` for an async function. When `MagicMock` is called on an async
+  function, it returns a coroutine object (not the result). The coroutine is never awaited. The mock "passes"
+  because the return value comparison still succeeds.
+- `patch('module.async_func')` without `new_callable=AsyncMock` — the patch creates a `MagicMock` by
+  default, which is synchronous.
+- Tests that use `assert mock.called` without `await` for async paths.
 
-**How to avoid:**
-Decide the embedding model before writing a single document to the index. For ThookAI's use case (user-specific content, English-primary, ~200-2000 tokens per item), `text-embedding-3-small` is the right choice — best cost/quality for short content at 1536 dims. Document this decision in `backend/config.py` as `LIGHTRAG_EMBEDDING_MODEL = "text-embedding-3-small"` and treat it as permanently frozen. Add a startup assertion that reads the stored embedding dimension from the first stored vector and confirms it matches the configured model's dimension.
+**Consequences:**
+- Test suite reports 100% of a module's happy paths passing, but the async code paths were never exercised
+- A genuine bug in `fire_webhook` will not be caught until production
+- Adding `filterwarnings = error::RuntimeWarning` to `pytest.ini` would turn these into immediate failures —
+  do this now, before writing 700 more tests
 
-**Warning signs:**
-- Any proposal to "upgrade the embedding model" mid-production
-- Retrieval quality degrades because a different model was used for new inserts than for old ones
-- PostgreSQL schema errors mentioning dimension mismatch
+**Prevention:**
+- Add `filterwarnings = error::RuntimeWarning::DeprecationWarning` to `pytest.ini` immediately. This
+  converts all unawaited coroutine warnings to test failures. Fix the 6 existing failures before the sprint
+  starts.
+- For every `patch()` call on an async function, use `new_callable=AsyncMock` explicitly.
+- Audit rule: after writing any test that mocks an `async def` function, confirm `AsyncMock` is used and
+  that the test body uses `await` where the production code does.
+- Use `pytest -W error::RuntimeWarning` locally to verify no new unawaited coroutines are introduced.
 
-**Phase to address:**
-LightRAG phase (Phase 2). Model choice must be locked in the config before the first document ingestion in any environment.
+**Detection:**
+- `RuntimeWarning: coroutine '...' was never awaited` in test output
+- `pytest -W error::RuntimeWarning` turns passing tests into failures
+- A test for an async function has no `await` keyword anywhere in the test body
+
+**Phase mapping:** All phases. Day 1 fix: add `filterwarnings = error` to `pytest.ini` before writing any
+new tests. Forces immediate resolution of the 6 existing silent failures.
 
 ---
 
-### Pitfall 4: LightRAG Extracts Persona-Irrelevant Entities from Content — Graph Noise Corrupts Thinker Retrieval
+### Pitfall 4: Coverage Numbers That Lie — Line Coverage Without Branch Coverage
 
 **What goes wrong:**
-LightRAG's entity extraction uses an LLM to identify entities and relationships from approved content. For ThookAI, approved content is user-created posts about, for example, "startup fundraising" or "leadership lessons." The LLM will extract all entities it sees, including irrelevant ones: platform names ("LinkedIn"), generic verbs ("announced"), time references ("Q3 2024"), and common nouns ("team"). Over time, the knowledge graph fills with thousands of low-signal nodes that pollute multi-hop retrieval. When the Thinker asks "what topics has this user written about?", the graph returns a noise cloud instead of meaningful topic clusters.
+The sprint targets 85% line coverage and 95% billing coverage. Line coverage counts whether a line ran, not
+whether all decision paths were tested. A function like:
+
+```python
+async def deduct_credits(user_id: str, amount: int) -> bool:
+    user = await db.users.find_one({"user_id": user_id})
+    if user and user["credits"] >= amount:
+        await db.users.update_one(...)
+        return True
+    return False
+```
+
+A single test that passes `amount=10` against a user with `credits=100` achieves 100% line coverage but never
+exercises the `credits < amount` branch — the path that hits the `return False` — and never exercises the
+`user is None` path. These are exactly the paths that contain billing bugs.
+
+**Evidence from this codebase:**
+The known non-atomic credits bug exists in a function that almost certainly has existing line coverage from
+the happy-path tests (credits are deducted successfully). The race condition lives in the gap between `find_one`
+and `update_one` — a timing/atomicity issue that line coverage cannot measure at all.
 
 **Why it happens:**
-LightRAG's default extraction prompt is domain-agnostic. It is designed for general document corpora, not for personal content fingerprinting. Without a custom entity extraction prompt scoped to ThookAI's domain (user topics, writing patterns, hook strategies, tone descriptors), the graph degrades into a generic index of English words.
+Line coverage tools (coverage.py in default mode) report line hit counts. Branch coverage requires explicit
+`--branch` flag. Teams report "85% coverage" without specifying which metric, then treat it as equivalent to
+"85% of behavior tested."
 
-**How to avoid:**
-Override LightRAG's default entity extraction prompt before any production ingestion. The custom prompt should instruct the model to extract only: (1) topic domains (e.g., "startup fundraising", "leadership"), (2) hook archetypes (e.g., "contrarian take", "personal story"), (3) emotional tones (e.g., "vulnerable", "authoritative"), and (4) named entities that are part of the user's domain expertise. Suppress extraction of: platform names, time references, filler words, and generic nouns. Test entity extraction output on 10 real approved posts before ingesting at scale.
+**Consequences:**
+- 85% line coverage with no branch coverage on billing code can leave 40-60% of actual billing decision
+  paths untested
+- Coverage reports show green on `services/credits.py` while the race condition path is never exercised
+- Meeting the 95% billing coverage target via line coverage alone is insufficient for a production billing
+  system
 
-**Warning signs:**
-- Knowledge graph node count grows faster than 50 nodes per approved post on average
-- Most frequent entities in the graph are generic words, not topic-domain terms
-- Thinker agent retrieval returns topics unrelated to user's historical content
+**Prevention:**
+- Measure branch coverage from the start: `pytest --cov=. --cov-branch --cov-report=term-missing`
+- For billing and auth modules, require 95% branch coverage (not line coverage). This is a materially higher
+  bar.
+- For the concurrent race condition bug specifically: branch coverage cannot catch it. Write explicit
+  concurrent tests using `asyncio.gather()` with multiple simultaneous credit deductions against the same
+  user_id and assert the final balance is correct.
+- Distinguish "coverage" from "confidence". Coverage measures execution. Confidence comes from assertions
+  on the right invariants (e.g., "credits can never go below 0", "the same Stripe event is never processed
+  twice").
 
-**Phase to address:**
-LightRAG phase (Phase 2). Custom extraction prompt must be written and tested before the ingestion pipeline is built.
+**Detection:**
+- `coverage run --branch` shows significantly lower branch coverage than line coverage on the same modules
+- `coverage report --show-missing` shows uncovered branches in error paths and edge cases
+- Billing tests all use the same happy-path fixture without testing `credits < amount`, `user not found`,
+  `stripe event already processed`
+
+**Phase mapping:** Phase 1 (Billing). Run `--cov-branch` from the start. Do not accept "85% coverage" as
+met until branch coverage is the metric.
 
 ---
 
-### Pitfall 5: Multi-Model Media Orchestration Has No Partial-Failure Rollback — Credits Consumed on Failed Pipelines
+### Pitfall 5: Tests Written Against Celery Beat That No Longer Runs Beat
 
 **What goes wrong:**
-A multi-model media pipeline for a "talking-head with overlays" might call: ElevenLabs (voice) → HeyGen (avatar) → fal.ai (background) → Remotion (assembly). If HeyGen generation succeeds but fal.ai background generation times out, ElevenLabs and HeyGen credits have already been consumed. The pipeline fails, the user gets no output, and the cost was real. Without explicit rollback accounting, this leaks money on every partial failure.
+Tests assert that `celeryconfig.beat_schedule` contains specific task keys. The codebase migrated from Celery
+beat to n8n cron triggers in v2.0. `celeryconfig.py` now explicitly sets `beat_schedule = {}`. Tests written
+during v1.x development that checked the beat schedule now fail permanently.
+
+**Evidence from this codebase:**
+This is a live, confirmed failure:
+
+```
+FAILED tests/test_pipeline_e2e.py::TestBeatScheduleHasCleanupStaleJobs::test_beat_schedule_has_cleanup_stale_jobs
+FAILED tests/test_pipeline_e2e.py::TestBeatScheduleHasCleanupStaleJobs::test_all_six_periodic_tasks_are_scheduled
+```
+
+The celeryconfig.py comment reads: "Beat schedule has been removed — all 7 periodic tasks are now driven by
+n8n cron triggers calling POST /api/n8n/execute/{task_name}."
+
+The tests are not wrong — they are testing the wrong thing. The correct tests for v2.1 should assert that
+the n8n bridge endpoints exist and respond correctly, not that `beat_schedule` is populated.
 
 **Why it happens:**
-Each provider call is independent and irreversible — you cannot "cancel" a completed ElevenLabs generation. Teams focus on the happy path and treat partial failures as edge cases, but at scale (100+ media generations per day), partial failure rates of even 3-5% per step compound to significant cost leakage. Additionally, Runway and HeyGen have documented cases where credits are deducted even for failed generations.
+Sprint planning referenced "scheduled tasks" as a testing target without auditing which scheduler is now
+canonical. v1.x tests persisted into v2.x without an ownership review.
 
-**How to avoid:**
-Track credit consumption at each pipeline stage in a `media_pipeline_ledger` MongoDB collection: `{job_id, stage, provider, credits_consumed, status}`. On pipeline failure at any stage, mark subsequent stages as `skipped` and record total wasted credits. Implement a cost cap per media job in `backend/services/credits.py`: if cumulative credits consumed across stages exceed the job's credit allocation, abort and refund the delta. Use `asyncio.wait_for()` with conservative timeouts (60s for image, 300s for video) on every provider call. Never treat a provider timeout as a silent exception — always mark the job as `failed` with `failure_stage` recorded.
+**Consequences:**
+- Two tests fail on every CI run, creating alert fatigue — engineers start ignoring "expected" CI failures
+- When a real regression occurs, it gets dismissed as "probably another known failure"
+- The tests document a contract (beat schedule) that no longer exists, misleading future engineers
 
-**Warning signs:**
-- `media_assets` collection has records with `status: "failed"` but no `credits_refunded: true` field
-- Users report being charged for media they never received
-- Provider invoices are growing faster than successful media job counts
+**Prevention:**
+- Before writing any new tests in a phase, run the full suite and triage all existing failures. Categorize:
+  (a) tests for deprecated behavior — delete with documented reason, (b) tests for migrated behavior — update
+  to test the new implementation, (c) tests for genuine regressions — fix the production code.
+- Create a "test audit" step at the start of each sprint wave: `pytest --tb=no -q` → review all FAILs before
+  adding new tests.
+- Never allow known persistent failures in the CI baseline. A clean baseline is the only way to make new
+  failures visible.
 
-**Phase to address:**
-Multi-model media orchestration phase (Phase 3). Pipeline ledger and cost-cap must be designed before the first provider integration.
+**Detection:**
+- Test failure asserts something about a module that has a comment saying "migrated to X"
+- `git log` on the failing test shows it was written for a previous architecture
+- The production code behavior the test describes no longer matches the system design
+
+**Phase mapping:** Day 1 of the sprint. Audit and delete/update the 3 existing failures before adding any
+new tests. Start the sprint from a clean baseline.
 
 ---
 
-### Pitfall 6: Remotion Asset Loading Times Out in Multi-Provider Pipelines — Silent Render Failure
+## Moderate Pitfalls
+
+Mistakes that waste velocity or create fragile tests without immediately falsifying results.
+
+---
+
+### Pitfall 6: Over-Mocking — Tests That Only Verify the Mock, Not the Code
 
 **What goes wrong:**
-Remotion's default `delayRender()` timeout is 30 seconds. In a pipeline where Remotion must load a HeyGen video (large file, external URL, cold CDN), an ElevenLabs audio file, and a fal.ai generated image, the combined asset load time routinely exceeds 30 seconds. Remotion aborts with no user-visible error message ("delayRender() called but not cleared after 28000ms"). The render job is marked failed in the Remotion service, but the ThookAI backend — if it only checks the exit code — may misinterpret this as a generic rendering error.
+A test mocks the database, the LLM client, and the Stripe client, then calls a route handler, then asserts
+`mock_db.users.update_one.assert_called_once_with(...)`. The test passes. But it has only verified that the
+production code calls `update_one` — not that the call will succeed, not that the query filter is correct,
+not that the result is handled correctly. If the database interaction is refactored from `update_one` to
+`find_one_and_update`, the test breaks even though behavior is preserved.
+
+**Evidence from this codebase:**
+The test suite uses `unittest.mock.patch("database.db")` as a shared conftest fixture. A significant
+proportion of tests will be implementation tests against `mock_db.*` call assertions. The risk is highest
+in the billing and credit paths where the exact MongoDB operation matters (atomic vs non-atomic).
 
 **Why it happens:**
-The 30-second timeout is appropriate for self-hosted assets. It becomes a reliability landmine when all assets are fetched from multiple external APIs at render time. Teams deploy Remotion without adjusting `delayRenderTimeoutInMilliseconds` because the default works fine in development (assets are small test files) but fails in production (real multi-provider assets).
+Over-mocking is the path of least resistance for external dependencies. It is fast to write and always
+passes initially. AI-assisted code generation (including Claude Code) has a documented tendency toward
+over-mocked test generation (arxiv.org/abs/2602.00409 found AI coding agents generate systematically
+over-mocked tests).
 
-**How to avoid:**
-In the `remotion-service/`, set `delayRenderTimeoutInMilliseconds: 120000` (120s) on every `<Img>`, `<Audio>`, and `<OffthreadVideo>` component. Pre-download all external assets to Cloudflare R2 before passing URLs to Remotion — Remotion should only fetch from R2, never directly from HeyGen/ElevenLabs/fal.ai CDNs. Pass R2 signed URLs with expiry of 1 hour (not permanent public URLs) to prevent stale asset access. Add a pre-render asset validation step that confirms all URLs are reachable before triggering the Remotion render.
+**Consequences:**
+- Tests pass through major behavioral bugs because only the call site is checked, not the data
+- Coverage is high but confidence is low
+- Refactoring production code requires proportional refactoring of all mocked tests
 
-**Warning signs:**
-- Remotion render logs contain "delayRender() called but not cleared"
-- Render failures are correlated with large asset sizes, not code errors
-- Renders succeed in development but fail intermittently in production
+**Prevention:**
+- Use a layered strategy:
+  - Unit tests: mock external dependencies (db, LLM, Stripe), assert call contracts
+  - Integration tests: use a real in-memory MongoDB (mongomock or testcontainers), assert actual data
+  - E2E tests: use httpx.AsyncClient against the real FastAPI app with real in-memory DB
+- For billing tests specifically, prefer mongomock over mock_db for the credit deduction tests. The bug is
+  in the atomicity of the MongoDB operation — that cannot be tested without executing the actual query.
+- For LLM tests: mock at the transport level (patch `anthropic.Anthropic.messages.create`) not at the
+  service level. This preserves the LlmClient wrapper's behavior under test.
+- Target: no more than 60% of billing tests should use pure mock_db assertions. The remaining 40% should
+  use mongomock or testcontainers for integration-level verification.
 
-**Phase to address:**
-Multi-model media orchestration phase (Phase 3). Asset staging to R2 before Remotion render must be a hard architectural requirement.
+**Detection:**
+- Test body contains only `mock_X.assert_called_once_with(...)` assertions with no data assertions
+- Test passes after any behavioral change that preserves the call site
+- `pytest --cov --cov-branch` shows high coverage but the test has no assertions on the function's return
+  value or side effects beyond call verification
+
+**Phase mapping:** Phase 1 (Billing), Phase 2 (Security). Establish the layered strategy before writing
+the first 255 billing tests.
 
 ---
 
-### Pitfall 7: LightRAG + Pinecone Both Active Without Clear Retrieval Routing — Context Bleeding
+### Pitfall 7: FastAPI Async Test Client Event Loop Conflicts
 
 **What goes wrong:**
-ThookAI v1.0 wired Pinecone into `agents/writer.py` (finds similar past content) and `agents/learning.py` (stores approved embeddings). v2.0 adds LightRAG for multi-hop topic retrieval by the Thinker agent. If both systems are active but the routing is unclear, the Writer may receive duplicate context from both Pinecone (vector similarity) and LightRAG (graph relationships) for the same approved content, causing it to over-weight historical style patterns and under-generate fresh angles. Worse, if approved content is written to both stores independently, updates to one store are not reflected in the other, causing staleness divergence.
+Tests using `httpx.AsyncClient` with FastAPI's `app` object produce `RuntimeError: Event loop is closed` or
+`RuntimeError: This event loop is already running` when mixing `asyncio_mode = auto` (set in `pytest.ini`)
+with synchronous test functions or when sharing a client instance across tests in a class.
+
+**Evidence from this codebase:**
+`pytest.ini` has `asyncio_mode = auto`. The Starlette ExceptionGroup failure in the viral card test (the
+confirmed ordering failure) wraps an `anyio._backends._asyncio.TaskGroup.__aexit__` call. This is consistent
+with an event loop lifecycle conflict between test cases.
 
 **Why it happens:**
-Each retrieval system was added independently — Pinecone in v1.0, LightRAG in v2.0. Without an explicit retrieval routing contract, agent code accumulates calls to both systems (because "more context is better"), creating redundancy. The two systems model the same data differently (embeddings vs. graph nodes), so they cannot be straightforwardly merged or deduplicated.
+- `asyncio_mode = auto` creates a new event loop per test function by default. Fixtures that create
+  `httpx.AsyncClient` at session or module scope run on a different loop than the test function.
+- FastAPI's lifespan events (startup/shutdown) involve async context managers. If a TestClient instance is
+  shared across tests, the lifespan runs once but subsequent tests operate on a "half-initialized" app.
+- `anyio.create_task_group()` used by Starlette's BaseHTTPMiddleware requires a running event loop that
+  matches the one that created the task group.
 
-**How to avoid:**
-Define a strict retrieval contract before implementing LightRAG: Pinecone is the similarity search layer (find stylistically similar past posts), LightRAG is the topic graph layer (find related topic clusters and unexplored angles). Thinker calls LightRAG only. Writer calls Pinecone only. Learning agent writes to both stores on approval, but with different data shapes. Document this routing in `backend/agents/pipeline.py` as an explicit comment block. Never add a second retrieval call to an agent without updating the routing contract.
+**Consequences:**
+- Tests fail with cryptic ExceptionGroup errors instead of meaningful assertion failures
+- The failure is non-deterministic (depends on event loop state, ordering of other tests)
+- CI becomes unreliable because the failure rate changes with the number of tests
 
-**Warning signs:**
-- `agents/writer.py` has both a Pinecone call and a LightRAG call in the same function
-- Agent prompts contain 2000+ tokens of retrieval context (sign of duplication)
-- Content generations start repeating the user's own past vocabulary too precisely
+**Prevention:**
+- For `httpx.AsyncClient` fixtures, use function scope: create and close the client per test, not per session.
+  Accept the overhead — it is correct behavior.
+- Use the FastAPI TestClient (synchronous) for simple request/response tests that do not need to exercise
+  async middleware directly. Reserve `AsyncClient` for tests that explicitly test async streaming or SSE.
+- When testing Starlette middleware behavior, create a minimal test app rather than using the full
+  production `app` with all middleware registered.
+- Configure pytest-asyncio explicitly: add `asyncio_default_fixture_loop_scope = "function"` to `pytest.ini`
+  (in addition to `asyncio_mode = auto`) to prevent ambiguity in pytest-asyncio >=0.23.
 
-**Phase to address:**
-LightRAG phase (Phase 2). Retrieval routing contract must be written before any LightRAG retrieval code is added to agent files.
+**Detection:**
+- `ExceptionGroup` or `anyio` in test failure traceback with no obvious assertion failure
+- Test passes in isolation, fails in suite
+- Failure involves Starlette middleware (BaseHTTPMiddleware, CORSMiddleware) even though test is not testing
+  middleware behavior
+
+**Phase mapping:** Phase 4 (Frontend/E2E integration tests). Also affects Phase 1 and 2 when writing route
+handler integration tests.
 
 ---
 
-### Pitfall 8: Strategist Agent Recommendation Spam Degrades User Trust Within Days
+### Pitfall 8: Stripe Webhook Tests Miss Signature Verification and Idempotency Paths
 
 **What goes wrong:**
-The Strategist Agent generates proactive content recommendations based on trending topics, persona signals, and analytics. Without frequency throttling, a user who logs in after 48 hours may see 12 new recommendation cards in their Strategy Dashboard. They dismiss all of them. After this happens 2-3 times, they stop checking the dashboard entirely. The feature that was meant to increase engagement becomes a trust-destroying notification flood.
+Tests mock the entire Stripe webhook handler and assert it processes events correctly. But the two most
+important behaviors of the webhook handler are: (1) it rejects events with invalid signatures and (2) it
+processes each event exactly once (idempotency). Neither of these is tested by "send an event, assert it was
+processed." Both behaviors require specific test patterns.
+
+**Relevance to this codebase:**
+The known bugs include webhook deduplication (BUG: non-idempotent webhook processing) and Stripe
+configuration issues (BUG: missing Price IDs). Tests for webhook behavior that do not cover these two
+paths are testing the wrong things.
 
 **Why it happens:**
-The Strategist agent is optimized for recall (generate many good ideas) rather than precision (surface only the most actionable idea). The first implementation typically has no per-user cadence control because cadence is a UX concern, not a generation concern. The developer mindset during feature build is "more recommendations = more value", which is the opposite of the user experience reality.
+The happy path (valid event, first time received, correct signature) is tested first and teams declare
+webhook testing "done." The security path (invalid signature) and the reliability path (duplicate event)
+require deliberate test design that is easy to skip under time pressure.
 
-**How to avoid:**
-Hard-cap Strategist recommendations at 3 new cards per user per day, surfaced as a max-3 "inbox" in the Strategy Dashboard. Track per-user dismissal rate in `db.strategy_recommendations`. If a user dismisses 5 consecutive recommendations without acting on one, halve the daily generation rate for that user and surface a "calibrate my preferences" prompt. Never generate a new recommendation for a topic the user dismissed in the last 14 days. Make the recommendation card UI communicate signal strength ("High opportunity based on 3 signals") not just the idea.
+**Consequences:**
+- A production deployment with broken signature verification is never caught in test
+- Duplicate subscription activation (user charged twice, credits doubled) is not caught in test
+- The webhook dedup bug that is known to exist remains unfixed because there is no test to make it fail
 
-**Warning signs:**
-- Strategy Dashboard is loading but user is immediately scrolling past all cards
-- Recommendation dismissal rate exceeds 80% across all users in analytics
-- Users stop visiting the Strategy Dashboard after the first week
+**Prevention:**
+- Test the signature verification path explicitly: `stripe.WebhookSignature.verify_header` raises
+  `SignatureVerificationError` for invalid signatures. Test this path first before the happy path.
+  Use `patch("stripe.Webhook.construct_event", side_effect=stripe.error.SignatureVerificationError)`.
+- For idempotency: test that calling the webhook handler twice with the same `event.id` results in exactly
+  one database write. Pattern: call handler → assert write count = 1 → call handler again with same event →
+  assert write count still = 1. This requires a mongomock or real DB fixture, not pure mock_db.
+- Test timestamp tolerance: Stripe rejects webhook events with timestamps more than 300 seconds old. Test
+  that your handler correctly rejects stale payloads.
+- Test the `STRIPE_WEBHOOK_SECRET` not-configured path: if `settings.stripe.webhook_secret` is empty, the
+  handler should return 400 immediately, not attempt processing.
 
-**Phase to address:**
-Strategist Agent phase (Phase 4). Cadence controls and dismissal tracking must be built into the first version — retrofitting them after UX trust is damaged is harder.
+**Detection:**
+- Webhook tests only test the path where `construct_event` succeeds
+- No test asserts `SignatureVerificationError` is handled as a 400 response
+- No test calls the webhook handler with the same `event.id` twice
+
+**Phase mapping:** Phase 1 (Billing). The webhook dedup fix is a named P0 bug. Tests for it must be written
+before the fix so the fix can be TDD-driven.
 
 ---
 
-### Pitfall 9: n8n Webhook Immediate-Response Mode Breaks Long-Running Pipeline Flows
+### Pitfall 9: Concurrent Race Condition Tests That Cannot Actually Produce the Race
 
 **What goes wrong:**
-n8n webhook nodes have a "Response" setting that defaults to "Immediately" — the node sends a 200 OK back to the caller the moment the webhook is triggered, before the workflow executes. If ThookAI's FastAPI backend calls n8n to trigger a scheduled-post publishing workflow and expects a result in the response body, it will receive an empty 200 with no data. The actual workflow result is discarded. The backend marks the post as "processed" based on the empty 200, but the post was never actually published.
+A test for the non-atomic credit deduction race condition uses `asyncio.gather()` to fire two concurrent
+requests. But because Python's asyncio is single-threaded and the database mock is synchronous, both
+"concurrent" coroutines execute sequentially on the same event loop turn. The race condition never actually
+occurs in the test. The test passes without demonstrating the bug and passes after the fix without
+verifying it was fixed.
 
 **Why it happens:**
-n8n's default "Immediately" response mode is appropriate for fire-and-forget automation. Content platform teams configuring n8n for the first time copy webhook node defaults. The issue is invisible in testing because the smoke test only checks HTTP status codes, not payload content.
+Asyncio concurrency does not produce true parallelism. Two coroutines in `asyncio.gather()` will interleave
+at `await` points. If the race condition requires two operations to interleave between a `find_one` and
+an `update_one` (which are both single `await` calls), the asyncio event loop will complete one entire
+sequence before yielding to the other.
 
-**How to avoid:**
-For any n8n workflow that ThookAI triggers and needs to act on the result: set webhook response mode to "When last node finishes" and use the "Respond to Webhook" node as the terminal node. For truly async flows (media generation, analytics collection), implement the two-webhook pattern: FastAPI calls n8n and receives a `workflow_execution_id` immediately, then polls `GET /executions/{id}` or listens to a callback webhook for the result. Add a contract test that asserts every n8n webhook that ThookAI calls returns a non-empty body with the expected schema.
+For a mock database, there is no yield between `find_one` and `update_one` because both are synchronous
+operations wrapped in `AsyncMock`. No interleaving occurs. The test is a false negative.
 
-**Warning signs:**
-- n8n execution logs show workflows completing successfully but FastAPI logs show empty response bodies
-- Scheduled posts are marked `published` in MongoDB but are not visible on the actual social platform
-- Integration test passes but real data shows no side effects
+**Prevention:**
+- To test atomicity: test the MongoDB operation itself, not the Python concurrency. Verify that the
+  production code uses an atomic MongoDB operation (`find_one_and_update` with `$inc` and a filter that
+  includes `credits: {$gte: amount}`) rather than a read-modify-write sequence. If the operation is atomic
+  at the query level, no concurrent test is needed — the atomicity guarantee comes from MongoDB.
+- For true concurrency testing (load behavior under high request volumes), use `locust` or
+  `pytest-benchmark` against a real running server, not unit test mocks.
+- Write the atomicity test as: "assert that the production code calls `find_one_and_update` with the correct
+  query (including the balance check in the filter, not just in Python)" — this is a contract test that
+  verifies the correct MongoDB operation is used.
 
-**Phase to address:**
-n8n infrastructure phase (Phase 1). The webhook response contract must be defined and tested before any business workflow is migrated.
+**Detection:**
+- Test description says "concurrent" but uses `asyncio.gather()` with `AsyncMock` database
+- Test for race condition passes before the fix is applied (false negative)
+- Test does not assert anything about MongoDB query atomicity, only about call counts
+
+**Phase mapping:** Phase 1 (Billing). Write the atomicity contract test: assert `find_one_and_update` is
+called with a filter that prevents over-deduction at the query level.
 
 ---
 
-### Pitfall 10: Obsidian Vault Integration Leaks Private Notes Into Scout Context
+### Pitfall 10: LightRAG and Pinecone Tests That Call Live External APIs
 
 **What goes wrong:**
-The Scout agent is enhanced to read from a user's Obsidian vault for research context. If the vault path is not strictly sandboxed, the Scout agent may traverse into daily journals, personal notes, password-related files, or emotionally sensitive writing that the user never intended to share with the AI pipeline. This content then becomes part of the generation context and may surface in AI-generated content — a catastrophic privacy breach that destroys user trust.
+Integration tests for `services/vector_store.py` and `services/lightrag.py` hit the real Pinecone API and
+the real LightRAG service. Each Pinecone test takes ~30 seconds. With 30 vector store tests in the billing
+and core phases, test suite time increases by 15 minutes. Pinecone tests are documented as heavily flaky
+on CI due to concurrent requests hitting the same index (GitHub: deepset-ai/haystack issue #2644).
 
 **Why it happens:**
-`obsidian-cli` or file-system reading code often uses the vault root path with recursive glob patterns. Developers focus on "give the Scout as much context as possible" without thinking about vault topology. Users organize vaults with `/Research`, `/Journal`, `/Passwords`, `/Work` directories all under the same root. A naive glob on `vault_root/**/*.md` hits everything.
+Vector store services are often written without dependency injection, making them hard to mock at the
+right layer. Teams write integration tests against the live API because mocking feels like "testing the
+mock, not the behavior."
 
-**How to avoid:**
-Require users to designate a specific "ThookAI Research" folder within their vault (not the vault root). Only read `.md` files from that explicitly designated folder path. Validate that the configured path is a subdirectory of the vault root (not the root itself, not `..` traversal). Never store vault content in MongoDB or pass it through the LLM for tasks other than the specific Scout research call. Log all vault reads with file paths in an audit trail the user can inspect. Make vault integration opt-in with a clear UI that shows "ThookAI will read files from: [path]" before activation.
+**Consequences:**
+- CI runtime exceeds 20 minutes, making TDD loops impractical
+- Flaky Pinecone failures create false CI failures unrelated to the code under test
+- Missing `PINECONE_API_KEY` in CI causes test collection to fail rather than skip
 
-**Warning signs:**
-- The Scout context includes content from files outside the user's research folder
-- Users report seeing references to personal information in generated content
-- Vault read logs contain paths outside the configured research directory
+**Prevention:**
+- Guard all live Pinecone and LightRAG tests with `pytest.mark.skipif(not os.getenv("PINECONE_API_KEY"), ...)`
+- Use `unittest.mock.patch` on `pinecone.Index` (not on the ThookAI wrapper) for unit tests. The wrapper
+  behavior (namespace isolation, error handling, retry) can be tested without a live connection.
+- Use a separate `tests/integration/` directory for live-API tests that run only in CI environments where
+  the API keys are available. Keep the main `tests/` directory free of live API calls.
+- For LightRAG: mock `httpx.AsyncClient` at the transport level (the approach already used in
+  `test_lightrag_isolation.py` — this pattern is correct and should be reused across all LightRAG tests).
 
-**Phase to address:**
-Obsidian vault integration phase (Phase 7). Path sandboxing and the opt-in UI flow must be the first things built before any vault reading is implemented.
+**Detection:**
+- Test fails with `pinecone.exceptions.UnauthorizedException` when `PINECONE_API_KEY` is not set
+- Test takes >10 seconds in isolation (sign of a real network call)
+- `pytest --co` shows the test collects fine but `pytest -k pinecone` reveals 30-second test times
 
----
-
-## Technical Debt Patterns
-
-Shortcuts that seem reasonable but create long-term problems.
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Run n8n on SQLite during dev/test | Zero setup overhead | Queue mode (required for production scale) is blocked — SQLite unsupported in queue mode | Local dev only, never staging/prod |
-| Use LightRAG with default entity extraction prompt | Working index in minutes | Graph fills with noise entities; retrieval degrades over weeks | Never — domain-specific prompt is mandatory |
-| Store Remotion assets as external provider URLs | Skip R2 staging step | Remotion timeouts under load; CDN URLs may expire; HeyGen URLs are temporary | Never in production |
-| Skip idempotency keys on n8n-triggered publishing | Simpler webhook handlers | Duplicate posts when n8n retries on network blip | Never for social publishing |
-| Hard-code media credit costs per provider call | Fast initial implementation | Cost estimates become stale as providers change pricing; no budget enforcement | Prototype only |
-| Reuse same LightRAG index across all users | Single index to manage | User A's content concepts bleed into User B's retrieval; persona cross-contamination | Never — per-user graph required |
+**Phase mapping:** Phase 3 (Core features). Establish the mock strategy for vector store before writing
+the 240 core feature tests.
 
 ---
 
-## Integration Gotchas
+## Minor Pitfalls
 
-Common mistakes when connecting to external services.
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| n8n webhook triggers | Assuming the workflow executes synchronously before the webhook responds | Explicitly configure "Response Mode: When last node finishes" or implement async polling pattern |
-| LightRAG storage init | Calling `rag.insert()` before `await rag.initialize_storages()` | Always call `initialize_storages()` as part of app startup lifespan, not lazily on first insert |
-| HeyGen avatar creation | Assuming video URL is immediately available after API call returns | HeyGen is async — poll `GET /v1/video_status.get?video_id={id}` until status is "completed"; never assume status on first response |
-| ElevenLabs voice generation | Using default 44kHz sample rate for all video pipelines | Remotion and most video formats expect 48kHz; resample explicitly or use ElevenLabs `output_format: pcm_48000` |
-| fal.ai image generation | Not specifying `seed` for reproducibility | Without seed, same prompt generates different images on retry — inconsistent output on pipeline re-runs; set seed from `job_id` hash |
-| Pinecone + LightRAG coexistence | Writing to both with same content encoding | Pinecone expects raw text chunks; LightRAG expects full documents for entity extraction — use different ingestion pipelines per store |
-| n8n → FastAPI calls | Not setting `Authorization` header on n8n HTTP nodes | n8n makes outbound HTTP calls without auth headers by default — all FastAPI protected routes will receive 401 from n8n |
-| Obsidian CLI vault read | Using vault root as the read path | Only read from a designated subdirectory; vault root includes journals, configs, private notes |
-| Strategist Agent + SSE | Pushing recommendation events to all connected users | SSE events must be scoped to `user_id` channel — never broadcast Strategist results to a shared SSE stream |
+Matters that create friction and reduce output quality but do not falsify results.
 
 ---
 
-## Performance Traps
+### Pitfall 11: 85% Coverage Target Creates Incentive to Test Trivial Code
 
-Patterns that work at small scale but fail as usage grows.
+**What goes wrong:**
+When coverage is a sprint completion criterion, engineers write tests for simple getters, property accessors,
+and configuration validation rather than complex business logic. This is the fastest way to raise coverage
+numbers. The `TIER_CONFIGS` dict in `services/credits.py` is easy to hit 100% on with a single test. The
+webhook dedup logic is hard to test correctly. Coverage-chasing selects for easy tests, not important tests.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Synchronous LightRAG `insert()` on every content approval | Approval API endpoint becomes slow (5-30s) as graph grows | Move LightRAG inserts to a background Celery task or n8n workflow triggered on approval | When knowledge graph exceeds ~500 nodes |
-| Single LightRAG graph for all users | Query response time degrades as all-user content accumulates | One LightRAG instance (or one storage namespace) per user from day one | At 100+ active users with 50+ approved posts each |
-| Remotion renders blocking the remotion-service event loop | Concurrent render requests queue up; users wait minutes for video previews | Run Remotion renders in child processes or use `@remotion/lambda` for true parallelism | At 5+ concurrent video render requests |
-| n8n workflows with no execution history pruning | n8n PostgreSQL database grows unboundedly; query performance degrades | Configure `EXECUTIONS_DATA_MAX_AGE=336` (14 days) and `EXECUTIONS_DATA_PRUNE_MAX_COUNT=10000` | After 30 days of production traffic |
-| Analytics feedback loop polling social APIs on a tight schedule | LinkedIn/X API rate limits hit; all analytics jobs start failing | Use exponential backoff with jitter; stagger polling by user with random offset; cache 24h results aggressively | At 50+ users with connected social accounts |
-| Strategist Agent runs full LLM generation for every user on every beat | LLM costs scale linearly with user count | Only run Strategist for users active in last 7 days; use lightweight scoring pass before full generation | At 200+ users |
+**Why it happens:**
+Coverage tools report all code equally. There is no signal that `TIER_CONFIGS` is less important than
+`handle_checkout_completed`. Sprint metrics that are purely coverage-percentage-based create perverse
+incentives.
 
----
+**Prevention:**
+- Assign coverage targets by criticality, not evenly: 95% branch coverage for billing/auth, 80% for
+  everything else.
+- Use `coverage.py` exclusion comments (`# pragma: no cover`) for trivially unimportant code (config dicts,
+  `__repr__` methods, type stubs) to prevent them from diluting coverage stats.
+- Prioritize coverage of code paths that contain known bugs first. A test that exposes BUG-X is worth more
+  than 10 tests for `build_plan_preview` edge cases.
+- Track "P0 bug coverage" as a separate metric: all 4 known P0 bugs (JWT fallback, non-atomic credits,
+  webhook dedup, LightRAG lambda injection) must have failing tests before fixes are applied.
 
-## Security Mistakes
+**Detection:**
+- Coverage is increasing but the known P0 bugs have no corresponding failing tests yet
+- Test names describe trivial accessors (`test_tier_config_has_credits_field`)
+- P0 bugs are fixed before tests that expose them are written
 
-Domain-specific security issues beyond general web security.
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| n8n instance publicly accessible without authentication | Anyone can trigger workflows, exfiltrate data, or run arbitrary code in Code nodes | Deploy n8n behind a private VPC or require `N8N_BASIC_AUTH_ACTIVE=true`; never expose n8n UI on public internet |
-| n8n Code nodes can access `process.env` | API keys in env vars are readable inside Code nodes — insider threat vector | Set `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` in production; pass secrets via n8n Credentials only |
-| Vault integration with unsandboxed file paths | Path traversal: `../../../etc/passwd` or journal exposure | Validate resolved path is strictly inside the designated research directory before every file read |
-| Strategist Agent recommendations embedded with unsanitized vault content | Prompt injection via user's own vault notes into Strategist LLM call | Sanitize vault content before injecting into LLM prompts; strip YAML frontmatter keys that look like instructions |
-| LightRAG graph exposed across users | User A's entity graph reveals User B's content strategy (competitor intel) | Enforce per-user graph namespace at storage level; include `user_id` as a required filter on all LightRAG queries |
-| n8n webhook URLs are unauthenticated by default | External parties can trigger content publishing or analytics collection by guessing URLs | Use n8n webhook authentication (header auth or JWT); validate `X-ThookAI-Webhook-Secret` on every inbound n8n webhook |
-
----
-
-## UX Pitfalls
-
-Common user experience mistakes in this domain.
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Strategy Dashboard shows all recommendation history, not just active ones | Dashboard is overwhelming after 2 weeks; users can't find actionable items | Show max 3 active recommendations; archive dismissed/acted-on to a separate "History" tab |
-| Multi-model media pipeline shows no intermediate progress | User waits 3-5 minutes with spinner; assumes the page hung | Show stage-by-stage progress: "Generating voice... Done. Creating avatar... 40%..." via SSE events from each pipeline stage |
-| Obsidian vault sync shows no indication of what was read | User is anxious about what private data the AI accessed | Show "Last synced: 12 notes from /Research/Competitors" in the Scout UI — explicit, auditable, reassuring |
-| Strategist recommendations lack explanation for why they were surfaced | Users don't trust recommendations they can't understand | Every recommendation card must show "Why now: [signal]" — e.g., "Your last 3 posts on fundraising got 2x avg engagement" |
-| Analytics feedback loop takes 24h to appear — no intermediate state | Dashboard shows no post-publish data; users think analytics are broken | Show "Pending — checking again in 22 hours" with a timestamp; never show empty analytics state without explaining the delay |
+**Phase mapping:** All phases. Establish coverage priorities at the start of each wave.
 
 ---
 
-## "Looks Done But Isn't" Checklist
+### Pitfall 12: n8n Bridge Tests That Require a Running n8n Instance
 
-Things that appear complete but are missing critical pieces.
+**What goes wrong:**
+`tests/test_n8n_bridge.py` and `tests/test_n8n_workflow_status.py` may call the n8n API directly. If the
+n8n instance is not running locally or in CI, these tests silently skip or fail with connection errors,
+creating a false clean test run.
 
-- [ ] **n8n infrastructure:** n8n deploys and UI is accessible — verify workers are actually dequeuing by triggering a test webhook and confirming it executes (not just enqueues)
-- [ ] **LightRAG integration:** First `insert()` succeeds — verify entity extraction produced domain-relevant entities (not generic words) by inspecting graph node names
-- [ ] **Multi-model media pipeline:** "Talking-head video" generates successfully in dev — verify asset staging to R2 works, Remotion loads from R2 (not external URLs), and partial failure records the failure stage correctly
-- [ ] **Strategist Agent:** Recommendations appear in dashboard — verify cadence controls are active (max 3/day), dismissal is persisted to DB, and dismissed topics are suppressed for 14 days
-- [ ] **Analytics feedback loop:** 24h polling task is scheduled — verify it actually fetches from LinkedIn/X API (not from internal DB), writes to `content_jobs.performance_data`, and handles API rate limit errors without crashing
-- [ ] **Obsidian integration:** Vault notes appear in Scout context — verify only files from the designated subdirectory are read (test with a file planted outside the directory)
-- [ ] **Celery→n8n migration:** n8n schedule triggers are running — verify Celery beat is stopped and that no scheduled tasks are running from both systems simultaneously
-- [ ] **SSE notifications:** Notifications appear in the frontend — verify events are scoped to the correct `user_id` and a test of two concurrent users does not cross-contaminate their notification streams
+**Why it happens:**
+n8n is a self-hosted service that cannot be mocked in-process (unlike MongoDB or Redis). Tests for the n8n
+bridge layer are tempting to write as integration tests against a live n8n instance, but this creates a CI
+dependency that is fragile.
 
----
+**Prevention:**
+- Mock the `httpx.AsyncClient` used by the n8n bridge service at the transport level (same pattern as
+  LightRAG isolation tests). Test the bridge service behavior (request construction, error handling, response
+  parsing) without a live n8n instance.
+- Use `pytest.mark.integration` to tag tests that require a live n8n instance. Exclude them from the default
+  `pytest` run with `pytest -m "not integration"`.
+- Contract tests: assert that the bridge constructs the correct HTTP request to n8n (correct URL, correct
+  authentication header, correct payload schema). This verifies the integration contract without needing
+  n8n to respond.
 
-## Recovery Strategies
-
-When pitfalls occur despite prevention, how to recover.
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Duplicate posts published to LinkedIn/X | HIGH | Delete duplicates via platform API immediately; add idempotency keys retroactively; audit all published posts from migration window; send user apology if public post was duplicated |
-| LightRAG graph filled with noise entities | MEDIUM | Drop and rebuild graph with corrected entity extraction prompt; re-ingest all approved content; no user data loss since source is MongoDB |
-| Embedding model switch needed post-index creation | HIGH | Drop vector tables; rebuild LightRAG index from scratch; downtime period required; this is why the model choice must be locked upfront |
-| n8n worker stuck in queue mode | LOW | Redeploy worker service with corrected `N8N_PROCESS_TYPE=worker` env var; queued jobs will resume automatically once worker connects |
-| Media pipeline partial failure leaks credits | MEDIUM | Implement `media_pipeline_ledger` retroactively; manually audit provider invoices vs. successful media job counts to estimate leak; issue credits to affected users |
-| Obsidian vault reads files outside designated folder | CRITICAL | Immediately disable vault integration feature flag; audit which content was used in LLM calls; delete contaminated LightRAG graph entries; notify affected users; rebuild vault reading with strict path validation |
+**Phase mapping:** Phase 1 (Billing) when testing Celery→n8n triggered tasks. Phase 3 (Core) when testing
+content pipeline n8n workflows.
 
 ---
 
-## Pitfall-to-Phase Mapping
+### Pitfall 13: Playwright E2E Tests That Hardcode Timing Assumptions
 
-How roadmap phases should address these pitfalls.
+**What goes wrong:**
+E2E tests for the content generation pipeline (which can take 30-60 seconds in real LLM calls) use
+`page.wait_for_timeout(5000)` to wait for results. When the LLM is slow (cold start, high load), the test
+times out. When the pipeline is fast (warm cache), the test passes on an intermediary loading state.
+45% of E2E flaky test failures are caused by async timing assumptions (Semaphore research, 2025).
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Dual Celery + n8n execution / duplicate jobs | Phase 1: n8n infrastructure | Smoke test: confirm no duplicate entries in `db.scheduled_posts` after publishing one post |
-| n8n worker not entering queue mode | Phase 1: n8n infrastructure | Health probe: Redis queue depth vs. worker active count must converge to 0 within 30s of trigger |
-| LightRAG embedding model lock-in | Phase 2: LightRAG knowledge graph | Config assertion at startup: `LIGHTRAG_EMBEDDING_MODEL` matches stored vector dimension |
-| LightRAG noise entity extraction | Phase 2: LightRAG knowledge graph | Manual review of 10 extracted post graphs; reject if >30% nodes are generic words |
-| LightRAG + Pinecone context bleeding | Phase 2: LightRAG knowledge graph | Code review: Writer calls only Pinecone; Thinker calls only LightRAG — no cross-calls |
-| Media pipeline partial failure with no cost tracking | Phase 3: Multi-model media orchestration | Every failed pipeline job has `failure_stage` + `credits_consumed` fields in `media_pipeline_ledger` |
-| Remotion asset timeout in production | Phase 3: Multi-model media orchestration | Load test: render with 50MB HeyGen video + ElevenLabs audio; confirm completes within 120s |
-| Strategist Agent recommendation spam | Phase 4: Strategist Agent | User study proxy: check dismissal rate after 7 days; must be below 50% |
-| n8n webhook immediate-response mode | Phase 1: n8n infrastructure | Contract test: every ThookAI→n8n webhook call receives non-empty body with expected schema |
-| Obsidian vault private notes exposure | Phase 7: Obsidian vault integration | Security test: plant test file outside designated folder; confirm Scout never reads it |
+**Evidence from this codebase:**
+The content generation pipeline goes through multiple status transitions: `pending → processing → reviewing`.
+An E2E test that asserts "content appears in reviewing state" within 5 seconds will fail under realistic
+LLM latency.
+
+**Prevention:**
+- Never use `waitForTimeout()` in Playwright tests. Replace with `waitForSelector('[data-testid=...]')` or
+  `waitForResponse(url => url.includes('/api/content'))`.
+- For long-running pipeline tests, mock the LLM at the service level and return a fixture response in <100ms.
+  The E2E test verifies the UI flow, not the LLM output.
+- Use `page.waitForLoadState('networkidle')` after triggering pipeline actions.
+- Set realistic `expect.timeout` defaults in `playwright.config.ts`: `timeout: 30000` per test,
+  `expect: { timeout: 10000 }` per assertion.
+- Tag slow E2E tests with `@pytest.mark.slow` or Playwright's `test.slow()` and run them separately from
+  the fast suite.
+
+**Phase mapping:** Phase 4 (Frontend/E2E tests). Establish the timing conventions before writing 105 tests.
+
+---
+
+### Pitfall 14: Test Helper Functions That Become Load-Bearing Infrastructure
+
+**What goes wrong:**
+A `make_user()` helper is defined in `test_stripe_billing.py`. A similar `_make_user()` helper is defined in
+`test_credits_billing.py`. Both exist independently. A third test file imports from one of them. When the
+billing schema changes (e.g., a new required field `plan_builder_config`), all three helper definitions must
+be updated independently, and the one that was missed produces misleading test failures.
+
+**Evidence from this codebase:**
+`test_stripe_billing.py` already defines `make_user()` and `_user_id()` helper factories at module level.
+As the test suite grows from 781 to 1050+ tests, this pattern will proliferate.
+
+**Prevention:**
+- Move shared test factories to `tests/conftest.py` or a dedicated `tests/factories.py` module. Import
+  from there.
+- Use a consistent naming convention: all factory functions are `make_X()` and live in a single place.
+- When a domain model changes (e.g., `users` schema adds a field), update `make_user()` in one place.
+  All tests that use `make_user()` pick up the change automatically.
+
+**Detection:**
+- The same helper function name appears in more than one test file
+- `grep -r "make_user\|_user_id\|make_job\|make_persona" tests/` returns results from more than 3 files
+
+**Phase mapping:** Day 1. Audit existing helpers in `conftest.py` and the major test files. Consolidate
+before writing 700 more tests.
+
+---
+
+## Phase-Specific Warnings
+
+How the pitfalls map to the 4 sprint phases.
+
+| Phase | Test Targets | Highest-Risk Pitfalls | Specific Mitigation |
+|-------|-------------|----------------------|---------------------|
+| Phase 1: Billing (255 tests) | Non-atomic credits, webhook dedup, JWT fallback, Stripe flows | P2 (fix breaks existing tests), P4 (branch coverage), P8 (webhook signature/idempotency), P9 (fake concurrency tests) | Use mongomock for credit tests; write dedup test before fix; branch coverage from the start |
+| Phase 2: Security/Auth (100 tests) | JWT validation, OAuth flows, rate limiting, OWASP | P1 (ordering failures), P3 (unawaited coroutines), P7 (event loop conflicts) | All auth mocks use `function` scope; run `--randomly-seed` variants; test JWT expiry with real time manipulation |
+| Phase 3: Core Features (240 tests) | Content pipeline, LangGraph, media orchestration, LightRAG | P6 (over-mocking), P10 (live API calls), P12 (n8n bridge) | Mock LLM at transport level; use existing LightRAG httpx mock pattern; no live Pinecone in default suite |
+| Phase 4: Frontend/E2E (105 tests) | Playwright flows, load testing, Docker smoke | P7 (async race conditions), P13 (timing assumptions) | No `waitForTimeout`; mock LLM for E2E; `--retries=2` in CI; test slow tag for pipeline tests |
+
+---
+
+## Pre-Sprint Hygiene Checklist
+
+Actions to take before writing test #1.
+
+- [ ] **Fix the 3 existing failures.** Delete the 2 Celery beat schedule tests (architecture is now n8n).
+  Diagnose and fix the viral card ordering failure. Start with a clean baseline.
+- [ ] **Add `filterwarnings = error::RuntimeWarning` to `pytest.ini`.** This converts the 6 unawaited
+  coroutine warnings to failures. Fix all 6 before proceeding.
+- [ ] **Audit `asyncio_default_fixture_loop_scope`.** Add `asyncio_default_fixture_loop_scope = "function"`
+  to `pytest.ini` to prevent event loop scope ambiguity.
+- [ ] **Consolidate test helpers.** Move `make_user()`, `_user_id()`, and any other shared factories to
+  `tests/conftest.py`.
+- [ ] **Add `pytest-randomly` to dev dependencies.** Run `pytest --randomly-seed=0 tests/` and
+  `pytest --randomly-seed=1234 tests/` and confirm zero ordering-dependent failures.
+- [ ] **Add `--cov-branch` to the coverage command.** Update the CI coverage command to use branch coverage.
+  Record the current branch coverage baseline before writing new tests.
+
+---
+
+## "Looks Done But Isn't" Checklist for Testing Sprint
+
+Things that can appear complete but leave the suite in a misleading state.
+
+- [ ] **Coverage is 85%:** Check that it is 85% _branch_ coverage, not line coverage. Confirm billing/auth
+  modules are at 95% branch coverage specifically.
+- [ ] **All 1050 tests pass:** Confirm `pytest --randomly-seed=0` and `pytest --randomly-seed=1234` both
+  pass. A suite that passes at a fixed seed but fails at another seed has hidden ordering failures.
+- [ ] **Webhook dedup is tested:** Confirm there is a test that calls the Stripe webhook handler twice with
+  the same `event.id` and asserts exactly one database write occurred.
+- [ ] **JWT fallback is tested:** Confirm there is a test that calls the onboarding endpoint with the wrong
+  model name and asserts it fails (not silently falls back to mock persona).
+- [ ] **Non-atomic credits fix is tested:** Confirm there is a test that asserts `find_one_and_update` (or
+  equivalent atomic operation) is called, not a read-modify-write sequence.
+- [ ] **LightRAG lambda injection is tested:** Confirm there is a test that sends a payload containing
+  common injection strings to the LightRAG query endpoint and asserts they are sanitized.
+- [ ] **No live external API calls in the default `pytest` run:** Confirm `pytest tests/ -q` completes in
+  under 60 seconds. If it takes longer, a test is calling a live API.
+- [ ] **No unawaited coroutine warnings:** Confirm `pytest -W error::RuntimeWarning tests/` exits clean.
 
 ---
 
 ## Sources
 
-- [n8n v2.0 Breaking Changes](https://docs.n8n.io/2-0-breaking-changes/) — Code nodes block `process.env` access, Sub-workflow data flow changes
-- [n8n Queue Mode Configuration](https://docs.n8n.io/hosting/scaling/queue-mode/) — PostgreSQL required, SQLite unsupported, worker architecture
-- [n8n Community: Worker Not Dequeuing in Queue Mode](https://community.n8n.io/t/self-hosted-n8n-cluster-on-railway-worker-not-dequeuing-jobs-webhook-triggers-stuck-in-queue/209719) — Worker initialization failure pattern
-- [n8n Community: All executions stuck in Queued](https://community.n8n.io/t/urgent-all-executions-stuck-in-queued-queue-mode-redis-stack-review-request/225804) — Redis Bull script execution errors in queue mode
-- [LightRAG GitHub README — HKUDS/LightRAG](https://github.com/HKUDS/LightRAG) — Embedding model lock-in, initialization requirement, LLM capability requirements (HIGH confidence — official source)
-- [Remotion Timeout Documentation](https://www.remotion.dev/docs/timeout) — delayRender timeout failure modes, multi-provider pipeline risks
-- [Remotion Production Checklist](https://www.remotion.dev/docs/lambda/checklist) — Lambda timeout configuration, asset loading pitfalls
-- [fal.ai: Building Effective Gen AI Model Architectures](https://fal.ai/learn/devs/building-effective-gen-ai-model-architectures) — Multi-model integration layer requirements, data pipeline criticality
-- [Production Knowledge Graph Systems 2025 — Medium](https://medium.com/@claudiubranzan/from-llms-to-knowledge-graphs-building-production-ready-graph-systems-in-2025-2b4aff1ec99a) — Entity deduplication, schema over-engineering, chunk overlap pitfalls
-- [n8n Webhook Node Documentation](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/) — Immediate response mode pitfall, async pattern
-- [Self-Hosting n8n on Render](https://render.com/articles/self-hosting-n8n-a-production-ready-architecture-on-render) — Queue mode architecture for Render deployments
-- [IBM: Agentic Drift — Hidden Risk](https://www.ibm.com/think/insights/agentic-drift-hidden-risk-degrades-ai-agent-performance) — Proactive agent trust degradation patterns
+- [Are Coding Agents Generating Over-Mocked Tests? An Empirical Study](https://arxiv.org/abs/2602.00409) —
+  AI agents systematically over-mock; applies to Claude Code-generated tests in this sprint
+- [FastAPI Async Tests](https://fastapi.tiangolo.com/advanced/async-tests/) — AsyncClient vs TestClient
+  event loop behavior (HIGH confidence — official FastAPI docs)
+- [pytest-asyncio Concepts](https://pytest-asyncio.readthedocs.io/en/stable/concepts.html) — Loop scope,
+  auto mode behavior (HIGH confidence — official docs)
+- [Testing with Celery](https://docs.celeryq.dev/en/stable/userguide/testing.html) — Eager mode
+  limitations, worker thread cleanup issues (HIGH confidence — official Celery docs)
+- [Mocking Stripe Signature Checks in pytest](https://til.simonwillison.net/pytest/pytest-stripe-signature)
+  — `patch("stripe.WebhookSignature.verify_header")` pattern (MEDIUM confidence)
+- [Branch Coverage vs Line Coverage](https://about.codecov.io/blog/line-or-branch-coverage-which-type-is-right-for-you/)
+  — When line coverage lies (HIGH confidence — authoritative source)
+- [Troubleshooting Fixture Leakage in pytest](https://www.mindfulchase.com/explore/troubleshooting-tips/testing-frameworks/troubleshooting-fixture-leakage-and-state-contamination-in-pytest.html)
+  — Session-scoped fixture mutation patterns (MEDIUM confidence)
+- [Preventing Race Conditions in Async Python](https://johal.in/preventing-race-conditions-in-async-python-code/)
+  — asyncio.gather and its limits for testing true concurrency (MEDIUM confidence)
+- [How to Avoid Flaky Tests in Playwright](https://semaphore.io/blog/flaky-tests-playwright) —
+  45% of E2E flakiness is async timing; waitForTimeout anti-pattern (MEDIUM confidence)
+- [Pinecone Testing Strategy](https://github.com/deepset-ai/haystack/issues/2644) — Flaky CI from
+  concurrent requests to shared Pinecone index (MEDIUM confidence — community verified)
+- [TDD Anti-Patterns](https://www.codurance.com/publications/tdd-anti-patterns-chapter-1) — Inspector
+  anti-pattern, coverage pressure causing trivial tests (HIGH confidence — widely cited)
+- [Software Testing Anti-Patterns](https://blog.codepipes.com/testing/software-testing-antipatterns.html)
+  — Comprehensive anti-pattern catalogue (HIGH confidence — widely cited)
 
 ---
-*Pitfalls research for: ThookAI v2.0 — n8n orchestration, LightRAG, multi-model media, Strategist Agent*
+
+*Pitfalls research for: ThookAI v2.1 — Production Hardening, 50x Testing Sprint*
 *Researched: 2026-04-01*
+*Grounded in: live codebase inspection (781 tests, 3 confirmed failures, 6 unawaited coroutine warnings)*

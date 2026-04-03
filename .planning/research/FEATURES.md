@@ -1,208 +1,190 @@
-# Feature Research
+# Feature Landscape — Testing Categories for v2.1 Production Hardening
 
-**Domain:** AI Content Operating System — proactive content intelligence, multi-model media orchestration, knowledge graph retrieval, workflow automation
+**Domain:** Billing SaaS platform with AI content pipeline — pre-public-launch testing sprint
 **Researched:** 2026-04-01
-**Confidence:** HIGH (current docs + multiple sources + competitor analysis)
+**Confidence:** HIGH (official Stripe docs + FastAPI docs + multiple verified sources)
 
 ---
 
-## Context: What Already Exists
+## Context
 
-ThookAI v1.0 ships the entire reactive content creation stack: auth, persona engine, 5-agent pipeline, scheduling, publishing, analytics, billing, media generation (images/video/voice), agency workspaces. This research covers **only the incremental v2.0 capabilities** — what proactive intelligence, knowledge graph integration, multi-model media orchestration, and workflow automation systems need to include to be competitive and differentiated.
+This document answers: **what test categories are table stakes before public launch of a billing SaaS, and in what priority order?**
 
----
+ThookAI enters v2.1 with 768 existing tests across 56 test files. Target is 1,050+ tests, 85%+ line coverage, 95%+ billing coverage, zero P0 failures. The platform has Stripe billing, JWT auth, Google OAuth, a 5-agent AI pipeline orchestrated by LangGraph, n8n workflow orchestration, LightRAG knowledge graph, Remotion media assembly, and agency workspaces.
 
-## Feature Landscape
-
-### Table Stakes (Users Expect These)
-
-Features that any platform calling itself a "content operating system" must have. Missing these creates an incomplete experience that competitors exploit.
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Proactive content idea recommendations | Tools like Taplio (500M+ post training) surface trending topics and ideas before users ask — users now expect AI to bring ideas, not wait for prompts | MEDIUM | Must surface daily/weekly; relevance tied to persona + past performance |
-| One-click approve from recommendation feed | Once recommendations appear, friction to act must be near zero — users expect approve → schedule, not approve → fill form → schedule | LOW | SSE notification + confirm dialog → immediate pipeline trigger |
-| Workflow status visibility | n8n workflows running in background need legible status — "video rendering", "publishing in 3h", "strategy ready" — users expect to see what the system is doing | LOW | Existing SSE system can be extended |
-| Automatic content performance feedback | After a post publishes, users expect to see real engagement data flow back into the platform within 24-48h — basic analytics loop is table stakes now | MEDIUM | Already built in v1.0 as real analytics; needs to be wired to Strategist + persona intelligence |
-| Multi-format media output | In 2026, "static image + caption" is not enough — carousel, short video, and talking-head are expected by LinkedIn/Instagram creators | HIGH | Remotion assembly + multi-model routing is the implementation |
-| Knowledge base–grounded content | Users with Obsidian vaults or note archives expect AI to write from their actual ideas, not hallucinate generic takes | MEDIUM | Scout agent + obsidian-cli integration; file path mapping required |
-| Campaign-level planning | Group related posts, see strategy across a week/month — standard feature in Taplio, Supergrow, Buffer | LOW | Already scaffolded; needs UI wiring to Strategist output |
-
-### Differentiators (Competitive Advantage)
-
-Features that no major competitor has at this level of integration. These are where ThookAI wins the comparison.
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| LightRAG knowledge graph over approved content | Builds entity/relationship graph from every approved post — Thinker agent can multi-hop query "what angles have I NOT used on topic X?" — no competitor does this | HIGH | LightRAG EMNLP2025 paper; dual-level retrieval (low: specific entities, high: thematic clusters); ~50% faster incremental updates vs full reindex |
-| Obsidian vault as Scout research source | User's own research notes become grounding material for content — prevents hallucination, creates genuinely original content — no competitor ingests personal PKM | MEDIUM | obsidian-cli reads vault; Scout agent preprocesses markdown with frontmatter; feeds Thinker |
-| Multi-model media orchestration (Designer → Orchestrator → best-model-per-task → Remotion) | Single prompt → Designer plans visual brief → Orchestrator routes image to fal.ai/DALL-E, video to Luma/Kling/HeyGen, TTS to ElevenLabs → Remotion assembles final MP4 — competitors use one model | HIGH | Intelligence in planning + assembly, not generation — avoids model-specific lock-in and produces professional results |
-| Strategist Agent as proactive content advisor | Not just scheduling — the Strategist reads analytics patterns, knowledge graph gaps, trending signals (Perplexity), and Obsidian recent notes to recommend WHAT to write, WHEN, and WHY | HIGH | Runs on n8n schedule (daily/weekly); produces recommendation cards with rationale |
-| Strategy Dashboard with rationale-first UX | Shows recommendation cards with "why this topic now" explanation before user approves — matches 2026 agentic AI UX pattern (Intent Preview) from Smashing Magazine research | MEDIUM | New React page; SSE-driven updates; approve → pipeline trigger |
-| Persona-grounded fatigue prevention | Anti-repetition system tied to knowledge graph — "you've covered growth frameworks 4 times this month, shift to mindset" — competitors either lack this or rely on simple deduplication | MEDIUM | Unified fatigue shield (v1.0) + LightRAG graph query on topic distribution |
-| n8n as observable workflow orchestrator | Visual workflow graph makes it auditable and modifiable without code deploys — platform owners can inspect, debug, or extend automation flows — Celery has no equivalent visibility | HIGH | Replaces Celery; self-hosted n8n on same infra; webhook triggers instead of broker queues |
-
-### Anti-Features (Commonly Requested, Often Problematic)
-
-Features that seem good on the surface but create concrete problems for this platform's architecture and quality goals.
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| "Auto-post everything without review" full autonomy mode | Saves time; users want zero friction | Brand safety risk — even well-trained AI produces occasional off-brand or factually wrong outputs; no competitor except bots offers this without human-in-the-loop checkpoint | Keep approve step but make it one-click from Strategy Dashboard; reduce friction without removing control |
-| Real-time content collaboration (multi-user editing) | Agency users want simultaneous editing | Adds significant state synchronization complexity (WebSockets, CRDT, operational transforms); out of scope for solo creators and small agencies who are the target segment | Workspace member roles + sequential review flow already covers agency use case |
-| General-purpose "write anything" prompt mode | Feels powerful and flexible | Dilutes persona fingerprint; encourages off-brand output; generic prompting = generic AI slop — contradicts core value | Always route through Commander agent which enforces persona context; provide advanced "raw mode" only as power-user escape hatch |
-| Automatic Obsidian note creation from generated content | Closes the loop; sounds useful | Vault is user's sacred knowledge space — writing back to it without explicit intent violates trust; would require careful conflict resolution | Offer export-to-Obsidian as an explicit action, not automatic; let user decide what earns vault status |
-| Multi-language support in v2.0 | Indian languages, global reach | Sarvam AI integration for Indian languages is a separate infrastructure lift (different model, transliteration, regional platform norms); dilutes focus | Explicitly deferred to v3.0 per PROJECT.md; document the decision prominently |
-| Full Canva-style visual editor in-platform | Users want design control | Design tools have a 20-year head start; building a credible visual editor takes 12+ months; distraction from AI differentiation | Expose Remotion template parameters as simple controls (color, font, logo upload); let professionals use their own design tools for fine-tuning |
-| Bulk AI-generate entire month of content unreviewed | Power users ask for content calendar automation | Produces high-volume generic output; undermines quality brand reputation; also expensive (credits × 30 posts) | Series planning (already built) + Strategist recommendations allow forward-planning with per-post review; batch approve is acceptable if review UI is fast |
+Four confirmed critical bugs anchor the TDD work: (1) JWT fallback path bypasses auth, (2) non-atomic credit deductions allow negative balance, (3) webhook dedup missing so duplicate events activate subscriptions twice, (4) LightRAG lambda-scoped client leaks connections.
 
 ---
 
-## Feature Dependencies
+## Table Stakes
+
+Test categories that must exist before any revenue flows. Missing these means real money can be lost or real users can be locked out.
+
+| Category | Why Required | Complexity | Current Coverage Signal |
+|----------|--------------|------------|------------------------|
+| **Billing: Webhook idempotency** | Stripe retries webhooks for up to 72h. Without dedup, `checkout.session.completed` fires twice → user gets double credits or double subscription activation → financial ledger corrupted | MEDIUM | `test_stripe_billing.py` exists but dedup path untested |
+| **Billing: Credit atomicity** | Concurrent requests to `/api/content/generate` race on `credits` field. Non-atomic read-modify-write allows negative balance → users generate unlimited content for free | HIGH | `test_credits_billing.py` has unit tests; concurrent stress test absent |
+| **Billing: Webhook signature verification** | Invalid or replayed webhooks must be rejected. Without `STRIPE_WEBHOOK_SECRET` check, any attacker can craft a fake `customer.subscription.created` event | LOW | Covered in `test_stripe_e2e.py` |
+| **Billing: Subscription lifecycle** | Trial → active → cancelled → downgrade path must work end-to-end. Stripe sends `customer.subscription.updated` and `customer.subscription.deleted`. If either is unhandled, users keep premium features after cancelling | HIGH | `test_stripe_billing.py` covers deletion; upgrade path gap |
+| **Billing: Checkout session creation** | Price ID lookup, plan preview calculation, credit pack SKUs must all resolve without throwing. Any Stripe `InvalidRequest` here = 100% conversion failure | MEDIUM | Covered for happy path; missing-config path needs test |
+| **Auth: JWT validation** | Every protected route depends on `get_current_user`. The confirmed BUG-1 variant for v2.1 is a JWT fallback that lets through malformed tokens. Must be locked down before first paid user | HIGH | `test_auth_core.py` exists; fallback path is the gap |
+| **Auth: Rate limiting on auth endpoints** | Without rate limit on `/api/auth/login`, brute-force attacks enumerate passwords. PCI DSS and OWASP require lockout policy | MEDIUM | `test_rate_limit.py` exists; concurrent burst tests absent |
+| **Auth: Google OAuth token exchange** | OAuth callback must not expose state parameter to CSRF. Token exchange must use PKCE or state validation | MEDIUM | `test_oauth_flows.py` exists |
+| **Content pipeline: Happy path E2E** | Commander → Scout → Thinker → Writer → QC must produce a job in `reviewing` status within 60s. If this is broken, zero revenue is possible regardless of billing | HIGH | `test_pipeline_e2e.py` exists |
+| **Content pipeline: Credit gating** | Insufficient credits must return HTTP 402 before the pipeline runs, not after. Post-run credit failure wastes LLM tokens and confuses users | LOW | `test_credits_billing.py` has unit-level check |
+| **Publishing: Platform OAuth token refresh** | LinkedIn/X/Instagram tokens expire. If refresh logic is broken, all scheduled posts silently fail after token expiry with no user alert | HIGH | `test_publishing.py` exists; token expiry simulation gap |
+| **Security: CORS + CSP headers** | Production CORS must allow only Vercel frontend origin. CSP must block inline scripts. Both are rejected by enterprise users (agency tier target) if misconfigured | LOW | `test_e2e_critical_path.py` covers headers |
+
+---
+
+## Differentiators (Test Coverage That Signals Quality)
+
+Beyond table stakes, these test categories are what separates a professional QA baseline from a "ship and pray" release. They are expected by any enterprise buyer doing due diligence.
+
+| Category | Value Proposition | Complexity | Notes |
+|----------|-------------------|------------|-------|
+| **Billing: Stripe Test Clock lifecycle** | Compresses trial-to-renewal verification from 30 days to 2 minutes. Proves the full subscription arc without real time passage — used by Stripe, Vercel, Linear | HIGH | Requires `stripe.test_helpers.test_clocks`; documents expected invoice amounts and status transitions |
+| **Billing: Custom plan price calculation accuracy** | ThookAI's pricing is volume-tiered with add-ons. A calculation bug silently charges the wrong amount. Verified pure-function tests are the cheapest protection | MEDIUM | Pure functions in `services/credits.py` — no mocks needed |
+| **LangGraph: Node-level unit tests** | Each agent node (Commander, Scout, Thinker, Writer, QC) should be testable in isolation with deterministic LLM mocks. Proves pipeline logic independent of LLM availability | HIGH | Industry standard as of Nov 2025; LangGraph's node architecture enables this; reduces CI flakiness |
+| **LightRAG: Per-user isolation** | The confirmed BUG-4 is a lambda-scoped LightRAG client that leaks connection state across users. Test that user A's knowledge graph queries cannot return user B's content | HIGH | `test_lightrag_isolation.py` exists but lambda bug is specifically untested |
+| **n8n: Webhook trigger contracts** | n8n workflows trigger on HTTP webhooks from the FastAPI backend. If the payload schema changes, workflows silently fail. Contract tests lock the schema | MEDIUM | `test_n8n_bridge.py` exists; schema drift detection absent |
+| **Media orchestration: Format routing** | The Designer agent routes to different media providers by format (image → fal.ai, video → Luma/Kling, TTS → ElevenLabs). Wrong routing sends expensive requests to wrong provider | MEDIUM | `test_media_orchestrator.py` exists |
+| **SSE: Tenant scoping** | SSE events must only be delivered to the user who owns the job. Cross-tenant event leakage is both a security bug and a confusing UX | MEDIUM | `test_sse_scoping.py` exists |
+| **Agency: Role enforcement** | Workspace members with `viewer` role must not be able to approve or publish content. RBAC gap = accidental content publishing by client | MEDIUM | `test_admin_agency.py` exists |
+| **Load testing: Credit endpoint concurrency** | The atomic credit deduction bug (BUG-2) only manifests under concurrent load. A stress test with 50 simultaneous generation requests proves the fix holds | HIGH | `test_rate_limit_concurrent.py` exists; credit-specific concurrent stress absent |
+| **Playwright E2E: Critical user flows** | Auth → onboard → generate → approve → schedule → billing upgrade. If any step in this flow breaks silently, the whole funnel is dead. Playwright catches it before users do | HIGH | `frontend/` tests unclear; PROJECT.md targets 105 frontend tests |
+
+---
+
+## Anti-Features (Test Approaches to Explicitly Avoid)
+
+Test patterns that sound thorough but create maintenance burden or false confidence.
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Integration tests against real Stripe API in CI** | Stripe API calls in CI are slow (500ms+), require real test keys in environment, and occasionally fail due to Stripe infra issues causing false CI failures | Use `unittest.mock` to mock Stripe SDK calls; reserve real Stripe CLI calls for local pre-merge smoke tests |
+| **Real LLM calls in unit/integration tests** | Claude API latency (2-5s per call) × 700+ tests = 30+ minute CI runs; also introduces non-determinism, making tests flaky | Mock `LlmChat.generate()` with deterministic fixtures; reserve real LLM calls for a separate `tests/evals/` suite gated behind a flag |
+| **Single giant integration test that covers "everything"** | 500-line test file with sequential steps fails at step 3, giving no signal on steps 4-50; also takes 60s to run | Pyramid: many fast unit tests, fewer medium integration tests, a handful of E2E smoke tests |
+| **Testing Stripe webhook by manually POSTing to staging** | No signature header → your own signature validation rejects it; teaches nothing about real webhook flow | Use `stripe listen --forward-to localhost:8000/api/billing/webhook` locally; in CI use mocked Stripe events with correct signature construction |
+| **Testing mongo operations with real MongoDB in CI** | CI MongoDB setup is slow, flaky on shared runners; test isolation requires teardown that often gets skipped | Use `mongomock_motor` for unit/integration tests; reserve real MongoDB tests for Docker Compose smoke tests (`test_e2e_ship.py` pattern) |
+| **100% line coverage as the only metric** | 100% line coverage with trivial assertions (assertEqual(True, True)) is worthless; creates coverage theater | Target 85%+ line coverage but enforce that billing-path tests assert specific state transitions, not just "no exception raised" |
+
+---
+
+## Priority Order for Testing Coverage
+
+Ordered by: (revenue risk × bug probability × blast radius). Fix bugs via TDD in this order.
+
+### Wave 1 — Block on These (Revenue at Risk)
+
+These categories must reach full coverage before launch. Any gap here directly maps to money or user trust being lost.
+
+1. **Billing: Webhook idempotency + dedup** — P0 bug confirmed. Every duplicate webhook activation is a support ticket and potential double-charge dispute. Write failing test first (idempotent event replay), then fix `routes/billing.py` dedup guard.
+
+2. **Billing: Atomic credit deduction** — P0 bug confirmed. Non-atomic `find → modify → update` allows negative balance under concurrency. Write failing concurrent stress test (50 coroutines), then fix to `find_one_and_update` with `$gte: cost` filter.
+
+3. **Auth: JWT fallback path** — P0 bug confirmed. Fallback that accepts malformed tokens means unauthenticated access to all `/api/*` routes. Write failing test with deliberately malformed JWT, then fix `auth_utils.py`.
+
+4. **Billing: Subscription lifecycle state machine** — Without verified event handling for all subscription states, upgrades/downgrades/cancellations are a black box. Write tests for `subscription.updated`, `subscription.deleted`, `payment_intent.succeeded`, `payment_intent.payment_failed`.
+
+5. **Auth: Rate limiting on login + register** — Brute-force protection is a legal/compliance requirement for any paid platform. Write concurrent burst test (100 req/s against `/api/auth/login`), verify 429 after threshold.
+
+### Wave 2 — Required Before First Paying User
+
+6. **Content pipeline: LangGraph node isolation** — Each agent node testable with LLM mock. Commander, Scout, Thinker, Writer, QC all have deterministic unit tests. Protects pipeline from silent regressions when prompts change.
+
+7. **LightRAG: Per-user isolation + lambda bug** — BUG-4 (lambda-scoped client) confirmed. Write failing test for user cross-contamination, then fix to per-request client instantiation.
+
+8. **Publishing: Token refresh + expiry simulation** — Publish flows silently drop scheduled posts when tokens expire. Write test simulating expired token → refresh → retry sequence.
+
+9. **Billing: Custom plan price calculation** — 20 pure function tests for `build_plan_preview` and `calculate_plan_price`. Volume tiers, add-ons, credit pack SKUs. Cheapest category to test, highest ROI for financial accuracy.
+
+10. **Security: CORS + CSP + SQL/NoSQL injection** — OWASP A01 (Broken Access Control) and A03 (Injection). Test that MongoDB queries use parameterized inputs; test that CORS rejects unauthorized origins.
+
+### Wave 3 — Before Public Announcement
+
+11. **n8n: Webhook contract tests** — Lock the payload schema between FastAPI and n8n workflows. Any schema drift breaks publishing silently.
+
+12. **Media orchestration: Format routing accuracy** — Verify Designer → Orchestrator → provider routing for all 8 format types. Prevents expensive misdirected API calls.
+
+13. **Agency: RBAC enforcement** — Viewer/editor/owner role gates on publish, approve, member management.
+
+14. **SSE: Tenant scoping verification** — Cross-tenant event leakage test.
+
+15. **Playwright E2E: Auth + onboard + generate + billing upgrade flows** — End-to-end smoke test covering the entire monetization funnel.
+
+### Wave 4 — Quality Bar Completion
+
+16. **Load testing: Concurrent content generation** — k6 or Locust, 50 concurrent users, credit deduction stress, verify atomicity holds under load.
+
+17. **Docker smoke: Full service stack** — `docker-compose up` + health check all services (FastAPI, MongoDB, Redis, n8n, Remotion). Catches environment configuration bugs before deploy.
+
+18. **Stripe Test Clock lifecycle** — Full subscription arc (trial → active → renewal → cancel) compressed to minutes. Documents expected financial state at each transition.
+
+---
+
+## Feature Dependencies (Testing)
 
 ```
-[Strategist Agent]
-    └──requires──> [LightRAG knowledge graph]
-    └──requires──> [Real analytics feedback loop (v1.0)]
-    └──requires──> [n8n scheduler trigger]
-    └──enhances──> [Fatigue Shield + Anti-repetition (v1.0)]
+[Wave 1: Credit atomicity test]
+    └──requires──> [find_one_and_update fix in services/credits.py]
+    └──validates──> [Wave 4: Load test concurrency]
 
-[Strategy Dashboard]
-    └──requires──> [Strategist Agent]
-    └──requires──> [SSE notification system (v1.0)]
-    └──enhances──> [Campaign/project grouping (v1.0)]
+[Wave 1: JWT fallback test]
+    └──requires──> [auth_utils.py fix]
+    └──validates──> [Wave 2: All pipeline auth tests]
 
-[LightRAG knowledge graph]
-    └──requires──> [Approved content store in MongoDB (v1.0)]
-    └──enhances──> [Thinker agent (multi-hop angle retrieval)]
-    └──enhances──> [Fatigue Shield (topic distribution queries)]
-    └──coexists with──> [Pinecone vector store (v1.0)] (complementary: Pinecone = similarity, LightRAG = relationships)
+[Wave 1: Webhook idempotency test]
+    └──requires──> [dedup guard in routes/billing.py]
+    └──validates──> [Wave 3: Stripe Test Clock lifecycle]
 
-[Obsidian vault integration]
-    └──requires──> [Scout agent (already exists)]
-    └──enhances──> [Strategist Agent (vault recent notes as recommendation triggers)]
+[Wave 2: LangGraph node isolation]
+    └──requires──> [LLM mock fixtures in conftest.py]
+    └──enables──> [All pipeline regression tests]
 
-[Multi-model media orchestration]
-    └──requires──> [Remotion service (already scaffolded)]
-    └──requires──> [fal.ai / DALL-E / Luma / HeyGen / ElevenLabs (v1.0)]
-    └──requires──> [Designer agent visual brief output]
-    └──produces──> [Static image with typography, Image carousel, Talking-head video, Short-form video]
+[Wave 2: LightRAG isolation]
+    └──requires──> [lambda client fix in services/lightrag_service.py]
+    └──validates──> [Wave 3: Agency RBAC tests (per-user knowledge graph)]
 
-[n8n workflow orchestration]
-    └──replaces──> [Celery task queue (v1.0)]
-    └──requires──> [Redis (still used as n8n queue backend)]
-    └──enables──> [SSE notifications via webhook trigger]
-    └──enables──> [Real publishing via platform API nodes]
-
-[One-click approve from Strategy Dashboard]
-    └──requires──> [Strategy Dashboard]
-    └──requires──> [Content generation pipeline (v1.0)]
-    └──triggers──> [n8n workflow: generate → review → schedule]
+[Wave 3: Playwright E2E]
+    └──requires──> [Wave 1 + Wave 2 complete]
+    └──requires──> [Frontend + backend running in Docker Compose]
+    └──validates──> [Wave 4: Load test user flows]
 ```
 
-### Dependency Notes
-
-- **LightRAG requires approved content store:** LightRAG ingests approved posts as documents; without a corpus of approved content the graph is empty and provides no value. Must trigger initial ingestion job on first setup.
-- **Strategist Agent requires LightRAG:** The Strategist's differentiated capability — "what angles are missing from your graph?" — only exists if the knowledge graph is populated and queryable. Strategist without LightRAG degrades to generic trending-topics recommendations that Taplio already does better.
-- **Multi-model orchestration requires Remotion:** Individual media generation (image, voice clip, video clip) is already available via existing providers. The differentiator is the assembly step — Remotion takes generated assets and composites them into the final deliverable. Designer + Orchestrator are routing logic; Remotion is the assembly layer.
-- **n8n replaces Celery but not simultaneously:** n8n and Celery must not run the same tasks concurrently during migration. Celery beat tasks must be decommissioned one-by-one as n8n equivalents are verified working.
-- **Obsidian enhances Strategist:** Scout agent uses Obsidian notes for content grounding during generation. The Strategist uses recent vault activity (new notes, recently modified files) as a signal for what the user has been thinking about — useful for recommendation triggers even before a generation request.
-
 ---
 
-## MVP Definition for v2.0
+## Coverage Targets by Category
 
-### Launch With (v2.0 core)
-
-The minimum set that fulfills the "Intelligent Content Operating System" positioning.
-
-- [ ] **n8n infrastructure** — task orchestration observable, debuggable, and extendable without code deploys; publishing workflows verified
-- [ ] **LightRAG knowledge graph** — entity/relationship extraction from approved content; Thinker agent queries for multi-hop angle retrieval
-- [ ] **Strategist Agent** — runs on n8n schedule; produces recommendation cards with rationale (why this topic, why now)
-- [ ] **Strategy Dashboard** — new React page showing recommendation cards; SSE-driven updates; one-click approve triggers pipeline
-- [ ] **Multi-model media orchestration** — at minimum: static image + typography and image carousel pipelines via Remotion; talking-head and short-form video as stretch
-- [ ] **Obsidian vault integration** — Scout agent reads vault via obsidian-cli; Strategist uses recent vault files as recommendation signal
-- [ ] **Analytics feedback loop** — real social metrics (24h + 7d after publish) feed back into Strategist context and persona intelligence
-
-### Add After Validation (v2.x)
-
-Features to add once core intelligence loop is working.
-
-- [ ] **Talking-head video with overlays** — adds HeyGen avatar + Remotion overlay composition; gated on media orchestration pipeline being stable
-- [ ] **Short-form video (15-60s)** — most complex Remotion composition; add when image/carousel pipelines are proven
-- [ ] **Batch content calendar from Strategist** — approve 5-7 Strategist recommendations at once into a weekly schedule; needs UX work
-- [ ] **Generative Engine Optimization (GEO) signals** — track how AI tools (ChatGPT, Perplexity) represent user's brand in answers; emerging category that gains traction as AI search grows
-
-### Future Consideration (v3+)
-
-Features to defer until v2.0 is validated in production.
-
-- [ ] **Multi-language support (Sarvam AI)** — explicitly deferred per PROJECT.md; separate infrastructure investment
-- [ ] **Mobile apps** — deferred per PROJECT.md; React PWA covers mobile adequately for v2.0 target segment
-- [ ] **Real-time collaboration** — deferred; small agencies use sequential review well enough
-- [ ] **Automatic Obsidian write-back** — user trust risk; offer explicit export action instead
-
----
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| n8n infrastructure replacing Celery | HIGH (reliability, debuggability) | HIGH (full migration) | P1 |
-| LightRAG knowledge graph ingestion | HIGH (enables Strategist differentiation) | HIGH (new service, integration with Thinker) | P1 |
-| Strategist Agent | HIGH (core v2.0 differentiator) | HIGH (new agent, n8n scheduled trigger) | P1 |
-| Strategy Dashboard | HIGH (surfaces Strategist output) | MEDIUM (new React page + SSE wiring) | P1 |
-| Analytics feedback loop | MEDIUM (improves Strategist quality) | MEDIUM (post-publish polling + aggregation) | P1 |
-| Obsidian vault integration | MEDIUM (power user differentiator) | MEDIUM (obsidian-cli + Scout agent update) | P1 |
-| Static image + typography pipeline | MEDIUM (table stakes for visual content) | MEDIUM (Remotion template + fal.ai routing) | P1 |
-| Image carousel pipeline | HIGH (LinkedIn carousels get 44% more engagement — PostNitro data) | MEDIUM (Remotion multi-slide template) | P1 |
-| Talking-head with overlays | HIGH (differentiating video format) | HIGH (HeyGen + Remotion composition) | P2 |
-| Short-form video (15-60s) | HIGH (most platforms prioritize short video) | HIGH (complex Remotion composition + audio sync) | P2 |
-| SSE notifications via n8n | LOW (already exists via SSE system) | LOW (webhook trigger → existing SSE endpoint) | P2 |
-| One-click approve UX | MEDIUM (reduces friction, adoption) | LOW (frontend only, pipeline already exists) | P1 |
-| Batch calendar approval | MEDIUM (power user time-saver) | MEDIUM (UX + scheduling logic) | P2 |
-
-**Priority key:**
-- P1: Required for v2.0 to deliver on "Intelligent Content Operating System" positioning
-- P2: Significant value-add, ship after P1 core is verified
-- P3: Future — nice to have, not needed for v2.0 launch
-
----
-
-## Competitor Feature Analysis
-
-| Feature | Taplio | Supergrow | Buffer/Hootsuite | ThookAI v2.0 Approach |
-|---------|--------|-----------|------------------|----------------------|
-| AI persona / voice fingerprint | Analyzes LinkedIn profile + history; GPT-4 trained on 500M posts | Style training on your writing samples | Basic tone settings | Full voice fingerprint from 7-question interview + approved content vector store — deepest persona model |
-| Proactive content recommendations | Trending LinkedIn content surfaced from corpus | None | None | Strategist Agent: persona + LightRAG + analytics + Obsidian + trending signals — recommendations with rationale |
-| Knowledge graph over user content | None | None | None | LightRAG: entities, relationships, multi-hop queries — unique in market |
-| Multi-model media orchestration | Single model generation | Carousel generator (Canva-adjacent) | Canva integration | Designer plans → best-model-per-task → Remotion assembly — production-grade output |
-| Personal knowledge base integration | None | None | None | Obsidian vault via obsidian-cli into Scout agent — grounded in user's actual ideas |
-| Workflow automation visibility | None (black box) | None | None | n8n self-hosted: visual workflow graph, debuggable, extendable |
-| Analytics feedback into generation | Performance data separate from generation | None | Social analytics tab | Real metrics (24h + 7d) feed Strategist + persona intelligence — closed loop |
-| Multi-platform publishing | LinkedIn only | LinkedIn only | 35+ platforms | LinkedIn, X, Instagram via n8n workflow nodes |
-| Agency workspaces | Team features at $149/mo | Limited | Team plans | Full workspace + member roles + per-client persona isolation |
-| Content fatigue prevention | Simple post history deduplication | None | None | Unified fatigue shield + knowledge graph topic distribution queries |
+| Category | Target Coverage | Current Signal | Notes |
+|----------|-----------------|----------------|-------|
+| Billing / payments | 95%+ | ~60% estimated | Critical — highest priority |
+| Auth / JWT / OAuth | 90%+ | ~70% estimated | JWT fallback is confirmed gap |
+| Content pipeline | 85%+ | ~75% estimated | LangGraph node isolation is main gap |
+| Media orchestration | 80%+ | ~50% estimated | v2.0 features newly built |
+| LightRAG + knowledge graph | 80%+ | ~40% estimated | Lambda bug confirms gap |
+| n8n integration | 75%+ | ~50% estimated | Contract tests are absent |
+| Strategist Agent | 80%+ | ~60% estimated | Deterministic fixtures needed |
+| Frontend E2E (Playwright) | Critical flows | 0% estimated | Not yet built |
+| Load / concurrency | Defined thresholds | 0% estimated | Not yet built |
+| **Overall line coverage** | **85%+** | **~65% estimated** | Estimate based on 768/1050 ratio |
 
 ---
 
 ## Sources
 
-- [The Shift from Content Creation to Content Orchestration in 2026 — Medium](https://medium.com/@sinanoypan/the-shift-from-content-creation-to-content-orchestration-in-2026-1d0c1b51342f) — MEDIUM confidence (single author, no official org affiliation)
-- [LightRAG: Simple and Fast Retrieval-Augmented Generation — EMNLP 2025 paper](https://arxiv.org/html/2410.05779v1) — HIGH confidence (peer-reviewed)
-- [LightRAG GitHub — HKUDS/LightRAG](https://github.com/HKUDS/LightRAG) — HIGH confidence (official repo, August 2025 release notes)
-- [Understanding GraphRAG vs. LightRAG — Maarga Systems](https://www.maargasystems.com/2025/05/12/understanding-graphrag-vs-lightrag-a-comparative-analysis-for-enhanced-knowledge-retrieval/) — MEDIUM confidence (technical analysis, May 2025)
-- [Designing For Agentic AI: Practical UX Patterns — Smashing Magazine, Feb 2026](https://www.smashingmagazine.com/2026/02/designing-agentic-ai-practical-ux-patterns/) — HIGH confidence (authoritative UX publication)
-- [Taplio Review 2026 — Brandled](https://brandled.app/blog/taplio-review) — MEDIUM confidence (competitor analysis, current)
-- [Supergrow vs Taplio Competitor Analysis — Supergrow](https://www.supergrow.ai/blog/taplio-vs-supergrow) — MEDIUM confidence (vendor-biased, but feature list is accurate)
-- [2025 Social Media Algorithm Changes: How Carousels Win — PostNitro](https://postnitro.ai/blog/post/2025-social-media-algorithm-changes-carousels) — MEDIUM confidence (vendor claim, 44% engagement figure from platform data)
-- [n8n Social Media Workflow Templates — n8n.io](https://n8n.io/workflows/categories/social-media/) — HIGH confidence (official n8n template library)
-- [Remotion: Building with AI — remotion.dev](https://www.remotion.dev/docs/ai/) — HIGH confidence (official documentation)
-- [Stop AI Slop: Brand Voice Quality — Writer.com](https://writer.com/blog/ai-content-quality-brand-voice/) — MEDIUM confidence (vendor perspective, industry analysis accurate)
-- [Future AI Content Tools 2026 — Smartli](https://www.smartli.ai/blog/future-ai-content-tools) — LOW confidence (single source, prediction article)
-- [Obsidian AI Knowledge Management — eesel.ai](https://www.eesel.ai/blog/obsidian-ai) — MEDIUM confidence (product context, Obsidian plugin ecosystem described accurately)
-- [Multimodal AI Agent Architecture — Kanerika, 2026](https://kanerika.com/blogs/multimodal-ai-agents/) — MEDIUM confidence (industry analysis)
+- [Stripe Webhooks Best Practices — Stigg Engineering](https://www.stigg.io/blog-posts/best-practices-i-wish-we-knew-when-integrating-stripe-webhooks) — HIGH confidence (engineering team, production experience)
+- [Testing SaaS Billing with Playwright + Stripe Test Clocks — MEXC News](https://www.mexc.com/news/no-more-ship-and-pray-testing-saas-billing-systems-with-playwright-stripe-test-clocks/67679) — MEDIUM confidence (technical article, Stripe documentation referenced)
+- [Stripe Idempotent Requests — Official Stripe API Reference](https://docs.stripe.com/api/idempotent_requests) — HIGH confidence (official)
+- [FastAPI Async Tests — Official FastAPI Documentation](https://fastapi.tiangolo.com/advanced/async-tests/) — HIGH confidence (official)
+- [How We Unit Test LangGraph Agents — Andrew Larsen, Medium, Nov 2025](https://andrew-larse514.medium.com/how-we-unit-test-langgraph-agents-29f5d6ef82c6) — MEDIUM confidence (practitioner, current)
+- [OWASP API Security Testing Checklist 2026 — AccuKnox](https://accuknox.com/blog/owasp-api-security-top-10-the-complete-testing-checklist-2026) — HIGH confidence (OWASP-derived, current)
+- [Scaling E2E Tests for Multi-Tenant SaaS with Playwright — CyberArk Engineering](https://medium.com/cyberark-engineering/scaling-e2e-tests-for-multi-tenant-saas-with-playwright-c85f50e6c2ae) — MEDIUM confidence (enterprise engineering, verified patterns)
+- [Webhook Idempotency Implementation — Hookdeck](https://hookdeck.com/webhooks/guides/implement-webhook-idempotency) — HIGH confidence (webhook infrastructure company, verified against Stripe docs)
+- [k6 API Load Testing Guide — Grafana k6 Official Docs](https://grafana.com/docs/k6/latest/testing-guides/api-load-testing/) — HIGH confidence (official)
+- [ThookAI PROJECT.md + CLAUDE.md — in-repo authoritative docs](../) — HIGH confidence (project ground truth)
 
 ---
-*Feature research for: AI Content Operating System (ThookAI v2.0)*
+
+*Feature (testing categories) research for: ThookAI v2.1 Production Hardening — 50x Testing Sprint*
 *Researched: 2026-04-01*

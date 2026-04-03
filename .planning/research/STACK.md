@@ -1,228 +1,393 @@
-# Stack Research
+# Technology Stack — Testing Tools
 
-**Domain:** AI Content Operating System — v2.0 new integrations only
+**Project:** ThookAI v2.1 — Production Hardening (50x Testing Sprint)
 **Researched:** 2026-04-01
-**Confidence:** MEDIUM-HIGH (verified with official docs and PyPI where possible; some integration patterns are inferred from ecosystem evidence)
+**Confidence:** HIGH (all versions verified against PyPI, npm, and official documentation)
 
 ---
 
-## Context: What This Research Covers
+## Context: Scope of This Research
 
-v1.0 stack (FastAPI, Motor, React, Redis, Celery, Pinecone, Anthropic, fal.ai, Luma, Runway, HeyGen, ElevenLabs, Stripe, Cloudflare R2) is validated and NOT re-researched here.
+This file covers only the **new testing tooling** additions required for the v2.1 milestone. The full production stack (FastAPI, Motor, React, Redis, n8n, LightRAG, Stripe, Remotion, etc.) is documented in previous research and is NOT re-researched here.
 
-This file covers only the **new additions** required for v2.0:
+**Current state of testing tooling:**
+- Backend: `pytest>=8.0.0`, `pytest-asyncio>=0.23.0`, `httpx==0.28.1` — in `requirements.txt`
+- `pytest.ini` contains only `asyncio_mode = auto` — no coverage config
+- No `.coveragerc` or `pyproject.toml` coverage section
+- No `pytest-cov` installed
+- No `pytest-mock` installed — tests use `unittest.mock` directly
+- No fixture data factories (`faker`, `factory_boy`)
+- No load testing tool
+- No mock for external HTTP calls (`respx` or `pytest-httpx`)
+- Frontend: Zero test files, no test framework configured, no `@testing-library/react`
+- No Playwright (E2E) installed anywhere
 
-1. n8n (self-hosted) replacing Celery for workflow orchestration
-2. LightRAG knowledge graph layer (complementing Pinecone)
-3. Multi-model media orchestration engine + Remotion compositor
-4. Strategist Agent intelligence layer
-5. Obsidian vault integration for Scout agent
+**Target after this milestone:** 1,050+ total tests, 85%+ line coverage, 95%+ billing coverage, zero P0 failures.
 
 ---
 
 ## Recommended Stack
 
-### 1. n8n — Workflow Orchestration (Celery Replacement)
+### Backend Test Infrastructure
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `n8nio/n8n` (Docker) | `stable` tag | Visual workflow automation, scheduled tasks, webhook triggers, platform OAuth publishing | Replaces Celery's opaque task graph with inspectable, debuggable workflows. Built-in nodes for LinkedIn, Twitter, Instagram OAuth publishing eliminate bespoke Python publisher code. Queue mode with Redis + PostgreSQL matches existing infra. |
-| PostgreSQL 15 | 15-alpine | n8n persistent storage | SQLite is explicitly unsupported for n8n queue mode. PostgreSQL required for multi-worker scaling and reliable write concurrency. Existing MongoDB remains for ThookAI application data — PostgreSQL is dedicated to n8n internal state only. |
-| Redis 7 | existing | n8n queue broker + result backend | Already in stack. n8n queue mode uses Redis as job broker identical to Celery. No new infra needed. |
+#### 1. Coverage Measurement: pytest-cov + coverage.py
 
-**Integration pattern with FastAPI:**
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `pytest-cov` | `>=7.1.0` | Coverage measurement, CI gate, HTML/XML/term reports | Latest stable (released 2026-03-21). Integrates directly with pytest via `--cov` flag. Supports `--cov-fail-under` for CI gate at 85%. Branch coverage via `--cov-branch`. The only standard choice — no meaningful alternative. |
+| `coverage` | pulled by pytest-cov | Underlying coverage engine | Installed automatically as a dependency. Do NOT pin separately. |
 
-FastAPI triggers n8n workflows via HTTP POST to n8n webhook URLs using `httpx`. This is a fire-and-forget call — FastAPI posts a JSON payload (job_id, user_id, platform, content) and n8n handles the workflow. n8n calls back to FastAPI via HTTP Request node when the step completes, updating job status in MongoDB through a dedicated internal callback endpoint.
+**Configuration note:** FastAPI's async routes have a known coverage undercounting issue with `asyncio` concurrency. Set `concurrency = greenlet,thread` in `.coveragerc` to prevent false negatives on async handler lines. This is the documented workaround confirmed in the coveragepy issue tracker.
 
-No Python SDK needed — the n8n REST API (`POST /api/v1/workflows/{id}/execute`) and Webhook Trigger node are sufficient. Use the webhook trigger for 90% of cases; the REST API only for privileged internal triggers.
+**Required `.coveragerc`** (create at `backend/.coveragerc`):
 
-**What n8n replaces:**
-- `backend/tasks/content_tasks.py` `process_scheduled_posts` task
-- `backend/tasks/content_tasks.py` `reset_daily_limits` task
-- `backend/tasks/content_tasks.py` `refresh_monthly_credits` task
-- `backend/tasks/content_tasks.py` `cleanup_old_jobs` task
-- `backend/tasks/content_tasks.py` `aggregate_daily_analytics` task
-- `backend/agents/publisher.py` direct platform calls → replaced by n8n LinkedIn/Twitter/Instagram nodes
+```ini
+[run]
+source = .
+branch = true
+concurrency = greenlet,thread
+omit =
+    tests/*
+    conftest.py
+    */__pycache__/*
+    */migrations/*
+    db_indexes.py
 
-**What stays in Python/Celery:**
-Nothing. Celery is fully retired. FastAPI's own `BackgroundTasks` handles short-lived inline jobs (< 5s). n8n handles everything scheduled or long-running.
+[report]
+fail_under = 85
+precision = 2
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if TYPE_CHECKING:
+    @abstractmethod
+    if __name__ == .__main__.:
 
-**Confidence:** MEDIUM. n8n's queue mode architecture is well-documented and production-proven. The FastAPI ↔ n8n webhook integration pattern is community-validated. Risk area: n8n's native LinkedIn/Instagram nodes may have OAuth scope gaps — verify before relying on them for publishing.
+[html]
+directory = htmlcov
 
----
-
-### 2. LightRAG — Knowledge Graph Layer
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `lightrag-hku` | 1.4.12 (latest as of 2026-03-27) | Entity/relationship extraction from approved content, multi-hop retrieval for Thinker agent | Dedicated graph-RAG library with dual-level retrieval (specific + abstract). Complements Pinecone (similarity search) with relationship traversal. Has built-in FastAPI server, MongoDB storage backend, and async Python API. Published in EMNLP 2025 — academic provenance with active maintenance. |
-| NetworkXStorage | built-in | Graph storage for development/single-node | In-memory graph backend for local dev and low-volume prod. No additional infra. |
-| Neo4j | 5.x (if scaling) | Graph storage for production at scale | Switch from NetworkXStorage when graph exceeds ~100k entities. Deferred — start with NetworkXStorage. |
-
-**Storage configuration for ThookAI:**
-
-Use LightRAG's MongoDB storage backends exclusively to avoid a new database:
-- `MongoKVStorage` — document chunks, LLM cache (MongoDB collection prefix: `lg_kv_`)
-- `MongoDocStatusStorage` — ingestion tracking (prefix: `lg_doc_`)
-- `NanoVectorDBStorage` (built-in) — embeddings in local file store initially, migrate to `PGVectorStorage` if needed
-
-**Do NOT use** `MongoVectorDBStorage` — it requires MongoDB Atlas Vector Search, which is not the current deployment target. Use `NanoVectorDBStorage` (file-based, zero infra) for vectors, since Pinecone already handles production-scale similarity search.
-
-**Deployment pattern:**
-
-Run LightRAG as a sidecar FastAPI service (`lightrag-server`) alongside the main ThookAI FastAPI app. LightRAG exposes endpoints at `http://lightrag:9621`. The Thinker agent calls `POST /query` with `mode: "hybrid"` to get multi-hop context. Document ingestion (`POST /documents/text`) is called from `agents/learning.py` when content is approved.
-
-**Why not integrate LightRAG inline into the ThookAI process:** LightRAG's server runs Gunicorn+Uvicorn multi-process for LLM calls which can run 10-150 seconds. Running it inline would exhaust ThookAI's own Uvicorn worker pool. Sidecar pattern keeps resource budgets separate.
-
-**Python async interface:**
-
-```python
-# Calling LightRAG from Thinker agent
-import httpx
-
-async def query_knowledge_graph(user_id: str, query: str) -> str:
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
-            "http://lightrag:9621/query",
-            json={"query": query, "mode": "hybrid"},
-            headers={"X-API-Key": settings.lightrag.api_key}
-        )
-        return resp.json()["response"]
+[xml]
+output = coverage.xml
 ```
 
-**Confidence:** MEDIUM. LightRAG 1.4.12 is actively maintained with MongoDB backends confirmed. The sidecar pattern is standard and avoids event-loop contention. Risk: LightRAG's graph extraction quality depends on the LLM used for entity extraction — use `claude-sonnet-4-20250514` for extraction to maintain consistent persona voice.
-
----
-
-### 3. Multi-Model Media Orchestration
-
-#### 3a. fal.ai — Extended Model Coverage
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `fal-client` | 0.13.2 (latest 2026-03-24) | Access to image, video, and 3D models not covered by dedicated providers | Already in stack. Async via `fal.run_async()`. Central routing hub for models without dedicated SDKs. |
-
-**No version change needed.** The existing `fal-client` at 0.10.0 should be upgraded to 0.13.2 for the async improvements and queue status streaming.
-
-#### 3b. Remotion — Video Compositor
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `remotion` | 4.0.x (4.0.441 as of 2026-03-28) | Assemble generated media assets (images, audio, overlays, typography) into final video | The only mature React-based video composition framework with Node.js SSR API. Allows component-driven assembly — each content type (talking-head, carousel, static-with-text) is a Remotion composition. Renders via `renderMedia()` in the existing `remotion-service/` directory. |
-| `@remotion/renderer` | same as above | Node.js render API (`renderMedia`, `renderStill`, `renderFrames`) | Required peer of `remotion` for server-side rendering. |
-
-**Key architecture decision:**
-
-The existing `remotion-service/` is an Express.js service. It should expose:
-- `POST /render/video` — accepts composition name + inputProps → renders MP4 → uploads to R2 → returns URL
-- `POST /render/still` — accepts composition name + inputProps → renders PNG → uploads to R2 → returns URL
-
-The FastAPI backend calls this service via `httpx`. The render service is fire-and-forget via a Celery (now n8n) task — FastAPI posts the job, n8n polls the render endpoint, R2 URL is written back to MongoDB when complete.
-
-**Licensing note:** Remotion requires a Company License for SaaS use in organizations with 4+ people. From Remotion 5.0 (anticipated), telemetry with a `licenseKey` is mandatory for commercial automators. Budget for this. The existing `remotion-service/` implementation should add the `licenseKey` to all `renderMedia()` calls before launch.
-
-**Confidence:** HIGH. Remotion is the established standard for programmatic React video. The existing service directory confirms the pattern is already chosen. Version 4.0.441 is confirmed active via npm.
-
----
-
-### 4. Strategist Agent — Intelligence Layer
-
-No new libraries. The Strategist Agent is a new Python agent (`backend/agents/strategist.py`) that orchestrates existing services:
-
-| Data source | Access method | What it provides |
-|-------------|--------------|-----------------|
-| LightRAG | `httpx` → `POST /query` | Entity graph patterns, topic relationships, what angles have been used |
-| Pinecone | existing `vector_store.py` | Similar past content, style exemplars |
-| MongoDB `persona_engines` | existing `db` | Voice fingerprint, content_identity, performance_intelligence |
-| Obsidian vault | new `ObsidianClient` (see §5) | User's own research notes, bookmarked articles, ideas |
-| Real analytics | existing analytics service | Which post formats, topics, times perform best |
-
-The Strategist calls all sources, synthesizes with `claude-sonnet-4-20250514`, and writes recommendation objects to `db.strategy_recommendations`. n8n triggers the Strategist on a schedule (daily) and also after analytics ingestion events.
-
-**No new packages.** All synthesis is via the existing `LlmClient`. The only new code is orchestration logic.
-
-**Confidence:** HIGH. This is a pure composition of existing services, not a new technology.
-
----
-
-### 5. Obsidian Vault Integration
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Obsidian Local REST API (community plugin) | current (maintained by coddingtonbear) | Read user's Obsidian vault notes, search, retrieve tagged content | Provides authenticated HTTPS REST API at `https://127.0.0.1:27124`. The Scout agent calls it to enrich topic research with the user's own notes and bookmarks. |
-| `httpx` (async) | existing in stack | HTTP client for calling the Obsidian REST API | Already in stack (`httpx 0.28.1`). Use `verify=False` or pass the Obsidian self-signed cert. |
-
-**Integration approach:**
-
-Create `backend/services/obsidian_client.py` — a thin async wrapper around the Obsidian Local REST API. Scout agent calls it optionally (feature-gated by `OBSIDIAN_API_KEY` env var presence). If the user hasn't configured Obsidian, Scout falls back to Perplexity as today.
-
-```python
-# backend/services/obsidian_client.py (sketch)
-class ObsidianClient:
-    base_url = "https://127.0.0.1:27124"
-
-    async def search(self, query: str) -> list[dict]:
-        # GET /search/simple/?q={query}&contextLength=200
-
-    async def get_note(self, path: str) -> str:
-        # GET /vault/{path}
-```
-
-**What NOT to use:**
-- `obsidian-cli` Python PyPI package — it wraps local file system access, not the REST API. It does not work for a deployed server scenario where Obsidian runs on the user's machine.
-- Obsidian's official CLI (v1.12+, released Feb 2026) — designed for terminal automation on the user's machine, not for remote server access. REST API is the correct approach for ThookAI's server-side Scout agent.
-
-**Important constraint:** The Obsidian Local REST API runs on the user's machine (`127.0.0.1:27124`). A deployed ThookAI server cannot call it directly. The realistic integration path for v2.0 is:
-1. User self-hosts ThookAI or runs it locally, OR
-2. The user's machine runs an ngrok/Cloudflare Tunnel that exposes the Obsidian REST API to a stable URL, which they register in ThookAI settings as `OBSIDIAN_BASE_URL`
-
-Store `OBSIDIAN_BASE_URL` and `OBSIDIAN_API_KEY` in `backend/config.py` under a new `ObsidianConfig` dataclass. Make the feature entirely optional and gracefully degrade when absent.
-
-**Confidence:** MEDIUM. The Local REST API plugin is actively maintained and the integration pattern is straightforward. The network topology constraint (user's machine vs. server) is a real limitation that must be communicated to users. For cloud deployments, this feature requires a tunnel setup.
-
----
-
-## Supporting Libraries — New Additions Only
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `lightrag-hku` | 1.4.12 | LightRAG core — graph extraction, query, document ingestion | Add to `backend/requirements.txt`. Run as separate sidecar service. |
-| `fal-client` | 0.13.2 | fal.ai model access (upgrade from 0.10.0) | Already in requirements — bump version only |
-| `httpx` | 0.28.1 (existing) | Async HTTP client for LightRAG sidecar, Obsidian, n8n webhooks, Remotion service | Already in stack. No change. |
-
-**No new npm packages** for the Remotion service — it already exists. Upgrade `remotion` and `@remotion/renderer` in `remotion-service/package.json` to 4.0.441.
-
----
-
-## Installation
+**Billing-specific threshold:** The billing files (`services/credits.py`, `services/stripe_service.py`, `routes/billing.py`) need 95%+ coverage enforced separately. Implement this as a second pytest run scoped to those files:
 
 ```bash
-# Backend: add to backend/requirements.txt
-lightrag-hku==1.4.12
-# (fal-client already present — bump to 0.13.2)
+pytest tests/test_stripe_billing.py tests/test_credits_billing.py \
+  --cov=services/credits --cov=services/stripe_service --cov=routes/billing \
+  --cov-fail-under=95 --cov-report=term-missing
+```
 
-# Remotion service: in remotion-service/
-npm install remotion@4.0.441 @remotion/renderer@4.0.441
+---
 
-# n8n: run via Docker Compose (no Python package)
-# docker-compose.yml addition — see Architecture section
+#### 2. Upgrade pytest-asyncio: Pin to 1.3.0
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `pytest-asyncio` | `>=1.3.0` | Async test support | The existing spec (`>=0.23.0`) allows resolving to 1.3.0 (released 2025-11-10) which requires Python 3.10+. ThookAI uses Python 3.11.11 — compatible. Version 1.3.0 stabilized `asyncio_mode = auto` and `asyncio_default_fixture_loop_scope`. Upgrade the pin in `requirements.txt` to `pytest-asyncio>=1.3.0` to prevent accidental downgrade. |
+
+**`pytest.ini` update needed** — the current `asyncio_mode = auto` is correct but needs `asyncio_default_fixture_loop_scope = function` added to suppress the new deprecation warning in 1.3.0:
+
+```ini
+[pytest]
+asyncio_mode = auto
+asyncio_default_fixture_loop_scope = function
+```
+
+---
+
+#### 3. Mocking: pytest-mock
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `pytest-mock` | `>=3.15.1` | `mocker` fixture wrapping `unittest.mock` | Released 2025-09-16. Provides automatic cleanup of mocks after each test (critical for test isolation), pytest-style assertion introspection on mock calls, and `mocker.spy()` for wrapping real functions. The existing tests use `unittest.mock` directly via `patch()` context managers — `pytest-mock` is compatible and additive. Add new tests using `mocker`; no rewrite of existing tests needed. |
+
+**Why not just continue with `unittest.mock` directly:** No automatic cleanup — patches left active across tests cause false positives. This is a real risk at 700+ test scale. `pytest-mock` eliminates this class of flakiness entirely.
+
+---
+
+#### 4. Fake Data Generation: Faker
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `Faker` | `>=40.12.0` | Realistic test data generation (emails, names, UUIDs, text, dates) | Released 2026-03-30. Pure Python, no infrastructure. Provides a pytest fixture (`faker`) via its built-in plugin. Eliminates the hundreds of `"test@test.com"`, `"test_user_123"` strings scattered across existing tests. Critical for billing tests where realistic email formats, credit card data, and Stripe webhook payloads are needed. |
+
+**Do NOT use factory_boy** for this codebase. `factory_boy` is designed around ORM model classes (SQLAlchemy, Django). ThookAI uses raw MongoDB dicts with no ORM — factory_boy provides no benefit and adds mapping boilerplate. Use `Faker` to generate field values directly in test helper functions (as the existing `make_user()` pattern already does).
+
+**Pattern to follow** (already established in `test_stripe_billing.py`):
+
+```python
+from faker import Faker
+fake = Faker()
+
+def make_user(**kwargs) -> dict:
+    defaults = {
+        "user_id": f"user_{fake.uuid4()[:8]}",
+        "email": fake.email(),
+        "subscription_tier": "starter",
+        "credits": 100,
+    }
+    defaults.update(kwargs)
+    return defaults
+```
+
+---
+
+#### 5. Async MongoDB Mocking: mongomock-motor
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `mongomock-motor` | `>=0.0.36` | In-memory async Motor client for unit tests that need real query semantics | Released 2025-05-16. Wraps `mongomock` (sync) with the Motor async interface. Eliminates the need to start a real MongoDB instance for unit tests. Use for tests that need `find_one`, `insert_one`, `update_one` query logic but do NOT need to test indexes or Atlas-specific features. |
+
+**When to use mongomock-motor vs `AsyncMock`:**
+
+| Scenario | Use |
+|----------|-----|
+| Testing query logic (filters, projections, sorts) | `mongomock-motor` — real query semantics |
+| Testing that a function calls `db.collection.find_one()` at all | `AsyncMock` — simpler, faster |
+| Testing MongoDB aggregation pipelines | Real MongoDB (CI services block already present in `.github/workflows/ci.yml`) |
+| Testing race conditions / atomic updates | Real MongoDB only |
+
+**Integration pattern:**
+
+```python
+from mongomock_motor import AsyncMongoMockClient
+
+@pytest.fixture
+def mock_db():
+    client = AsyncMongoMockClient()
+    return client["thookai_test"]
+```
+
+**Limitation:** Does not support `$vectorSearch` (Atlas operator), `$search` (Atlas Search), or complex `explain()` plans. For tests involving Pinecone or vector operations, continue using `AsyncMock`.
+
+---
+
+#### 6. External HTTP Call Mocking: respx
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `respx` | `>=0.22.0` | Mock outbound `httpx` calls (Anthropic, Stripe API, Perplexity, n8n webhooks, LightRAG sidecar, Obsidian client) | Released 2024-12-19. Async-native httpx mocker — the only correct choice when the code under test uses `httpx.AsyncClient`. The alternative (`pytest-httpx`) is an equally valid choice but `respx` has a simpler API for route-based mocking. |
+
+**Why not `unittest.mock.patch` on httpx:** Patching at the `httpx` level is fragile and context-dependent. `respx` intercepts at the transport layer, which is both cleaner and immune to import-path issues.
+
+**Example for mocking the Anthropic API:**
+
+```python
+import respx, httpx
+
+@respx.mock
+async def test_writer_calls_anthropic(respx_mock):
+    respx_mock.post("https://api.anthropic.com/v1/messages").mock(
+        return_value=httpx.Response(200, json={"content": [{"text": "Generated content"}]})
+    )
+    result = await run_writer(job_spec, persona)
+    assert result["draft"] is not None
+```
+
+---
+
+#### 7. Load Testing: Locust
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `locust` | `>=2.43.4` | Load testing the FastAPI API under concurrent user load | Released 2026-04-01. Pure Python, gevent-based, runs headless or with a web UI. The project context calls for load testing as part of the 105 frontend/integration tests. Locust is the standard choice for Python-native load testing — no separate service, no YAML DSL, tests are plain Python. |
+
+**Do NOT use k6:** k6 requires JavaScript and a separate binary installation. Locust integrates into the Python test environment without friction.
+
+**Usage pattern** (headless CI mode):
+
+```bash
+locust -f tests/locustfile.py \
+  --host http://localhost:8000 \
+  --users 50 --spawn-rate 5 \
+  --run-time 60s --headless \
+  --html tests/reports/load-report.html
+```
+
+**Place** `backend/tests/locustfile.py` separately from pytest-collected test files (prefixed `test_`) to avoid pytest attempting to collect it.
+
+---
+
+#### 8. Stripe Webhook Testing: stripe-mock (Docker)
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `stripe/stripe-mock` (Docker image) | latest | Local Stripe API mock for webhook and checkout session tests | Runs as a Docker service at `localhost:12111`. Responds identically to Stripe's API. Eliminates test-mode API key dependency and Stripe rate limits. Already used in the ecosystem — the existing `test_stripe_e2e.py` references live Stripe behavior that should be mocked. |
+
+**For unit tests:** Do NOT use stripe-mock. Instead, mock `stripe.Webhook.construct_event()` and `stripe.PaymentIntent.create()` via `unittest.mock.patch` or `mocker.patch`. This is faster and isolates the Python logic from the HTTP boundary.
+
+**For integration tests only:** Use stripe-mock running as a Docker service in CI. Add to `.github/workflows/ci.yml`:
+
+```yaml
+services:
+  stripe-mock:
+    image: stripe/stripe-mock:latest
+    ports:
+      - "12111:12111"
+```
+
+Then in tests, set `stripe.api_base = "http://localhost:12111"`.
+
+---
+
+### Frontend Test Infrastructure
+
+#### 9. Component Testing: @testing-library/react + Jest (CRA built-in)
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `@testing-library/react` | `>=16.x` | Render React components and query the DOM | Bundled with CRA (`react-scripts 5.0.1` includes RTL). Zero configuration needed — CRA's Jest runner picks up `*.test.js` files automatically. |
+| `@testing-library/user-event` | `>=14.x` | Simulate realistic user interactions (click, type, tab) | NOT bundled with CRA — must install explicitly. v14 is the current major version. Supersedes v13's `fireEvent` patterns with event dispatch that matches browser behavior. |
+| `@testing-library/jest-dom` | `>=6.x` | Custom Jest matchers (`toBeInTheDocument`, `toHaveValue`, etc.) | NOT bundled. Requires one import in `src/setupTests.js`: `import '@testing-library/jest-dom'`. CRA generates this file — just add the import. |
+| `msw` (Mock Service Worker) | `>=2.7.x` | Intercept API calls from frontend tests | Mocks `axios` calls at the network level (Service Worker in browser, Node interceptor in Jest). Eliminates `jest.mock('./api')` per-file mocking. Use for testing pages that make backend calls. |
+
+**Installation:**
+
+```bash
+cd frontend
+npm install --save-dev \
+  @testing-library/user-event \
+  @testing-library/jest-dom \
+  msw
+```
+
+**Do NOT install Jest separately.** CRA's `react-scripts` ships Jest 29 internally. Installing Jest as a dev dependency causes version conflicts with `react-scripts`'s internal Jest. The CRACO config does not need changes — CRA's Jest runner works out of the box.
+
+**`src/setupTests.js`** — add one line (file already exists in CRA):
+
+```javascript
+import '@testing-library/jest-dom';
+```
+
+**Test file location:** Place test files adjacent to components as `ComponentName.test.js` or in a `__tests__/` folder within `src/`. CRA's Jest runner discovers both patterns.
+
+---
+
+#### 10. E2E Testing: Playwright
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `@playwright/test` | `>=1.50.x` (latest stable ~1.50.1) | Full browser E2E testing (auth flows, content generation, billing) | The current industry standard for E2E testing in 2026. Superior to Cypress for: SSE/WebSocket testing (needed for notification system), multi-tab scenarios, network condition simulation, and headless Chrome on Linux CI without Xvfb. Microsoft-maintained, highly active. |
+
+**Install location:** Install Playwright at the **repo root** (not inside `frontend/`). This allows E2E tests to target both the running frontend dev server and the FastAPI backend.
+
+```bash
+cd /path/to/thookAI-production
+npm init -y  # if no root package.json
+npm install --save-dev @playwright/test
+npx playwright install chromium  # chromium only — sufficient for CI
+```
+
+**Do NOT install Firefox/WebKit browsers in CI.** Chromium alone covers ThookAI's user base (Chrome + Edge). Adding WebKit (Safari) adds 500MB+ to CI runner. Add WebKit locally if cross-browser coverage is a future requirement.
+
+**`playwright.config.js`** at repo root:
+
+```javascript
+const { defineConfig } = require('@playwright/test');
+
+module.exports = defineConfig({
+  testDir: './e2e',
+  timeout: 30 * 1000,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: process.env.CI ? 'github' : 'list',
+
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+
+  webServer: [
+    {
+      command: 'cd backend && uvicorn server:app --port 8000',
+      url: 'http://localhost:8000/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60 * 1000,
+    },
+    {
+      command: 'cd frontend && npm start',
+      url: 'http://localhost:3000',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+  ],
+});
+```
+
+**Test directory:** Create `e2e/` at the repo root (sibling to `backend/` and `frontend/`). Playwright tests live there, separate from both the backend pytest suite and the frontend Jest suite.
+
+**Naming convention:** `e2e/auth.spec.js`, `e2e/billing.spec.js`, `e2e/content-pipeline.spec.js` etc.
+
+---
+
+## Installation Commands
+
+### Backend additions (add to `backend/requirements.txt`)
+
+```bash
+# Coverage
+pytest-cov>=7.1.0
+
+# Mocking improvements
+pytest-mock>=3.15.1
+respx>=0.22.0
+mongomock-motor>=0.0.36
+
+# Test data
+Faker>=40.12.0
+
+# Load testing (separate from main test suite)
+locust>=2.43.4
+```
+
+**Full install:**
+
+```bash
+cd backend
+pip install pytest-cov>=7.1.0 pytest-mock>=3.15.1 respx>=0.22.0 mongomock-motor>=0.0.36 "Faker>=40.12.0" "locust>=2.43.4"
+```
+
+**Also update `pytest-asyncio` in requirements.txt:**
+
+```
+pytest-asyncio>=1.3.0
+```
+
+### Frontend additions
+
+```bash
+cd frontend
+npm install --save-dev \
+  @testing-library/user-event \
+  @testing-library/jest-dom \
+  msw
+```
+
+### E2E (Playwright) — repo root
+
+```bash
+cd /path/to/thookAI-production
+npm install --save-dev @playwright/test
+npx playwright install chromium
 ```
 
 ---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | Why Not |
-|-------------|-------------|---------|
-| n8n (self-hosted Docker) | Temporal.io | Temporal is powerful but Go-based and heavyweight; n8n has built-in platform OAuth nodes that eliminate custom publisher code |
-| n8n replacing Celery | Keep Celery, add n8n alongside | Two task systems create synchronization complexity and double the infra. Clean cut is better. |
-| LightRAG sidecar FastAPI | Inline LightRAG in ThookAI process | LightRAG's LLM calls (entity extraction) are slow and CPU-bound; inline risks blocking ThookAI's async event loop |
-| LightRAG + NetworkXStorage | GraphRAG (Microsoft) | GraphRAG requires Azure and is 10x slower to build; LightRAG is designed for fast incremental ingestion |
-| LightRAG + NetworkXStorage | LangChain GraphRAG | LangChain adds abstraction layers with version instability; lightrag-hku is standalone and simpler |
-| Pinecone (existing) + LightRAG | Replace Pinecone with LightRAG vectors | LightRAG's MongoVectorDBStorage requires Atlas — not current target. Pinecone stays for embedding similarity; LightRAG adds graph traversal. Complementary, not competitive. |
-| Obsidian Local REST API | Obsidian official CLI | Official CLI runs on user's machine (terminal commands), not callable from a deployed server. REST API is the only viable remote integration. |
-| Remotion (existing service) | FFmpeg-based assembly | FFmpeg requires imperative timeline programming; Remotion compositions are component-driven and match the existing service architecture |
-| n8n:stable Docker tag | Pinned version (e.g., 1.116.x) | n8n releases minor versions weekly; :stable always gives the latest stable without manual tag management. Pin to specific version only if a breaking change occurs. |
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Coverage | `pytest-cov 7.1.0` | `coverage` CLI directly | pytest-cov integrates with pytest's exit code; bare `coverage` requires separate run command and doesn't gate on fail_under naturally |
+| HTTP mocking (backend) | `respx` | `pytest-httpx` | Functionally equivalent; `respx` has a cleaner route-based API and better async support documentation. Either is acceptable — `respx` chosen for consistency. |
+| MongoDB mocking | `mongomock-motor` | Full `AsyncMock` everywhere | `AsyncMock` cannot test query filter logic; `mongomock-motor` validates that `{"user_id": x, "status": "active"}` filters correctly. Both needed for different test layers. |
+| Frontend unit tests | Jest + RTL (CRA built-in) | Vitest + RTL | Vitest requires ejecting from CRA or moving to Vite. ThookAI uses CRA + CRACO — ejecting now is high risk for a testing sprint. Jest is already configured and working. |
+| E2E framework | Playwright | Cypress | Playwright is superior for SSE testing (required for the notification system), native multi-tab, and is now the more actively developed option in 2026. Cypress has architectural limitations with streaming responses. |
+| Load testing | Locust | k6 | k6 requires a separate Go binary and JavaScript test scripts; Locust is pure Python, integrates with existing test environment, no new toolchain. |
+| Test data | `Faker` | `factory_boy` | `factory_boy` is designed for ORM model instances (SQLAlchemy, Django). ThookAI uses raw MongoDB dicts — `factory_boy` provides no benefit and adds ORM mapping boilerplate. |
+| Stripe testing | `stripe-mock` Docker | `vcrpy` (cassette recording) | VCR cassettes become stale as Stripe's API evolves; `stripe-mock` always reflects the current Stripe API contract. |
 
 ---
 
@@ -230,64 +395,141 @@ npm install remotion@4.0.441 @remotion/renderer@4.0.441
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| SQLite for n8n | Incompatible with queue mode (multi-worker); file locking causes write failures under concurrent load | PostgreSQL 15 (dedicated to n8n internal state) |
-| `MongoVectorDBStorage` in LightRAG | Requires MongoDB Atlas Vector Search — not available on standard MongoDB Community or Atlas free tier | `NanoVectorDBStorage` (built-in file-based) for vectors; Pinecone for production-scale similarity |
-| `obsidian-cli` PyPI package | Wraps local filesystem access, not the REST API; will not work when ThookAI is deployed remotely | `obsidian-local-rest-api` plugin + custom `httpx` client |
-| Celery alongside n8n | Creates two competing task systems with no clear ownership; operational complexity doubles | Remove Celery entirely; use n8n for all scheduled/long-running tasks |
-| `n8n:latest` Docker tag | Being phased out in n8n v2.0 breaking changes | Use `n8n:stable` |
-| Remotion Lambda | Vendor lock-in to AWS; adds billing complexity; existing `remotion-service/` is already a self-hosted render server | `@remotion/renderer` in the existing Express service |
-| Inline LightRAG in backend process | LightRAG entity extraction uses LLM calls (10-150s); running inline blocks FastAPI async workers | Sidecar service communicating over localhost HTTP |
+| Ejecting CRA (`npm run eject`) | Irreversible. Breaks CRACO. Makes all future upgrades manual. The testing sprint does not require it. | Keep CRA + CRACO; Jest works fine without ejecting |
+| `jest-environment-jsdom` explicitly | CRA already configures jsdom as the test environment. Adding it explicitly causes duplicate config warnings. | Nothing — CRA handles it |
+| `Vitest` | Requires moving to Vite build. CRA is the build system. Migrating build systems during a testing sprint is out of scope and high risk. | Jest (CRA built-in) for unit/integration; Playwright for E2E |
+| `Selenium` / `WebDriver` | Legacy technology. Fragile, slow, no SSE support. | Playwright |
+| `responses` library (Python) | Mocks `requests` library only. ThookAI uses `httpx` for all async HTTP. Incompatible. | `respx` for async httpx mocking |
+| `pytest-django` / `pytest-sqlalchemy` | ThookAI uses MongoDB/Motor, not Django or SQLAlchemy. These fixtures are irrelevant. | `mongomock-motor` for MongoDB mocking |
+| Pinning `coverage` separately | `pytest-cov` pulls the correct `coverage` version. Manual pinning causes resolution conflicts. | Let `pytest-cov` manage `coverage` as its dependency |
+| `nox` or `tox` | Over-engineering for a single-environment codebase. `pytest` directly is sufficient. | Plain `pytest` with `--cov` flags |
+| `locust` in the `tests/` directory as `test_locust.py` | pytest will attempt to collect and run `locust` scenarios as regular pytest tests. | Name it `locustfile.py` and keep it in `tests/` but excluded from `pytest.ini`'s `testpaths` or via `collect_ignore` in `conftest.py` |
 
 ---
 
-## Integration Points With Existing Stack
+## Configuration Files to Create
 
-| New Component | Connects To | How |
-|--------------|-------------|-----|
-| n8n | Redis (existing) | Broker for queue mode — no config change needed |
-| n8n | PostgreSQL (new, dedicated) | n8n internal DB — separate from MongoDB |
-| n8n | MongoDB (existing) | n8n HTTP Request node calls FastAPI endpoints which read/write MongoDB |
-| n8n | LinkedIn/X/Instagram OAuth | n8n native nodes replace `backend/agents/publisher.py` |
-| LightRAG sidecar | MongoDB (existing) | Uses MongoKVStorage + MongoDocStatusStorage on existing connection |
-| LightRAG sidecar | `backend/agents/thinker.py` | Thinker calls `POST /query` via httpx |
-| LightRAG sidecar | `backend/agents/learning.py` | Learning calls `POST /documents/text` after content approval |
-| Remotion service | Cloudflare R2 (existing) | Render service uploads output to R2 using existing boto3 config |
-| Remotion service | FastAPI backend | FastAPI POSTs render jobs; n8n polls completion; R2 URL stored in MongoDB |
-| Obsidian client | `backend/agents/scout.py` | Scout calls ObsidianClient.search() before Perplexity |
-| Strategist agent | All above | Orchestrates LightRAG + Pinecone + persona + analytics |
+### `backend/.coveragerc`
+
+Already specified in the coverage section above. Key settings:
+- `branch = true` — required for 85% threshold to be meaningful
+- `concurrency = greenlet,thread` — prevents async FastAPI line undercounting
+- `fail_under = 85` — gates CI
+- `omit = tests/*, conftest.py` — excludes test files from coverage calculation (they're not product code)
+
+### `backend/pytest.ini` (update existing)
+
+```ini
+[pytest]
+asyncio_mode = auto
+asyncio_default_fixture_loop_scope = function
+testpaths = tests
+```
+
+### `frontend/src/setupTests.js` (update existing — add one line)
+
+```javascript
+import '@testing-library/jest-dom';
+```
+
+### `playwright.config.js` (create at repo root)
+
+Already provided in the Playwright section above.
+
+### `.github/workflows/ci.yml` (additions to existing)
+
+Add to the `backend-test` job:
+1. `stripe-mock` Docker service (for Stripe integration tests)
+2. Change test command to include `--cov` flags
+3. Add a `playwright-e2e` job after `frontend-build`
+4. Add an `upload-coverage` job that uploads `coverage.xml` to Codecov (optional but recommended)
+
+**Updated `backend-test` run command:**
+
+```yaml
+- name: Run tests with coverage
+  run: |
+    cd backend
+    python -m pytest \
+      --cov=. \
+      --cov-branch \
+      --cov-report=term-missing \
+      --cov-report=xml \
+      --cov-fail-under=85 \
+      -v --tb=short
+```
+
+**New `playwright-e2e` job:**
+
+```yaml
+playwright-e2e:
+  name: Playwright E2E
+  runs-on: ubuntu-latest
+  needs: [backend-test, frontend-build]
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "18"
+    - name: Install Playwright
+      run: npm ci && npx playwright install chromium --with-deps
+    - name: Install backend deps
+      run: pip install -r backend/requirements.txt
+    - name: Run E2E tests
+      env:
+        MONGO_URL: mongodb://localhost:27017
+        # ... other env vars
+      run: npx playwright test
+    - name: Upload Playwright report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: playwright-report/
+```
 
 ---
 
-## Version Compatibility
+## Version Compatibility Matrix
 
-| Package | Compatible With | Notes |
-|---------|----------------|-------|
-| `lightrag-hku==1.4.12` | Python 3.10+ | ThookAI uses Python 3.11.11 — compatible |
-| `fal-client==0.13.2` | Python >=3.8 | Upgrade from 0.10.0; async API is backward-compatible |
-| `remotion@4.0.441` | Node.js 18+ | `remotion-service/` already targets Node 18 |
-| n8n:stable | PostgreSQL 13+, Redis 7+ | PostgreSQL 15 recommended; Redis 7 already in stack |
-| `lightrag-hku[api]` | FastAPI already in requirements | LightRAG's API server pins its own FastAPI version internally; run it in an isolated venv/container to avoid conflicts with ThookAI's FastAPI version |
+| Package | Version | Python/Node | Compatible With ThookAI |
+|---------|---------|-------------|-------------------------|
+| `pytest-cov` | `>=7.1.0` | Python 3.9+ | Python 3.11.11 — YES |
+| `pytest-asyncio` | `>=1.3.0` | Python 3.10+ | Python 3.11.11 — YES |
+| `pytest-mock` | `>=3.15.1` | Python 3.9+ | Python 3.11.11 — YES |
+| `respx` | `>=0.22.0` | Python 3.8+ | Python 3.11.11 — YES |
+| `mongomock-motor` | `>=0.0.36` | Python 3.8-3.13 | Python 3.11.11 — YES |
+| `Faker` | `>=40.12.0` | Python 3.10+ | Python 3.11.11 — YES |
+| `locust` | `>=2.43.4` | Python 3.9+ | Python 3.11.11 — YES |
+| `@testing-library/user-event` | `>=14.x` | Node 18+ | Node 18 — YES |
+| `@testing-library/jest-dom` | `>=6.x` | Node 18+ | Node 18 — YES |
+| `msw` | `>=2.7.x` | Node 18+ | Node 18 — YES |
+| `@playwright/test` | `>=1.50.x` | Node 20+ recommended | Node 18 — YES (Node 18 still supported) |
 
-**Critical compatibility note:** Install LightRAG in its own virtual environment or Docker container. It pins internal dependencies (including its own FastAPI version) that may conflict with ThookAI's `fastapi==0.110.1`. The sidecar Docker deployment naturally handles this isolation.
+**Note on Playwright Node version:** The Playwright docs now recommend Node 20+. Node 18 is still supported but is in maintenance mode. The CI workflow already uses Node 18 — it works, but consider upgrading the CI Node version to 20 for the Playwright job only (add `node-version: "20"` to the playwright CI job specifically).
 
 ---
 
 ## Sources
 
-- [lightrag-hku on PyPI](https://pypi.org/project/lightrag-hku/) — Version 1.4.12 confirmed, storage backends verified (HIGH confidence)
-- [HKUDS/LightRAG GitHub](https://github.com/HKUDS/LightRAG) — Architecture, MongoDB storage options (HIGH confidence)
-- [LightRAG API README](https://github.com/HKUDS/LightRAG/blob/main/lightrag/api/README.md) — FastAPI server deployment, workspace isolation (HIGH confidence)
-- [fal-client on PyPI](https://pypi.org/project/fal-client/) — Version 0.13.2, async capabilities (HIGH confidence)
-- [Remotion SSR docs](https://www.remotion.dev/docs/ssr) — renderMedia(), Node.js API (HIGH confidence)
-- [Remotion licensing docs](https://www.remotion.dev/docs/licensing/) — Commercial SaaS requirements (HIGH confidence)
-- [n8n Docker Hub](https://hub.docker.com/r/n8nio/n8n) — :stable vs :latest tags (HIGH confidence)
-- [n8n queue mode docs](https://docs.n8n.io/hosting/scaling/queue-mode/) — PostgreSQL requirement confirmed (HIGH confidence)
-- [obsidian-local-rest-api GitHub](https://github.com/coddingtonbear/obsidian-local-rest-api) — API endpoints, auth, HTTPS on 27124 (HIGH confidence)
-- [n8n REST API docs](https://docs.n8n.io/api/) — Webhook trigger vs management API (HIGH confidence)
-- [LightRAG multi-hop issue #1629](https://github.com/HKUDS/LightRAG/issues/1629) — Hybrid query mode for multi-hop retrieval (MEDIUM confidence)
-- WebSearch results for n8n + FastAPI integration patterns — Multiple corroborating sources (MEDIUM confidence)
+- [pytest-cov 7.1.0 on PyPI](https://pypi.org/project/pytest-cov/) — Version, options, `--cov-fail-under` behavior (HIGH confidence)
+- [pytest-cov configuration docs](https://pytest-cov.readthedocs.io/en/latest/config.html) — pyproject.toml and .coveragerc format (HIGH confidence)
+- [coverage.py configuration reference](https://coverage.readthedocs.io/en/latest/config.html) — `concurrency = greenlet,thread` for async FastAPI (HIGH confidence)
+- [coveragepy issue #1240](https://github.com/nedbat/coveragepy/issues/1240) — Async line undercounting confirmed, greenlet workaround (MEDIUM confidence)
+- [pytest-asyncio 1.3.0 on PyPI](https://pypi.org/project/pytest-asyncio/) — Version, `asyncio_default_fixture_loop_scope` requirement (HIGH confidence)
+- [pytest-mock 3.15.1 on PyPI](https://pypi.org/project/pytest-mock/) — Version, automatic cleanup benefit (HIGH confidence)
+- [Faker 40.12.0 on PyPI](https://pypi.org/project/faker/) — Version, pytest fixture integration (HIGH confidence)
+- [mongomock-motor 0.0.36 on PyPI](https://pypi.org/project/mongomock-motor/) — Version, limitations (HIGH confidence)
+- [respx 0.22.0 on PyPI](https://pypi.org/project/respx/) — Version, async httpx mocking pattern (HIGH confidence)
+- [Locust 2.43.4 on PyPI](https://pypi.org/project/locust/) — Version, headless mode flags (HIGH confidence)
+- [Playwright installation docs](https://playwright.dev/docs/intro) — npm install, browser installation (HIGH confidence)
+- [Playwright webServer docs](https://playwright.dev/docs/test-webserver) — `webServer` config for CRA (HIGH confidence)
+- [Playwright CI docs](https://playwright.dev/docs/ci) — `workers: 1` in CI, no browser caching (HIGH confidence)
+- [CRA running tests docs](https://create-react-app.dev/docs/running-tests/) — Jest built-in, setupTests.js, no eject needed (HIGH confidence)
+- [React Testing Library docs](https://testing-library.com/docs/react-testing-library/intro/) — `@testing-library/react` bundled in CRA (HIGH confidence)
+- [stripe/stripe-mock GitHub](https://github.com/stripe/stripe-mock) — Docker image, `api_base` override pattern (HIGH confidence)
 
 ---
 
-*Stack research for: ThookAI v2.0 — Intelligent Content Operating System*
+*Stack research for: ThookAI v2.1 — Production Hardening (50x Testing Sprint)*
 *Researched: 2026-04-01*
