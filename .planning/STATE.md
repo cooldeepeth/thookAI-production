@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
-status: verifying
-stopped_at: Completed 21-03-PLAN.md — frontend cookie auth migration complete
-last_updated: "2026-04-03T20:55:38.039Z"
+status: executing
+stopped_at: Completed 22-01-PLAN.md — API client foundation complete (constants.js + enhanced apiFetch)
+last_updated: "2026-04-03T21:13:50.528Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 17
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Proactive, personalized content creation at scale — hardened for production launch.
-**Current focus:** Phase 21 — ci-strictness-httponly-cookie-auth
+**Current focus:** Phase 22 — apifetch-migration-error-handling
 
 ## Current Position
 
-Phase: 22
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 22 (apifetch-migration-error-handling) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 21-ci-strictness-httponly-cookie-auth P01 | 525599 | 2 tasks | 2 files |
 | Phase 21-ci-strictness-httponly-cookie-auth P02 | 8 | 1 tasks | 4 files |
 | Phase 21-ci-strictness-httponly-cookie-auth P03 | 2 | 2 tasks | 3 files |
+| Phase 22-apifetch-migration-error-handling P01 | 242 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Recent decisions affecting current work:
 - [Phase 21-ci-strictness-httponly-cookie-auth]: Google OAuth token param flow kept for backward compat but token no longer saved to browser storage — session_token cookie set by backend callback is the session source of truth
 - [Phase 21-ci-strictness-httponly-cookie-auth]: apiFetch CSRF pattern: getCsrfToken() reads csrf_token cookie; injects X-CSRF-Token header on POST/PUT/PATCH/DELETE; GET/HEAD excluded per spec
 - [Phase 21-ci-strictness-httponly-cookie-auth]: Dashboard component localStorage cleanup deferred to Phase 22 apiFetch migration — backend get_current_user accepts both Bearer+cookie for backward compat
+- [Phase 22-apifetch-migration-error-handling]: Return raw Response from apiFetch for backward compatibility — callers still call .json() until migration is complete
+- [Phase 22-apifetch-migration-error-handling]: Retry all HTTP methods once on 5xx — backend should be idempotent, spec said no method restriction
 
 ### Pending Todos
 
@@ -121,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T20:54:47.773Z
-Stopped at: Completed 21-03-PLAN.md — frontend cookie auth migration complete
+Last session: 2026-04-03T21:13:50.524Z
+Stopped at: Completed 22-01-PLAN.md — API client foundation complete (constants.js + enhanced apiFetch)
 Resume file: None

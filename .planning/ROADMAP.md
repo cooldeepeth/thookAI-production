@@ -290,7 +290,7 @@ Plans:
   5. All feature flags and the API base URL are sourced from `frontend/src/lib/constants.js` — no hardcoded URLs or ad-hoc config values remain in component files
 **Plans**: 3 plans
 Plans:
-- [ ] 22-01-PLAN.md — Create constants.js + enhance apiFetch with timeout, retry, error handling (API-01, API-02, API-03, API-04)
+- [x] 22-01-PLAN.md — Create constants.js + enhance apiFetch with timeout, retry, error handling (API-01, API-02, API-03, API-04)
 - [ ] 22-02-PLAN.md — Migrate lib/ modules, hooks, components, AuthContext, non-Dashboard pages (API-05)
 - [ ] 22-03-PLAN.md — Migrate all 17 Dashboard pages + final zero-fetch grep verification (API-05, API-06)
 **UI hint**: yes
@@ -360,7 +360,7 @@ Plans:
 | 19. Core Features | v2.1 | 5/5 | Complete | 2026-04-03 |
 | 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete | 2026-04-03 |
 | 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 3/3 | Complete    | 2026-04-03 |
-| 22. apiFetch Migration + Error Handling | v2.2 | 0/3 | Not started | - |
+| 22. apiFetch Migration + Error Handling | v2.2 | 1/3 | In Progress|  |
 | 23. Frontend Unit Test Suite | v2.2 | 0/TBD | Not started | - |
 | 24. Content Download + Redirect-to-Platform | v2.2 | 0/TBD | Not started | - |
 | 25. E2E Verification + Production Ship Checklist | v2.2 | 0/TBD | Not started | - |
