@@ -341,7 +341,7 @@ class TestStripeConfigValidation:
         from config import StripeConfig
 
         config = StripeConfig.__new__(StripeConfig)
-        config.secret_key = "sk_test_abc123xyz"
+        config.secret_key = "sk_test_PLACEHOLDER"
         config.webhook_secret = "whsec_test"
         config.price_pro_monthly = "price_1"
         config.price_pro_annual = "price_2"

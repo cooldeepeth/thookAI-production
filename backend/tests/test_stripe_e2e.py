@@ -523,14 +523,14 @@ class TestMissingStripeConfig:
         """is_stripe_configured() is False when key starts with 'placeholder'."""
         from services.stripe_service import is_stripe_configured
 
-        with patch("services.stripe_service.STRIPE_SECRET_KEY", "placeholder_sk_test_xxx"):
+        with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_PLACEHOLDER"):
             assert is_stripe_configured() is False
 
     def test_is_stripe_configured_true_for_real_key(self):
         """is_stripe_configured() is True for a real-looking test key."""
         from services.stripe_service import is_stripe_configured
 
-        with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_realkey123abc"):
+        with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_PLACEHOLDER"):
             assert is_stripe_configured() is True
 
     def test_validate_stripe_config_callable(self):

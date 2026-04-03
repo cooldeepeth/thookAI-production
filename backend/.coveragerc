@@ -1,6 +1,6 @@
 [run]
 branch = true
-concurrency = greenlet,thread
+concurrency = thread
 source = .
 omit =
     tests/*

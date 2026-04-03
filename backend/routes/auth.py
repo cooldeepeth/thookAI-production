@@ -18,8 +18,11 @@ ALGORITHM = "HS256"
 
 
 def _jwt_secret() -> str:
-    """Return JWT secret, falling back to dev default when not configured."""
-    return settings.security.jwt_secret_key or "thook-dev-secret"
+    """Return JWT secret. Raises if not configured — never fall back to a default."""
+    secret = settings.security.jwt_secret_key
+    if not secret:
+        raise ValueError("JWT_SECRET_KEY not configured — refusing to start with no secret")
+    return secret
 
 
 class RegisterRequest(BaseModel):

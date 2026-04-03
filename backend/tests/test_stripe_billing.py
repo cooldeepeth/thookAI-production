@@ -495,7 +495,7 @@ def test_is_stripe_configured_true_when_set():
     """is_stripe_configured returns True for a real-looking key."""
     from services.stripe_service import is_stripe_configured
 
-    with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_realkey123"):
+    with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_PLACEHOLDER"):
         assert is_stripe_configured() is True
 
 
