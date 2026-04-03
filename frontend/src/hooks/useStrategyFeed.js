@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '@/lib/api';
 
 /**
  * React hook for managing strategy recommendation cards.
@@ -17,40 +16,22 @@ export default function useStrategyFeed() {
   const [historyCards, setHistoryCards] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem("thook_token");
-    const headers = {};
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-    return headers;
-  }, []);
-
   const fetchActiveCards = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/strategy?status=pending_approval&limit=3`,
-        { credentials: "include", headers: getAuthHeaders() }
-      );
+      const res = await apiFetch('/api/strategy?status=pending_approval&limit=3');
       if (!res.ok) return;
       const data = await res.json();
       setActiveCards(data.cards || []);
     } catch (err) {
-      console.error("[useStrategyFeed] Failed to fetch active cards:", err);
+      console.error('[useStrategyFeed] Failed to fetch active cards:', err);
     }
-  }, [getAuthHeaders]);
+  }, []);
 
   const fetchHistoryCards = useCallback(async () => {
     try {
       const [dismissedRes, approvedRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/strategy?status=dismissed&limit=20`, {
-          credentials: "include",
-          headers: getAuthHeaders(),
-        }),
-        fetch(`${BACKEND_URL}/api/strategy?status=approved&limit=20`, {
-          credentials: "include",
-          headers: getAuthHeaders(),
-        }),
+        apiFetch('/api/strategy?status=dismissed&limit=20'),
+        apiFetch('/api/strategy?status=approved&limit=20'),
       ]);
 
       const dismissed = dismissedRes.ok ? (await dismissedRes.json()).cards || [] : [];
@@ -62,9 +43,9 @@ export default function useStrategyFeed() {
       );
       setHistoryCards(merged);
     } catch (err) {
-      console.error("[useStrategyFeed] Failed to fetch history cards:", err);
+      console.error('[useStrategyFeed] Failed to fetch history cards:', err);
     }
-  }, [getAuthHeaders]);
+  }, []);
 
   /**
    * Approve a card. Refreshes active list and returns the generate_payload.
@@ -73,24 +54,19 @@ export default function useStrategyFeed() {
    */
   const approveCard = useCallback(
     async (recommendationId) => {
-      const res = await fetch(
-        `${BACKEND_URL}/api/strategy/${recommendationId}/approve`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: getAuthHeaders(),
-        }
-      );
+      const res = await apiFetch(`/api/strategy/${recommendationId}/approve`, {
+        method: 'POST',
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || "Approve failed");
+        throw new Error(err.detail || 'Approve failed');
       }
       const data = await res.json();
       // Refresh active list (card just moved out of pending_approval)
       await fetchActiveCards();
       return data.generate_payload;
     },
-    [getAuthHeaders, fetchActiveCards]
+    [fetchActiveCards]
   );
 
   /**
@@ -102,30 +78,21 @@ export default function useStrategyFeed() {
   const dismissCard = useCallback(
     async (recommendationId, reason) => {
       const body = reason ? JSON.stringify({ reason }) : undefined;
-      const headers = {
-        ...getAuthHeaders(),
-        ...(body ? { "Content-Type": "application/json" } : {}),
-      };
 
-      const res = await fetch(
-        `${BACKEND_URL}/api/strategy/${recommendationId}/dismiss`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers,
-          ...(body ? { body } : {}),
-        }
-      );
+      const res = await apiFetch(`/api/strategy/${recommendationId}/dismiss`, {
+        method: 'POST',
+        ...(body ? { body } : {}),
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || "Dismiss failed");
+        throw new Error(err.detail || 'Dismiss failed');
       }
       const data = await res.json();
       // Refresh both lists
       await Promise.all([fetchActiveCards(), fetchHistoryCards()]);
       return data;
     },
-    [getAuthHeaders, fetchActiveCards, fetchHistoryCards]
+    [fetchActiveCards, fetchHistoryCards]
   );
 
   // Initial data load
