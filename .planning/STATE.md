@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Production Hardening — 50x Testing Sprint
+milestone: v1.0
+milestone_name: milestone
 status: executing
-stopped_at: Completed 18-security-auth/18-03-PLAN.md
-last_updated: "2026-04-03T06:51:19.650Z"
+stopped_at: Completed 18-security-auth/18-04-PLAN.md
+last_updated: "2026-04-03T06:50:58.072Z"
 last_activity: 2026-04-03
 progress:
-  total_phases: 12
+  total_phases: 7
   completed_phases: 1
-  total_plans: 9
-  completed_plans: 8
+  total_plans: 2
+  completed_plans: 2
   percent: 0
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 18 — security-auth
+**Current focus:** Phase 01 — git-branch-cleanup
 
 ## Current Position
 
-Phase: 18 (security-auth) — EXECUTING
-Plan: 2 of 4
+Phase: 01 (git-branch-cleanup) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -52,16 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
-| Phase 03 P03 | 8 | 2 tasks | 2 files |
-| Phase 04 P01 | 5 | 2 tasks | 1 files |
-| Phase 04-content-pipeline P02 | 3 | 2 tasks | 1 files |
-| Phase 05-publishing-scheduling-billing P02 | 4 | 2 tasks | 3 files |
-| Phase 05-publishing-scheduling-billing P01 | 6 | 2 tasks | 4 files |
-| Phase 05-publishing-scheduling-billing P03 | 2 | 2 tasks | 2 files |
-| Phase 06-media-generation-analytics P01 | 3 | 2 tasks | 1 files |
-| Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
-| Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
-| Phase 18-security-auth P03 | 50 | 2 tasks | 5 files |
+| Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,24 +66,8 @@ Recent decisions affecting current work:
 - PR #30 included: Custom plan builder (pricing pivot) is final direction, merge into dev in Phase 1
 - Billing changes: Flag for human review — no auto-merge on billing code
 - Verification standard: Manual E2E + automated tests required — 59 existing tests missed real bugs
-- [Phase 03]: AUTH-05 verified: claude-sonnet-4-20250514 is correct model name in both analyze-posts and generate-persona endpoints
-- [Phase 03]: AUTH-06 verified: Persona Engine has voice_fingerprint, content_identity, uom, learning_signals; smart fallback produces archetype-specific non-generic personas
-- [Phase 03]: Source transparency: generate-persona returns source field (llm|smart_fallback) so frontend can show notice when fallback used
-- [Phase 04]: Mock langgraph.graph at sys.modules level to allow testing orchestrator pure functions in envs without langgraph installed
-- [Phase 04-content-pipeline]: Stale job cleanup only targets status='running' — all jobs start with this status in content routes
-- [Phase 05]: Use find_one_and_update with credits >= amount filter for atomic deduction — eliminates race condition without transactions
-- [Phase 05]: Platform restriction in route handler (not credits service) — keeps billing concerns separate from access control
-- [Phase 05-01]: Test httpx.AsyncClient (not publisher function) to verify real HTTP dispatch code path
-- [Phase 05-01]: Extracted _run_scheduled_posts_inner to module level for unit-testable scheduled post processing
-- [Phase 05-publishing-scheduling-billing]: validate_stripe_config runs on module import so startup warnings appear in logs immediately
-- [Phase 05-publishing-scheduling-billing]: Task 2 regression check required zero test file changes — all 222 tests passed cleanly
-- [Phase 06-01]: Pre-existing test_uploads_media_storage.py failures (7 tests) are out of scope — confirmed pre-existing before this plan's changes
-- [Phase 06-01]: TDD approach: wrote all 28 tests before any agent code changes — all passed immediately because agents already implemented correctly
-- [Phase 06-02]: Use app.dependency_overrides[get_current_user] (not patch) for auth bypass in FastAPI route tests
-- [Phase 06-02]: Mount upload router at root (no prefix) in TestClient apps to avoid double-prefix path issues
-- [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
-- [Phase 18-security-auth]: routes/auth.py binds db at module import time — tests must patch both database.db and routes.auth.db to mock auth correctly
-- [Phase 18-security-auth]: autouse pytest fixture resets in-memory RateLimiter._mem_requests between tests to prevent cross-test rate limit contamination
+- [Phase 18-04]: Patch 'database.db' (not 'auth_utils.db') for auth_utils lazy db imports; patch 'routes.X.db' for module-level imports
+- [Phase 18-04]: Agency router self-declares prefix — mount at '/api' not '/api/agency' in test apps to avoid double prefix
 
 ### Pending Todos
 
@@ -108,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T06:51:19.646Z
-Stopped at: Completed 18-security-auth/18-03-PLAN.md
+Last session: 2026-04-03T06:50:58.069Z
+Stopped at: Completed 18-security-auth/18-04-PLAN.md
 Resume file: None
