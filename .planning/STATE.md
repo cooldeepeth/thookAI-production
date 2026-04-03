@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
 status: executing
-stopped_at: Completed 18-security-auth/18-04-PLAN.md
-last_updated: "2026-04-03T06:57:16.480Z"
+stopped_at: Completed 19-core-features/19-02-PLAN.md
+last_updated: "2026-04-03T07:22:05.947Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 14
+  completed_plans: 10
   percent: 0
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 01 — git-branch-cleanup
+**Current focus:** Phase 19 — core-features
 
 ## Current Position
 
-Phase: 19
-Plan: Not started
+Phase: 19 (core-features) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
+| Phase 19-core-features P02 | 3 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,7 @@ Recent decisions affecting current work:
 - Verification standard: Manual E2E + automated tests required — 59 existing tests missed real bugs
 - [Phase 18-04]: Patch 'database.db' (not 'auth_utils.db') for auth_utils lazy db imports; patch 'routes.X.db' for module-level imports
 - [Phase 18-04]: Agency router self-declares prefix — mount at '/api' not '/api/agency' in test apps to avoid double prefix
+- [Phase 19-core-features]: Used function-level patch context managers for media test isolation — avoids cross-test state leakage from singleton module-level handlers
 
 ### Pending Todos
 
@@ -83,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T06:50:58.069Z
-Stopped at: Completed 18-security-auth/18-04-PLAN.md
+Last session: 2026-04-03T07:22:05.943Z
+Stopped at: Completed 19-core-features/19-02-PLAN.md
 Resume file: None

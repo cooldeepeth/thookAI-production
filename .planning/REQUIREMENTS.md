@@ -38,7 +38,7 @@
 
 - [ ] **CORE-01**: Content pipeline comprehensive tests — Commander, Scout, Thinker, Writer, QC individually with deterministic LLM mocks
 - [ ] **CORE-02**: LangGraph orchestrator tests — node-level unit tests, debate protocol, quality loop retry behavior
-- [ ] **CORE-03**: Media orchestrator comprehensive tests — all 8 format handlers, credit ledger partial failure, R2 staging, Remotion client
+- [x] **CORE-03**: Media orchestrator comprehensive tests — all 8 format handlers, credit ledger partial failure, R2 staging, Remotion client
 - [ ] **CORE-04**: n8n bridge contract tests — all execute endpoints, HMAC verification, callback handling, workflow trigger dispatch
 - [ ] **CORE-05**: LightRAG integration tests — insert/query with per-user isolation, entity extraction, embedding lock assertion
 - [ ] **CORE-06**: Strategist Agent tests — cadence controls, dismissal tracking, adaptive throttle, generate_payload validation
@@ -107,7 +107,7 @@ Deferred beyond v2.1.
 | SEC-07 | Phase 18 | Complete |
 | CORE-01 | Phase 19 | Pending |
 | CORE-02 | Phase 19 | Pending |
-| CORE-03 | Phase 19 | Pending |
+| CORE-03 | Phase 19 | Complete |
 | CORE-04 | Phase 19 | Pending |
 | CORE-05 | Phase 19 | Pending |
 | CORE-06 | Phase 19 | Pending |
