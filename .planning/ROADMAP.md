@@ -252,7 +252,7 @@ Plans:
 | 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
-| 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete   | 2026-04-03 |
+| 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
 | 18. Security & Auth | v2.1 | 0/TBD | Not started | - |
 | 19. Core Features | v2.1 | 0/TBD | Not started | - |
 | 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
