@@ -1,5 +1,33 @@
 # Milestones
 
+## v2.1 Production Hardening — 50x Testing Sprint (Shipped: 2026-04-03)
+
+**Phases completed:** 4 phases, 19 plans, 22 tasks
+
+**Key accomplishments:**
+
+- Commit:
+- RED commit:
+- GitHub Actions CI matrix with 4 domain-specific test jobs enforcing 95% branch coverage on billing modules and 85% on security/pipeline modules
+- test_checkout.py
+- Commit:
+- 1. [Rule 3 - Blocking] Worktree branch was behind dev by Phase 17 commits
+- Task 1 — `tests/security/test_oauth_security.py` (16 tests):
+- `backend/tests/security/test_input_validation.py`
+- 15 privilege-escalation tests verifying non-admin users get 403 on all admin endpoints and workspace role boundaries (creator/manager/owner) are enforced via FastAPI dependency_overrides + database.db patching
+- TestCommanderAgent (5 tests)
+- 1. [Rule 3 - Blocking] Worktree branch was behind dev — missing media_orchestrator.py
+- TDD fix for f-string user_id injection in LightRAG query filter — user_id validated to [a-zA-Z0-9_-] before lambda interpolation, blocking cross-user data leak via "or True" expansion
+- Task 1 — n8n Bridge Contract Tests
+- `backend/tests/core/test_strategist_comprehensive.py`
+- One-liner:
+- Locust 50-user load test with credit atomicity guard and Docker Compose smoke test validating all 7 services healthy within 120 seconds
+- Happy Path (serial, 7 steps):
+- 10 Playwright E2E tests across billing (E2E-03) and agency workspace (E2E-04) flows — all Stripe calls mocked via page.route(), all RBAC boundaries verified at API level.
+- One-liner:
+
+---
+
 ## v2.0 Intelligent Content Operating System (Shipped: 2026-04-01)
 
 **Phases completed:** 8 phases, 27 plans, 45 tasks
