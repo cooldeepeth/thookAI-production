@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
 status: executing
-stopped_at: Completed 21-01-PLAN.md (CI strictness — remove all continue-on-error)
-last_updated: "2026-04-03T20:47:02.985Z"
+stopped_at: Completed 21-02-PLAN.md — CSRF protection active
+last_updated: "2026-04-03T20:49:56.213Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 17
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 21 (ci-strictness-httponly-cookie-auth) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
 | Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
 | Phase 21-ci-strictness-httponly-cookie-auth P01 | 525599 | 2 tasks | 2 files |
+| Phase 21-ci-strictness-httponly-cookie-auth P02 | 8 | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,7 @@ Recent decisions affecting current work:
 - [v2.2 Roadmap]: Phase 23 frontend tests depend on Phase 22 — apiFetch must be stable before MSW mocks can reliably intercept it
 - [Phase 21-ci-strictness-httponly-cookie-auth]: Removed all 4 continue-on-error directives from CI workflows — any test failure now causes hard red CI status
 - [Phase 21-ci-strictness-httponly-cookie-auth]: Pre-existing event loop closure failure in test_api_routes_alive.py documented but not fixed in plan 01 — will correctly block CI going forward
+- [Phase 21-02]: CSRF double-submit cookie: Bearer auth bypasses; no session_token cookie = no CSRF check; csrf_token cookie httpOnly=False intentionally
 
 ### Pending Todos
 
@@ -115,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T20:47:02.982Z
-Stopped at: Completed 21-01-PLAN.md (CI strictness — remove all continue-on-error)
+Last session: 2026-04-03T20:49:56.210Z
+Stopped at: Completed 21-02-PLAN.md — CSRF protection active
 Resume file: None

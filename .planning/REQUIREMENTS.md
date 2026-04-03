@@ -13,11 +13,11 @@
 
 ### Auth Migration
 
-- [ ] **AUTH-01**: Backend sets httpOnly secure cookie on login/register (alongside existing JWT response for backward compat)
-- [ ] **AUTH-02**: Backend middleware reads auth from cookie first, falls back to Authorization header
+- [x] **AUTH-01**: Backend sets httpOnly secure cookie on login/register (alongside existing JWT response for backward compat)
+- [x] **AUTH-02**: Backend middleware reads auth from cookie first, falls back to Authorization header
 - [ ] **AUTH-03**: Frontend AuthContext reads from cookie-based session (no more localStorage.getItem for JWT)
 - [ ] **AUTH-04**: Frontend removes `localStorage.setItem("thook_token", ...)` after cookie migration confirmed
-- [ ] **AUTH-05**: CSRF protection added for cookie-based auth (double-submit or synchronizer token pattern)
+- [x] **AUTH-05**: CSRF protection added for cookie-based auth (double-submit or synchronizer token pattern)
 
 ### API Client
 
@@ -77,11 +77,11 @@
 | CI-01 | Phase 21 | Complete |
 | CI-02 | Phase 21 | Complete |
 | CI-03 | Phase 21 | Complete |
-| AUTH-01 | Phase 21 | Pending |
-| AUTH-02 | Phase 21 | Pending |
+| AUTH-01 | Phase 21 | Complete |
+| AUTH-02 | Phase 21 | Complete |
 | AUTH-03 | Phase 21 | Pending |
 | AUTH-04 | Phase 21 | Pending |
-| AUTH-05 | Phase 21 | Pending |
+| AUTH-05 | Phase 21 | Complete |
 | API-01 | Phase 22 | Pending |
 | API-02 | Phase 22 | Pending |
 | API-03 | Phase 22 | Pending |
