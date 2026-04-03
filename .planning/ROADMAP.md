@@ -227,7 +227,7 @@ Plans:
 Plans:
 - [ ] 19-01-PLAN.md — Pipeline agent isolated tests (Commander/Scout/Thinker/Writer/QC) + LangGraph orchestrator node tests (CORE-01, CORE-02)
 - [x] 19-02-PLAN.md — Media orchestrator comprehensive tests: all 8 format handlers + credit ledger partial failure (CORE-03)
-- [ ] 19-03-PLAN.md — TDD LightRAG lambda injection fix + comprehensive isolation tests (CORE-05, CORE-09)
+- [x] 19-03-PLAN.md — TDD LightRAG lambda injection fix + comprehensive isolation tests (CORE-05, CORE-09)
 - [ ] 19-04-PLAN.md — n8n bridge contract tests for all execute endpoints + analytics feedback loop tests (CORE-04, CORE-07)
 - [ ] 19-05-PLAN.md — Strategist cadence/dismissal/throttle tests + Obsidian path sandboxing + 85% coverage gate (CORE-06, CORE-08, CORE-10)
 
@@ -265,5 +265,5 @@ Plans:
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
 | 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
 | 18. Security & Auth | v2.1 | 3/4 | Complete    | 2026-04-03 |
-| 19. Core Features | v2.1 | 1/5 | In Progress|  |
+| 19. Core Features | v2.1 | 2/5 | In Progress|  |
 | 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
