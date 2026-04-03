@@ -10,8 +10,7 @@ import {
   RefreshCw, Eye, Clock, Check, X, Send, Trash2, MoreVertical,
   Layers, Plus, ChevronRight, Download, Copy, ClipboardCheck, ChevronDown
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const PLATFORM_CONFIG = {
   linkedin: { name: "LinkedIn", icon: Linkedin, color: "bg-blue-600" },
@@ -52,10 +51,7 @@ export default function ContentLibrary() {
 
   const fetchContent = async () => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/content`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch('/api/content');
 
       if (!res.ok) throw new Error("Failed to fetch content");
       const data = await res.json();
@@ -69,10 +65,7 @@ export default function ContentLibrary() {
 
   const fetchSeries = async () => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/content/series`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch('/api/content/series');
 
       if (!res.ok) return;
       const data = await res.json();
@@ -98,16 +91,13 @@ export default function ContentLibrary() {
   const handleBulkExport = async (format) => {
     setShowExportMenu(false);
     try {
-      const token = localStorage.getItem("thook_token");
       const params = new URLSearchParams({ format });
       if (filterPlatform !== "all") params.set("platform", filterPlatform);
       if (filterStatus !== "all") params.set("status", filterStatus);
       if (exportFromDate) params.set("from_date", exportFromDate);
       if (exportToDate) params.set("to_date", exportToDate);
 
-      const res = await fetch(`${BACKEND_URL}/api/content/export/bulk?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch(`/api/content/export/bulk?${params.toString()}`);
 
       if (!res.ok) throw new Error("Export failed");
 

@@ -5,9 +5,7 @@ import { Zap, RefreshCw, Edit2, Check, X, Share2, Download, Copy, Globe, Externa
 import { useAuth } from "@/context/AuthContext";
 import PersonaShareModal from "@/components/PersonaShareModal";
 import VoiceCloneCard from "@/components/VoiceCloneCard";
-
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const ARCHETYPE_COLORS = {
   Educator: { bg: "bg-cyan-400/10", text: "text-cyan-400", border: "border-cyan-400/20" },
@@ -112,14 +110,14 @@ export default function PersonaEngine() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/persona/me`, { credentials: "include" });
+        const res = await apiFetch('/api/persona/me');
         if (res.ok) {
           const data = await res.json();
           setPersona(data);
           setSelectedRegion(data?.card?.regional_english || "US");
         }
         // Also fetch share status
-        const shareRes = await fetch(`${BACKEND_URL}/api/persona/share/status`, { credentials: "include" });
+        const shareRes = await apiFetch('/api/persona/share/status');
         if (shareRes.ok) {
           setShareStatus(await shareRes.json());
         }
@@ -131,10 +129,8 @@ export default function PersonaEngine() {
   const handleSaveField = async (field, value) => {
     const updatedCard = { ...persona.card, [field]: value };
     try {
-      await fetch(`${BACKEND_URL}/api/persona/me`, {
+      await apiFetch('/api/persona/me', {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ card: updatedCard }),
       });
       setPersona(p => ({ ...p, card: updatedCard }));
@@ -143,7 +139,7 @@ export default function PersonaEngine() {
 
   const handleReset = async () => {
     if (!window.confirm("Reset your Persona Engine and redo the interview?")) return;
-    await fetch(`${BACKEND_URL}/api/persona/me`, { method: "DELETE", credentials: "include" });
+    await apiFetch('/api/persona/me', { method: "DELETE" });
     await checkAuth(); // refresh user state so onboarding_completed=false
     navigate("/onboarding");
   };
@@ -189,10 +185,8 @@ export default function PersonaEngine() {
     setSelectedRegion(code);
     setShowRegionDropdown(false);
     try {
-      await fetch(`${BACKEND_URL}/api/persona/regional-english`, {
+      await apiFetch('/api/persona/regional-english', {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ regional_english: code }),
       });
       setPersona(p => ({ ...p, card: { ...p.card, regional_english: code } }));
@@ -214,10 +208,8 @@ export default function PersonaEngine() {
         platform: importPlatform,
         date: null,
       }));
-      const res = await fetch(`${BACKEND_URL}/api/onboarding/import-history`, {
+      const res = await apiFetch('/api/onboarding/import-history', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ posts, source: "manual_paste" }),
       });
       if (res.ok) {

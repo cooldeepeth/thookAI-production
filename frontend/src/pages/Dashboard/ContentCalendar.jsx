@@ -10,8 +10,7 @@ import {
   Linkedin, Twitter, Instagram, Plus, Trash2, Eye, Send,
   Sparkles, RefreshCw, Zap, AlertCircle, CheckCircle2
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const PLATFORM_ICONS = {
   linkedin: Linkedin,
@@ -50,10 +49,7 @@ export default function ContentCalendar() {
 
   const fetchScheduledContent = async () => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/dashboard/schedule/upcoming?limit=20`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch('/api/dashboard/schedule/upcoming?limit=20');
 
       if (!res.ok) throw new Error("Failed to fetch scheduled content");
       const data = await res.json();
@@ -68,10 +64,7 @@ export default function ContentCalendar() {
   const fetchWeeklySuggestions = async () => {
     setLoadingSuggestions(true);
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/dashboard/schedule/weekly?posts_per_week=5`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch('/api/dashboard/schedule/weekly?posts_per_week=5');
 
       if (!res.ok) throw new Error("Failed to fetch suggestions");
       const data = await res.json();
@@ -95,10 +88,8 @@ export default function ContentCalendar() {
 
   const cancelScheduled = async (jobId) => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/dashboard/schedule/${jobId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiFetch(`/api/dashboard/schedule/${jobId}`, {
+        method: "DELETE"
       });
 
       if (!res.ok) throw new Error("Failed to cancel");
@@ -117,10 +108,8 @@ export default function ContentCalendar() {
 
   const publishNow = async (jobId, platform) => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/dashboard/publish/${jobId}?platforms=${platform}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiFetch(`/api/dashboard/publish/${jobId}?platforms=${platform}`, {
+        method: "POST"
       });
 
       const data = await res.json();

@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Building2, Users, Plus, Mail, Shield, Crown, 
-  UserPlus, Settings, Trash2, Eye, Calendar, 
+import {
+  Building2, Users, Plus, Mail, Shield, Crown,
+  UserPlus, Settings, Trash2, Eye, Calendar,
   FileText, ChevronRight, Check, X, AlertCircle,
   Loader2
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const ROLE_BADGES = {
   owner: { label: "Owner", color: "bg-lime text-black" },
@@ -116,12 +115,10 @@ function InviteModal({ workspace, onClose, onSuccess }) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     try {
-      const res = await fetch(`${BACKEND_URL}/api/agency/workspace/${workspace.workspace_id}/invite`, {
+      const res = await apiFetch(`/api/agency/workspace/${workspace.workspace_id}/invite`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email, role }),
       });
       
@@ -224,12 +221,10 @@ function CreateWorkspaceModal({ onClose, onSuccess }) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     try {
-      const res = await fetch(`${BACKEND_URL}/api/agency/workspace`, {
+      const res = await apiFetch('/api/agency/workspace', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ name, description }),
       });
       
@@ -335,7 +330,7 @@ export default function AgencyWorkspace() {
   useEffect(() => {
     const fetchWorkspaces = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/agency/workspaces`, { credentials: "include" });
+        const res = await apiFetch('/api/agency/workspaces');
         const data = await res.json();
         
         if (res.status === 403) {
@@ -365,9 +360,8 @@ export default function AgencyWorkspace() {
     const fetchCreators = async () => {
       setCreatorsLoading(true);
       try {
-        const res = await fetch(
-          `${BACKEND_URL}/api/agency/workspace/${selectedWorkspace.workspace_id}/creators`,
-          { credentials: "include" }
+        const res = await apiFetch(
+          `/api/agency/workspace/${selectedWorkspace.workspace_id}/creators`
         );
         const data = await res.json();
         if (data.success) {

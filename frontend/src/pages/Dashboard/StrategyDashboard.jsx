@@ -12,8 +12,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import useStrategyFeed from "@/hooks/useStrategyFeed";
 import useNotifications from "@/hooks/useNotifications";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const PLATFORM_ICONS = {
   linkedin: Linkedin,
@@ -238,14 +237,8 @@ export default function StrategyDashboard() {
         throw new Error("Invalid generate payload — missing required fields");
       }
 
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/content/create`, {
+      const res = await apiFetch('/api/content/create', {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
         body: JSON.stringify(generatePayload),
       });
 

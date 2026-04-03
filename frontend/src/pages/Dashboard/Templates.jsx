@@ -18,8 +18,7 @@ import {
   createTemplate,
   deleteTemplate,
 } from "@/lib/templatesApi";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 const PAGE_SIZE = 20;
 
 // ==================== Share Template Dialog ====================
@@ -41,11 +40,7 @@ function ShareTemplateDialog({ onClose, onSubmit }) {
       setLoadingJobs(true);
       try {
         // Fetch approved content jobs
-        const token = localStorage.getItem("thook_token");
-        const res = await fetch(`${BACKEND_URL}/api/content?status=approved`, {
-          credentials: "include",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const res = await apiFetch('/api/content?status=approved');
         if (res.ok) {
           const data = await res.json();
           setJobs(data.jobs || []);

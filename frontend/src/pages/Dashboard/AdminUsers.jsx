@@ -23,8 +23,7 @@ import {
   Users, Search, ChevronLeft, ChevronRight, ShieldCheck,
   ArrowLeft, CreditCard, Ban, CheckCircle2, RefreshCw
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const TIER_COLORS = {
   free: "bg-zinc-700 text-zinc-300",
@@ -32,14 +31,6 @@ const TIER_COLORS = {
   studio: "bg-blue-500/20 text-blue-400",
   agency: "bg-lime/20 text-lime",
 };
-
-function getHeaders() {
-  const token = localStorage.getItem("thook_token");
-  return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-}
 
 export default function AdminUsers() {
   const { user } = useAuth();
@@ -68,10 +59,7 @@ export default function AdminUsers() {
       if (search) params.set("search", search);
       if (tierFilter) params.set("tier", tierFilter);
 
-      const res = await fetch(
-        `${BACKEND_URL}/api/admin/users?${params.toString()}`,
-        { headers: getHeaders() }
-      );
+      const res = await apiFetch(`/api/admin/users?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
@@ -105,11 +93,10 @@ export default function AdminUsers() {
     if (!creditsModal || !creditsAmount || !creditsReason) return;
     setActionLoading(true);
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/admin/users/${creditsModal.user_id}/credits`,
+      const res = await apiFetch(
+        `/api/admin/users/${creditsModal.user_id}/credits`,
         {
           method: "POST",
-          headers: getHeaders(),
           body: JSON.stringify({
             credits: parseInt(creditsAmount, 10),
             reason: creditsReason,
@@ -133,11 +120,10 @@ export default function AdminUsers() {
     if (!tierModal || !newTier) return;
     setActionLoading(true);
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/admin/users/${tierModal.user_id}/tier`,
+      const res = await apiFetch(
+        `/api/admin/users/${tierModal.user_id}/tier`,
         {
           method: "POST",
-          headers: getHeaders(),
           body: JSON.stringify({ tier: newTier }),
         }
       );
@@ -156,9 +142,9 @@ export default function AdminUsers() {
   const handleToggleSuspend = async (u) => {
     const endpoint = u.active === false ? "unsuspend" : "suspend";
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/admin/users/${u.user_id}/${endpoint}`,
-        { method: "POST", headers: getHeaders() }
+      const res = await apiFetch(
+        `/api/admin/users/${u.user_id}/${endpoint}`,
+        { method: "POST" }
       );
       if (res.ok) fetchUsers();
     } catch (err) {

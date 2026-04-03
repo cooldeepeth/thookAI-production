@@ -6,8 +6,7 @@ import {
   RefreshCw, Link2, BookOpen, Settings, Zap, LogOut, ChevronRight,
   Building2, LayoutTemplate, CreditCard, FolderOpen, ShieldCheck, Lightbulb
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -33,12 +32,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   useEffect(() => {
     const fetchCredits = async () => {
       try {
-        const token = localStorage.getItem("thook_token");
-        if (!token) return;
-        
-        const res = await fetch(`${BACKEND_URL}/api/billing/credits`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await apiFetch('/api/billing/credits');
         
         if (res.ok) {
           const data = await res.json();
