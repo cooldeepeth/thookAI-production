@@ -816,17 +816,17 @@ test.describe("E2E-02: Error Resilience", () => {
     await page.goto("/dashboard/studio");
     await page.waitForSelector('[data-testid="input-panel"]', { timeout: 10000 });
 
-    // Attempt generation
+    // Attempt generation — listen for response BEFORE clicking to avoid race
     await page.locator('[data-testid="content-input-textarea"]').fill(
       "Test content for error scenario"
     );
-    await page.locator('[data-testid="generate-content-btn"]').click();
-
-    // Wait for the request to complete
-    await page.waitForResponse(
-      (resp) => resp.url().includes("/api/content/create"),
-      { timeout: 10000 }
-    );
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes("/api/content/create"),
+        { timeout: 15000 }
+      ),
+      page.locator('[data-testid="generate-content-btn"]').click(),
+    ]);
 
     // Assert error is shown somewhere on page — check multiple possible selectors
     const errorElements = [
