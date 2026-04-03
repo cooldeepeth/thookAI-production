@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
-status: roadmap_complete
-stopped_at: null
-last_updated: "2026-04-04"
-last_activity: 2026-04-04
+status: executing
+stopped_at: Completed 21-01-PLAN.md (CI strictness — remove all continue-on-error)
+last_updated: "2026-04-03T20:47:02.985Z"
+last_activity: 2026-04-03
 progress:
-  total_phases: 5
+  total_phases: 17
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Proactive, personalized content creation at scale — hardened for production launch.
-**Current focus:** v2.2 Frontend Hardening & Production Ship — Phase 21 next
+**Current focus:** Phase 21 — ci-strictness-httponly-cookie-auth
 
 ## Current Position
 
-Phase: Phase 21 — CI Strictness + httpOnly Cookie Auth Migration
-Plan: Not started
-Status: Roadmap defined, ready to plan Phase 21
-Last activity: 2026-04-04 — v2.2 roadmap created (5 phases, 31 requirements mapped)
+Phase: 21 (ci-strictness-httponly-cookie-auth) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P05 | 8 | 2 tasks | 2 files |
 | Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
 | Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
+| Phase 21-ci-strictness-httponly-cookie-auth P01 | 525599 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [v2.2 Roadmap]: Phase 21 must complete CI strictness before auth migration — a broken test must block CI before we can trust the cookie auth changes are safe
 - [v2.2 Roadmap]: Phase 22 apiFetch depends on Phase 21 cookie auth — apiFetch must default to credentials: 'include' for the cookie session to work
 - [v2.2 Roadmap]: Phase 23 frontend tests depend on Phase 22 — apiFetch must be stable before MSW mocks can reliably intercept it
+- [Phase 21-ci-strictness-httponly-cookie-auth]: Removed all 4 continue-on-error directives from CI workflows — any test failure now causes hard red CI status
+- [Phase 21-ci-strictness-httponly-cookie-auth]: Pre-existing event loop closure failure in test_api_routes_alive.py documented but not fixed in plan 01 — will correctly block CI going forward
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T00:00:00.000Z
-Stopped at: v2.2 roadmap defined — ready to start Phase 21
+Last session: 2026-04-03T20:47:02.982Z
+Stopped at: Completed 21-01-PLAN.md (CI strictness — remove all continue-on-error)
 Resume file: None

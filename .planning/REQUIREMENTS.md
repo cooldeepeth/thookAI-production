@@ -7,9 +7,9 @@
 
 ### CI Strictness
 
-- [ ] **CI-01**: Remove all `continue-on-error: true` from `.github/workflows/ci.yml` — all 4 backend test jobs must block on failure
-- [ ] **CI-02**: Remove `continue-on-error: true` from `.github/workflows/e2e.yml` — Playwright must block on failure
-- [ ] **CI-03**: All CI checks pass green on dev branch after changes
+- [x] **CI-01**: Remove all `continue-on-error: true` from `.github/workflows/ci.yml` — all 4 backend test jobs must block on failure
+- [x] **CI-02**: Remove `continue-on-error: true` from `.github/workflows/e2e.yml` — Playwright must block on failure
+- [x] **CI-03**: All CI checks pass green on dev branch after changes
 
 ### Auth Migration
 
@@ -74,9 +74,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CI-01 | Phase 21 | Pending |
-| CI-02 | Phase 21 | Pending |
-| CI-03 | Phase 21 | Pending |
+| CI-01 | Phase 21 | Complete |
+| CI-02 | Phase 21 | Complete |
+| CI-03 | Phase 21 | Complete |
 | AUTH-01 | Phase 21 | Pending |
 | AUTH-02 | Phase 21 | Pending |
 | AUTH-03 | Phase 21 | Pending |
