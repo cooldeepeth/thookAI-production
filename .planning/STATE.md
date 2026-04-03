@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Frontend Hardening & Production Ship
+milestone: v1.0
+milestone_name: milestone
 status: executing
-stopped_at: Completed 22-01-PLAN.md — API client foundation complete (constants.js + enhanced apiFetch)
-last_updated: "2026-04-03T21:13:50.528Z"
-last_activity: 2026-04-03
+stopped_at: Completed 06-media-generation-analytics/06-03-PLAN.md
+last_updated: "2026-03-31T10:55:00.958Z"
+last_activity: 2026-03-31
 progress:
-  total_phases: 17
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 4
+  total_phases: 7
+  completed_phases: 6
+  total_plans: 20
+  completed_plans: 17
   percent: 0
 ---
 
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-04)
+See: .planning/PROJECT.md (updated 2026-03-31)
 
-**Core value:** Proactive, personalized content creation at scale — hardened for production launch.
-**Current focus:** Phase 22 — apifetch-migration-error-handling
+**Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
+**Current focus:** Phase 07 — Platform Features, Admin & Frontend Quality
 
 ## Current Position
 
-Phase: 22 (apifetch-migration-error-handling) — EXECUTING
-Plan: 2 of 3
+Phase: 07 (Platform Features, Admin & Frontend Quality) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-04-03
+Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,20 +52,15 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
-| Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
-| Phase 19-core-features P02 | 3 | 1 tasks | 2 files |
-| Phase 19-core-features P03 | 5 | 2 tasks | 4 files |
-| Phase 19-core-features P04 | 6 | 2 tasks | 2 files |
-| Phase 19-core-features P05 | 824 | 2 tasks | 3 files |
-| Phase 20-frontend-e2e-integration P02 | 4 | 2 tasks | 5 files |
-| Phase 20-frontend-e2e-integration P01 | 5 | 2 tasks | 10 files |
-| Phase 20-frontend-e2e-integration P05 | 8 | 2 tasks | 2 files |
-| Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
-| Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
-| Phase 21-ci-strictness-httponly-cookie-auth P01 | 525599 | 2 tasks | 2 files |
-| Phase 21-ci-strictness-httponly-cookie-auth P02 | 8 | 1 tasks | 4 files |
-| Phase 21-ci-strictness-httponly-cookie-auth P03 | 2 | 2 tasks | 3 files |
-| Phase 22-apifetch-migration-error-handling P01 | 242 | 2 tasks | 2 files |
+| Phase 03 P03 | 8 | 2 tasks | 2 files |
+| Phase 04 P01 | 5 | 2 tasks | 1 files |
+| Phase 04-content-pipeline P02 | 3 | 2 tasks | 1 files |
+| Phase 05-publishing-scheduling-billing P02 | 4 | 2 tasks | 3 files |
+| Phase 05-publishing-scheduling-billing P01 | 6 | 2 tasks | 4 files |
+| Phase 05-publishing-scheduling-billing P03 | 2 | 2 tasks | 2 files |
+| Phase 06-media-generation-analytics P01 | 3 | 2 tasks | 1 files |
+| Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
+| Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -79,36 +74,22 @@ Recent decisions affecting current work:
 - PR #30 included: Custom plan builder (pricing pivot) is final direction, merge into dev in Phase 1
 - Billing changes: Flag for human review — no auto-merge on billing code
 - Verification standard: Manual E2E + automated tests required — 59 existing tests missed real bugs
-- [Phase 18-04]: Patch 'database.db' (not 'auth_utils.db') for auth_utils lazy db imports; patch 'routes.X.db' for module-level imports
-- [Phase 18-04]: Agency router self-declares prefix — mount at '/api' not '/api/agency' in test apps to avoid double prefix
-- [Phase 19-core-features]: Used function-level patch context managers for media test isolation — avoids cross-test state leakage from singleton module-level handlers
-- [Phase 19-03]: Option B (sanitized lambda) chosen for LightRAG user_id filter: re.sub strips dangerous chars, reject-on-mismatch returns empty string — no API contract change needed
-- [Phase 19-03]: LightRAG test pattern: patch LIGHTRAG_URL and LIGHTRAG_API_KEY as module-level globals directly, not via importlib.reload which re-reads real settings
-- [Phase 19-04]: Patch 'database.db' not 'routes.n8n_bridge.db' for execute endpoint tests because all endpoints use lazy 'from database import db' inside function bodies
-- [Phase 19-04]: Module-level attribute swap for strategist tests: directly replace agents.strategist.run_strategist_for_all_users with AsyncMock and restore in finally block
-- [Phase 19-05]: Split exact-match suppression test into two independent tests to avoid event-loop-closed mock reuse bug
-- [Phase 19-05]: CORE-10 85% gate applies to core v2.0 modules (strategist 87.4%, obsidian_service 92.4%, lightrag 100%, strategy routes 100%) — overall 49.78% depressed by untested media/viral/uom modules outside sprint scope
-- [Phase 20-02]: Locust excluded from requirements.txt — installed separately as dev/CI tool (pip install locust>=2.43.4)
-- [Phase 20-02]: norecursedirs used (not collect_ignore_glob) to exclude tests/load from pytest collection — collect_ignore_glob caused PytestConfigWarning
-- [Phase 20-01]: Chromium-only Playwright install to reduce CI download time and keep setup fast
-- [Phase 20-01]: Node 20 in CI for Playwright (18+ recommended, 20 best supported)
-- [Phase 20-01]: reuseExistingServer in local mode so devs don't need to restart servers for each test run
-- [Phase 20-frontend-e2e-integration]: Used isolated FastAPI app (no lifespan) with ASGITransport for route liveness tests to avoid real DB/Redis connections; dual-patched database.db and routes.<mod>.db for lazy vs module-level imports
-- [Phase 20-frontend-e2e-integration]: fetchBillingApi helper: passes API base URL as serialized arg to page.evaluate() — process.env not available in browser context
-- [Phase 20-frontend-e2e-integration]: LIFO route ordering: mockWorkspaceContext must be applied after mockAgencyEndpoints to override overlapping workspaces route
-- [Phase 20-03]: Serial test.describe used for critical path steps — each step depends on shared mock auth state from previous steps
-- [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
-- [v2.2 Roadmap]: Phase 21 must complete CI strictness before auth migration — a broken test must block CI before we can trust the cookie auth changes are safe
-- [v2.2 Roadmap]: Phase 22 apiFetch depends on Phase 21 cookie auth — apiFetch must default to credentials: 'include' for the cookie session to work
-- [v2.2 Roadmap]: Phase 23 frontend tests depend on Phase 22 — apiFetch must be stable before MSW mocks can reliably intercept it
-- [Phase 21-ci-strictness-httponly-cookie-auth]: Removed all 4 continue-on-error directives from CI workflows — any test failure now causes hard red CI status
-- [Phase 21-ci-strictness-httponly-cookie-auth]: Pre-existing event loop closure failure in test_api_routes_alive.py documented but not fixed in plan 01 — will correctly block CI going forward
-- [Phase 21-02]: CSRF double-submit cookie: Bearer auth bypasses; no session_token cookie = no CSRF check; csrf_token cookie httpOnly=False intentionally
-- [Phase 21-ci-strictness-httponly-cookie-auth]: Google OAuth token param flow kept for backward compat but token no longer saved to browser storage — session_token cookie set by backend callback is the session source of truth
-- [Phase 21-ci-strictness-httponly-cookie-auth]: apiFetch CSRF pattern: getCsrfToken() reads csrf_token cookie; injects X-CSRF-Token header on POST/PUT/PATCH/DELETE; GET/HEAD excluded per spec
-- [Phase 21-ci-strictness-httponly-cookie-auth]: Dashboard component localStorage cleanup deferred to Phase 22 apiFetch migration — backend get_current_user accepts both Bearer+cookie for backward compat
-- [Phase 22-apifetch-migration-error-handling]: Return raw Response from apiFetch for backward compatibility — callers still call .json() until migration is complete
-- [Phase 22-apifetch-migration-error-handling]: Retry all HTTP methods once on 5xx — backend should be idempotent, spec said no method restriction
+- [Phase 03]: AUTH-05 verified: claude-sonnet-4-20250514 is correct model name in both analyze-posts and generate-persona endpoints
+- [Phase 03]: AUTH-06 verified: Persona Engine has voice_fingerprint, content_identity, uom, learning_signals; smart fallback produces archetype-specific non-generic personas
+- [Phase 03]: Source transparency: generate-persona returns source field (llm|smart_fallback) so frontend can show notice when fallback used
+- [Phase 04]: Mock langgraph.graph at sys.modules level to allow testing orchestrator pure functions in envs without langgraph installed
+- [Phase 04-content-pipeline]: Stale job cleanup only targets status='running' — all jobs start with this status in content routes
+- [Phase 05]: Use find_one_and_update with credits >= amount filter for atomic deduction — eliminates race condition without transactions
+- [Phase 05]: Platform restriction in route handler (not credits service) — keeps billing concerns separate from access control
+- [Phase 05-01]: Test httpx.AsyncClient (not publisher function) to verify real HTTP dispatch code path
+- [Phase 05-01]: Extracted _run_scheduled_posts_inner to module level for unit-testable scheduled post processing
+- [Phase 05-publishing-scheduling-billing]: validate_stripe_config runs on module import so startup warnings appear in logs immediately
+- [Phase 05-publishing-scheduling-billing]: Task 2 regression check required zero test file changes — all 222 tests passed cleanly
+- [Phase 06-01]: Pre-existing test_uploads_media_storage.py failures (7 tests) are out of scope — confirmed pre-existing before this plan's changes
+- [Phase 06-01]: TDD approach: wrote all 28 tests before any agent code changes — all passed immediately because agents already implemented correctly
+- [Phase 06-02]: Use app.dependency_overrides[get_current_user] (not patch) for auth bypass in FastAPI route tests
+- [Phase 06-02]: Mount upload router at root (no prefix) in TestClient apps to avoid double-prefix path issues
+- [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
 
 ### Pending Todos
 
@@ -124,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T21:13:50.524Z
-Stopped at: Completed 22-01-PLAN.md — API client foundation complete (constants.js + enhanced apiFetch)
+Last session: 2026-03-31T07:31:15.460Z
+Stopped at: Completed 06-media-generation-analytics/06-03-PLAN.md
 Resume file: None
