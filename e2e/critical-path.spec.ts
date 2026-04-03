@@ -867,11 +867,19 @@ test.describe("E2E-02: Error Resilience", () => {
       });
     });
 
-    // Also mock any other API calls to return 401
+    // Also mock any other API calls (non-auth) to return 401
+    // auth/me is already handled by the specific route above — Playwright
+    // applies the most-recently-registered matching route first, so the
+    // specific /api/auth/me handler takes precedence; this catch-all only
+    // fires for paths that don't match /api/auth/me.
     await page.route("**/api/**", (route) => {
-      // Let auth/me proceed (already mocked above)
+      // Re-fulfill auth/me as 401 here too (belt-and-suspenders)
       if (route.request().url().includes("/api/auth/me")) {
-        route.continue();
+        route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ detail: "Token expired" }),
+        });
         return;
       }
       route.fulfill({
