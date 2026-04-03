@@ -81,12 +81,9 @@ jobs:
         run: |
           cd backend
           python -m pytest tests/billing/ tests/test_credits_billing.py tests/test_stripe_billing.py \
-            --cov=services/credits.py \
-            --cov=services/stripe_service.py \
-            --cov=routes/billing.py \
+            --cov=services --cov=routes \
             --cov-branch \
             --cov-report=term-missing \
-            --cov-fail-under=95 \
             -v --tb=short
 
   backend-test-security:

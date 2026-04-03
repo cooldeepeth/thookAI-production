@@ -19,6 +19,11 @@ def _make_stripe_event(event_id: str, event_type: str, data: dict) -> dict:
 @pytest.mark.asyncio
 class TestWebhookDeduplication:
 
+    @pytest.fixture(autouse=True)
+    async def _ensure_unique_index(self, mongomock_db):
+        """Create the unique index on stripe_events.event_id for dedup tests."""
+        await mongomock_db.stripe_events.create_index("event_id", unique=True)
+
     async def test_first_event_processes_successfully(self, mongomock_db):
         """First delivery of a Stripe event processes and returns success."""
         event = _make_stripe_event("evt_first_001", "checkout.session.completed", {
