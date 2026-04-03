@@ -54,7 +54,7 @@
 - [x] **Phase 21: CI Strictness + httpOnly Cookie Auth Migration** - Remove all CI blind spots (continue-on-error), then migrate auth from localStorage JWT to httpOnly secure cookies with CSRF protection (completed 2026-04-03)
 - [x] **Phase 22: apiFetch Migration + Error Handling** - Create centralized fetch wrapper with timeout, retry, error handling, and replace all 41 raw fetch() calls across the frontend (completed 2026-04-03)
 - [ ] **Phase 23: Frontend Unit Test Suite** - Install testing libraries, configure Jest, write 45+ unit/component tests across 10+ files, wire into CI
-- [ ] **Phase 24: Content Download + Redirect-to-Platform** - Download text/images/zip from content detail view, open-in-platform compose URL buttons for LinkedIn and X
+- [x] **Phase 24: Content Download + Redirect-to-Platform** - Download text/images/zip from content detail view, open-in-platform compose URL buttons for LinkedIn and X (completed 2026-04-03)
 - [ ] **Phase 25: E2E Verification + Production Ship Checklist** - Full Playwright E2E verification, dependency audit, security sweep, env documentation, and ship checklist
 
 ## Phase Details
@@ -325,7 +325,7 @@ Plans:
   6. All download and redirect buttons appear in the content detail view alongside the existing Publish button — the layout is not broken on mobile viewports
 **Plans**: 1 plan
 Plans:
-- [ ] 24-01-PLAN.md — contentExport utilities + ExportActionsBar component + ContentOutput wiring
+- [x] 24-01-PLAN.md — contentExport utilities + ExportActionsBar component + ContentOutput wiring
 **UI hint**: yes
 
 ### Phase 25: E2E Verification + Production Ship Checklist
@@ -368,5 +368,5 @@ Plans:
 | 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 3/3 | Complete    | 2026-04-03 |
 | 22. apiFetch Migration + Error Handling | v2.2 | 2/3 | Complete    | 2026-04-03 |
 | 23. Frontend Unit Test Suite | v2.2 | 0/TBD | Not started | - |
-| 24. Content Download + Redirect-to-Platform | v2.2 | 0/TBD | Not started | - |
+| 24. Content Download + Redirect-to-Platform | v2.2 | 1/1 | Complete   | 2026-04-03 |
 | 25. E2E Verification + Production Ship Checklist | v2.2 | 0/TBD | Not started | - |

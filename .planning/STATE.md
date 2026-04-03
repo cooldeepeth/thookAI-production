@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
 status: executing
-stopped_at: Completed 06-media-generation-analytics/06-03-PLAN.md
-last_updated: "2026-04-03T21:31:36.996Z"
+stopped_at: Completed 24-content-download-redirect-to-platform/24-01-PLAN.md
+last_updated: "2026-04-03T21:46:28.319Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 17
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 3
+  total_plans: 10
+  completed_plans: 7
   percent: 0
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 07 — Platform Features, Admin & Frontend Quality
+**Current focus:** Phase 23 — frontend-unit-test-suite
 
 ## Current Position
 
-Phase: 23
-Plan: Not started
+Phase: 23 (frontend-unit-test-suite) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-media-generation-analytics P01 | 3 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
+| Phase 24-content-download-redirect-to-platform P01 | 12 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 06-02]: Use app.dependency_overrides[get_current_user] (not patch) for auth bypass in FastAPI route tests
 - [Phase 06-02]: Mount upload router at root (no prefix) in TestClient apps to avoid double-prefix path issues
 - [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
+- [Phase 24-01]: Used URLSearchParams for platform URL building — avoids manual encoding bugs
+- [Phase 24-01]: ExportActionsBar visible whenever bodyText exists (not just approved jobs) — allows draft content export
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T07:31:15.460Z
-Stopped at: Completed 06-media-generation-analytics/06-03-PLAN.md
+Last session: 2026-04-03T21:46:28.315Z
+Stopped at: Completed 24-content-download-redirect-to-platform/24-01-PLAN.md
 Resume file: None
