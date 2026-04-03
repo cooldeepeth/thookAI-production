@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
 status: executing
-stopped_at: Completed 17-test-foundation-billing-payments/17-03-PLAN.md
-last_updated: "2026-04-03T03:26:25.142Z"
+stopped_at: Completed 17-test-foundation-billing-payments/17-02-PLAN.md
+last_updated: "2026-04-03T03:34:33.746Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 07 (Platform Features, Admin & Frontend Quality) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
 | Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
 | Phase 17-test-foundation-billing-payments P03 | 2 | 1 tasks | 1 files |
+| Phase 17-test-foundation-billing-payments P02 | 9 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
 - [Phase 17-03]: Billing CI job uses continue-on-error=true until Phase 17 billing tests satisfy the 95% coverage gate
 - [Phase 17-03]: CI matrix uses 4 domain-specific jobs (billing 95%, security 85%, pipeline 85%, general no gate) for fast feedback and domain-isolated failure
+- [Phase 17-02]: TDD RED commit before GREEN fix: each P0 bug got a failing test committed before the production fix
+- [Phase 17-02]: stripe_events collection with unique event_id index provides O(1) webhook dedup; 7d TTL prevents unbounded growth
+- [Phase 17-02]: _TEST_JWT_SECRET constant in test helpers after removing fallback secret; tests patch auth_utils.settings.security to match
 
 ### Pending Todos
 
@@ -108,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T03:26:25.139Z
-Stopped at: Completed 17-test-foundation-billing-payments/17-03-PLAN.md
+Last session: 2026-04-03T03:34:33.742Z
+Stopped at: Completed 17-test-foundation-billing-payments/17-02-PLAN.md
 Resume file: None
