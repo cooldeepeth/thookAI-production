@@ -1,0 +1,12 @@
+{
+  "name": "thookai-e2e",
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  },
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:smoke": "playwright test e2e/smoke.spec.ts"
+  }
+}
