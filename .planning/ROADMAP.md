@@ -42,7 +42,7 @@
 
 - [x] **Phase 17: Test Foundation + Billing & Payments** - Clean CI baseline, coverage infrastructure, standardized fixtures, CI matrix, then 255 billing tests with TDD fixes for 3 P0 bugs (completed 2026-04-03)
 - [x] **Phase 18: Security & Auth** - 100 tests covering JWT, OAuth (all 4 platforms), rate limiting, security headers, input validation, RBAC, and OWASP Top 10 (completed 2026-04-03)
-- [ ] **Phase 19: Core Features** - 240 tests covering content pipeline, LangGraph orchestrator, media orchestration, n8n bridge, LightRAG, Strategist Agent, analytics, Obsidian, with LightRAG lambda TDD fix
+- [x] **Phase 19: Core Features** - 240 tests covering content pipeline, LangGraph orchestrator, media orchestration, n8n bridge, LightRAG, Strategist Agent, analytics, Obsidian, with LightRAG lambda TDD fix (completed 2026-04-03)
 - [ ] **Phase 20: Frontend E2E & Integration** - Playwright setup, critical path E2E, billing E2E, agency workspace E2E, load testing, Docker Compose smoke, dead link detection
 
 ## Phase Details
@@ -229,7 +229,7 @@ Plans:
 - [x] 19-02-PLAN.md — Media orchestrator comprehensive tests: all 8 format handlers + credit ledger partial failure (CORE-03)
 - [x] 19-03-PLAN.md — TDD LightRAG lambda injection fix + comprehensive isolation tests (CORE-05, CORE-09)
 - [x] 19-04-PLAN.md — n8n bridge contract tests for all execute endpoints + analytics feedback loop tests (CORE-04, CORE-07)
-- [ ] 19-05-PLAN.md — Strategist cadence/dismissal/throttle tests + Obsidian path sandboxing + 85% coverage gate (CORE-06, CORE-08, CORE-10)
+- [x] 19-05-PLAN.md — Strategist cadence/dismissal/throttle tests + Obsidian path sandboxing + 85% coverage gate (CORE-06, CORE-08, CORE-10)
 
 ### Phase 20: Frontend E2E & Integration
 **Goal**: The full user journey is verified end-to-end via Playwright, the system holds under 50-concurrent-user load, Docker Compose brings all services to healthy, and every URL in the platform resolves — the platform is ready for public announcement
@@ -265,5 +265,5 @@ Plans:
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
 | 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
 | 18. Security & Auth | v2.1 | 3/4 | Complete    | 2026-04-03 |
-| 19. Core Features | v2.1 | 4/5 | In Progress|  |
+| 19. Core Features | v2.1 | 5/5 | Complete   | 2026-04-03 |
 | 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
