@@ -305,7 +305,11 @@ Plans:
   3. apiFetch tests verify timeout enforcement, retry-on-5xx, 401 redirect behavior, and JSON parsing using MSW request interception — no real network calls are made
   4. Component tests for StrategyDashboard, ContentStudio, Sidebar, and NotificationBell render correctly given mocked API responses — no snapshot-only tests (behavior is verified)
   5. The `frontend-test` CI job in `.github/workflows/ci.yml` runs on every push and blocks merge on failure
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 23-01-PLAN.md — Install testing packages, configure Jest moduleNameMapper, create MSW server + default handlers
+- [ ] 23-02-PLAN.md — apiFetch unit tests (22), AuthContext tests (10), useStrategyFeed + useNotifications hook tests (16)
+- [ ] 23-03-PLAN.md — NotificationBell + Sidebar + StrategyDashboard + ContentStudio component tests (30), frontend-test CI job
 **UI hint**: yes
 
 ### Phase 24: Content Download + Redirect-to-Platform
@@ -319,7 +323,9 @@ Plans:
   4. Clicking "Open in X" opens a new tab to the X tweet intent URL with the post text pre-filled and within the character limit
   5. The Instagram button shows an inline tooltip explaining that Instagram has no web compose URL and walks the user through copy-paste workflow — no broken link or dead button
   6. All download and redirect buttons appear in the content detail view alongside the existing Publish button — the layout is not broken on mobile viewports
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 24-01-PLAN.md — contentExport utilities + ExportActionsBar component + ContentOutput wiring
 **UI hint**: yes
 
 ### Phase 25: E2E Verification + Production Ship Checklist
