@@ -7,9 +7,9 @@
 
 ### Test Foundation
 
-- [ ] **FOUND-01**: Clean test baseline — fix 3 existing failures, enforce `filterwarnings = error::RuntimeWarning`, add `pytest-randomly`
-- [ ] **FOUND-02**: Coverage infrastructure — `pytest-cov` with `.coveragerc` (`concurrency = greenlet,thread`), branch coverage enabled, `--cov-branch` flag
-- [ ] **FOUND-03**: Standardized test fixtures in root `conftest.py` — async client factory, mock DB factory, mock user factory, respx mock factory
+- [x] **FOUND-01**: Clean test baseline — fix 3 existing failures, enforce `filterwarnings = error::RuntimeWarning`, add `pytest-randomly`
+- [x] **FOUND-02**: Coverage infrastructure — `pytest-cov` with `.coveragerc` (`concurrency = greenlet,thread`), branch coverage enabled, `--cov-branch` flag
+- [x] **FOUND-03**: Standardized test fixtures in root `conftest.py` — async client factory, mock DB factory, mock user factory, respx mock factory
 - [ ] **FOUND-04**: CI matrix configuration — separate jobs per domain (billing, security, pipeline, e2e) with per-domain coverage thresholds
 
 ### Billing & Payments
@@ -85,9 +85,9 @@ Deferred beyond v2.1.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 17 | Pending |
-| FOUND-02 | Phase 17 | Pending |
-| FOUND-03 | Phase 17 | Pending |
+| FOUND-01 | Phase 17 | Complete |
+| FOUND-02 | Phase 17 | Complete |
+| FOUND-03 | Phase 17 | Complete |
 | FOUND-04 | Phase 17 | Pending |
 | BILL-01 | Phase 17 | Pending |
 | BILL-02 | Phase 17 | Pending |

@@ -189,7 +189,7 @@ Plans:
   5. The JWT fallback path that previously accepted malformed tokens now returns 401 — a failing test exposes the bug before the production fix lands
 **Plans**: 5 plans
 Plans:
-- [ ] 17-01-PLAN.md — Clean CI baseline: fix 3 broken tests, fix 6 unawaited coroutines, install 6 packages, coverage infrastructure, standardize conftest.py fixtures
+- [x] 17-01-PLAN.md — Clean CI baseline: fix 3 broken tests, fix 6 unawaited coroutines, install 6 packages, coverage infrastructure, standardize conftest.py fixtures
 - [ ] 17-02-PLAN.md — TDD fix 3 P0 bugs: JWT fallback secret, non-atomic add_credits, missing webhook deduplication
 - [ ] 17-03-PLAN.md — CI matrix: 4 domain-specific test jobs with per-domain coverage thresholds
 - [ ] 17-04-PLAN.md — Billing tests: checkout flows, subscription lifecycle, volume pricing (~120 tests)
@@ -252,7 +252,7 @@ Plans:
 | 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
-| 17. Test Foundation + Billing & Payments | v2.1 | 0/5 | In progress | - |
+| 17. Test Foundation + Billing & Payments | v2.1 | 1/5 | In Progress|  |
 | 18. Security & Auth | v2.1 | 0/TBD | Not started | - |
 | 19. Core Features | v2.1 | 0/TBD | Not started | - |
 | 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
