@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
-status: defining_requirements
+status: roadmap_complete
 stopped_at: null
 last_updated: "2026-04-04"
 last_activity: 2026-04-04
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Proactive, personalized content creation at scale — hardened for production launch.
-**Current focus:** Defining requirements for v2.2 — Frontend Hardening & Production Ship
+**Current focus:** v2.2 Frontend Hardening & Production Ship — Phase 21 next
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-04 — Milestone v2.2 started
+Phase: Phase 21 — CI Strictness + httpOnly Cookie Auth Migration
+Plan: Not started
+Status: Roadmap defined, ready to plan Phase 21
+Last activity: 2026-04-04 — v2.2 roadmap created (5 phases, 31 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -94,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 20-frontend-e2e-integration]: LIFO route ordering: mockWorkspaceContext must be applied after mockAgencyEndpoints to override overlapping workspaces route
 - [Phase 20-03]: Serial test.describe used for critical path steps — each step depends on shared mock auth state from previous steps
 - [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
+- [v2.2 Roadmap]: Phase 21 must complete CI strictness before auth migration — a broken test must block CI before we can trust the cookie auth changes are safe
+- [v2.2 Roadmap]: Phase 22 apiFetch depends on Phase 21 cookie auth — apiFetch must default to credentials: 'include' for the cookie session to work
+- [v2.2 Roadmap]: Phase 23 frontend tests depend on Phase 22 — apiFetch must be stable before MSW mocks can reliably intercept it
 
 ### Pending Todos
 
@@ -109,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T08:19:22.840Z
-Stopped at: Completed 20-frontend-e2e-integration/20-03-PLAN.md
+Last session: 2026-04-04T00:00:00.000Z
+Stopped at: v2.2 roadmap defined — ready to start Phase 21
 Resume file: None

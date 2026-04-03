@@ -4,7 +4,8 @@
 
 - v1.0 ThookAI Stabilization — Phases 1-8 (shipped 2026-04-01) — [archive](milestones/v1.0-ROADMAP.md)
 - v2.0 Intelligent Content Operating System — Phases 9-16 (shipped 2026-04-01)
-- v2.1 Production Hardening — 50x Testing Sprint — Phases 17-20 (in progress)
+- v2.1 Production Hardening — 50x Testing Sprint — Phases 17-20 (shipped 2026-04-03)
+- v2.2 Frontend Hardening & Production Ship — Phases 21-25 (in progress)
 
 ## Phases
 
@@ -36,14 +37,25 @@
 
 </details>
 
-### v2.1 Production Hardening — 50x Testing Sprint (In Progress)
-
-**Milestone Goal:** Comprehensive testing before public launch. 700+ net new tests using TDD approach: write failing tests to expose bugs first, then fix. Target 1,050+ total tests, 85%+ line/branch coverage globally, 95%+ branch coverage on billing, zero P0 failures.
+<details>
+<summary>v2.1 Production Hardening — 50x Testing Sprint (Phases 17-20) — SHIPPED 2026-04-03</summary>
 
 - [x] **Phase 17: Test Foundation + Billing & Payments** - Clean CI baseline, coverage infrastructure, standardized fixtures, CI matrix, then 255 billing tests with TDD fixes for 3 P0 bugs (completed 2026-04-03)
 - [x] **Phase 18: Security & Auth** - 100 tests covering JWT, OAuth (all 4 platforms), rate limiting, security headers, input validation, RBAC, and OWASP Top 10 (completed 2026-04-03)
 - [x] **Phase 19: Core Features** - 240 tests covering content pipeline, LangGraph orchestrator, media orchestration, n8n bridge, LightRAG, Strategist Agent, analytics, Obsidian, with LightRAG lambda TDD fix (completed 2026-04-03)
 - [x] **Phase 20: Frontend E2E & Integration** - Playwright setup, critical path E2E, billing E2E, agency workspace E2E, load testing, Docker Compose smoke, dead link detection (completed 2026-04-03)
+
+</details>
+
+### v2.2 Frontend Hardening & Production Ship (In Progress)
+
+**Milestone Goal:** Harden the React frontend for production launch — CI strictness, httpOnly cookie auth, centralized API client, frontend unit tests, content download/redirect feature, final E2E verification and ship.
+
+- [ ] **Phase 21: CI Strictness + httpOnly Cookie Auth Migration** - Remove all CI blind spots (continue-on-error), then migrate auth from localStorage JWT to httpOnly secure cookies with CSRF protection
+- [ ] **Phase 22: apiFetch Migration + Error Handling** - Create centralized fetch wrapper with timeout, retry, error handling, and replace all 41 raw fetch() calls across the frontend
+- [ ] **Phase 23: Frontend Unit Test Suite** - Install testing libraries, configure Jest, write 45+ unit/component tests across 10+ files, wire into CI
+- [ ] **Phase 24: Content Download + Redirect-to-Platform** - Download text/images/zip from content detail view, open-in-platform compose URL buttons for LinkedIn and X
+- [ ] **Phase 25: E2E Verification + Production Ship Checklist** - Full Playwright E2E verification, dependency audit, security sweep, env documentation, and ship checklist
 
 ## Phase Details
 
@@ -249,6 +261,72 @@ Plans:
 - [x] 20-04-PLAN.md — Billing E2E + Agency workspace E2E (E2E-03, E2E-04)
 - [x] 20-05-PLAN.md — Dead link detection: static analysis + dynamic API route liveness (E2E-07)
 
+### Phase 21: CI Strictness + httpOnly Cookie Auth Migration
+**Goal**: Every CI failure is a hard failure (no silent blind spots), and all frontend auth is migrated from localStorage JWT to httpOnly secure cookies with CSRF protection
+**Depends on**: Phase 20 (v2.1 complete, Playwright E2E passing)
+**Requirements**: CI-01, CI-02, CI-03, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05
+**Success Criteria** (what must be TRUE):
+  1. A deliberate test failure in any backend test job or the Playwright E2E job causes the CI run to fail with a red status — no job can pass while tests are broken due to continue-on-error
+  2. User can log in and the browser receives a Set-Cookie header with httpOnly and Secure flags — no JWT token is written to localStorage after the migration is complete
+  3. A subsequent page reload after login shows the user as authenticated without any JavaScript reading from localStorage — the session is established purely via cookie
+  4. A request to any protected API route with a forged CSRF token (or missing CSRF token) is rejected with 403 — the double-submit or synchronizer token pattern blocks cross-site request forgery
+  5. Existing Authorization header-based auth (for non-browser API clients) continues to work alongside cookie auth — no regression for direct API consumers
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 22: apiFetch Migration + Error Handling
+**Goal**: Every HTTP request in the React frontend flows through a single centralized client with consistent timeout, retry, error handling, and 401/403/5xx behavior — no raw fetch() calls remain
+**Depends on**: Phase 21 (cookie auth in place — apiFetch must send cookies by default)
+**Requirements**: API-01, API-02, API-03, API-04, API-05, API-06
+**Success Criteria** (what must be TRUE):
+  1. A request to any backend route from the frontend automatically includes credentials (cookies), applies a 15-second timeout, and parses JSON — no per-call configuration needed
+  2. A 5xx response from any backend endpoint is automatically retried once after a short backoff — the user sees a loading state during the retry, not an immediate error
+  3. A 401 response from any route redirects the user to /auth without any page-level try/catch in the calling component
+  4. `grep -r "fetch(" frontend/src/` returns zero results — all 41 raw fetch calls have been replaced with apiFetch
+  5. All feature flags and the API base URL are sourced from `frontend/src/lib/constants.js` — no hardcoded URLs or ad-hoc config values remain in component files
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 23: Frontend Unit Test Suite
+**Goal**: The React frontend has a complete unit and component test suite with 45+ tests covering the core auth, API, and feature components — tests run in CI on every push
+**Depends on**: Phase 22 (apiFetch stable — tests can mock it reliably)
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
+**Success Criteria** (what must be TRUE):
+  1. Running `npm test -- --watchAll=false` from `frontend/` exits 0 with 45+ tests passing across 10+ test files — no test framework configuration errors
+  2. AuthContext tests verify that an authenticated user state is established from cookie session and that logout clears the session — no localStorage interactions are tested or expected
+  3. apiFetch tests verify timeout enforcement, retry-on-5xx, 401 redirect behavior, and JSON parsing using MSW request interception — no real network calls are made
+  4. Component tests for StrategyDashboard, ContentStudio, Sidebar, and NotificationBell render correctly given mocked API responses — no snapshot-only tests (behavior is verified)
+  5. The `frontend-test` CI job in `.github/workflows/ci.yml` runs on every push and blocks merge on failure
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 24: Content Download + Redirect-to-Platform
+**Goal**: Users can download any approved content as a file (text, images, zip) and open platform compose windows pre-filled with their content — without leaving the content detail view
+**Depends on**: Phase 22 (apiFetch in place for any new API calls)
+**Requirements**: DL-01, DL-02, DL-03, DL-04, DL-05, DL-06
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Download Text" on any approved content job downloads a .txt file containing the final content — the filename includes the platform and a date stamp
+  2. Clicking "Download Images" on a carousel content job downloads a .zip archive containing all slide images — single-image jobs download the image directly (no unnecessary zip)
+  3. Clicking "Open in LinkedIn" opens a new tab to the LinkedIn share compose URL with the post text pre-filled — the URL uses the official LinkedIn share endpoint
+  4. Clicking "Open in X" opens a new tab to the X tweet intent URL with the post text pre-filled and within the character limit
+  5. The Instagram button shows an inline tooltip explaining that Instagram has no web compose URL and walks the user through copy-paste workflow — no broken link or dead button
+  6. All download and redirect buttons appear in the content detail view alongside the existing Publish button — the layout is not broken on mobile viewports
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 25: E2E Verification + Production Ship Checklist
+**Goal**: The platform passes a full end-to-end Playwright verification including the new download/redirect features, all dependencies are audited clean, and a documented ship checklist confirms production readiness
+**Depends on**: Phases 21-24 (all v2.2 features complete)
+**Requirements**: SHIP-01, SHIP-02, SHIP-03, SHIP-04, SHIP-05, SHIP-06
+**Success Criteria** (what must be TRUE):
+  1. Playwright E2E passes green across the full critical path plus the new download/redirect flows (download text, open in LinkedIn, open in X) — all steps pass in CI without manual intervention
+  2. `npm audit --audit-level=high` in `frontend/` reports zero high or critical vulnerabilities — any findings are resolved or explicitly risk-accepted with a written note
+  3. `pip-audit` or `safety check` in `backend/` reports zero critical vulnerabilities — any findings are resolved or explicitly risk-accepted with a written note
+  4. Every environment variable in `.env.example` has a comment explaining its purpose and whether it is required or optional — no blank or undocumented entries remain
+  5. A production ship checklist document exists at `.planning/SHIP-CHECKLIST.md` and every item is checked off — the checklist covers env vars, secrets, DB indexes, Stripe config, n8n config, monitoring, and rollback procedure
+  6. A grep for hardcoded secrets, `console.log` statements, and debug-only endpoints across the full codebase returns zero production-facing findings
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -269,7 +347,12 @@ Plans:
 | 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
-| 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete    | 2026-04-03 |
-| 18. Security & Auth | v2.1 | 3/4 | Complete    | 2026-04-03 |
-| 19. Core Features | v2.1 | 5/5 | Complete    | 2026-04-03 |
-| 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete    | 2026-04-03 |
+| 17. Test Foundation + Billing & Payments | v2.1 | 5/5 | Complete | 2026-04-03 |
+| 18. Security & Auth | v2.1 | 3/4 | Complete | 2026-04-03 |
+| 19. Core Features | v2.1 | 5/5 | Complete | 2026-04-03 |
+| 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete | 2026-04-03 |
+| 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 0/TBD | Not started | - |
+| 22. apiFetch Migration + Error Handling | v2.2 | 0/TBD | Not started | - |
+| 23. Frontend Unit Test Suite | v2.2 | 0/TBD | Not started | - |
+| 24. Content Download + Redirect-to-Platform | v2.2 | 0/TBD | Not started | - |
+| 25. E2E Verification + Production Ship Checklist | v2.2 | 0/TBD | Not started | - |

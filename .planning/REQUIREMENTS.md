@@ -74,43 +74,43 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CI-01 | — | Pending |
-| CI-02 | — | Pending |
-| CI-03 | — | Pending |
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| API-06 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| DL-01 | — | Pending |
-| DL-02 | — | Pending |
-| DL-03 | — | Pending |
-| DL-04 | — | Pending |
-| DL-05 | — | Pending |
-| DL-06 | — | Pending |
-| SHIP-01 | — | Pending |
-| SHIP-02 | — | Pending |
-| SHIP-03 | — | Pending |
-| SHIP-04 | — | Pending |
-| SHIP-05 | — | Pending |
-| SHIP-06 | — | Pending |
+| CI-01 | Phase 21 | Pending |
+| CI-02 | Phase 21 | Pending |
+| CI-03 | Phase 21 | Pending |
+| AUTH-01 | Phase 21 | Pending |
+| AUTH-02 | Phase 21 | Pending |
+| AUTH-03 | Phase 21 | Pending |
+| AUTH-04 | Phase 21 | Pending |
+| AUTH-05 | Phase 21 | Pending |
+| API-01 | Phase 22 | Pending |
+| API-02 | Phase 22 | Pending |
+| API-03 | Phase 22 | Pending |
+| API-04 | Phase 22 | Pending |
+| API-05 | Phase 22 | Pending |
+| API-06 | Phase 22 | Pending |
+| TEST-01 | Phase 23 | Pending |
+| TEST-02 | Phase 23 | Pending |
+| TEST-03 | Phase 23 | Pending |
+| TEST-04 | Phase 23 | Pending |
+| TEST-05 | Phase 23 | Pending |
+| DL-01 | Phase 24 | Pending |
+| DL-02 | Phase 24 | Pending |
+| DL-03 | Phase 24 | Pending |
+| DL-04 | Phase 24 | Pending |
+| DL-05 | Phase 24 | Pending |
+| DL-06 | Phase 24 | Pending |
+| SHIP-01 | Phase 25 | Pending |
+| SHIP-02 | Phase 25 | Pending |
+| SHIP-03 | Phase 25 | Pending |
+| SHIP-04 | Phase 25 | Pending |
+| SHIP-05 | Phase 25 | Pending |
+| SHIP-06 | Phase 25 | Pending |
 
 **Coverage:**
 - v2.2 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 after initial definition*
+*Last updated: 2026-04-04 — traceability complete, all 31 requirements mapped to phases 21-25*
