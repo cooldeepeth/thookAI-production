@@ -149,7 +149,6 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=85 \
             -v --tb=short
-        continue-on-error: true
 
   backend-test-pipeline:
     name: Backend Tests — Pipeline & Agents (85% coverage gate)
@@ -221,12 +220,10 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=85 \
             -v --tb=short
-        continue-on-error: true
 
   backend-test-general:
     name: Backend Tests — General (catch-all)
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     services:
       mongo:
