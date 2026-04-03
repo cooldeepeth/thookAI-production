@@ -187,7 +187,13 @@ Plans:
   3. A Stripe webhook delivered twice with the same event ID activates a subscription exactly once — no double-activation occurs in the test suite under mongomock-motor
   4. Two concurrent requests to deduct credits from the same user account never produce a negative balance — the atomic `find_one_and_update` contract is verified with `asyncio.gather` under mongomock-motor
   5. The JWT fallback path that previously accepted malformed tokens now returns 401 — a failing test exposes the bug before the production fix lands
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 17-01-PLAN.md — Clean CI baseline: fix 3 broken tests, fix 6 unawaited coroutines, install 6 packages, coverage infrastructure, standardize conftest.py fixtures
+- [ ] 17-02-PLAN.md — TDD fix 3 P0 bugs: JWT fallback secret, non-atomic add_credits, missing webhook deduplication
+- [ ] 17-03-PLAN.md — CI matrix: 4 domain-specific test jobs with per-domain coverage thresholds
+- [ ] 17-04-PLAN.md — Billing tests: checkout flows, subscription lifecycle, volume pricing (~120 tests)
+- [ ] 17-05-PLAN.md — Billing tests: webhook idempotency, credit atomicity, route integration, 95% coverage gate (~120 tests)
 
 ### Phase 18: Security & Auth
 **Goal**: Every auth boundary and security control across the platform is verified — JWT lifecycle, all 4 OAuth platform flows, rate limiting thresholds, security headers, injection prevention, and RBAC are all tested to the OWASP Top 10 standard
@@ -246,7 +252,7 @@ Plans:
 | 14. Strategy Dashboard + Notifications | v2.0 | 2/2 | Complete | 2026-04-01 |
 | 15. Obsidian Vault Integration | v2.0 | 0/TBD | Not started | - |
 | 16. E2E Audit + Security Hardening + Production Ship | v2.0 | 5/5 | Complete | 2026-04-01 |
-| 17. Test Foundation + Billing & Payments | v2.1 | 0/TBD | Not started | - |
+| 17. Test Foundation + Billing & Payments | v2.1 | 0/5 | In progress | - |
 | 18. Security & Auth | v2.1 | 0/TBD | Not started | - |
 | 19. Core Features | v2.1 | 0/TBD | Not started | - |
 | 20. Frontend E2E & Integration | v2.1 | 0/TBD | Not started | - |
