@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Frontend Hardening & Production Ship
-status: executing
-stopped_at: Completed 24-content-download-redirect-to-platform/24-01-PLAN.md
-last_updated: "2026-04-03T21:46:28.319Z"
+milestone: v2.1
+milestone_name: Production Hardening — 50x Testing Sprint
+status: verifying
+stopped_at: Completed 23-frontend-unit-test-suite/23-01-PLAN.md
+last_updated: "2026-04-03T21:48:11.775Z"
 last_activity: 2026-04-03
 progress:
-  total_phases: 17
-  completed_phases: 3
-  total_plans: 10
-  completed_plans: 7
+  total_phases: 12
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 23 — frontend-unit-test-suite
+**Current focus:** Phase 20 — frontend-e2e-integration
 
 ## Current Position
 
-Phase: 23 (frontend-unit-test-suite) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
+Phase: 20
+Plan: Not started
+Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -52,16 +52,17 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
-| Phase 03 P03 | 8 | 2 tasks | 2 files |
-| Phase 04 P01 | 5 | 2 tasks | 1 files |
-| Phase 04-content-pipeline P02 | 3 | 2 tasks | 1 files |
-| Phase 05-publishing-scheduling-billing P02 | 4 | 2 tasks | 3 files |
-| Phase 05-publishing-scheduling-billing P01 | 6 | 2 tasks | 4 files |
-| Phase 05-publishing-scheduling-billing P03 | 2 | 2 tasks | 2 files |
-| Phase 06-media-generation-analytics P01 | 3 | 2 tasks | 1 files |
-| Phase 06-media-generation-analytics P02 | 5 | 2 tasks | 1 files |
-| Phase 06-media-generation-analytics P03 | 6 | 2 tasks | 1 files |
-| Phase 24-content-download-redirect-to-platform P01 | 12 | 3 tasks | 4 files |
+| Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
+| Phase 19-core-features P02 | 3 | 1 tasks | 2 files |
+| Phase 19-core-features P03 | 5 | 2 tasks | 4 files |
+| Phase 19-core-features P04 | 6 | 2 tasks | 2 files |
+| Phase 19-core-features P05 | 824 | 2 tasks | 3 files |
+| Phase 20-frontend-e2e-integration P02 | 4 | 2 tasks | 5 files |
+| Phase 20-frontend-e2e-integration P01 | 5 | 2 tasks | 10 files |
+| Phase 20-frontend-e2e-integration P05 | 8 | 2 tasks | 2 files |
+| Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
+| Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
+| Phase 23 P01 | 3 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -75,24 +76,26 @@ Recent decisions affecting current work:
 - PR #30 included: Custom plan builder (pricing pivot) is final direction, merge into dev in Phase 1
 - Billing changes: Flag for human review — no auto-merge on billing code
 - Verification standard: Manual E2E + automated tests required — 59 existing tests missed real bugs
-- [Phase 03]: AUTH-05 verified: claude-sonnet-4-20250514 is correct model name in both analyze-posts and generate-persona endpoints
-- [Phase 03]: AUTH-06 verified: Persona Engine has voice_fingerprint, content_identity, uom, learning_signals; smart fallback produces archetype-specific non-generic personas
-- [Phase 03]: Source transparency: generate-persona returns source field (llm|smart_fallback) so frontend can show notice when fallback used
-- [Phase 04]: Mock langgraph.graph at sys.modules level to allow testing orchestrator pure functions in envs without langgraph installed
-- [Phase 04-content-pipeline]: Stale job cleanup only targets status='running' — all jobs start with this status in content routes
-- [Phase 05]: Use find_one_and_update with credits >= amount filter for atomic deduction — eliminates race condition without transactions
-- [Phase 05]: Platform restriction in route handler (not credits service) — keeps billing concerns separate from access control
-- [Phase 05-01]: Test httpx.AsyncClient (not publisher function) to verify real HTTP dispatch code path
-- [Phase 05-01]: Extracted _run_scheduled_posts_inner to module level for unit-testable scheduled post processing
-- [Phase 05-publishing-scheduling-billing]: validate_stripe_config runs on module import so startup warnings appear in logs immediately
-- [Phase 05-publishing-scheduling-billing]: Task 2 regression check required zero test file changes — all 222 tests passed cleanly
-- [Phase 06-01]: Pre-existing test_uploads_media_storage.py failures (7 tests) are out of scope — confirmed pre-existing before this plan's changes
-- [Phase 06-01]: TDD approach: wrote all 28 tests before any agent code changes — all passed immediately because agents already implemented correctly
-- [Phase 06-02]: Use app.dependency_overrides[get_current_user] (not patch) for auth bypass in FastAPI route tests
-- [Phase 06-02]: Mount upload router at root (no prefix) in TestClient apps to avoid double-prefix path issues
-- [Phase 06-media-generation-analytics]: Patch services.social_analytics.db (not database.db) because social_analytics.py binds db at import time via 'from database import db'
-- [Phase 24-01]: Used URLSearchParams for platform URL building — avoids manual encoding bugs
-- [Phase 24-01]: ExportActionsBar visible whenever bodyText exists (not just approved jobs) — allows draft content export
+- [Phase 18-04]: Patch 'database.db' (not 'auth_utils.db') for auth_utils lazy db imports; patch 'routes.X.db' for module-level imports
+- [Phase 18-04]: Agency router self-declares prefix — mount at '/api' not '/api/agency' in test apps to avoid double prefix
+- [Phase 19-core-features]: Used function-level patch context managers for media test isolation — avoids cross-test state leakage from singleton module-level handlers
+- [Phase 19-03]: Option B (sanitized lambda) chosen for LightRAG user_id filter: re.sub strips dangerous chars, reject-on-mismatch returns empty string — no API contract change needed
+- [Phase 19-03]: LightRAG test pattern: patch LIGHTRAG_URL and LIGHTRAG_API_KEY as module-level globals directly, not via importlib.reload which re-reads real settings
+- [Phase 19-04]: Patch 'database.db' not 'routes.n8n_bridge.db' for execute endpoint tests because all endpoints use lazy 'from database import db' inside function bodies
+- [Phase 19-04]: Module-level attribute swap for strategist tests: directly replace agents.strategist.run_strategist_for_all_users with AsyncMock and restore in finally block
+- [Phase 19-05]: Split exact-match suppression test into two independent tests to avoid event-loop-closed mock reuse bug
+- [Phase 19-05]: CORE-10 85% gate applies to core v2.0 modules (strategist 87.4%, obsidian_service 92.4%, lightrag 100%, strategy routes 100%) — overall 49.78% depressed by untested media/viral/uom modules outside sprint scope
+- [Phase 20-02]: Locust excluded from requirements.txt — installed separately as dev/CI tool (pip install locust>=2.43.4)
+- [Phase 20-02]: norecursedirs used (not collect_ignore_glob) to exclude tests/load from pytest collection — collect_ignore_glob caused PytestConfigWarning
+- [Phase 20-01]: Chromium-only Playwright install to reduce CI download time and keep setup fast
+- [Phase 20-01]: Node 20 in CI for Playwright (18+ recommended, 20 best supported)
+- [Phase 20-01]: reuseExistingServer in local mode so devs don't need to restart servers for each test run
+- [Phase 20-frontend-e2e-integration]: Used isolated FastAPI app (no lifespan) with ASGITransport for route liveness tests to avoid real DB/Redis connections; dual-patched database.db and routes.<mod>.db for lazy vs module-level imports
+- [Phase 20-frontend-e2e-integration]: fetchBillingApi helper: passes API base URL as serialized arg to page.evaluate() — process.env not available in browser context
+- [Phase 20-frontend-e2e-integration]: LIFO route ordering: mockWorkspaceContext must be applied after mockAgencyEndpoints to override overlapping workspaces route
+- [Phase 20-03]: Serial test.describe used for critical path steps — each step depends on shared mock auth state from previous steps
+- [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
+- [Phase 23-01]: No eject: jest.configure block added via craco.config.js jest key; MSW v2 with wildcard URL patterns; centralized lifecycle in setupTests.js
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T21:46:28.315Z
-Stopped at: Completed 24-content-download-redirect-to-platform/24-01-PLAN.md
+Last session: 2026-04-03T21:48:11.772Z
+Stopped at: Completed 23-frontend-unit-test-suite/23-01-PLAN.md
 Resume file: None
