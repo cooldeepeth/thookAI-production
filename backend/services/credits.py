@@ -330,7 +330,14 @@ async def get_credit_balance(user_id: str) -> Dict[str, Any]:
                 )
 
     # Calculate usage this period
-    period_start = user.get("credits_last_refresh", now - timedelta(days=30))
+    # Normalize period_start to a timezone-aware datetime for consistent arithmetic.
+    _raw_period_start = user.get("credits_last_refresh", now - timedelta(days=30))
+    if isinstance(_raw_period_start, str):
+        period_start = datetime.fromisoformat(_raw_period_start)
+    else:
+        period_start = _raw_period_start
+    if isinstance(period_start, datetime) and period_start.tzinfo is None:
+        period_start = period_start.replace(tzinfo=timezone.utc)
     usage_cursor = db.credit_transactions.find({
         "user_id": user_id,
         "created_at": {"$gte": period_start},
