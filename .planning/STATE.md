@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
 status: executing
-stopped_at: Completed 19-core-features/19-03-PLAN.md
-last_updated: "2026-04-03T07:23:00.520Z"
+stopped_at: Completed 19-core-features/19-04-PLAN.md
+last_updated: "2026-04-03T07:26:26.823Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 13
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 19 (core-features) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
 | Phase 19-core-features P02 | 3 | 1 tasks | 2 files |
 | Phase 19-core-features P03 | 5 | 2 tasks | 4 files |
+| Phase 19-core-features P04 | 6 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 19-core-features]: Used function-level patch context managers for media test isolation — avoids cross-test state leakage from singleton module-level handlers
 - [Phase 19-03]: Option B (sanitized lambda) chosen for LightRAG user_id filter: re.sub strips dangerous chars, reject-on-mismatch returns empty string — no API contract change needed
 - [Phase 19-03]: LightRAG test pattern: patch LIGHTRAG_URL and LIGHTRAG_API_KEY as module-level globals directly, not via importlib.reload which re-reads real settings
+- [Phase 19-04]: Patch 'database.db' not 'routes.n8n_bridge.db' for execute endpoint tests because all endpoints use lazy 'from database import db' inside function bodies
+- [Phase 19-04]: Module-level attribute swap for strategist tests: directly replace agents.strategist.run_strategist_for_all_users with AsyncMock and restore in finally block
 
 ### Pending Todos
 
@@ -88,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T07:23:00.517Z
-Stopped at: Completed 19-core-features/19-03-PLAN.md
+Last session: 2026-04-03T07:26:26.814Z
+Stopped at: Completed 19-core-features/19-04-PLAN.md
 Resume file: None

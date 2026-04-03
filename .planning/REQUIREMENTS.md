@@ -39,12 +39,12 @@
 - [ ] **CORE-01**: Content pipeline comprehensive tests — Commander, Scout, Thinker, Writer, QC individually with deterministic LLM mocks
 - [ ] **CORE-02**: LangGraph orchestrator tests — node-level unit tests, debate protocol, quality loop retry behavior
 - [x] **CORE-03**: Media orchestrator comprehensive tests — all 8 format handlers, credit ledger partial failure, R2 staging, Remotion client
-- [ ] **CORE-04**: n8n bridge contract tests — all execute endpoints, HMAC verification, callback handling, workflow trigger dispatch
-- [ ] **CORE-05**: LightRAG integration tests — insert/query with per-user isolation, entity extraction, embedding lock assertion
+- [x] **CORE-04**: n8n bridge contract tests — all execute endpoints, HMAC verification, callback handling, workflow trigger dispatch
+- [x] **CORE-05**: LightRAG integration tests — insert/query with per-user isolation, entity extraction, embedding lock assertion
 - [ ] **CORE-06**: Strategist Agent tests — cadence controls, dismissal tracking, adaptive throttle, generate_payload validation
-- [ ] **CORE-07**: Analytics feedback loop tests — poll endpoints, publish_results write-back, optimal_posting_times calculation
+- [x] **CORE-07**: Analytics feedback loop tests — poll endpoints, publish_results write-back, optimal_posting_times calculation
 - [ ] **CORE-08**: Obsidian integration tests — vault search, path sandboxing, graceful degradation, per-user config
-- [ ] **CORE-09**: TDD bug fix: LightRAG lambda injection — failing test exposing cross-user data via lambda scope, then fix
+- [x] **CORE-09**: TDD bug fix: LightRAG lambda injection — failing test exposing cross-user data via lambda scope, then fix
 - [ ] **CORE-10**: 85%+ branch coverage across `agents/`, `services/`, `routes/`
 
 ### Frontend E2E & Integration
@@ -108,12 +108,12 @@ Deferred beyond v2.1.
 | CORE-01 | Phase 19 | Pending |
 | CORE-02 | Phase 19 | Pending |
 | CORE-03 | Phase 19 | Complete |
-| CORE-04 | Phase 19 | Pending |
-| CORE-05 | Phase 19 | Pending |
+| CORE-04 | Phase 19 | Complete |
+| CORE-05 | Phase 19 | Complete |
 | CORE-06 | Phase 19 | Pending |
-| CORE-07 | Phase 19 | Pending |
+| CORE-07 | Phase 19 | Complete |
 | CORE-08 | Phase 19 | Pending |
-| CORE-09 | Phase 19 | Pending |
+| CORE-09 | Phase 19 | Complete |
 | CORE-10 | Phase 19 | Pending |
 | E2E-01 | Phase 20 | Pending |
 | E2E-02 | Phase 20 | Pending |
