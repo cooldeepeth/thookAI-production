@@ -520,10 +520,10 @@ class TestMissingStripeConfig:
             assert is_stripe_configured() is False
 
     def test_is_stripe_configured_returns_false_for_placeholder(self):
-        """is_stripe_configured() is False when key starts with 'placeholder'."""
+        """is_stripe_configured() is False when key contains 'placeholder'."""
         from services.stripe_service import is_stripe_configured
 
-        with patch("services.stripe_service.STRIPE_SECRET_KEY", "sk_test_51ngLef4k3"):
+        with patch("services.stripe_service.STRIPE_SECRET_KEY", "placeholder_key"):
             assert is_stripe_configured() is False
 
     def test_is_stripe_configured_true_for_real_key(self):

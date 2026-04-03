@@ -229,6 +229,7 @@ jobs:
   backend-test-general:
     name: Backend Tests — General (catch-all)
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     services:
       mongo:

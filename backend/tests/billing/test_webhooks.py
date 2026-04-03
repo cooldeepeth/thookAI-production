@@ -169,6 +169,11 @@ class TestWebhookSignatureVerification:
 @pytest.mark.asyncio
 class TestWebhookIdempotency:
 
+    @pytest.fixture(autouse=True)
+    async def _ensure_unique_index(self, mongomock_db):
+        """Create the unique index on stripe_events.event_id for dedup tests."""
+        await mongomock_db.stripe_events.create_index("event_id", unique=True)
+
     async def test_duplicate_checkout_session_completed_skipped(self, mongomock_db):
         """checkout.session.completed delivered twice → second is duplicate=True, credits added once."""
         user_id = "u_dup_checkout"
