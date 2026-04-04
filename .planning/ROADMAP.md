@@ -367,6 +367,6 @@ Plans:
 | 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete | 2026-04-03 |
 | 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 3/3 | Complete    | 2026-04-03 |
 | 22. apiFetch Migration + Error Handling | v2.2 | 2/3 | Complete    | 2026-04-03 |
-| 23. Frontend Unit Test Suite | v2.2 | 3/3 | Complete   | 2026-04-04 |
-| 24. Content Download + Redirect-to-Platform | v2.2 | 1/1 | Complete   | 2026-04-03 |
+| 23. Frontend Unit Test Suite | v2.2 | 3/3 | Complete    | 2026-04-04 |
+| 24. Content Download + Redirect-to-Platform | v2.2 | 1/1 | Complete    | 2026-04-04 |
 | 25. E2E Verification + Production Ship Checklist | v2.2 | 0/TBD | Not started | - |
