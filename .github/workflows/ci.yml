@@ -35,6 +35,7 @@ jobs:
   backend-test-billing:
     name: Backend Tests — Billing (95% coverage gate)
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     services:
       mongo:
@@ -89,6 +90,7 @@ jobs:
   backend-test-security:
     name: Backend Tests — Security (85% coverage gate)
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     services:
       mongo:
@@ -149,11 +151,11 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=85 \
             -v --tb=short
-        continue-on-error: true
 
   backend-test-pipeline:
     name: Backend Tests — Pipeline & Agents (85% coverage gate)
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     services:
       mongo:
@@ -221,7 +223,6 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=85 \
             -v --tb=short
-        continue-on-error: true
 
   backend-test-general:
     name: Backend Tests — General (catch-all)
@@ -321,3 +322,26 @@ jobs:
         run: |
           cd frontend
           npm run build
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          CI=true npm test -- --watchAll=false

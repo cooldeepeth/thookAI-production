@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Production Hardening — 50x Testing Sprint
-status: verifying
-stopped_at: Completed 20-frontend-e2e-integration/20-03-PLAN.md
-last_updated: "2026-04-03T08:28:03.468Z"
-last_activity: 2026-04-03
+milestone: v2.2
+milestone_name: Frontend Hardening & Production Ship
+status: executing
+stopped_at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
+last_updated: "2026-04-04T01:59:37.283Z"
+last_activity: 2026-04-04
 progress:
-  total_phases: 12
-  completed_phases: 4
-  total_plans: 19
-  completed_plans: 19
+  total_phases: 17
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 13
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 20 — frontend-e2e-integration
+**Current focus:** Phase 25 — e2e-verification-production-ship
 
 ## Current Position
 
-Phase: 20
+Phase: 25
 Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-03
+Status: Executing Phase 25
+Last activity: 2026-04-04
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -62,6 +62,9 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P05 | 8 | 2 tasks | 2 files |
 | Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
 | Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
+| Phase 23 P01 | 3 | 2 tasks | 6 files |
+| Phase 23 P03 | 17 | 2 tasks | 7 files |
+| Phase 23 P02 | 92 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -94,6 +97,11 @@ Recent decisions affecting current work:
 - [Phase 20-frontend-e2e-integration]: LIFO route ordering: mockWorkspaceContext must be applied after mockAgencyEndpoints to override overlapping workspaces route
 - [Phase 20-03]: Serial test.describe used for critical path steps — each step depends on shared mock auth state from previous steps
 - [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
+- [Phase 23-01]: No eject: jest.configure block added via craco.config.js jest key; MSW v2 with wildcard URL patterns; centralized lifecycle in setupTests.js
+- [Phase 23-03]: EventSource mock must be in beforeEach/afterEach (not module scope) because babel hoists imports before global assignments execute
+- [Phase 23-03]: react-router-dom v7.13.2 main field (dist/main.js) missing — Jest 27 needs explicit moduleNameMapper to dist/index.js; same for react-router/dom subpath
+- [Phase 23]: AbortError timeout test: stub global.fetch (not MSW never-resolving handler) because MSW v2 Node mode does not propagate AbortError from intercepted handlers
+- [Phase 23]: EventSource mock: re-assign in beforeEach (not module level) to survive resetMocks: true auto-reset between tests
 
 ### Pending Todos
 
@@ -109,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T08:19:22.840Z
-Stopped at: Completed 20-frontend-e2e-integration/20-03-PLAN.md
+Last session: 2026-04-04T00:06:39.863Z
+Stopped at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
 Resume file: None

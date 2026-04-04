@@ -1,15 +1,9 @@
-import { useCallback, useRef, useState } from "react";
-import { Image as ImageIcon, Link2, Play, X, Upload } from "lucide-react";
+import { useCallback, useRef, useState } from 'react';
+import { Image as ImageIcon, Link2, Play, X, Upload } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
+import { API_BASE_URL } from '@/lib/constants';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
-
-function authHeaders() {
-  const token = typeof window !== "undefined" ? localStorage.getItem("thook_token") : null;
-  const h = {};
-  if (token) h.Authorization = `Bearer ${token}`;
-  return h;
-}
 
 /**
  * @param {object} props
@@ -18,7 +12,7 @@ function authHeaders() {
  * @param {(upload: object) => void} [props.onUploadComplete]
  */
 export default function MediaUploader({ items, onItemsChange, onUploadComplete }) {
-  const [urlInput, setUrlInput] = useState("");
+  const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [fileProgress, setFileProgress] = useState(0);
   const [fileBusy, setFileBusy] = useState(false);
@@ -37,33 +31,36 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
   );
 
   const inferContextType = (file) => {
-    const t = file.type || "";
-    if (t.startsWith("image/")) return "image";
-    if (t.startsWith("video/")) return "video";
-    if (t === "application/pdf" || t === "text/plain") return "document";
+    const t = file.type || '';
+    if (t.startsWith('image/')) return 'image';
+    if (t.startsWith('video/')) return 'video';
+    if (t === 'application/pdf' || t === 'text/plain') return 'document';
     const n = file.name.toLowerCase();
-    if (/\.(jpg|jpeg|png|gif|webp)$/i.test(n)) return "image";
-    if (/\.(mp4|mov|webm)$/i.test(n)) return "video";
-    if (/\.(pdf|txt)$/i.test(n)) return "document";
+    if (/\.(jpg|jpeg|png|gif|webp)$/i.test(n)) return 'image';
+    if (/\.(mp4|mov|webm)$/i.test(n)) return 'video';
+    if (/\.(pdf|txt)$/i.test(n)) return 'document';
     return null;
   };
 
   const uploadFile = async (file) => {
     if (file.size > MAX_FILE_BYTES) {
-      alert("File must be 100MB or smaller");
+      alert('File must be 100MB or smaller');
       return;
     }
     const contextType = inferContextType(file);
     if (!contextType) {
-      alert("Unsupported file type");
+      alert('Unsupported file type');
       return;
     }
     setFileBusy(true);
     setFileProgress(10);
     const fd = new FormData();
-    fd.append("file", file);
-    fd.append("context_type", contextType);
+    fd.append('file', file);
+    fd.append('context_type', contextType);
     try {
+      // Use XHR for file upload to track progress via xhr.upload.onprogress.
+      // apiFetch wraps fetch() which does not expose upload progress.
+      // Auth via cookie: xhr.withCredentials = true sends the session_token cookie automatically.
       const xhr = new XMLHttpRequest();
       const p = new Promise((resolve, reject) => {
         xhr.upload.onprogress = (e) => {
@@ -74,22 +71,20 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
             try {
               resolve(JSON.parse(xhr.responseText));
             } catch {
-              reject(new Error("Invalid response"));
+              reject(new Error('Invalid response'));
             }
           } else {
             try {
               const j = JSON.parse(xhr.responseText);
-              reject(new Error(j.detail || "Upload failed"));
+              reject(new Error(j.detail || 'Upload failed'));
             } catch {
-              reject(new Error("Upload failed"));
+              reject(new Error('Upload failed'));
             }
           }
         };
-        xhr.onerror = () => reject(new Error("Network error"));
+        xhr.onerror = () => reject(new Error('Network error'));
       });
-      xhr.open("POST", `${BACKEND_URL}/api/uploads/media`);
-      const headers = authHeaders();
-      if (headers.Authorization) xhr.setRequestHeader("Authorization", headers.Authorization);
+      xhr.open('POST', `${API_BASE_URL}/api/uploads/media`);
       xhr.withCredentials = true;
       xhr.send(fd);
       const data = await p;
@@ -103,7 +98,7 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
         size_bytes: file.size,
       });
     } catch (e) {
-      alert(e.message || "Upload failed");
+      alert(e.message || 'Upload failed');
     } finally {
       setFileBusy(false);
       setFileProgress(0);
@@ -123,22 +118,20 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
     if (!u) return;
     setUrlLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/uploads/url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        credentials: "include",
-        body: JSON.stringify({ url: u, context_type: "link" }),
+      const res = await apiFetch('/api/uploads/url', {
+        method: 'POST',
+        body: JSON.stringify({ url: u, context_type: 'link' }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || "Could not add link");
+      if (!res.ok) throw new Error(data.detail || 'Could not add link');
       addItem({
         upload_id: data.upload_id,
         url: data.url,
-        content_type: "link",
+        content_type: 'link',
         title: data.title,
-        context_type: "link",
+        context_type: 'link',
       });
-      setUrlInput("");
+      setUrlInput('');
     } catch (err) {
       alert(err.message);
     } finally {
@@ -151,7 +144,7 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
       <div
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+        onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
         onClick={() => !fileBusy && inputRef.current?.click()}
@@ -165,7 +158,7 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
           disabled={fileBusy}
           onChange={(e) => {
             const f = e.target.files?.[0];
-            e.target.value = "";
+            e.target.value = '';
             if (f) uploadFile(f);
           }}
         />
@@ -195,7 +188,7 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
           disabled={urlLoading || !urlInput.trim()}
           className="px-3 rounded-xl border border-white/10 text-xs text-zinc-300 hover:bg-white/5 disabled:opacity-50"
         >
-          {urlLoading ? "…" : "Add"}
+          {urlLoading ? '…' : 'Add'}
         </button>
       </form>
 
@@ -206,13 +199,13 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
               key={it.upload_id}
               className="flex items-center gap-2 pl-1 pr-1 py-1 rounded-lg bg-white/5 border border-white/10 max-w-full"
             >
-              {it.context_type === "image" && it.url?.startsWith("http") ? (
+              {it.context_type === 'image' && it.url?.startsWith('http') ? (
                 <img src={it.url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-              ) : it.context_type === "image" ? (
+              ) : it.context_type === 'image' ? (
                 <ImageIcon className="w-8 h-8 text-zinc-500 flex-shrink-0" />
-              ) : it.context_type === "video" ? (
+              ) : it.context_type === 'video' ? (
                 <Play className="w-8 h-8 text-zinc-400 flex-shrink-0 p-1" />
-              ) : it.context_type === "link" ? (
+              ) : it.context_type === 'link' ? (
                 <Link2 className="w-8 h-8 text-zinc-400 flex-shrink-0 p-1" />
               ) : (
                 <span className="w-8 h-8 flex items-center justify-center text-[10px] text-zinc-500 font-mono">DOC</span>

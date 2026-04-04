@@ -7,11 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Settings as SettingsIcon, CreditCard, Zap, Crown, Building2, Users,
   ChevronRight, Check, RefreshCw, AlertTriangle, Sparkles, TrendingUp,
-  Calendar, Shield, Mic, Video, Code, BarChart3, ExternalLink, 
+  Calendar, Shield, Mic, Video, Code, BarChart3, ExternalLink,
   ShoppingCart, Gift, Percent, ArrowRight, Clock, Star, X
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const TIER_ICONS = {
   free: Zap,
@@ -68,16 +67,13 @@ export default function Settings() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("thook_token");
-      const headers = { Authorization: `Bearer ${token}` };
-
       const [subRes, creditsRes, tiersRes, limitsRes, configRes, costsRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/billing/subscription`, { headers }),
-        fetch(`${BACKEND_URL}/api/billing/credits`, { headers }),
-        fetch(`${BACKEND_URL}/api/billing/subscription/tiers`, { headers }),
-        fetch(`${BACKEND_URL}/api/billing/subscription/limits`, { headers }),
-        fetch(`${BACKEND_URL}/api/billing/config`),
-        fetch(`${BACKEND_URL}/api/billing/credits/costs`)
+        apiFetch('/api/billing/subscription'),
+        apiFetch('/api/billing/credits'),
+        apiFetch('/api/billing/subscription/tiers'),
+        apiFetch('/api/billing/subscription/limits'),
+        apiFetch('/api/billing/config'),
+        apiFetch('/api/billing/credits/costs')
       ]);
 
       if (subRes.ok) setSubscription(await subRes.json());
@@ -106,13 +102,8 @@ export default function Settings() {
 
     setUpgrading(tierId);
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/billing/subscription/checkout`, {
+      const res = await apiFetch('/api/billing/subscription/checkout', {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({ tier: tierId, billing_period: billingPeriod })
       });
 
@@ -147,13 +138,8 @@ export default function Settings() {
 
   const handleDirectUpgrade = async (tierId) => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/billing/simulate/upgrade`, {
+      const res = await apiFetch('/api/billing/simulate/upgrade', {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({ tier: tierId, billing_period: billingPeriod })
       });
 
@@ -177,13 +163,8 @@ export default function Settings() {
 
   const handleBuyCredits = async (packageName) => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/billing/credits/checkout`, {
+      const res = await apiFetch('/api/billing/credits/checkout', {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({ package: packageName })
       });
 
@@ -192,9 +173,8 @@ export default function Settings() {
       if (res.ok) {
         if (data.simulated) {
           // Simulate adding credits
-          const addRes = await fetch(`${BACKEND_URL}/api/billing/simulate/credits?amount=${data.credits}`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` }
+          const addRes = await apiFetch(`/api/billing/simulate/credits?amount=${data.credits}`, {
+            method: "POST"
           });
           
           if (addRes.ok) {
@@ -218,10 +198,8 @@ export default function Settings() {
 
   const handleManageBilling = async () => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/billing/portal`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiFetch('/api/billing/portal', {
+        method: "POST"
       });
 
       const data = await res.json();

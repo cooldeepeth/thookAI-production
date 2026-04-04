@@ -7,8 +7,7 @@ import {
   Users, Activity, FileText, AlertTriangle, TrendingUp,
   ShieldCheck, RefreshCw
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 function StatCard({ title, value, icon: Icon, subtitle, color = "text-lime" }) {
   return (
@@ -48,13 +47,10 @@ export default function Admin() {
 
   const fetchData = async () => {
     setLoading(true);
-    const token = localStorage.getItem("thook_token");
-    const headers = { Authorization: `Bearer ${token}` };
-
     try {
       const [statsRes, errorsRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/admin/stats/overview`, { headers }),
-        fetch(`${BACKEND_URL}/api/admin/stats/errors`, { headers }),
+        apiFetch('/api/admin/stats/overview'),
+        apiFetch('/api/admin/stats/errors'),
       ]);
 
       if (statsRes.ok) setStats(await statsRes.json());

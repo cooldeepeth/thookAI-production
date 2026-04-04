@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '@/lib/api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -9,15 +9,9 @@ export function AuthProvider({ children }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const headers = {};
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-      const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
-        credentials: "include",
-        headers,
-      });
+      // session_token cookie is sent automatically via credentials: 'include' (apiFetch default)
+      // No Authorization header — cookie is the source of truth
+      const res = await apiFetch('/api/auth/me');
       if (!res.ok) {
         setUser(null);
         return;
@@ -25,6 +19,7 @@ export function AuthProvider({ children }) {
       const data = await res.json();
       setUser(data);
     } catch {
+      // apiFetch may redirect to /auth on 401 before we get here — that's correct behavior
       setUser(null);
     } finally {
       setLoading(false);
@@ -33,21 +28,23 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    const token = params.get('token');
     if (token) {
-      localStorage.setItem("thook_token", token);
+      // Google OAuth callback: token param present.
+      // The Google OAuth callback handler already set the session_token cookie
+      // before redirecting to the frontend. We call /api/auth/me with the Bearer
+      // header one-time for validation, but do NOT store the token in browser storage.
+      // The cookie (set by the backend) is the session source of truth.
       (async () => {
         try {
-          const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+          const res = await apiFetch('/api/auth/me', {
             headers: { Authorization: `Bearer ${token}` },
-            credentials: "include",
           });
-          if (!res.ok) throw new Error("Invalid token");
+          if (!res.ok) throw new Error('Invalid token');
           const userData = await res.json();
-          setUser({ ...userData, token });
-          window.history.replaceState({}, "", "/dashboard");
+          setUser(userData);
+          window.history.replaceState({}, '', '/dashboard');
         } catch {
-          localStorage.removeItem("thook_token");
           setUser(null);
         } finally {
           setLoading(false);
@@ -61,8 +58,8 @@ export function AuthProvider({ children }) {
   const login = (userData) => setUser(userData);
 
   const logout = async () => {
-    await fetch(`${BACKEND_URL}/api/auth/logout`, { method: "POST", credentials: "include" });
-    localStorage.removeItem("thook_token");
+    // Backend clears session_token and csrf_token cookies
+    await apiFetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
   };
 
@@ -75,6 +72,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }

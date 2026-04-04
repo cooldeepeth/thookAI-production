@@ -7,8 +7,7 @@ import {
   Linkedin, Twitter, Instagram, Clock, CheckCircle2, XCircle, AlertCircle
 } from "lucide-react";
 import DailyBrief from "./DailyBrief";
-
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const quickActions = [
   { label: "Write a LinkedIn post", icon: Linkedin, color: "#0A66C2", to: "/dashboard/studio", tag: "Text" },
@@ -116,9 +115,7 @@ export default function DashboardHome() {
       
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/api/dashboard/stats`, {
-          credentials: "include"
-        });
+        const response = await apiFetch('/api/dashboard/stats');
         
         if (!response.ok) {
           throw new Error("Failed to fetch stats");

@@ -5,8 +5,7 @@ import {
   Sparkles, TrendingUp, Lightbulb, Clock, Battery, BatteryLow, BatteryMedium,
   ChevronDown, ChevronUp, X, RefreshCw, Linkedin, Twitter, Instagram, ArrowRight
 } from "lucide-react";
-
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const platformIcons = {
   linkedin: { icon: Linkedin, color: "#0A66C2" },
@@ -96,9 +95,7 @@ export default function DailyBrief() {
   const checkAndFetchBrief = async () => {
     try {
       // Check if dismissed
-      const statusRes = await fetch(`${API_URL}/api/dashboard/daily-brief/status`, {
-        credentials: "include"
-      });
+      const statusRes = await apiFetch('/api/dashboard/daily-brief/status');
       if (statusRes.ok) {
         const status = await statusRes.json();
         if (!status.show_brief) {
@@ -121,13 +118,11 @@ export default function DailyBrief() {
       setLoading(!refresh);
       setRefreshing(refresh);
       
-      const url = refresh 
-        ? `${API_URL}/api/dashboard/daily-brief?refresh=true`
-        : `${API_URL}/api/dashboard/daily-brief`;
-      
-      const response = await fetch(url, {
-        credentials: "include"
-      });
+      const url = refresh
+        ? '/api/dashboard/daily-brief?refresh=true'
+        : '/api/dashboard/daily-brief';
+
+      const response = await apiFetch(url);
       
       if (!response.ok) throw new Error("Failed to fetch brief");
       
@@ -145,9 +140,8 @@ export default function DailyBrief() {
 
   const handleDismiss = async () => {
     try {
-      await fetch(`${API_URL}/api/dashboard/daily-brief/dismiss`, {
-        method: "POST",
-        credentials: "include"
+      await apiFetch('/api/dashboard/daily-brief/dismiss', {
+        method: "POST"
       });
       setDismissed(true);
     } catch (err) {

@@ -1,18 +1,17 @@
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Upload, Trash2, Play, Pause, AlertCircle, Lock, CheckCircle2, Loader2, X } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mic, Upload, Trash2, Play, Pause, AlertCircle, Lock, CheckCircle2, Loader2, X } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 const ALLOWED_AUDIO_TYPES = [
-  "audio/mpeg",
-  "audio/wav",
-  "audio/x-wav",
-  "audio/mp4",
-  "audio/ogg",
-  "audio/aac",
-  "audio/flac",
-  "audio/mp3",
+  'audio/mpeg',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/mp4',
+  'audio/ogg',
+  'audio/aac',
+  'audio/flac',
+  'audio/mp3',
 ];
 
 const MAX_SAMPLES = 5;
@@ -76,8 +75,8 @@ function AudioSampleItem({ file, onRemove, index }) {
 }
 
 export default function VoiceCloneCard({ user }) {
-  const tier = user?.subscription_tier || user?.plan || "free";
-  const isEligible = tier === "studio" || tier === "agency";
+  const tier = user?.subscription_tier || user?.plan || 'free';
+  const isEligible = tier === 'studio' || tier === 'agency';
 
   const [cloneStatus, setCloneStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -85,9 +84,9 @@ export default function VoiceCloneCard({ user }) {
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [voiceName, setVoiceName] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [voiceName, setVoiceName] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -99,9 +98,7 @@ export default function VoiceCloneCard({ user }) {
 
   const fetchCloneStatus = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/persona/voice-clone`, {
-        credentials: "include",
-      });
+      const res = await apiFetch('/api/persona/voice-clone');
       if (res.ok) {
         const data = await res.json();
         setCloneStatus(data);
@@ -114,7 +111,7 @@ export default function VoiceCloneCard({ user }) {
   };
 
   const handleFileSelect = (e) => {
-    setError("");
+    setError('');
     const selected = Array.from(e.target.files || []);
 
     // Validate
@@ -133,7 +130,7 @@ export default function VoiceCloneCard({ user }) {
     setFiles(combined);
 
     // Reset the input so the same file can be selected again
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeFile = (index) => {
@@ -143,33 +140,32 @@ export default function VoiceCloneCard({ user }) {
   const handleUploadSamples = async () => {
     if (files.length === 0) return;
     setUploading(true);
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
 
     try {
       const formData = new FormData();
       for (const f of files) {
-        formData.append("files", f);
+        formData.append('files', f);
       }
 
-      const res = await fetch(`${BACKEND_URL}/api/persona/voice-clone/samples`, {
-        method: "POST",
-        credentials: "include",
+      const res = await apiFetch('/api/persona/voice-clone/samples', {
+        method: 'POST',
         body: formData,
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(err.detail || "Failed to upload samples.");
+        setError(err.detail || 'Failed to upload samples.');
         return;
       }
 
       const data = await res.json();
-      setSuccess(data.message || "Samples uploaded.");
+      setSuccess(data.message || 'Samples uploaded.');
       setFiles([]);
       await fetchCloneStatus();
     } catch {
-      setError("Network error. Please try again.");
+      setError('Network error. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -177,33 +173,31 @@ export default function VoiceCloneCard({ user }) {
 
   const handleCreateClone = async () => {
     if (!voiceName.trim()) {
-      setError("Please enter a name for your voice clone.");
+      setError('Please enter a name for your voice clone.');
       return;
     }
     setCreating(true);
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/persona/voice-clone/create`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+      const res = await apiFetch('/api/persona/voice-clone/create', {
+        method: 'POST',
         body: JSON.stringify({ voice_name: voiceName.trim() }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(err.detail || "Voice clone creation failed.");
+        setError(err.detail || 'Voice clone creation failed.');
         return;
       }
 
       const data = await res.json();
-      setSuccess(data.message || "Voice clone created!");
-      setVoiceName("");
+      setSuccess(data.message || 'Voice clone created!');
+      setVoiceName('');
       await fetchCloneStatus();
     } catch {
-      setError("Network error. Please try again.");
+      setError('Network error. Please try again.');
     } finally {
       setCreating(false);
     }
@@ -211,26 +205,25 @@ export default function VoiceCloneCard({ user }) {
 
   const handleDeleteClone = async () => {
     setDeleting(true);
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/persona/voice-clone`, {
-        method: "DELETE",
-        credentials: "include",
+      const res = await apiFetch('/api/persona/voice-clone', {
+        method: 'DELETE',
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(err.detail || "Failed to delete voice clone.");
+        setError(err.detail || 'Failed to delete voice clone.');
         return;
       }
 
-      setSuccess("Voice clone deleted.");
+      setSuccess('Voice clone deleted.');
       setShowDeleteConfirm(false);
       await fetchCloneStatus();
     } catch {
-      setError("Network error. Please try again.");
+      setError('Network error. Please try again.');
     } finally {
       setDeleting(false);
     }
@@ -304,8 +297,8 @@ export default function VoiceCloneCard({ user }) {
       </div>
       <p className="text-zinc-500 text-xs mb-4">
         {hasClone
-          ? "Your voice clone is active and will be used for AI narrations."
-          : "Upload 1-5 audio samples of your voice to create a custom clone."}
+          ? 'Your voice clone is active and will be used for AI narrations.'
+          : 'Upload 1-5 audio samples of your voice to create a custom clone.'}
       </p>
 
       {/* ---- Error / Success ---- */}
@@ -359,7 +352,7 @@ export default function VoiceCloneCard({ user }) {
             {showDeleteConfirm && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
+                animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
@@ -374,7 +367,7 @@ export default function VoiceCloneCard({ user }) {
                       className="flex items-center gap-1 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg px-3 py-1.5 hover:bg-red-500/30 transition-colors disabled:opacity-50"
                     >
                       {deleting && <Loader2 size={12} className="animate-spin" />}
-                      {deleting ? "Deleting..." : "Yes, delete"}
+                      {deleting ? 'Deleting...' : 'Yes, delete'}
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm(false)}
@@ -412,7 +405,7 @@ export default function VoiceCloneCard({ user }) {
                 Drop audio files or <span className="text-violet font-semibold">browse</span>
               </p>
               <p className="text-[10px] text-zinc-600 mt-1">
-                MP3, WAV, OGG, M4A -- up to 25 MB each -- {MAX_SAMPLES - files.length} slot{MAX_SAMPLES - files.length !== 1 ? "s" : ""} remaining
+                MP3, WAV, OGG, M4A -- up to 25 MB each -- {MAX_SAMPLES - files.length} slot{MAX_SAMPLES - files.length !== 1 ? 's' : ''} remaining
               </p>
               <input
                 ref={fileInputRef}
@@ -437,7 +430,7 @@ export default function VoiceCloneCard({ user }) {
               ) : (
                 <Upload size={14} />
               )}
-              {uploading ? "Uploading..." : `Upload ${files.length} Sample${files.length !== 1 ? "s" : ""}`}
+              {uploading ? 'Uploading...' : `Upload ${files.length} Sample${files.length !== 1 ? 's' : ''}`}
             </button>
           )}
 
@@ -446,7 +439,7 @@ export default function VoiceCloneCard({ user }) {
             <div className="space-y-3 pt-1">
               <div className="bg-white/5 rounded-lg px-3 py-2.5 border border-white/5">
                 <p className="text-xs text-zinc-400">
-                  {cloneStatus.sample_count} sample{cloneStatus.sample_count !== 1 ? "s" : ""} uploaded
+                  {cloneStatus.sample_count} sample{cloneStatus.sample_count !== 1 ? 's' : ''} uploaded
                 </p>
               </div>
 
@@ -462,7 +455,7 @@ export default function VoiceCloneCard({ user }) {
                   ) : (
                     <Upload size={12} />
                   )}
-                  {uploading ? "Uploading..." : "Replace samples"}
+                  {uploading ? 'Uploading...' : 'Replace samples'}
                 </button>
               )}
 
@@ -491,7 +484,7 @@ export default function VoiceCloneCard({ user }) {
                 ) : (
                   <Mic size={14} />
                 )}
-                {creating ? "Creating Voice Clone..." : "Create My Voice Clone"}
+                {creating ? 'Creating Voice Clone...' : 'Create My Voice Clone'}
               </button>
             </div>
           )}

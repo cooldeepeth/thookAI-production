@@ -70,9 +70,15 @@ Proactive, personalized content creation at scale — the platform recommends wh
 
 ### Active
 
-<!-- Next milestone: to be defined via /gsd:new-milestone -->
+<!-- v2.2: Frontend Hardening & Production Ship -->
 
-(To be defined in next milestone via `/gsd:new-milestone`)
+- [ ] CI strictness — remove all continue-on-error from ci.yml and e2e.yml
+- [ ] httpOnly cookie auth migration (replace localStorage JWT)
+- [ ] Centralized apiFetch replacing 41 raw fetch() calls with timeout, retry, error handling
+- [ ] Frontend unit test suite (45+ tests across 10 files) with CI job
+- [ ] Content download (text/images/zip) + redirect-to-platform compose URLs
+- [ ] Full Playwright E2E verification + dependency audit + security sweep
+- [ ] Production ship checklist complete
 
 ### Out of Scope
 
@@ -84,9 +90,9 @@ Proactive, personalized content creation at scale — the platform recommends wh
 - Full UI/UX redesign — incremental improvements only (Strategy Dashboard is new, rest evolves)
 - Real-time collaboration — not needed for solo creators / small agencies yet
 
-## Current State
+## Current Milestone: v2.2 Frontend Hardening & Production Ship
 
-**v2.1 Production Hardening shipped** — 764+ net new tests, 4 P0 TDD bug fixes, 95%+ billing coverage, Playwright E2E, Locust load testing. Platform ready for public launch.
+**Goal:** Harden the React frontend for production launch — CI strictness, httpOnly cookie auth, centralized API client, frontend unit tests, content download/redirect feature, final E2E verification and ship.
 
 ## Context
 
