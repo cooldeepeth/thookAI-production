@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Production Hardening — 50x Testing Sprint
+milestone: v2.2
+milestone_name: Frontend Hardening & Production Ship
 status: verifying
-stopped_at: Completed 25-e2e-verification-production-ship/25-02-PLAN.md
-last_updated: "2026-04-04T00:42:20.826Z"
+stopped_at: Completed 25-e2e-verification-production-ship/25-03-PLAN.md
+last_updated: "2026-04-04T01:56:06.150Z"
 last_activity: 2026-04-03
 progress:
-  total_phases: 12
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 17
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 13
   percent: 0
 ---
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
 | Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
 | Phase 25 P02 | 11 | 2 tasks | 3 files |
+| Phase 25 P03 | 66 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
 - [Phase 25]: Risk-accept 14 npm audit high findings in react-scripts build tooling (svgo, nth-check, serialize-javascript, underscore chain) — dev-build deps only, zero attack surface in prod Vercel deployment; fix requires CRA-to-Vite migration deferred to v3.0
 - [Phase 25]: pymongo upgraded to >=4.6.3 (CVE-2024-5629), starlette pinned to >=0.47.2 (CVE-2024-47874, CVE-2025-54121), fastapi relaxed from == to >= to allow transitive starlette upgrade
+- [Phase 25]: Export spec uses inline auth+mock helpers directly rather than re-exporting mockExportContent — more readable, avoids import indirection
+- [Phase 25]: apiFetch retry+backoff requires either waitForSelector or textContent fallback for error assertions (not sequential isVisible loops)
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T00:42:20.822Z
-Stopped at: Completed 25-e2e-verification-production-ship/25-02-PLAN.md
+Last session: 2026-04-04T01:56:06.146Z
+Stopped at: Completed 25-e2e-verification-production-ship/25-03-PLAN.md
 Resume file: None

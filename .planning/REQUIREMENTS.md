@@ -47,7 +47,7 @@
 
 ### E2E & Production Ship
 
-- [ ] **SHIP-01**: Full Playwright E2E passes green (critical path, billing, agency, download/redirect)
+- [x] **SHIP-01**: Full Playwright E2E passes green (critical path, billing, agency, download/redirect)
 - [ ] **SHIP-02**: `npm audit` reports 0 critical/high vulnerabilities in frontend
 - [ ] **SHIP-03**: `pip-audit` or `safety check` reports 0 critical vulnerabilities in backend
 - [ ] **SHIP-04**: All environment variables documented in `.env.example` with descriptions
@@ -99,7 +99,7 @@
 | DL-04 | Phase 24 | Complete |
 | DL-05 | Phase 24 | Complete |
 | DL-06 | Phase 24 | Complete |
-| SHIP-01 | Phase 25 | Pending |
+| SHIP-01 | Phase 25 | Complete |
 | SHIP-02 | Phase 25 | Pending |
 | SHIP-03 | Phase 25 | Pending |
 | SHIP-04 | Phase 25 | Pending |

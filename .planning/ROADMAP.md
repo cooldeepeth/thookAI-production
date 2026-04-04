@@ -55,7 +55,7 @@
 - [x] **Phase 22: apiFetch Migration + Error Handling** - Create centralized fetch wrapper with timeout, retry, error handling, and replace all 41 raw fetch() calls across the frontend (completed 2026-04-03)
 - [x] **Phase 23: Frontend Unit Test Suite** - Install testing libraries, configure Jest, write 45+ unit/component tests across 10+ files, wire into CI (completed 2026-04-04)
 - [x] **Phase 24: Content Download + Redirect-to-Platform** - Download text/images/zip from content detail view, open-in-platform compose URL buttons for LinkedIn and X (completed 2026-04-03)
-- [ ] **Phase 25: E2E Verification + Production Ship Checklist** - Full Playwright E2E verification, dependency audit, security sweep, env documentation, and ship checklist
+- [x] **Phase 25: E2E Verification + Production Ship Checklist** - Full Playwright E2E verification, dependency audit, security sweep, env documentation, and ship checklist (completed 2026-04-04)
 
 ## Phase Details
 
@@ -341,9 +341,9 @@ Plans:
   6. A grep for hardcoded secrets, `console.log` statements, and debug-only endpoints across the full codebase returns zero production-facing findings
 **Plans**: 3 plans
 Plans:
-- [ ] 25-01-PLAN.md — Security sweep (console.log removal) + .env.example full annotation (SHIP-06, SHIP-04)
-- [ ] 25-02-PLAN.md — npm audit + pip-audit + SHIP-CHECKLIST.md (SHIP-02, SHIP-03, SHIP-05)
-- [ ] 25-03-PLAN.md — E2E export.spec.ts + full Playwright suite verification (SHIP-01)
+- [x] 25-01-PLAN.md — Security sweep (console.log removal) + .env.example full annotation (SHIP-06, SHIP-04)
+- [x] 25-02-PLAN.md — npm audit + pip-audit + SHIP-CHECKLIST.md (SHIP-02, SHIP-03, SHIP-05)
+- [x] 25-03-PLAN.md — E2E export.spec.ts + full Playwright suite verification (SHIP-01)
 
 ## Progress
 
@@ -373,4 +373,4 @@ Plans:
 | 22. apiFetch Migration + Error Handling | v2.2 | 2/3 | Complete    | 2026-04-03 |
 | 23. Frontend Unit Test Suite | v2.2 | 3/3 | Complete    | 2026-04-04 |
 | 24. Content Download + Redirect-to-Platform | v2.2 | 1/1 | Complete    | 2026-04-04 |
-| 25. E2E Verification + Production Ship Checklist | v2.2 | 0/3 | In progress | - |
+| 25. E2E Verification + Production Ship Checklist | v2.2 | 3/3 | Complete   | 2026-04-04 |
