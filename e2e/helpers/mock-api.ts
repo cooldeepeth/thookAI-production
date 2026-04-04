@@ -679,3 +679,70 @@ export async function mockWorkspaceContext(
     }
   });
 }
+
+/**
+ * Mock all endpoints needed to render a ContentOutput page with
+ * an approved content job that has final_content set — this makes
+ * ExportActionsBar visible in the DOM.
+ *
+ * Mocks:
+ *   GET /api/auth/me           → authenticated user
+ *   GET /api/content/:job_id   → approved job with final_content
+ *   GET /api/dashboard/stats   → minimal stats (so Dashboard loads)
+ */
+export async function mockExportContent(
+  page: Page,
+  options: { jobId?: string; platform?: string; finalContent?: string } = {}
+): Promise<void> {
+  const jobId = options.jobId ?? "export-test-job-001";
+  const platform = options.platform ?? "linkedin";
+  const finalContent =
+    options.finalContent ??
+    "This is a test LinkedIn post about AI content creation. It has enough text to be meaningful and demonstrates the export feature working correctly.";
+
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user_id: "export-user-001",
+        email: "export@thookai.test",
+        name: "Export Tester",
+        subscription_tier: "pro",
+        credits: 100,
+        onboarding_completed: true,
+      }),
+    })
+  );
+
+  await page.route(`**/api/content/${jobId}`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        job_id: jobId,
+        platform,
+        status: "approved",
+        draft: finalContent,
+        final_content: finalContent,
+        edited_content: null,
+        was_edited: false,
+        media_assets: [],
+        carousel: null,
+        created_at: new Date().toISOString(),
+      }),
+    })
+  );
+
+  await page.route("**/api/dashboard/stats", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        total_posts: 5,
+        total_credits: 100,
+        platforms_connected: 1,
+      }),
+    })
+  );
+}
