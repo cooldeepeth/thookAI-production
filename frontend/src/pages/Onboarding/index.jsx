@@ -1,18 +1,17 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { motion, AnimatePresence } from "framer-motion";
-import PhaseOne from "./PhaseOne";
-import PhaseTwo from "./PhaseTwo";
-import PhaseThree from "./PhaseThree";
-import { Zap } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import PhaseOne from './PhaseOne';
+import PhaseTwo from './PhaseTwo';
+import PhaseThree from './PhaseThree';
+import { Zap } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 const phases = [
-  { num: 1, label: "Profile Analysis" },
-  { num: 2, label: "Interview" },
-  { num: 3, label: "Persona Reveal" },
+  { num: 1, label: 'Profile Analysis' },
+  { num: 2, label: 'Interview' },
+  { num: 3, label: 'Persona Reveal' },
 ];
 
 export default function OnboardingWizard() {
@@ -20,12 +19,12 @@ export default function OnboardingWizard() {
   const [postsAnalysis, setPostsAnalysis] = useState(null);
   const [personaCard, setPersonaCard] = useState(null);
   const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user?.onboarding_completed) navigate("/dashboard/persona", { replace: true });
+    if (user?.onboarding_completed) navigate('/dashboard/persona', { replace: true });
   }, [user, navigate]);
 
   const handlePhaseOneComplete = (analysis) => {
@@ -36,20 +35,18 @@ export default function OnboardingWizard() {
   const handlePhaseTwoComplete = async (answers) => {
     setPhase(3);
     setGenerating(true);
-    setError("");
+    setError('');
     try {
-      const res = await fetch(`${BACKEND_URL}/api/onboarding/generate-persona`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      const res = await apiFetch('/api/onboarding/generate-persona', {
+        method: 'POST',
         body: JSON.stringify({ answers, posts_analysis: postsAnalysis?.analysis || null }),
       });
-      if (!res.ok) throw new Error("Failed to generate persona");
+      if (!res.ok) throw new Error('Failed to generate persona');
       const data = await res.json();
       setPersonaCard(data.persona_card);
       await checkAuth(); // refresh user state (onboarding_completed = true)
     } catch (e) {
-      setError("Something went wrong generating your persona. Please try again.");
+      setError('Something went wrong generating your persona. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -70,23 +67,23 @@ export default function OnboardingWizard() {
         <div className="flex items-center gap-2">
           {phases.map((p, i) => (
             <div key={p.num} className="flex items-center gap-2">
-              <div className={`flex items-center gap-2 transition-all ${phase === p.num ? "opacity-100" : phase > p.num ? "opacity-60" : "opacity-30"}`}>
+              <div className={`flex items-center gap-2 transition-all ${phase === p.num ? 'opacity-100' : phase > p.num ? 'opacity-60' : 'opacity-30'}`}>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  phase > p.num ? "bg-lime text-black" : phase === p.num ? "bg-white text-black" : "bg-white/10 text-zinc-500"
+                  phase > p.num ? 'bg-lime text-black' : phase === p.num ? 'bg-white text-black' : 'bg-white/10 text-zinc-500'
                 }`}>
-                  {phase > p.num ? "✓" : p.num}
+                  {phase > p.num ? '✓' : p.num}
                 </div>
                 <span className="text-xs text-zinc-400 hidden sm:block">{p.label}</span>
               </div>
               {i < phases.length - 1 && (
-                <div className={`w-8 h-px mx-1 transition-colors ${phase > p.num ? "bg-lime/50" : "bg-white/10"}`} />
+                <div className={`w-8 h-px mx-1 transition-colors ${phase > p.num ? 'bg-lime/50' : 'bg-white/10'}`} />
               )}
             </div>
           ))}
         </div>
 
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate('/dashboard')}
           className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
           data-testid="skip-onboarding-btn"
         >

@@ -1,13 +1,4 @@
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
-function getAuthHeaders() {
-  const token = localStorage.getItem("thook_token");
-  const headers = { "Content-Type": "application/json" };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return headers;
-}
+import { apiFetch } from './api';
 
 /**
  * Browse templates with optional filters.
@@ -15,18 +6,15 @@ function getAuthHeaders() {
  */
 export async function getTemplates(filters = {}) {
   const params = new URLSearchParams();
-  if (filters.platform) params.append("platform", filters.platform);
-  if (filters.category) params.append("category", filters.category);
-  if (filters.hook_type) params.append("hook_type", filters.hook_type);
-  if (filters.sort) params.append("sort", filters.sort);
-  if (filters.limit) params.append("limit", String(filters.limit));
-  if (filters.offset !== undefined) params.append("offset", String(filters.offset));
+  if (filters.platform) params.append('platform', filters.platform);
+  if (filters.category) params.append('category', filters.category);
+  if (filters.hook_type) params.append('hook_type', filters.hook_type);
+  if (filters.sort) params.append('sort', filters.sort);
+  if (filters.limit) params.append('limit', String(filters.limit));
+  if (filters.offset !== undefined) params.append('offset', String(filters.offset));
 
-  const res = await fetch(`${BACKEND_URL}/api/templates?${params}`, {
-    credentials: "include",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) throw new Error("Failed to fetch templates");
+  const res = await apiFetch(`/api/templates?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch templates');
   return res.json();
 }
 
@@ -34,11 +22,8 @@ export async function getTemplates(filters = {}) {
  * Get a single template by ID.
  */
 export async function getTemplate(templateId) {
-  const res = await fetch(`${BACKEND_URL}/api/templates/${templateId}`, {
-    credentials: "include",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) throw new Error("Template not found");
+  const res = await apiFetch(`/api/templates/${templateId}`);
+  if (!res.ok) throw new Error('Template not found');
   return res.json();
 }
 
@@ -46,12 +31,10 @@ export async function getTemplate(templateId) {
  * Toggle upvote on a template.
  */
 export async function upvoteTemplate(templateId) {
-  const res = await fetch(`${BACKEND_URL}/api/templates/${templateId}/upvote`, {
-    method: "POST",
-    credentials: "include",
-    headers: getAuthHeaders(),
+  const res = await apiFetch(`/api/templates/${templateId}/upvote`, {
+    method: 'POST',
   });
-  if (!res.ok) throw new Error("Failed to upvote template");
+  if (!res.ok) throw new Error('Failed to upvote template');
   return res.json();
 }
 
@@ -61,13 +44,11 @@ export async function upvoteTemplate(templateId) {
  * @param {Object} options - { platform }
  */
 export async function useTemplate(templateId, options = {}) {
-  const res = await fetch(`${BACKEND_URL}/api/templates/${templateId}/use`, {
-    method: "POST",
-    credentials: "include",
-    headers: getAuthHeaders(),
+  const res = await apiFetch(`/api/templates/${templateId}/use`, {
+    method: 'POST',
     body: JSON.stringify({ platform: options.platform || null }),
   });
-  if (!res.ok) throw new Error("Failed to use template");
+  if (!res.ok) throw new Error('Failed to use template');
   return res.json();
 }
 
@@ -76,15 +57,13 @@ export async function useTemplate(templateId, options = {}) {
  * @param {Object} templateData - { job_id, title, category, description, tags }
  */
 export async function createTemplate(templateData) {
-  const res = await fetch(`${BACKEND_URL}/api/templates`, {
-    method: "POST",
-    credentials: "include",
-    headers: getAuthHeaders(),
+  const res = await apiFetch('/api/templates', {
+    method: 'POST',
     body: JSON.stringify(templateData),
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.detail || "Failed to create template");
+    throw new Error(error.detail || 'Failed to create template');
   }
   return res.json();
 }
@@ -93,11 +72,8 @@ export async function createTemplate(templateData) {
  * Get templates published by the current user.
  */
 export async function getMyPublishedTemplates() {
-  const res = await fetch(`${BACKEND_URL}/api/templates/my/published`, {
-    credentials: "include",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) throw new Error("Failed to fetch your templates");
+  const res = await apiFetch('/api/templates/my/published');
+  if (!res.ok) throw new Error('Failed to fetch your templates');
   return res.json();
 }
 
@@ -105,11 +81,8 @@ export async function getMyPublishedTemplates() {
  * Get templates the current user has used.
  */
 export async function getMyUsedTemplates() {
-  const res = await fetch(`${BACKEND_URL}/api/templates/my/used`, {
-    credentials: "include",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) throw new Error("Failed to fetch used templates");
+  const res = await apiFetch('/api/templates/my/used');
+  if (!res.ok) throw new Error('Failed to fetch used templates');
   return res.json();
 }
 
@@ -117,11 +90,8 @@ export async function getMyUsedTemplates() {
  * Get available categories and hook types.
  */
 export async function getCategories() {
-  const res = await fetch(`${BACKEND_URL}/api/templates/categories`, {
-    credentials: "include",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) throw new Error("Failed to fetch categories");
+  const res = await apiFetch('/api/templates/categories');
+  if (!res.ok) throw new Error('Failed to fetch categories');
   return res.json();
 }
 
@@ -129,11 +99,8 @@ export async function getCategories() {
  * Get featured/trending templates.
  */
 export async function getFeaturedTemplates() {
-  const res = await fetch(`${BACKEND_URL}/api/templates/featured`, {
-    credentials: "include",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) throw new Error("Failed to fetch featured templates");
+  const res = await apiFetch('/api/templates/featured');
+  if (!res.ok) throw new Error('Failed to fetch featured templates');
   return res.json();
 }
 
@@ -141,11 +108,9 @@ export async function getFeaturedTemplates() {
  * Delete a template (author only).
  */
 export async function deleteTemplate(templateId) {
-  const res = await fetch(`${BACKEND_URL}/api/templates/${templateId}`, {
-    method: "DELETE",
-    credentials: "include",
-    headers: getAuthHeaders(),
+  const res = await apiFetch(`/api/templates/${templateId}`, {
+    method: 'DELETE',
   });
-  if (!res.ok) throw new Error("Failed to delete template");
+  if (!res.ok) throw new Error('Failed to delete template');
   return res.json();
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Share2,
   Copy,
@@ -11,18 +11,17 @@ import {
   Eye,
   ShieldAlert,
   X,
-} from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+} from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 const EXPIRY_OPTIONS = [
-  { value: "7", label: "7 days" },
-  { value: "30", label: "30 days" },
-  { value: "-1", label: "Never (Pro+)" },
+  { value: '7', label: '7 days' },
+  { value: '30', label: '30 days' },
+  { value: '-1', label: 'Never (Pro+)' },
 ];
 
 export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShareStatusChange }) {
-  const [expiryDays, setExpiryDays] = useState("30");
+  const [expiryDays, setExpiryDays] = useState('30');
   const [generating, setGenerating] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -40,15 +39,13 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
     setGenerating(true);
     setError(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/persona/share`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      const res = await apiFetch('/api/persona/share', {
+        method: 'POST',
         body: JSON.stringify({ expiry_days: parseInt(expiryDays, 10) }),
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail || "Failed to create share link");
+        throw new Error(err.detail || 'Failed to create share link');
       }
       const data = await res.json();
       onShareStatusChange({
@@ -68,19 +65,18 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
   };
 
   const handleRevoke = async () => {
-    if (!window.confirm("Revoke your share link? Anyone with the link will no longer be able to view your persona card.")) {
+    if (!window.confirm('Revoke your share link? Anyone with the link will no longer be able to view your persona card.')) {
       return;
     }
     setRevoking(true);
     setError(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/persona/share`, {
-        method: "DELETE",
-        credentials: "include",
+      const res = await apiFetch('/api/persona/share', {
+        method: 'DELETE',
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail || "Failed to revoke share link");
+        throw new Error(err.detail || 'Failed to revoke share link');
       }
       onShareStatusChange({ is_shared: false });
     } catch (err) {
@@ -95,7 +91,7 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
     const shareUrl = shareStatus?.share_url;
     const fullUrl =
       shareUrl != null
-        ? (shareUrl.startsWith("/") ? `${window.location.origin}${shareUrl}` : shareUrl)
+        ? (shareUrl.startsWith('/') ? `${window.location.origin}${shareUrl}` : shareUrl)
         : `${window.location.origin}/creator/${shareStatus?.share_token}`;
     try {
       await navigator.clipboard.writeText(fullUrl);
@@ -103,18 +99,18 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
       setTimeout(() => setCopiedLink(false), 2000);
     } catch (err) {
       // Fallback: create temporary textarea for copying
-      const textarea = document.createElement("textarea");
+      const textarea = document.createElement('textarea');
       textarea.value = fullUrl;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
       document.body.appendChild(textarea);
       textarea.select();
       try {
-        document.execCommand("copy");
+        document.execCommand('copy');
         setCopiedLink(true);
         setTimeout(() => setCopiedLink(false), 2000);
       } catch (fallbackErr) {
-        console.error("Fallback copy failed:", fallbackErr);
+        console.error('Fallback copy failed:', fallbackErr);
       }
       document.body.removeChild(textarea);
     }
@@ -181,7 +177,7 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
                     readOnly
                     value={
                       shareStatus?.share_url
-                        ? (shareStatus.share_url.startsWith("/")
+                        ? (shareStatus.share_url.startsWith('/')
                             ? `${window.location.origin}${shareStatus.share_url}`
                             : shareStatus.share_url)
                         : `${window.location.origin}/creator/${shareStatus?.share_token}`
@@ -192,8 +188,8 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
                     onClick={copyShareLink}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 flex-shrink-0 ${
                       copiedLink
-                        ? "bg-lime text-black"
-                        : "bg-white/10 text-white hover:bg-white/20"
+                        ? 'bg-lime text-black'
+                        : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
                     {copiedLink ? (
@@ -218,10 +214,10 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
                   </div>
                   <p className="text-sm text-white">
                     {shareStatus?.is_permanent
-                      ? "Never"
+                      ? 'Never'
                       : shareStatus?.expires_at
                       ? new Date(shareStatus.expires_at).toLocaleDateString()
-                      : "Unknown"}
+                      : 'Unknown'}
                   </p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3">
@@ -239,7 +235,7 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() =>
-                    window.open(`/creator/${shareStatus?.share_token}`, "_blank")
+                    window.open(`/creator/${shareStatus?.share_token}`, '_blank')
                   }
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-white transition-colors"
                 >
@@ -282,15 +278,15 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
                       onClick={() => setExpiryDays(option.value)}
                       className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all border ${
                         expiryDays === option.value
-                          ? "bg-lime/10 text-lime border-lime/30"
-                          : "bg-white/5 text-zinc-400 border-white/5 hover:border-white/10"
+                          ? 'bg-lime/10 text-lime border-lime/30'
+                          : 'bg-white/5 text-zinc-400 border-white/5 hover:border-white/10'
                       }`}
                     >
                       {option.label}
                     </button>
                   ))}
                 </div>
-                {expiryDays === "-1" && (
+                {expiryDays === '-1' && (
                   <p className="text-xs text-zinc-600 mt-2">
                     Permanent links are available for Pro, Studio, and Agency plans. Free tier links are capped at 30 days.
                   </p>
@@ -308,7 +304,7 @@ export default function PersonaShareModal({ isOpen, onClose, shareStatus, onShar
                 ) : (
                   <Link2 size={16} />
                 )}
-                {generating ? "Generating..." : "Generate Share Link"}
+                {generating ? 'Generating...' : 'Generate Share Link'}
               </button>
 
               <p className="text-xs text-zinc-600 text-center">

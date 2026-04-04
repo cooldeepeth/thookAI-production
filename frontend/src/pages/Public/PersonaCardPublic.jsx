@@ -1,35 +1,34 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { 
-  Zap, Users, Target, Sparkles, Eye, Calendar, 
-  Share2, Download, ExternalLink, ChevronRight 
-} from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { useState, useEffect, useRef } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  Zap, Users, Target, Sparkles, Eye, Calendar,
+  Share2, Download, ExternalLink, ChevronRight
+} from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 const ARCHETYPE_GRADIENTS = {
-  Educator: "from-cyan-500/20 via-cyan-400/10 to-transparent",
-  Storyteller: "from-violet-500/20 via-violet-400/10 to-transparent",
-  Provocateur: "from-pink-500/20 via-pink-400/10 to-transparent",
-  Builder: "from-lime-500/20 via-lime-400/10 to-transparent",
+  Educator: 'from-cyan-500/20 via-cyan-400/10 to-transparent',
+  Storyteller: 'from-violet-500/20 via-violet-400/10 to-transparent',
+  Provocateur: 'from-pink-500/20 via-pink-400/10 to-transparent',
+  Builder: 'from-lime-500/20 via-lime-400/10 to-transparent',
 };
 
 const ARCHETYPE_COLORS = {
-  Educator: { text: "text-cyan-400", bg: "bg-cyan-400/10", border: "border-cyan-400/30", glow: "shadow-cyan-400/20" },
-  Storyteller: { text: "text-violet-400", bg: "bg-violet-400/10", border: "border-violet-400/30", glow: "shadow-violet-400/20" },
-  Provocateur: { text: "text-pink-400", bg: "bg-pink-400/10", border: "border-pink-400/30", glow: "shadow-pink-400/20" },
-  Builder: { text: "text-lime", bg: "bg-lime/10", border: "border-lime/30", glow: "shadow-lime/20" },
+  Educator: { text: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-400/30', glow: 'shadow-cyan-400/20' },
+  Storyteller: { text: 'text-violet-400', bg: 'bg-violet-400/10', border: 'border-violet-400/30', glow: 'shadow-violet-400/20' },
+  Provocateur: { text: 'text-pink-400', bg: 'bg-pink-400/10', border: 'border-pink-400/30', glow: 'shadow-pink-400/20' },
+  Builder: { text: 'text-lime', bg: 'bg-lime/10', border: 'border-lime/30', glow: 'shadow-lime/20' },
 };
 
 const REGIONAL_FLAGS = {
-  US: "🇺🇸",
-  UK: "🇬🇧",
-  AU: "🇦🇺",
-  IN: "🇮🇳",
+  US: '🇺🇸',
+  UK: '🇬🇧',
+  AU: '🇦🇺',
+  IN: '🇮🇳',
 };
 
-function VoiceMetricBar({ label, value, color = "lime" }) {
+function VoiceMetricBar({ label, value, color = 'lime' }) {
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
@@ -40,7 +39,7 @@ function VoiceMetricBar({ label, value, color = "lime" }) {
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${value * 100}%` }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
           className={`h-full bg-${color} rounded-full`}
         />
       </div>
@@ -58,10 +57,11 @@ export default function PersonaCardPublic() {
   useEffect(() => {
     const fetchPublicPersona = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/persona/public/${shareToken}`);
+        // Public endpoint — CSRF header not injected (GET request) and credentials:include is harmless
+        const res = await apiFetch(`/api/persona/public/${shareToken}`);
         if (!res.ok) {
           const err = await res.json();
-          throw new Error(err.detail || "Failed to load persona");
+          throw new Error(err.detail || 'Failed to load persona');
         }
         const data = await res.json();
         setPersona(data);
@@ -71,7 +71,7 @@ export default function PersonaCardPublic() {
         setLoading(false);
       }
     };
-    
+
     if (shareToken) {
       fetchPublicPersona();
     }
@@ -80,7 +80,7 @@ export default function PersonaCardPublic() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="flex flex-col items-center gap-4"
@@ -95,7 +95,7 @@ export default function PersonaCardPublic() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center max-w-md"
@@ -104,16 +104,16 @@ export default function PersonaCardPublic() {
             <Zap size={28} className="text-red-400" />
           </div>
           <h2 className="font-display font-bold text-2xl text-white mb-2">
-            {error === "Share link has expired" ? "Link Expired" : "Persona Not Found"}
+            {error === 'Share link has expired' ? 'Link Expired' : 'Persona Not Found'}
           </h2>
           <p className="text-zinc-500 text-sm mb-6">
-            {error === "Share link has expired" 
+            {error === 'Share link has expired'
               ? "This persona card share link has expired. The creator may have revoked it or it's past its expiry date."
               : "This persona card doesn't exist or has been removed by its creator."
             }
           </p>
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="inline-flex items-center gap-2 btn-primary"
           >
             Create Your Own <ChevronRight size={16} />
@@ -127,8 +127,8 @@ export default function PersonaCardPublic() {
   const creator = persona?.creator || {};
   const voiceMetrics = persona?.voice_metrics || {};
   const shareInfo = persona?.share_info || {};
-  
-  const archetype = card.personality_archetype || "Educator";
+
+  const archetype = card.personality_archetype || 'Educator';
   const colors = ARCHETYPE_COLORS[archetype] || ARCHETYPE_COLORS.Educator;
   const gradient = ARCHETYPE_GRADIENTS[archetype] || ARCHETYPE_GRADIENTS.Educator;
 
@@ -136,7 +136,7 @@ export default function PersonaCardPublic() {
     <div className="min-h-screen bg-[#050505] relative overflow-hidden">
       {/* Background gradient effect */}
       <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-radial ${gradient} blur-3xl opacity-50 pointer-events-none`} />
-      
+
       {/* Thook branding header */}
       <header className="relative z-10 p-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
@@ -169,13 +169,13 @@ export default function PersonaCardPublic() {
                   <img src={creator.picture} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <span className={`font-bold text-2xl ${colors.text}`}>
-                    {creator.name?.[0]?.toUpperCase() || "C"}
+                    {creator.name?.[0]?.toUpperCase() || 'C'}
                   </span>
                 )}
               </div>
               <div className="flex-1">
                 <h1 className="font-display font-bold text-2xl text-white mb-1">
-                  {creator.name || "Creator"}
+                  {creator.name || 'Creator'}
                 </h1>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-sm font-semibold px-3 py-1 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}>
@@ -229,8 +229,8 @@ export default function PersonaCardPublic() {
                 <p className="text-xs text-zinc-600 uppercase tracking-wider mb-3">Content Pillars</p>
                 <div className="flex flex-wrap gap-2">
                   {card.content_pillars.map((pillar, i) => (
-                    <span 
-                      key={i} 
+                    <span
+                      key={i}
                       className={`text-sm px-3 py-1.5 rounded-full ${colors.bg} ${colors.text} border ${colors.border}`}
                     >
                       {pillar}
@@ -246,8 +246,8 @@ export default function PersonaCardPublic() {
                 <p className="text-xs text-zinc-600 uppercase tracking-wider mb-3">Platforms</p>
                 <div className="flex gap-2">
                   {card.focus_platforms.map((platform, i) => (
-                    <span 
-                      key={i} 
+                    <span
+                      key={i}
                       className="text-sm px-3 py-1.5 rounded-full bg-white/5 text-zinc-300 border border-white/10"
                     >
                       {platform}
@@ -264,13 +264,13 @@ export default function PersonaCardPublic() {
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Voice Fingerprint</span>
               </div>
               <div className="space-y-3">
-                <VoiceMetricBar 
-                  label="Vocabulary Depth" 
-                  value={voiceMetrics.vocabulary_complexity || 0.65} 
+                <VoiceMetricBar
+                  label="Vocabulary Depth"
+                  value={voiceMetrics.vocabulary_complexity || 0.65}
                 />
-                <VoiceMetricBar 
-                  label="Emoji Style" 
-                  value={voiceMetrics.emoji_frequency || 0.05} 
+                <VoiceMetricBar
+                  label="Emoji Style"
+                  value={voiceMetrics.emoji_frequency || 0.05}
                 />
               </div>
               {voiceMetrics.hook_style_preferences?.length > 0 && (
@@ -309,7 +309,7 @@ export default function PersonaCardPublic() {
         </motion.div>
 
         {/* CTA Section */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
@@ -318,8 +318,8 @@ export default function PersonaCardPublic() {
           <p className="text-zinc-500 text-sm mb-4">
             Want your own AI-powered persona card?
           </p>
-          <Link 
-            to="/?utm_source=shared_persona&utm_medium=public_card" 
+          <Link
+            to="/?utm_source=shared_persona&utm_medium=public_card"
             className="inline-flex items-center gap-2 btn-primary text-lg px-6 py-3"
           >
             <Sparkles size={18} />

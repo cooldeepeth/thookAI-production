@@ -8,8 +8,7 @@ import {
   Linkedin, Twitter, Instagram, Link2, Unlink, CheckCircle2,
   AlertCircle, ExternalLink, RefreshCw, Shield, Zap
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const PLATFORM_CONFIG = {
   linkedin: {
@@ -83,10 +82,7 @@ export default function Connections() {
 
   const fetchPlatformStatus = async () => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/platforms/status`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch('/api/platforms/status');
 
       if (!res.ok) throw new Error("Failed to fetch platform status");
       const data = await res.json();
@@ -106,10 +102,7 @@ export default function Connections() {
   const connectPlatform = async (platform) => {
     setConnecting(platform);
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/platforms/connect/${platform}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch(`/api/platforms/connect/${platform}`);
 
       if (!res.ok) {
         const data = await res.json();
@@ -133,10 +126,8 @@ export default function Connections() {
   const disconnectPlatform = async (platform) => {
     setDisconnecting(platform);
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/platforms/disconnect/${platform}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiFetch(`/api/platforms/disconnect/${platform}`, {
+        method: "DELETE"
       });
 
       if (!res.ok) throw new Error("Failed to disconnect");

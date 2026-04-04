@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Production Hardening — 50x Testing Sprint
 status: verifying
-stopped_at: Completed 20-frontend-e2e-integration/20-03-PLAN.md
-last_updated: "2026-04-03T08:28:03.468Z"
+stopped_at: Completed 25-e2e-verification-production-ship/25-02-PLAN.md
+last_updated: "2026-04-04T00:42:20.826Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 12
-  completed_phases: 4
-  total_plans: 19
-  completed_plans: 19
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P05 | 8 | 2 tasks | 2 files |
 | Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
 | Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
+| Phase 25 P02 | 11 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,8 @@ Recent decisions affecting current work:
 - [Phase 20-frontend-e2e-integration]: LIFO route ordering: mockWorkspaceContext must be applied after mockAgencyEndpoints to override overlapping workspaces route
 - [Phase 20-03]: Serial test.describe used for critical path steps — each step depends on shared mock auth state from previous steps
 - [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
+- [Phase 25]: Risk-accept 14 npm audit high findings in react-scripts build tooling (svgo, nth-check, serialize-javascript, underscore chain) — dev-build deps only, zero attack surface in prod Vercel deployment; fix requires CRA-to-Vite migration deferred to v3.0
+- [Phase 25]: pymongo upgraded to >=4.6.3 (CVE-2024-5629), starlette pinned to >=0.47.2 (CVE-2024-47874, CVE-2025-54121), fastapi relaxed from == to >= to allow transitive starlette upgrade
 
 ### Pending Todos
 
@@ -109,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T08:19:22.840Z
-Stopped at: Completed 20-frontend-e2e-integration/20-03-PLAN.md
+Last session: 2026-04-04T00:42:20.822Z
+Stopped at: Completed 25-e2e-verification-production-ship/25-02-PLAN.md
 Resume file: None

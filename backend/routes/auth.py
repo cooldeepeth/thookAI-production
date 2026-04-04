@@ -1,4 +1,5 @@
 import logging
+import secrets
 
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from pydantic import BaseModel, EmailStr
@@ -42,13 +43,30 @@ def create_jwt_token(user_id: str, email: str) -> str:
     return jwt.encode({"sub": user_id, "email": email, "exp": expire}, _jwt_secret(), algorithm=ALGORITHM)
 
 
-def set_auth_cookie(response: Response, token: str):
+def set_auth_cookie(response: Response, token: str) -> None:
     # Use secure=False and samesite=lax in development to allow cookies over HTTP
     is_dev = settings.app.is_development
     expire_days = settings.security.jwt_expire_days
     response.set_cookie(
         key="session_token", value=token,
         httponly=True,
+        secure=not is_dev,
+        samesite="lax" if is_dev else "none",
+        max_age=expire_days * 24 * 3600, path="/"
+    )
+
+
+def set_csrf_cookie(response: Response, csrf_value: str) -> None:
+    """Set the JS-readable CSRF token cookie (double-submit cookie pattern).
+
+    This cookie is intentionally NOT httpOnly so that the frontend JavaScript
+    can read it and attach it as the X-CSRF-Token request header.
+    """
+    is_dev = settings.app.is_development
+    expire_days = settings.security.jwt_expire_days
+    response.set_cookie(
+        key="csrf_token", value=csrf_value,
+        httponly=False,  # JS must be able to read this — intentional
         secure=not is_dev,
         samesite="lax" if is_dev else "none",
         max_age=expire_days * 24 * 3600, path="/"
@@ -79,8 +97,10 @@ async def register(data: RegisterRequest, response: Response):
     users_wmajority = db.users.with_options(write_concern=WriteConcern("majority"))
     await users_wmajority.insert_one(user)
     token = create_jwt_token(user_id, data.email)
+    csrf_value = secrets.token_urlsafe(32)
     set_auth_cookie(response, token)
-    return {**safe_user(user), "token": token}
+    set_csrf_cookie(response, csrf_value)
+    return {**safe_user(user), "token": token, "csrf_token": csrf_value}
 
 
 @router.post("/login")
@@ -93,8 +113,10 @@ async def login(data: LoginRequest, response: Response):
         logger.warning("Failed login attempt: email=%s (wrong password)", data.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_jwt_token(user["user_id"], data.email)
+    csrf_value = secrets.token_urlsafe(32)
     set_auth_cookie(response, token)
-    return {**safe_user(user), "token": token}
+    set_csrf_cookie(response, csrf_value)
+    return {**safe_user(user), "token": token, "csrf_token": csrf_value}
 
 
 @router.get("/me")
@@ -107,5 +129,21 @@ async def logout(response: Response, request: Request):
     token = request.cookies.get("session_token")
     if token:
         await db.user_sessions.delete_one({"session_token": token})
-    response.delete_cookie(key="session_token", path="/", samesite="none", secure=True)
+    is_dev = settings.app.is_development
+    samesite = "lax" if is_dev else "none"
+    secure = not is_dev
+    response.delete_cookie(key="session_token", path="/", samesite=samesite, secure=secure)
+    response.delete_cookie(key="csrf_token", path="/", samesite=samesite, secure=secure)
     return {"message": "Logged out"}
+
+
+@router.get("/csrf-token")
+async def get_csrf_token(response: Response, current_user: dict = Depends(get_current_user)):
+    """Return a fresh CSRF token and set the csrf_token cookie.
+
+    Call this endpoint on page load when the frontend needs to refresh its CSRF
+    token (e.g. after a page reload). Requires cookie-based authentication.
+    """
+    csrf_value = secrets.token_urlsafe(32)
+    set_csrf_cookie(response, csrf_value)
+    return {"csrf_token": csrf_value}

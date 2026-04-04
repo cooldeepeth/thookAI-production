@@ -1,13 +1,12 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowRight, FileText, UserPlus, Linkedin, Twitter, Instagram } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { ArrowRight, FileText, UserPlus, Linkedin, Twitter, Instagram } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 export default function PhaseOne({ onContinue }) {
   const [mode, setMode] = useState(null); // "existing" | "new"
-  const [postsText, setPostsText] = useState("");
-  const [platform, setPlatform] = useState("LinkedIn");
+  const [postsText, setPostsText] = useState('');
+  const [platform, setPlatform] = useState('LinkedIn');
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -15,10 +14,8 @@ export default function PhaseOne({ onContinue }) {
     if (!postsText.trim()) { onContinue(null); return; }
     setAnalyzing(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/onboarding/analyze-posts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      const res = await apiFetch('/api/onboarding/analyze-posts', {
+        method: 'POST',
         body: JSON.stringify({ posts_text: postsText, platform }),
       });
       const data = await res.json();
@@ -30,7 +27,7 @@ export default function PhaseOne({ onContinue }) {
     }
   };
 
-  const platformIcons = { LinkedIn: Linkedin, "X (Twitter)": Twitter, Instagram };
+  const platformIcons = { LinkedIn: Linkedin, 'X (Twitter)': Twitter, Instagram };
 
   if (result) {
     return (
@@ -70,7 +67,7 @@ export default function PhaseOne({ onContinue }) {
         {!mode ? (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
-              onClick={() => setMode("existing")}
+              onClick={() => setMode('existing')}
               data-testid="option-existing-creator"
               className="card-thook p-6 text-left hover:border-lime/20 transition-all group"
             >
@@ -103,7 +100,7 @@ export default function PhaseOne({ onContinue }) {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
             {/* Platform selector */}
             <div className="flex gap-2 mb-4">
-              {["LinkedIn", "X (Twitter)", "Instagram"].map(p => {
+              {['LinkedIn', 'X (Twitter)', 'Instagram'].map(p => {
                 const Icon = platformIcons[p] || FileText;
                 return (
                   <button
@@ -111,7 +108,7 @@ export default function PhaseOne({ onContinue }) {
                     onClick={() => setPlatform(p)}
                     data-testid={`platform-${p.toLowerCase().replace(/\s+/g, '-')}`}
                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-colors border ${
-                      platform === p ? "bg-lime/15 border-lime/30 text-lime" : "bg-white/5 border-white/10 text-zinc-400 hover:text-white"
+                      platform === p ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
                     }`}
                   >
                     <Icon size={13} /> {p}
@@ -142,7 +139,7 @@ export default function PhaseOne({ onContinue }) {
                 {analyzing ? (
                   <><span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> Analyzing your style...</>
                 ) : (
-                  <>{postsText.trim() ? "Analyze my posts" : "Skip this step"} <ArrowRight size={15} /></>
+                  <>{postsText.trim() ? 'Analyze my posts' : 'Skip this step'} <ArrowRight size={15} /></>
                 )}
               </button>
             </div>

@@ -9,8 +9,7 @@ import {
   RefreshCw, Linkedin, Twitter, Instagram, ArrowRight, Check,
   Loader2, Sparkles, Eye, ChevronDown, ChevronUp, Zap, Copy
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const PLATFORM_CONFIG = {
   linkedin: { name: "LinkedIn", icon: Linkedin, color: "bg-blue-600", textColor: "text-blue-400" },
@@ -36,10 +35,7 @@ export default function RepurposeAgent() {
 
   const fetchSuggestions = async () => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/content/repurpose/suggestions?limit=6`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch('/api/content/repurpose/suggestions?limit=6');
 
       if (!res.ok) throw new Error("Failed to fetch suggestions");
       const data = await res.json();
@@ -68,11 +64,9 @@ export default function RepurposeAgent() {
     setPreviews(null);
 
     try {
-      const token = localStorage.getItem("thook_token");
       const platforms = selectedPlatforms.join(",");
-      const res = await fetch(
-        `${BACKEND_URL}/api/content/repurpose/preview/${selectedContent.job_id}?platforms=${platforms}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await apiFetch(
+        `/api/content/repurpose/preview/${selectedContent.job_id}?platforms=${platforms}`
       );
 
       if (!res.ok) throw new Error("Preview failed");
@@ -92,13 +86,8 @@ export default function RepurposeAgent() {
     setRepurposing(true);
 
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/content/repurpose`, {
+      const res = await apiFetch('/api/content/repurpose', {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({
           job_id: selectedContent.job_id,
           target_platforms: selectedPlatforms

@@ -6,8 +6,8 @@ import {
   Calendar, Send, Clock, Linkedin, ExternalLink, Copy, ClipboardCheck
 } from "lucide-react";
 import { LinkedInShell, XShell, InstagramShell } from "./Shells";
-
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
+import { ExportActionsBar } from './ExportActionsBar';
 
 function QCBadge({ label, value, max, isRisk = false }) {
   const pct = (value / max) * 100;
@@ -196,12 +196,10 @@ function MediaPanel({ job, onMediaUpdate }) {
   const handleGenerateImage = async () => {
     setGenerating(true);
     setError(null);
-    
+
     try {
-      const response = await fetch(`${API_URL}/api/content/generate-image`, {
+      const response = await apiFetch('/api/content/generate-image', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           job_id: job.job_id,
           style: selectedStyle
@@ -226,12 +224,10 @@ function MediaPanel({ job, onMediaUpdate }) {
   const handleGenerateVoice = async () => {
     setGeneratingVoice(true);
     setError(null);
-    
+
     try {
-      const response = await fetch(`${API_URL}/api/content/narrate`, {
+      const response = await apiFetch('/api/content/narrate', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           job_id: job.job_id
         })
@@ -587,6 +583,11 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
       {/* Video generation status */}
       {job.video_status && <VideoStatusBadge job={job} />}
 
+      {/* Export & Redirect Actions — visible whenever content text exists */}
+      {bodyText && (
+        <ExportActionsBar job={job} contentText={bodyText} />
+      )}
+
       {/* Publish Panel (for approved content) */}
       {isApproved && job.status !== "published" && job.status !== "scheduled" && (
         <PublishPanel job={job} onPublished={() => console.log("Published/Scheduled")} />
@@ -711,10 +712,7 @@ function PublishPanel({ job, onPublished }) {
   const fetchOptimalTimes = async () => {
     setLoadingTimes(true);
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${API_URL}/api/dashboard/schedule/optimal-times?platform=${platform}&count=3`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch(`/api/dashboard/schedule/optimal-times?platform=${platform}&count=3`);
       
       if (res.ok) {
         const data = await res.json();
@@ -730,12 +728,10 @@ function PublishPanel({ job, onPublished }) {
   const handlePublishNow = async () => {
     setPublishing(true);
     setResult(null);
-    
+
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${API_URL}/api/dashboard/publish/${job.job_id}?platforms=${platform}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiFetch(`/api/dashboard/publish/${job.job_id}?platforms=${platform}`, {
+        method: "POST"
       });
       
       const data = await res.json();
@@ -758,17 +754,15 @@ function PublishPanel({ job, onPublished }) {
 
   const handleSchedule = async () => {
     if (!selectedDate || !selectedTime) return;
-    
+
     setScheduling(true);
     setResult(null);
-    
+
     try {
       const scheduledAt = new Date(`${selectedDate}T${selectedTime}:00`).toISOString();
-      const token = localStorage.getItem("thook_token");
-      
-      const res = await fetch(`${API_URL}/api/dashboard/schedule/content?job_id=${job.job_id}&scheduled_at=${scheduledAt}&platforms=${platform}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+
+      const res = await apiFetch(`/api/dashboard/schedule/content?job_id=${job.job_id}&scheduled_at=${scheduledAt}&platforms=${platform}`, {
+        method: "POST"
       });
       
       const data = await res.json();

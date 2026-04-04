@@ -5,8 +5,7 @@ import InputPanel from "./InputPanel";
 import MediaUploader from "@/components/MediaUploader";
 import AgentPipeline from "./AgentPipeline";
 import ContentOutput from "./ContentOutput";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 export default function ContentStudio() {
   const [searchParams] = useSearchParams();
@@ -28,9 +27,7 @@ export default function ContentStudio() {
   useEffect(() => {
     const fetchTier = async () => {
       try {
-        const token = localStorage.getItem("thook_token");
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch(`${BACKEND_URL}/api/billing/credits`, { credentials: "include", headers });
+        const res = await apiFetch('/api/billing/credits');
         if (res.ok) {
           const data = await res.json();
           setUserTier(data.tier || "free");
@@ -59,9 +56,7 @@ export default function ContentStudio() {
   // Poll job status
   const pollJob = useCallback(async (id) => {
     try {
-      const token = localStorage.getItem("thook_token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${BACKEND_URL}/api/content/job/${id}`, { credentials: "include", headers });
+      const res = await apiFetch(`/api/content/job/${id}`);
       if (!res.ok) return;
       const data = await res.json();
       setJob(data);
@@ -89,13 +84,8 @@ export default function ContentStudio() {
     setJob(null);
     setJobId(null);
     try {
-      const token = localStorage.getItem("thook_token");
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${BACKEND_URL}/api/content/create`, {
+      const res = await apiFetch('/api/content/create', {
         method: "POST",
-        headers,
-        credentials: "include",
         body: JSON.stringify({
           platform,
           content_type: contentType,
@@ -119,10 +109,8 @@ export default function ContentStudio() {
 
   const handleApprove = async (editedContent) => {
     if (!job) return;
-    await fetch(`${BACKEND_URL}/api/content/job/${job.job_id}/status`, {
+    await apiFetch(`/api/content/job/${job.job_id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ status: "approved", edited_content: editedContent }),
     });
     setJob(j => ({ ...j, status: "approved", final_content: editedContent || j.final_content }));
@@ -138,10 +126,8 @@ export default function ContentStudio() {
     // Use the regeneration endpoint
     try {
       setCreating(true);
-      const res = await fetch(`${BACKEND_URL}/api/content/job/${job.job_id}/regenerate`, {
+      const res = await apiFetch(`/api/content/job/${job.job_id}/regenerate`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ hint: "" }),
       });
       
@@ -162,10 +148,8 @@ export default function ContentStudio() {
   const handleDiscard = async (reason) => {
     if (job) {
       // Mark as rejected with reason
-      await fetch(`${BACKEND_URL}/api/content/job/${job.job_id}/status`, {
+      await apiFetch(`/api/content/job/${job.job_id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ status: "rejected", notes: reason }),
       });
     }

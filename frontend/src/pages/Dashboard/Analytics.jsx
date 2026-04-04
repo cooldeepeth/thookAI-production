@@ -10,8 +10,7 @@ import {
   Shield, ChevronRight, Linkedin, Twitter, Instagram, Zap,
   Target, Brain, LineChart, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { apiFetch } from '@/lib/api';
 
 const PLATFORM_CONFIG = {
   linkedin: { name: "LinkedIn", icon: Linkedin, color: "bg-blue-600", textColor: "text-blue-400" },
@@ -50,13 +49,10 @@ export default function Analytics() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("thook_token");
-      const headers = { Authorization: `Bearer ${token}` };
-
       const [overviewRes, trendsRes, fatigueRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/analytics/overview?days=30`, { headers }),
-        fetch(`${BACKEND_URL}/api/analytics/trends?days=30&granularity=week`, { headers }),
-        fetch(`${BACKEND_URL}/api/analytics/fatigue-shield`, { headers })
+        apiFetch('/api/analytics/overview?days=30'),
+        apiFetch('/api/analytics/trends?days=30&granularity=week'),
+        apiFetch('/api/analytics/fatigue-shield')
       ]);
 
       if (overviewRes.ok) setOverview(await overviewRes.json());
@@ -73,10 +69,7 @@ export default function Analytics() {
   const fetchInsights = async () => {
     setLoadingInsights(true);
     try {
-      const token = localStorage.getItem("thook_token");
-      const res = await fetch(`${BACKEND_URL}/api/analytics/insights?days=30`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiFetch('/api/analytics/insights?days=30');
 
       if (!res.ok) throw new Error("Failed to fetch insights");
       const data = await res.json();
