@@ -339,7 +339,11 @@ Plans:
   4. Every environment variable in `.env.example` has a comment explaining its purpose and whether it is required or optional — no blank or undocumented entries remain
   5. A production ship checklist document exists at `.planning/SHIP-CHECKLIST.md` and every item is checked off — the checklist covers env vars, secrets, DB indexes, Stripe config, n8n config, monitoring, and rollback procedure
   6. A grep for hardcoded secrets, `console.log` statements, and debug-only endpoints across the full codebase returns zero production-facing findings
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 25-01-PLAN.md — Security sweep (console.log removal) + .env.example full annotation (SHIP-06, SHIP-04)
+- [ ] 25-02-PLAN.md — npm audit + pip-audit + SHIP-CHECKLIST.md (SHIP-02, SHIP-03, SHIP-05)
+- [ ] 25-03-PLAN.md — E2E export.spec.ts + full Playwright suite verification (SHIP-01)
 
 ## Progress
 
@@ -369,4 +373,4 @@ Plans:
 | 22. apiFetch Migration + Error Handling | v2.2 | 2/3 | Complete    | 2026-04-03 |
 | 23. Frontend Unit Test Suite | v2.2 | 3/3 | Complete    | 2026-04-04 |
 | 24. Content Download + Redirect-to-Platform | v2.2 | 1/1 | Complete    | 2026-04-04 |
-| 25. E2E Verification + Production Ship Checklist | v2.2 | 0/TBD | Not started | - |
+| 25. E2E Verification + Production Ship Checklist | v2.2 | 0/3 | In progress | - |
