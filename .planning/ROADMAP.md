@@ -53,7 +53,7 @@
 
 - [x] **Phase 21: CI Strictness + httpOnly Cookie Auth Migration** - Remove all CI blind spots (continue-on-error), then migrate auth from localStorage JWT to httpOnly secure cookies with CSRF protection (completed 2026-04-03)
 - [x] **Phase 22: apiFetch Migration + Error Handling** - Create centralized fetch wrapper with timeout, retry, error handling, and replace all 41 raw fetch() calls across the frontend (completed 2026-04-03)
-- [ ] **Phase 23: Frontend Unit Test Suite** - Install testing libraries, configure Jest, write 45+ unit/component tests across 10+ files, wire into CI
+- [x] **Phase 23: Frontend Unit Test Suite** - Install testing libraries, configure Jest, write 45+ unit/component tests across 10+ files, wire into CI (completed 2026-04-04)
 - [x] **Phase 24: Content Download + Redirect-to-Platform** - Download text/images/zip from content detail view, open-in-platform compose URL buttons for LinkedIn and X (completed 2026-04-03)
 - [ ] **Phase 25: E2E Verification + Production Ship Checklist** - Full Playwright E2E verification, dependency audit, security sweep, env documentation, and ship checklist
 
@@ -308,7 +308,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 23-01-PLAN.md — Install testing packages, configure Jest moduleNameMapper, create MSW server + default handlers
-- [ ] 23-02-PLAN.md — apiFetch unit tests (22), AuthContext tests (10), useStrategyFeed + useNotifications hook tests (16)
+- [x] 23-02-PLAN.md — apiFetch unit tests (22), AuthContext tests (10), useStrategyFeed + useNotifications hook tests (16)
 - [x] 23-03-PLAN.md — NotificationBell + Sidebar + StrategyDashboard + ContentStudio component tests (30), frontend-test CI job
 **UI hint**: yes
 
@@ -367,6 +367,6 @@ Plans:
 | 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete | 2026-04-03 |
 | 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 3/3 | Complete    | 2026-04-03 |
 | 22. apiFetch Migration + Error Handling | v2.2 | 2/3 | Complete    | 2026-04-03 |
-| 23. Frontend Unit Test Suite | v2.2 | 2/3 | In Progress|  |
+| 23. Frontend Unit Test Suite | v2.2 | 3/3 | Complete   | 2026-04-04 |
 | 24. Content Download + Redirect-to-Platform | v2.2 | 1/1 | Complete   | 2026-04-03 |
 | 25. E2E Verification + Production Ship Checklist | v2.2 | 0/TBD | Not started | - |

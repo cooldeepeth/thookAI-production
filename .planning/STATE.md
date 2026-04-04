@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
 status: verifying
-stopped_at: Completed 23-frontend-unit-test-suite/23-03-PLAN.md
-last_updated: "2026-04-03T22:54:42.306Z"
+stopped_at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
+last_updated: "2026-04-04T00:06:39.866Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 17
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
 | Phase 23 P01 | 3 | 2 tasks | 6 files |
 | Phase 23 P03 | 17 | 2 tasks | 7 files |
+| Phase 23 P02 | 92 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ Recent decisions affecting current work:
 - [Phase 23-01]: No eject: jest.configure block added via craco.config.js jest key; MSW v2 with wildcard URL patterns; centralized lifecycle in setupTests.js
 - [Phase 23-03]: EventSource mock must be in beforeEach/afterEach (not module scope) because babel hoists imports before global assignments execute
 - [Phase 23-03]: react-router-dom v7.13.2 main field (dist/main.js) missing — Jest 27 needs explicit moduleNameMapper to dist/index.js; same for react-router/dom subpath
+- [Phase 23]: AbortError timeout test: stub global.fetch (not MSW never-resolving handler) because MSW v2 Node mode does not propagate AbortError from intercepted handlers
+- [Phase 23]: EventSource mock: re-assign in beforeEach (not module level) to survive resetMocks: true auto-reset between tests
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T22:54:37.995Z
-Stopped at: Completed 23-frontend-unit-test-suite/23-03-PLAN.md
+Last session: 2026-04-04T00:06:39.863Z
+Stopped at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
 Resume file: None
