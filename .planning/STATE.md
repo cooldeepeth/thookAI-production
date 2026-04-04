@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
-status: verifying
-stopped_at: Completed 25-e2e-verification-production-ship/25-03-PLAN.md
-last_updated: "2026-04-04T01:56:06.150Z"
-last_activity: 2026-04-03
+status: executing
+stopped_at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
+last_updated: "2026-04-04T00:27:39.668Z"
+last_activity: 2026-04-04 -- Phase 25 execution started
 progress:
   total_phases: 17
-  completed_phases: 5
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 13
+  completed_plans: 10
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 20 — frontend-e2e-integration
+**Current focus:** Phase 25 — e2e-verification-production-ship
 
 ## Current Position
 
-Phase: 20
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-03
+Phase: 25 (e2e-verification-production-ship) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 25
+Last activity: 2026-04-04 -- Phase 25 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -62,8 +62,9 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 20-frontend-e2e-integration P05 | 8 | 2 tasks | 2 files |
 | Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
 | Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
-| Phase 25 P02 | 11 | 2 tasks | 3 files |
-| Phase 25 P03 | 66 | 2 tasks | 3 files |
+| Phase 23 P01 | 3 | 2 tasks | 6 files |
+| Phase 23 P03 | 17 | 2 tasks | 7 files |
+| Phase 23 P02 | 92 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -96,10 +97,11 @@ Recent decisions affecting current work:
 - [Phase 20-frontend-e2e-integration]: LIFO route ordering: mockWorkspaceContext must be applied after mockAgencyEndpoints to override overlapping workspaces route
 - [Phase 20-03]: Serial test.describe used for critical path steps — each step depends on shared mock auth state from previous steps
 - [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
-- [Phase 25]: Risk-accept 14 npm audit high findings in react-scripts build tooling (svgo, nth-check, serialize-javascript, underscore chain) — dev-build deps only, zero attack surface in prod Vercel deployment; fix requires CRA-to-Vite migration deferred to v3.0
-- [Phase 25]: pymongo upgraded to >=4.6.3 (CVE-2024-5629), starlette pinned to >=0.47.2 (CVE-2024-47874, CVE-2025-54121), fastapi relaxed from == to >= to allow transitive starlette upgrade
-- [Phase 25]: Export spec uses inline auth+mock helpers directly rather than re-exporting mockExportContent — more readable, avoids import indirection
-- [Phase 25]: apiFetch retry+backoff requires either waitForSelector or textContent fallback for error assertions (not sequential isVisible loops)
+- [Phase 23-01]: No eject: jest.configure block added via craco.config.js jest key; MSW v2 with wildcard URL patterns; centralized lifecycle in setupTests.js
+- [Phase 23-03]: EventSource mock must be in beforeEach/afterEach (not module scope) because babel hoists imports before global assignments execute
+- [Phase 23-03]: react-router-dom v7.13.2 main field (dist/main.js) missing — Jest 27 needs explicit moduleNameMapper to dist/index.js; same for react-router/dom subpath
+- [Phase 23]: AbortError timeout test: stub global.fetch (not MSW never-resolving handler) because MSW v2 Node mode does not propagate AbortError from intercepted handlers
+- [Phase 23]: EventSource mock: re-assign in beforeEach (not module level) to survive resetMocks: true auto-reset between tests
 
 ### Pending Todos
 
@@ -115,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T01:56:06.146Z
-Stopped at: Completed 25-e2e-verification-production-ship/25-03-PLAN.md
+Last session: 2026-04-04T00:06:39.863Z
+Stopped at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
 Resume file: None
