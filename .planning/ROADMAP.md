@@ -307,9 +307,9 @@ Plans:
   5. The `frontend-test` CI job in `.github/workflows/ci.yml` runs on every push and blocks merge on failure
 **Plans**: 3 plans
 Plans:
-- [ ] 23-01-PLAN.md — Install testing packages, configure Jest moduleNameMapper, create MSW server + default handlers
+- [x] 23-01-PLAN.md — Install testing packages, configure Jest moduleNameMapper, create MSW server + default handlers
 - [ ] 23-02-PLAN.md — apiFetch unit tests (22), AuthContext tests (10), useStrategyFeed + useNotifications hook tests (16)
-- [ ] 23-03-PLAN.md — NotificationBell + Sidebar + StrategyDashboard + ContentStudio component tests (30), frontend-test CI job
+- [x] 23-03-PLAN.md — NotificationBell + Sidebar + StrategyDashboard + ContentStudio component tests (30), frontend-test CI job
 **UI hint**: yes
 
 ### Phase 24: Content Download + Redirect-to-Platform
@@ -367,6 +367,6 @@ Plans:
 | 20. Frontend E2E & Integration | v2.1 | 5/5 | Complete | 2026-04-03 |
 | 21. CI Strictness + httpOnly Cookie Auth Migration | v2.2 | 3/3 | Complete    | 2026-04-03 |
 | 22. apiFetch Migration + Error Handling | v2.2 | 2/3 | Complete    | 2026-04-03 |
-| 23. Frontend Unit Test Suite | v2.2 | 0/TBD | Not started | - |
+| 23. Frontend Unit Test Suite | v2.2 | 2/3 | In Progress|  |
 | 24. Content Download + Redirect-to-Platform | v2.2 | 1/1 | Complete   | 2026-04-03 |
 | 25. E2E Verification + Production Ship Checklist | v2.2 | 0/TBD | Not started | - |

@@ -32,9 +32,9 @@
 
 - [ ] **TEST-01**: Install `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `msw` (v2)
 - [ ] **TEST-02**: Configure Jest via CRA defaults — no eject, no custom webpack
-- [ ] **TEST-03**: Write 45+ unit/component tests across 10+ test files
-- [ ] **TEST-04**: Add `frontend-test` CI job to `.github/workflows/ci.yml`
-- [ ] **TEST-05**: Tests cover: AuthContext, apiFetch, StrategyDashboard, ContentStudio, Sidebar, NotificationBell, key hooks
+- [x] **TEST-03**: Write 45+ unit/component tests across 10+ test files
+- [x] **TEST-04**: Add `frontend-test` CI job to `.github/workflows/ci.yml`
+- [x] **TEST-05**: Tests cover: AuthContext, apiFetch, StrategyDashboard, ContentStudio, Sidebar, NotificationBell, key hooks
 
 ### Content Download & Redirect
 
@@ -90,9 +90,9 @@
 | API-06 | Phase 22 | Pending |
 | TEST-01 | Phase 23 | Pending |
 | TEST-02 | Phase 23 | Pending |
-| TEST-03 | Phase 23 | Pending |
-| TEST-04 | Phase 23 | Pending |
-| TEST-05 | Phase 23 | Pending |
+| TEST-03 | Phase 23 | Complete |
+| TEST-04 | Phase 23 | Complete |
+| TEST-05 | Phase 23 | Complete |
 | DL-01 | Phase 24 | Pending |
 | DL-02 | Phase 24 | Pending |
 | DL-03 | Phase 24 | Pending |
