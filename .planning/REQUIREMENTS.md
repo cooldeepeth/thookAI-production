@@ -32,18 +32,18 @@
 
 - [ ] **TEST-01**: Install `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `msw` (v2)
 - [ ] **TEST-02**: Configure Jest via CRA defaults — no eject, no custom webpack
-- [x] **TEST-03**: Write 45+ unit/component tests across 10+ test files
-- [x] **TEST-04**: Add `frontend-test` CI job to `.github/workflows/ci.yml`
-- [x] **TEST-05**: Tests cover: AuthContext, apiFetch, StrategyDashboard, ContentStudio, Sidebar, NotificationBell, key hooks
+- [ ] **TEST-03**: Write 45+ unit/component tests across 10+ test files
+- [ ] **TEST-04**: Add `frontend-test` CI job to `.github/workflows/ci.yml`
+- [ ] **TEST-05**: Tests cover: AuthContext, apiFetch, StrategyDashboard, ContentStudio, Sidebar, NotificationBell, key hooks
 
 ### Content Download & Redirect
 
-- [ ] **DL-01**: Download text content as `.txt` file from content detail view
-- [ ] **DL-02**: Download generated images individually or as `.zip` for carousels
-- [ ] **DL-03**: "Open in LinkedIn" button with pre-filled compose URL
-- [ ] **DL-04**: "Open in X" button with pre-filled tweet intent URL
-- [ ] **DL-05**: "Open in Instagram" info tooltip (Instagram has no compose URL — explain copy workflow)
-- [ ] **DL-06**: Download/redirect buttons appear alongside existing Publish button
+- [x] **DL-01**: Download text content as `.txt` file from content detail view
+- [x] **DL-02**: Download generated images individually or as `.zip` for carousels
+- [x] **DL-03**: "Open in LinkedIn" button with pre-filled compose URL
+- [x] **DL-04**: "Open in X" button with pre-filled tweet intent URL
+- [x] **DL-05**: "Open in Instagram" info tooltip (Instagram has no compose URL — explain copy workflow)
+- [x] **DL-06**: Download/redirect buttons appear alongside existing Publish button
 
 ### E2E & Production Ship
 
@@ -90,15 +90,15 @@
 | API-06 | Phase 22 | Pending |
 | TEST-01 | Phase 23 | Pending |
 | TEST-02 | Phase 23 | Pending |
-| TEST-03 | Phase 23 | Complete |
-| TEST-04 | Phase 23 | Complete |
-| TEST-05 | Phase 23 | Complete |
-| DL-01 | Phase 24 | Pending |
-| DL-02 | Phase 24 | Pending |
-| DL-03 | Phase 24 | Pending |
-| DL-04 | Phase 24 | Pending |
-| DL-05 | Phase 24 | Pending |
-| DL-06 | Phase 24 | Pending |
+| TEST-03 | Phase 23 | Pending |
+| TEST-04 | Phase 23 | Pending |
+| TEST-05 | Phase 23 | Pending |
+| DL-01 | Phase 24 | Complete |
+| DL-02 | Phase 24 | Complete |
+| DL-03 | Phase 24 | Complete |
+| DL-04 | Phase 24 | Complete |
+| DL-05 | Phase 24 | Complete |
+| DL-06 | Phase 24 | Complete |
 | SHIP-01 | Phase 25 | Pending |
 | SHIP-02 | Phase 25 | Pending |
 | SHIP-03 | Phase 25 | Pending |
