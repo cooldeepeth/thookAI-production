@@ -56,7 +56,8 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
 
   const currentCredits = credits?.credits ?? user?.credits ?? 50;
   const maxCredits = credits?.monthly_allowance ?? 50;
-  const tierName = user?.subscription_tier || user?.plan || "free";
+  const rawTier = user?.subscription_tier || user?.plan || "starter";
+  const tierName = rawTier === "custom" ? "Custom" : rawTier === "starter" ? "Starter" : rawTier;
   const isLowBalance = credits?.is_low_balance || currentCredits < maxCredits * 0.2;
 
   return (

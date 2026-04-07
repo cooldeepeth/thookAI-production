@@ -13,6 +13,7 @@ from typing import List, Optional
 import httpx
 
 from database import db
+from services.credits import CreditOperation, add_credits
 from agents.commander import run_commander
 from agents.scout import run_scout
 from agents.thinker import run_thinker
@@ -143,6 +144,21 @@ async def update_job(job_id: str, data: dict):
     await db.content_jobs.update_one({"job_id": job_id}, {"$set": data})
 
 
+async def _refund_credits_on_failure(user_id: str, job_id: str) -> None:
+    """Refund content creation credits when the pipeline fails."""
+    try:
+        refund_amount = CreditOperation.CONTENT_CREATE.value
+        await add_credits(
+            user_id=user_id,
+            amount=refund_amount,
+            source="pipeline_failure_refund",
+            description=f"Auto-refund for failed job {job_id}"
+        )
+        logger.info("Refunded %d credits to user %s for failed job %s", refund_amount, user_id, job_id)
+    except Exception as refund_err:
+        logger.error("Failed to refund credits for job %s: %s", job_id, refund_err)
+
+
 PIPELINE_TIMEOUT_SECONDS = 180.0  # 3-minute global timeout
 
 
@@ -189,6 +205,7 @@ async def run_agent_pipeline(
             "current_agent": "error",
             "error": "Content generation timed out. Please try again.",
         })
+        await _refund_credits_on_failure(user_id, job_id)
         logger.info("Job %s marked as error after timeout — returning early", job_id)
         return
 
@@ -448,6 +465,8 @@ async def run_agent_pipeline_legacy(
 
     except asyncio.CancelledError:
         await update_job(job_id, {"status": "error", "current_agent": "error", "error": "Pipeline was cancelled"})
+        await _refund_credits_on_failure(user_id, job_id)
     except Exception as e:
         logger.error(f"Pipeline error for job {job_id}: {e}")
         await update_job(job_id, {"status": "error", "current_agent": "error", "error": str(e)})
+        await _refund_credits_on_failure(user_id, job_id)

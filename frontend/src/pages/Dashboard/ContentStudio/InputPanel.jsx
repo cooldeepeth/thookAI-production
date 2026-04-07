@@ -41,7 +41,7 @@ export default function InputPanel({
   userTier,
 }) {
   const [showUpgradeTooltip, setShowUpgradeTooltip] = useState(false);
-  const videoEnabled = userTier === "studio" || userTier === "agency";
+  const videoEnabled = userTier === "studio" || userTier === "agency" || userTier === "custom";
   const cfg = PLATFORMS.find(p => p.id === platform) || PLATFORMS[0];
   const Icon = cfg.icon;
 
