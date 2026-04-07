@@ -13,24 +13,50 @@ import {
 import { apiFetch } from '@/lib/api';
 
 const TIER_ICONS = {
+  starter: Zap,
   free: Zap,
+  custom: Sparkles,
   pro: Sparkles,
   studio: Crown,
   agency: Building2
 };
 
 const TIER_COLORS = {
+  starter: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
   free: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  custom: "bg-lime/10 text-lime border-lime/20",
   pro: "bg-violet/10 text-violet border-violet/20",
   studio: "bg-lime/10 text-lime border-lime/20",
   agency: "bg-orange-500/10 text-orange-400 border-orange-500/20"
 };
 
 const TIER_GRADIENTS = {
+  starter: "from-zinc-500/20 to-zinc-600/20",
   free: "from-zinc-500/20 to-zinc-600/20",
+  custom: "from-lime/20 to-green-500/20",
   pro: "from-violet/20 to-purple-600/20",
   studio: "from-lime/20 to-green-500/20",
   agency: "from-orange-500/20 to-red-500/20"
+};
+
+const PLAN_BUILDER_DEFAULTS = {
+  text_posts: 20,
+  images: 5,
+  videos: 0,
+  carousels: 2,
+  repurposes: 5,
+  voice_narrations: 0,
+  series_plans: 0
+};
+
+const PLAN_BUILDER_LABELS = {
+  text_posts: { name: "Text Posts", credits: 10, max: 200, icon: "pencil" },
+  images: { name: "Images", credits: 8, max: 100, icon: "image" },
+  videos: { name: "Videos", credits: 50, max: 20, icon: "video" },
+  carousels: { name: "Carousels", credits: 15, max: 50, icon: "layers" },
+  repurposes: { name: "Repurposes", credits: 3, max: 100, icon: "repeat" },
+  voice_narrations: { name: "Voice Narrations", credits: 12, max: 50, icon: "mic" },
+  series_plans: { name: "Series Plans", credits: 6, max: 20, icon: "calendar" }
 };
 
 // Credit costs for reference
@@ -58,6 +84,9 @@ export default function Settings() {
   const [upgrading, setUpgrading] = useState(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState("monthly");
+  const [planUsage, setPlanUsage] = useState({ ...PLAN_BUILDER_DEFAULTS });
+  const [planPreview, setPlanPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -93,37 +122,62 @@ export default function Settings() {
     }
   };
 
-  const handleUpgrade = async (tierId) => {
-    if (tierId === "free") {
-      // Direct downgrade to free
-      await handleDirectUpgrade(tierId);
-      return;
-    }
-
-    setUpgrading(tierId);
+  const fetchPlanPreview = async (usage) => {
+    setPreviewLoading(true);
     try {
-      const res = await apiFetch('/api/billing/subscription/checkout', {
+      const res = await apiFetch('/api/billing/plan/preview', {
         method: "POST",
-        body: JSON.stringify({ tier: tierId, billing_period: billingPeriod })
+        body: JSON.stringify(usage)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlanPreview(data);
+      }
+    } catch {
+      // Silent — preview is non-critical
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  // Debounced plan preview
+  useEffect(() => {
+    const totalUsage = Object.values(planUsage).reduce((a, b) => a + b, 0);
+    if (totalUsage > 0) {
+      const timer = setTimeout(() => fetchPlanPreview(planUsage), 400);
+      return () => clearTimeout(timer);
+    } else {
+      setPlanPreview(null);
+    }
+  }, [planUsage]);
+
+  const handlePlanCheckout = async () => {
+    setUpgrading("custom");
+    try {
+      const isModify = subscription?.tier === "custom" && subscription?.stripe_subscription_id;
+      const endpoint = isModify ? '/api/billing/plan/modify' : '/api/billing/plan/checkout';
+
+      const res = await apiFetch(endpoint, {
+        method: "POST",
+        body: JSON.stringify({
+          ...planUsage,
+          success_url: `${window.location.origin}/dashboard/settings?billing=success`,
+          cancel_url: `${window.location.origin}/dashboard/settings?billing=cancel`
+        })
       });
 
       const data = await res.json();
 
       if (res.ok) {
         if (data.checkout_url) {
-          // Redirect to Stripe checkout or simulated
           if (data.simulated) {
-            toast({
-              title: "Demo Mode",
-              description: "Stripe not configured. Using simulated checkout."
-            });
-            // Simulate the upgrade
-            await handleDirectUpgrade(tierId);
+            toast({ title: "Demo Mode", description: "Plan activated in simulated mode." });
+            fetchData();
           } else {
             window.location.href = data.checkout_url;
           }
         } else {
-          toast({ title: "Success", description: data.message });
+          toast({ title: "Success", description: data.message || "Plan updated!" });
           fetchData();
         }
       } else {
@@ -136,23 +190,24 @@ export default function Settings() {
     }
   };
 
-  const handleDirectUpgrade = async (tierId) => {
+  const handleUpgrade = async (tierId) => {
+    if (tierId === "custom") {
+      await handlePlanCheckout();
+      return;
+    }
+    // For starter/free — simulate downgrade
+    setUpgrading(tierId);
     try {
       const res = await apiFetch('/api/billing/simulate/upgrade', {
         method: "POST",
         body: JSON.stringify({ tier: tierId, billing_period: billingPeriod })
       });
-
       const data = await res.json();
-
       if (res.ok) {
-        toast({
-          title: data.simulated ? "Demo Upgrade Complete!" : "Upgraded!",
-          description: `You now have ${data.credits} credits on the ${tierId} plan.`
-        });
+        toast({ title: "Plan Updated", description: `Switched to ${tierId} plan.` });
         fetchData();
       } else {
-        throw new Error(data.detail || "Upgrade failed");
+        throw new Error(data.detail || "Failed");
       }
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -262,7 +317,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Early Bird Banner */}
+        {/* Volume Discount Banner */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -270,19 +325,19 @@ export default function Settings() {
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-lime/20 flex items-center justify-center">
-              <Gift className="text-lime" size={20} />
+              <TrendingUp className="text-lime" size={20} />
             </div>
             <div>
               <p className="text-white font-medium flex items-center gap-2">
-                <Star className="text-lime" size={14} />
-                Early Bird Pricing Active!
+                <Sparkles className="text-lime" size={14} />
+                Volume Discounts
               </p>
-              <p className="text-sm text-zinc-400">Save up to 35% on all plans - limited time offer</p>
+              <p className="text-sm text-zinc-400">The more you use, the less you pay — from $0.06 to $0.03 per credit</p>
             </div>
           </div>
           <Badge className="bg-lime/20 text-lime border-lime/30">
             <Percent size={12} className="mr-1" />
-            35% OFF
+            Up to 50% OFF
           </Badge>
         </motion.div>
 
@@ -479,136 +534,135 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Billing Period Toggle */}
-        <div className="flex items-center justify-center gap-4">
-          <span className={`text-sm ${billingPeriod === "monthly" ? "text-white" : "text-zinc-500"}`}>
-            Monthly
-          </span>
-          <button
-            onClick={() => setBillingPeriod(billingPeriod === "monthly" ? "annual" : "monthly")}
-            className={`w-14 h-7 rounded-full p-1 transition-colors ${
-              billingPeriod === "annual" ? "bg-lime" : "bg-white/10"
-            }`}
-          >
-            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
-              billingPeriod === "annual" ? "translate-x-7" : ""
-            }`} />
-          </button>
-          <span className={`text-sm ${billingPeriod === "annual" ? "text-white" : "text-zinc-500"}`}>
-            Annual
-            <Badge className="ml-2 bg-lime/20 text-lime text-xs">Save 20%</Badge>
-          </span>
-        </div>
-
-        {/* Available Plans */}
+        {/* Plan Builder */}
         <div>
-          <h2 className="text-lg font-semibold text-white mb-4">Choose Your Plan</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {tiers.map((tier) => {
-              const Icon = TIER_ICONS[tier.id] || Zap;
-              const isCurrent = tier.is_current;
-              const isPopular = tier.id === "pro";
-              const price = billingPeriod === "annual" 
-                ? (tier.price_annual || tier.price_monthly * 12 * 0.8) 
-                : tier.price_monthly;
-              
-              return (
-                <Card 
-                  key={tier.id} 
-                  className={`bg-surface-2 border-white/5 relative overflow-hidden ${
-                    isCurrent ? "ring-2 ring-lime/50" : ""
-                  } ${isPopular ? "ring-2 ring-violet/50" : ""}`}
-                >
-                  {isPopular && (
-                    <div className="absolute top-0 right-0 bg-violet text-white text-xs px-3 py-1 rounded-bl-lg">
-                      Most Popular
-                    </div>
-                  )}
-                  <CardContent className="py-6">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${TIER_GRADIENTS[tier.id]} flex items-center justify-center mb-4`}>
-                      <Icon size={20} className={TIER_COLORS[tier.id]?.split(" ")[1]} />
-                    </div>
-                    
-                    <h3 className="text-lg font-semibold text-white">{tier.name}</h3>
-                    <div className="flex items-baseline gap-1 mt-1">
-                      <span className="text-3xl font-bold text-white">
-                        ${billingPeriod === "annual" ? Math.round(price / 12) : price}
-                      </span>
-                      {price > 0 && (
-                        <span className="text-sm text-zinc-500">/mo</span>
-                      )}
-                    </div>
-                    {billingPeriod === "annual" && price > 0 && (
-                      <p className="text-xs text-zinc-500 mt-1">
-                        ${price} billed annually
-                      </p>
-                    )}
-                    
-                    <p className="text-sm text-lime mt-2 font-medium">
-                      {tier.credits_per_month?.toLocaleString() || tier.monthly_credits?.toLocaleString()} credits/month
-                    </p>
+          <h2 className="text-lg font-semibold text-white mb-4">Build Your Plan</h2>
+          <p className="text-sm text-zinc-400 mb-6">
+            Pick how much you use each month — we calculate your price with volume discounts.
+          </p>
 
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2 text-xs text-zinc-400">
-                        <Check size={12} className="text-lime" />
-                        {tier.features?.content_per_day || "Unlimited"} posts/day
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Sliders */}
+            <Card className="lg:col-span-2 bg-surface-2 border-white/5">
+              <CardContent className="py-6 space-y-5">
+                {Object.entries(PLAN_BUILDER_LABELS).map(([key, meta]) => (
+                  <div key={key}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-sm text-zinc-300">{meta.name}</label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-zinc-500">{meta.credits} credits each</span>
+                        <span className="text-sm font-mono text-white w-10 text-right">
+                          {planUsage[key]}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-zinc-400">
-                        <Check size={12} className="text-lime" />
-                        {tier.features?.max_personas || 1} persona{(tier.features?.max_personas || 1) > 1 ? "s" : ""}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-zinc-400">
-                        <Check size={12} className="text-lime" />
-                        {tier.features?.platforms?.length || 1} platform{(tier.features?.platforms?.length || 1) > 1 ? "s" : ""}
-                      </div>
-                      {tier.features?.voice_enabled && (
-                        <div className="flex items-center gap-2 text-xs text-zinc-400">
-                          <Check size={12} className="text-lime" />
-                          Voice narration
-                        </div>
-                      )}
-                      {tier.features?.video_enabled && (
-                        <div className="flex items-center gap-2 text-xs text-zinc-400">
-                          <Check size={12} className="text-lime" />
-                          Video generation
-                        </div>
-                      )}
-                      {tier.features?.api_access && (
-                        <div className="flex items-center gap-2 text-xs text-zinc-400">
-                          <Check size={12} className="text-lime" />
-                          API access
-                        </div>
-                      )}
                     </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={meta.max}
+                      step={key === "text_posts" ? 5 : key === "videos" ? 1 : 1}
+                      value={planUsage[key]}
+                      onChange={(e) =>
+                        setPlanUsage((prev) => ({ ...prev, [key]: Number(e.target.value) }))
+                      }
+                      className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer
+                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-lime [&::-webkit-slider-thumb]:cursor-pointer"
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Price Summary */}
+            <Card className="bg-surface-2 border-white/5 sticky top-6">
+              <CardContent className="py-6">
+                <h3 className="text-sm font-medium text-zinc-400 mb-4">Your Plan</h3>
+
+                {planPreview ? (
+                  <div className="space-y-4">
+                    <div className="text-center py-2">
+                      <p className="text-4xl font-bold text-white">
+                        ${planPreview.monthly_price || 0}
+                      </p>
+                      <p className="text-sm text-zinc-500">/month</p>
+                    </div>
+
+                    <div className="p-3 bg-white/5 rounded-lg text-center">
+                      <p className="text-lg font-semibold text-lime">
+                        {planPreview.total_credits?.toLocaleString()} credits
+                      </p>
+                      <p className="text-xs text-zinc-500">per month</p>
+                    </div>
+
+                    {/* Features unlocked */}
+                    {planPreview.features && (
+                      <div className="space-y-1.5 pt-2 border-t border-white/5">
+                        <p className="text-xs text-zinc-500 mb-2">Included features</p>
+                        {planPreview.features.voice_enabled && (
+                          <div className="flex items-center gap-2 text-xs text-zinc-300">
+                            <Check size={12} className="text-lime" /> Voice narration
+                          </div>
+                        )}
+                        {planPreview.features.video_enabled && (
+                          <div className="flex items-center gap-2 text-xs text-zinc-300">
+                            <Check size={12} className="text-lime" /> Video generation
+                          </div>
+                        )}
+                        {planPreview.features.api_access && (
+                          <div className="flex items-center gap-2 text-xs text-zinc-300">
+                            <Check size={12} className="text-lime" /> API access
+                          </div>
+                        )}
+                        {planPreview.features.priority_support && (
+                          <div className="flex items-center gap-2 text-xs text-zinc-300">
+                            <Check size={12} className="text-lime" /> Priority support
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-zinc-300">
+                          <Check size={12} className="text-lime" />
+                          {planPreview.features.max_personas || 3} personas
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-zinc-300">
+                          <Check size={12} className="text-lime" />
+                          {planPreview.features.content_per_day || 50} posts/day
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-zinc-300">
+                          <Check size={12} className="text-lime" />
+                          {planPreview.features.team_members || 1} team member{(planPreview.features.team_members || 1) > 1 ? "s" : ""}
+                        </div>
+                      </div>
+                    )}
 
                     <Button
-                      onClick={() => handleUpgrade(tier.id)}
-                      disabled={isCurrent || upgrading === tier.id}
-                      className={`w-full mt-4 gap-2 ${
-                        isCurrent 
-                          ? "bg-white/5 text-zinc-500" 
-                          : tier.is_upgrade 
-                            ? "bg-lime text-black hover:bg-lime/90" 
-                            : "bg-white/10 text-white hover:bg-white/20"
-                      }`}
+                      onClick={handlePlanCheckout}
+                      disabled={upgrading === "custom" || !planPreview.total_credits}
+                      className="w-full bg-lime text-black hover:bg-lime/90 gap-2 mt-2"
                     >
-                      {upgrading === tier.id ? (
+                      {upgrading === "custom" ? (
                         <RefreshCw size={14} className="animate-spin" />
-                      ) : isCurrent ? (
-                        "Current Plan"
-                      ) : tier.is_upgrade ? (
-                        <>
-                          Upgrade
-                          <ArrowRight size={14} />
-                        </>
+                      ) : subscription?.tier === "custom" ? (
+                        <>Update Plan <ArrowRight size={14} /></>
                       ) : (
-                        "Switch"
+                        <>Subscribe <ArrowRight size={14} /></>
                       )}
                     </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </div>
+                ) : previewLoading ? (
+                  <div className="text-center py-8">
+                    <RefreshCw size={20} className="animate-spin text-zinc-500 mx-auto" />
+                    <p className="text-xs text-zinc-500 mt-2">Calculating...</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Zap size={24} className="text-zinc-600 mx-auto" />
+                    <p className="text-sm text-zinc-500 mt-2">
+                      Adjust the sliders to see your price
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
 

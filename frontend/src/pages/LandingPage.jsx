@@ -374,46 +374,45 @@ function AgentCouncil() {
 // ─── Pricing ──────────────────────────────────────────────
 const plans = [
   {
-    name: "Free",
+    name: "Starter",
     price: "$0",
-    period: "/month",
-    desc: "Start building your Persona Engine",
-    features: ["50 credits/month", "1 platform", "Basic persona setup", "Text posts only"],
+    period: "",
+    desc: "Try ThookAI with 200 free credits",
+    features: ["200 one-time credits", "LinkedIn platform", "Persona Engine", "Text posts", "Content library"],
     cta: "Start free",
     highlight: false,
   },
   {
-    name: "Pro",
-    price: "$19",
-    originalPrice: "$29",
+    name: "Creator",
+    price: "$15",
     period: "/month",
-    desc: "Full AI agency for serious creators",
-    features: ["500 credits/month", "All 3 platforms", "Full Persona Engine", "All content formats", "Voice narration", "Analytics & insights"],
-    cta: "Get Early Bird Pricing",
+    desc: "For consistent creators posting weekly",
+    features: ["~300 credits/month", "All 3 platforms", "Full Persona Engine", "Images & carousels", "Content repurposing", "30-day analytics"],
+    cta: "Build your plan",
+    highlight: false,
+    example: "~20 posts + 5 images + 5 repurposes",
+  },
+  {
+    name: "Growth",
+    price: "$79",
+    period: "/month",
+    desc: "For serious creators scaling output",
+    features: ["~1,800 credits/month", "Voice narration", "10 personas", "5 team members", "90-day analytics", "Priority support"],
+    cta: "Build your plan",
     highlight: true,
-    badge: "35% OFF",
+    badge: "Most Popular",
+    example: "~100 posts + 30 images + 10 videos",
   },
   {
-    name: "Studio",
-    price: "$49",
-    originalPrice: "$79",
+    name: "Scale",
+    price: "$149+",
     period: "/month",
-    desc: "For professional creators & teams",
-    features: ["2,000 credits/month", "Video generation", "Priority support", "Team collaboration", "Advanced analytics", "API access"],
-    cta: "Get Early Bird Pricing",
+    desc: "For agencies and power users",
+    features: ["5,000+ credits/month", "Video generation", "API access", "10+ team members", "365-day analytics", "Custom integrations"],
+    cta: "Build your plan",
     highlight: false,
-    badge: "38% OFF",
-  },
-  {
-    name: "Agency",
-    price: "$129",
-    originalPrice: "$199",
-    period: "/month",
-    desc: "For agencies managing creators",
-    features: ["10,000 credits/month", "Unlimited personas", "White-label options", "Client workspaces", "Dedicated support", "Custom integrations"],
-    cta: "Contact Sales",
-    highlight: false,
-    badge: "35% OFF",
+    badge: "Best Value",
+    example: "Unlimited content at $0.03/credit",
   },
 ];
 
@@ -430,11 +429,11 @@ function Pricing() {
         >
           <div className="inline-flex items-center gap-2 bg-lime/10 border border-lime/20 rounded-full px-4 py-1.5 mb-4 text-sm">
             <span className="w-2 h-2 bg-lime rounded-full animate-pulse" />
-            <span className="text-lime font-medium">Early Bird Pricing — Limited Time</span>
+            <span className="text-lime font-medium">Volume Discounts — The More You Use, The Less You Pay</span>
           </div>
           <p className="text-lime text-sm font-semibold uppercase tracking-wider mb-3">Pricing</p>
-          <h2 className="font-display font-bold text-4xl md:text-5xl text-white">Simple, credit-based.</h2>
-          <p className="text-zinc-500 mt-3 text-sm">Pay for what you create. Credits refresh monthly.</p>
+          <h2 className="font-display font-bold text-4xl md:text-5xl text-white">Build your own plan.</h2>
+          <p className="text-zinc-500 mt-3 text-sm">Pick your usage, we calculate the price. Credits refresh monthly. Start free.</p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

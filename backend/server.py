@@ -381,7 +381,9 @@ app.add_middleware(CacheMiddleware, max_entries=1000)
 app.add_middleware(TimingMiddleware, slow_request_threshold_ms=2000)
 
 # OAuth (Authlib) requires server-side session for authorize state / PKCE
-_session_secret = settings.security.jwt_secret_key or "dev-oauth-session-secret-not-for-production"
+if settings.app.is_production and not settings.security.jwt_secret_key:
+    raise RuntimeError("JWT_SECRET_KEY is required for session middleware in production")
+_session_secret = settings.security.jwt_secret_key or "dev-only-oauth-session-secret"
 app.add_middleware(
     SessionMiddleware,
     secret_key=_session_secret,
