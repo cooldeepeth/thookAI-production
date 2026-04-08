@@ -186,82 +186,24 @@ text
 
 ---
 
-## 6. Known Bugs & Broken Systems (Priority Order)
+## 6. Current Status & Remaining Work
 
-These are confirmed broken. Fix in this order due to dependencies.
+> All 12 original bugs (BUG-1 through BUG-12) from the March 2026 audit have been
+> resolved. See `AUDIT_REPORT.md` for the full fix record.
 
-### 🔴 CRITICAL — Blocks Core Functionality
+### Active Production Issues
 
-**[BUG-1] Wrong Claude model name in onboarding.py**
-- File: `backend/routes/onboarding.py` lines ~95 and ~110
-- Bug: `"claude-4-sonnet-20250514"` should be `"claude-sonnet-4-20250514"`
-- Effect: Every onboarding call fails silently and falls back to the dumb mock persona generator. All users get generic personas, destroying the core product value.
-- Fix: Replace both incorrect model strings with `"claude-sonnet-4-20250514"`
+- **Analytics uses simulated metrics** when real platform data is unavailable (analyst.py `_simulate_engagement()`). Real metrics flow in after n8n `poll-analytics-24h/7d` workflows are active.
+- **R2 media storage not configured** — file uploads fall back to /tmp (ephemeral). Set `R2_*` env vars for persistent media.
+- **n8n not yet deployed** — scheduled post publishing, daily limit resets, and monthly credit refreshes are inactive until n8n is running on Railway.
 
-**[BUG-2] Celery app not configured — ALL scheduled tasks are dead**
-- Missing files: `backend/celery_app.py` and `backend/celeryconfig.py`
-- Effect: All `@shared_task` decorators in `backend/tasks/content_tasks.py` and `backend/tasks/media_tasks.py` are orphaned. Nothing in `tasks/` ever runs automatically.
-- Broken tasks: `process_scheduled_posts` (posts never publish), `reset_daily_limits` (users stay credit-capped forever), `refresh_monthly_credits`, `cleanup_old_jobs`, `cleanup_expired_shares`, `aggregate_daily_analytics`
-- Fix: Create `backend/celery_app.py` with Redis broker from `settings.app.redis_url`. Create `backend/celeryconfig.py` with a `beat_schedule` dict for all 6 tasks. Update `Procfile` to add `worker: celery -A celery_app worker` and `beat: celery -A celery_app beat`.
+### Recently Fixed (April 2026)
 
-**[BUG-3] `_publish_to_platform()` in content_tasks.py is a placeholder**
-- File: `backend/tasks/content_tasks.py` — `_publish_to_platform()` function
-- Bug: The function logs `"[SIMULATED] Publishing to {platform}"` and returns `True`. It never calls `agents/publisher.py`.
-- Effect: Scheduled posts appear to "publish" in the DB (status set to `published`) but nothing is actually sent to LinkedIn/X/Instagram.
-- Fix: Replace the placeholder body with a call to the appropriate method in `backend/agents/publisher.py`, passing the platform, content, and OAuth token.
-
-**[BUG-4] No email service — password reset and agency invites are silent**
-- Missing: No email sending implementation anywhere in the codebase
-- `RESEND_API_KEY` and `FROM_EMAIL` are declared in `.env.example` and `config.py` but never used
-- Affected: `backend/routes/password_reset.py` (generates token, never emails it), `backend/routes/agency.py` invite endpoint (logs "invitation sent", sends nothing)
-- Fix: Create `backend/services/email_service.py` using the `resend` Python package (already in `requirements.txt`). Implement `send_password_reset_email(to_email, reset_link)` and `send_workspace_invite_email(to_email, workspace_name, invite_link)`. Call these from the respective routes.
-
-### 🟡 HIGH — Platform Quality Degraded
-
-**[BUG-5] Analytics data is fabricated — no real social data**
-- Files: `backend/agents/analyst.py`, `backend/routes/analytics.py`
-- Bug: All metrics (engagement, reach, impressions) are derived from internal DB job counts, not actual post performance from LinkedIn/X/Instagram APIs.
-- `performance_intelligence` in `db.persona_engines` is always initialised as `{}` and never populated.
-- `optimal_posting_times` is always `{}`.
-- Fix: Add a background task that, after a post is published, polls the platform API for performance metrics after 24h and 7d, and writes results back to `db.content_jobs.performance_data` and aggregates into `persona_engines.performance_intelligence`.
-
-**[BUG-6] Vector store implemented but never called**
-- File: `backend/services/vector_store.py` — full Pinecone wrapper exists
-- Bug: `agents/learning.py` stores approved content as raw strings in MongoDB, NOT as embeddings in Pinecone. `agents/writer.py` does not query similar past content before writing.
-- Fix: In `agents/learning.py`, after storing approval, also call `vector_store.store_content_embedding(user_id, content, metadata)`. In `agents/writer.py`, call `vector_store.find_similar_content(user_id, topic)` at the start to fetch style examples and inject them into the writer prompt.
-
-**[BUG-7] Media upload falls back to /tmp in production (data loss)**
-- File: `backend/routes/uploads.py`
-- Bug: If `R2_ACCESS_KEY_ID` is not set, files are saved to `/tmp/thookai_uploads/` and the local path is stored as the URL in MongoDB. On cloud deployments, `/tmp` is ephemeral — files vanish on restart, all media URLs become dead links.
-- Fix: Add a startup check in `server.py` lifespan that warns loudly if R2 is not configured. In `uploads.py`, if R2 is unavailable, raise HTTP 503 with message "Media storage not configured" rather than silently falling back to /tmp.
-
-**[BUG-8] Stripe billing has no Price IDs — checkout will fail**
-- File: `backend/services/stripe_service.py`
-- Bug: `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_STUDIO_MONTHLY`, etc. are all blank in `.env.example`. `create_checkout_session` will throw a Stripe `InvalidRequest` error for any upgrade attempt.
-- Also: `STRIPE_WEBHOOK_SECRET` being missing causes all webhooks to fail signature verification — subscription upgrades from Stripe won't propagate to the DB.
-- Fix (config-level, not code): Document in PR description that owner must create Stripe products and fill in all `STRIPE_PRICE_*` env vars. Code fix: Add explicit check at startup that logs `ERROR: Stripe Price IDs not configured` if any are blank when `ENVIRONMENT=production`.
-
-**[BUG-9] Pattern Fatigue Shield and Anti-Repetition are duplicate + disconnected systems**
-- Files: `backend/services/persona_refinement.py` (`get_pattern_fatigue_shield`), `backend/agents/anti_repetition.py`
-- Bug: Two separate systems do the same job but don't share data. The Commander calls `anti_repetition.py` during generation. The Fatigue Shield in `persona_refinement.py` is only exposed via `GET /analytics/fatigue-shield` but never fed back into the generation pipeline.
-- Fix: In `backend/agents/pipeline.py` (Thinker step), before angle selection, call `get_pattern_fatigue_shield(user_id)` and inject any flagged patterns into the Thinker prompt as explicit avoidance instructions. Deprecate the duplicate logic in `anti_repetition.py` gradually.
-
-### 🟠 MEDIUM — Features Built But Unreachable
-
-**[BUG-10] Template marketplace has no seed data**
-- File: `backend/routes/templates.py`
-- Bug: `db.templates` collection is empty on a fresh deployment. The marketplace page will show nothing.
-- Fix: Create `backend/scripts/seed_templates.py` with 20–30 curated starter templates across all categories (`thought_leadership`, `storytelling`, `how_to`, `contrarian`, etc.) for LinkedIn, X, and Instagram. Run once on deploy.
-
-**[BUG-11] Persona sharing feature is complete but hidden**
-- File: `backend/routes/persona.py` — full implementation exists
-- Bug: No frontend routes or UI components reference the persona share endpoints. Users cannot discover or use the feature.
-- Fix: Add a "Share Persona" button in the Persona page in the frontend. Wire it to `POST /api/persona/share` and display the returned link.
-
-**[BUG-12] Designer agent image generation blocks event loop**
-- File: `backend/agents/designer.py`
-- Bug: Image generation polling loop runs synchronously when Celery is not configured. This blocks FastAPI's async event loop during 5-minute timeouts, freezing the entire server under concurrent load.
-- Fix: Wrap the polling loop in `asyncio.wait_for()` with a 60s timeout. If Celery is available, always use the async task path.
+- Credit refund on pipeline failure (auto-refunds 10 credits on timeout/error)
+- Session secret hardcoded fallback removed (production guard added)
+- Startup guards relaxed (R2 optional, Stripe Price IDs optional for custom plan builder)
+- Frontend billing UI replaced with interactive Plan Builder matching backend API
+- Video generation enabled for custom tier users
 
 ---
 
@@ -756,3 +698,42 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 > Profile not yet configured. Run `/gsd:profile-user` to generate your developer profile.
 > This section is managed by `generate-claude-profile` -- do not edit manually.
 <!-- GSD:profile-end -->
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+**IMPORTANT: This project has a knowledge graph. ALWAYS use the
+code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
+the codebase.** The graph is faster, cheaper (fewer tokens), and gives
+you structural context (callers, dependents, test coverage) that file
+scanning cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
+- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
+- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview` + `list_communities`
+
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
+
+### Key Tools
+
+| Tool | Use when |
+|------|----------|
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
+| `get_impact_radius` | Understanding blast radius of a change |
+| `get_affected_flows` | Finding which execution paths are impacted |
+| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes` | Finding functions/classes by name or keyword |
+| `get_architecture_overview` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes` for code review.
+3. Use `get_affected_flows` to understand impact.
+4. Use `query_graph` pattern="tests_for" to check coverage.

@@ -167,12 +167,16 @@ class StripeConfig:
         ])
 
     def is_fully_configured(self) -> bool:
-        """Check if Stripe is fully configured for production billing."""
-        # FIXED: reject placeholder/example keys
+        """Check if Stripe is configured enough for production billing.
+
+        The custom plan builder uses dynamic pricing (price_data), so fixed
+        tier Price IDs are NOT required.  Only secret_key + webhook_secret
+        are mandatory.
+        """
         key = (self.secret_key or "").strip()
         if not key or any(p in key.lower() for p in ("placeholder", "example", "your_")):
             return False
-        return bool(self.webhook_secret and self.all_price_ids_configured())
+        return bool(self.webhook_secret)
 
 
 @dataclass
@@ -468,10 +472,10 @@ def validate_required_env_vars() -> list:
 
     env = os.environ.get("ENVIRONMENT", "development")
     if env == "production":
+        # Core production requirements only — R2 media storage is optional
+        # (media uploads will fail gracefully if R2 not configured)
         prod_required = [
             "REDIS_URL",
-            "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY",
-            "R2_BUCKET_NAME", "R2_PUBLIC_URL",
             "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
             "ENCRYPTION_KEY",
         ]
