@@ -22,7 +22,7 @@ INDEXES = {
     # ========== USERS ==========
     'users': [
         IndexModel([('user_id', ASCENDING)], unique=True, name='idx_user_id'),
-        IndexModel([('email', ASCENDING)], unique=True, name='idx_email'),
+        IndexModel([('email', ASCENDING)], unique=True, name='users_email_unique'),
         IndexModel([('google_id', ASCENDING)], sparse=True, name='idx_google_id'),
         IndexModel([('subscription_tier', ASCENDING)], name='idx_subscription_tier'),
         IndexModel([('created_at', DESCENDING)], name='idx_created_at'),

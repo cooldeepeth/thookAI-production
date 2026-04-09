@@ -60,8 +60,8 @@ async def forgot_password(data: ForgotPasswordRequest, background_tasks: Backgro
 
 @router.post("/reset-password")
 async def reset_password(data: ResetPasswordRequest):
-    if len(data.new_password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    from auth_utils import validate_password_strength
+    validate_password_strength(data.new_password)
     th = _token_hash(data.token)
     doc = await db.password_resets.find_one({"token_hash": th})
     if not doc or doc.get("used"):

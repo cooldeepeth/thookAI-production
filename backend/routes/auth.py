@@ -8,7 +8,8 @@ from datetime import datetime, timezone, timedelta
 from pymongo import WriteConcern
 import uuid
 from database import db
-from auth_utils import hash_password, verify_password, get_current_user
+from pymongo.errors import DuplicateKeyError
+from auth_utils import hash_password, verify_password, get_current_user, validate_password_strength
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,9 @@ def safe_user(user: dict) -> dict:
 
 @router.post("/register")
 async def register(data: RegisterRequest, response: Response):
+    # Enforce password policy
+    validate_password_strength(data.password)
+
     if await db.users.find_one({"email": data.email}, {"_id": 0}):
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -94,8 +98,11 @@ async def register(data: RegisterRequest, response: Response):
         "onboarding_completed": False, "platforms_connected": [],
         "created_at": datetime.now(timezone.utc)
     }
-    users_wmajority = db.users.with_options(write_concern=WriteConcern("majority"))
-    await users_wmajority.insert_one(user)
+    try:
+        users_wmajority = db.users.with_options(write_concern=WriteConcern("majority"))
+        await users_wmajority.insert_one(user)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=400, detail="Email already registered")
     token = create_jwt_token(user_id, data.email)
     csrf_value = secrets.token_urlsafe(32)
     set_auth_cookie(response, token)
@@ -106,9 +113,13 @@ async def register(data: RegisterRequest, response: Response):
 @router.post("/login")
 async def login(data: LoginRequest, response: Response):
     user = await db.users.find_one({"email": data.email}, {"_id": 0})
-    if not user or user.get("auth_method") == "google":
-        logger.warning("Failed login attempt: email=%s (user not found or wrong auth method)", data.email)
+    if not user:
+        logger.warning("Failed login attempt: email=%s (not found)", data.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if user.get("auth_method") != "email":
+        method = user.get("auth_method", "unknown")
+        logger.warning("Failed login attempt: email=%s (uses %s auth)", data.email, method)
+        raise HTTPException(status_code=401, detail=f"This account uses {method} sign-in. Please use that method to log in.")
     if not verify_password(data.password, user.get("hashed_password", "")):
         logger.warning("Failed login attempt: email=%s (wrong password)", data.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")

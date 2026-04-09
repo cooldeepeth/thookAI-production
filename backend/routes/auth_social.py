@@ -66,14 +66,24 @@ def _encrypt_token(token: str) -> str:
 
 async def _find_or_create_user(
     email: str, name: str, picture: str | None, auth_method: str
-) -> str:
-    """Find existing user by email or create new one. Returns user_id."""
+) -> str | None:
+    """Find existing user by email or create new one.
+
+    Returns user_id on success, or None if the account uses a
+    different auth method (caller should redirect with error).
+    """
     existing = await db.users.find_one({"email": email}, {"_id": 0})
     if existing:
+        existing_method = existing.get("auth_method", "email")
+        # Allow same-method re-login and email→social upgrade
+        if existing_method not in (auth_method, "email"):
+            return None  # Account exists with a different social provider
         user_id = existing["user_id"]
         update_fields = {"name": name}
         if picture:
             update_fields["picture"] = picture
+        if existing_method == "email":
+            update_fields["auth_method"] = auth_method
         await db.users.update_one({"user_id": user_id}, {"$set": update_fields})
         return user_id
 
@@ -232,6 +242,11 @@ async def linkedin_callback(code: str = "", state: str = "", error: str = ""):
 
     # Find or create user
     user_id = await _find_or_create_user(email, name, picture, "linkedin")
+    if user_id is None:
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}/auth?error=account_exists&method=other",
+            status_code=302,
+        )
 
     # Store platform token for publishing
     await _store_platform_token(
