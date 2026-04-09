@@ -2,6 +2,7 @@ import logging
 import secrets
 
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from jose import jwt
 from datetime import datetime, timezone, timedelta
@@ -163,18 +164,19 @@ async def register(data: RegisterRequest, response: Response):
             "onboarding_completed": False, "platforms_connected": [],
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        users_wmajority = db.users.with_options(write_concern=WriteConcern("majority"))
-        await users_wmajority.insert_one(user)
+        await db.users.insert_one(user)
         token = create_jwt_token(user_id, data.email)
         csrf_value = secrets.token_urlsafe(32)
-        set_auth_cookie(response, token)
-        set_csrf_cookie(response, csrf_value)
-        return {**safe_user(user), "token": token, "csrf_token": csrf_value}
+        body = {**safe_user(user), "token": token, "csrf_token": csrf_value}
+        resp = JSONResponse(content=body)
+        set_auth_cookie(resp, token)
+        set_csrf_cookie(resp, csrf_value)
+        return resp
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Register crash: %s\n%s", e, _tb.format_exc())
-        raise HTTPException(status_code=500, detail=f"Registration failed: {type(e).__name__}: {e}")
+        return JSONResponse(status_code=500, content={"detail": f"Registration failed: {type(e).__name__}: {e}"})
 
 
 @router.post("/login")
@@ -190,14 +192,16 @@ async def login(data: LoginRequest, response: Response):
             raise HTTPException(status_code=401, detail="Invalid email or password")
         token = create_jwt_token(user["user_id"], data.email)
         csrf_value = secrets.token_urlsafe(32)
-        set_auth_cookie(response, token)
-        set_csrf_cookie(response, csrf_value)
-        return {**safe_user(user), "token": token, "csrf_token": csrf_value}
+        body = {**safe_user(user), "token": token, "csrf_token": csrf_value}
+        resp = JSONResponse(content=body)
+        set_auth_cookie(resp, token)
+        set_csrf_cookie(resp, csrf_value)
+        return resp
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Login crash: %s\n%s", e, _tb.format_exc())
-        raise HTTPException(status_code=500, detail=f"Login failed: {type(e).__name__}: {e}")
+        return JSONResponse(status_code=500, content={"detail": f"Login failed: {type(e).__name__}: {e}"})
 
 
 @router.get("/me")
