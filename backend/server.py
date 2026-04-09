@@ -30,6 +30,7 @@ from middleware.csrf import CSRFMiddleware
 from routes.auth import router as auth_router
 from routes.password_reset import router as password_reset_router
 from routes.auth_google import router as google_auth_router
+from routes.auth_social import router as social_auth_router
 from routes.onboarding import router as onboarding_router
 from routes.persona import router as persona_router
 from routes.content import router as content_router
@@ -272,6 +273,7 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
 api_router.include_router(password_reset_router)
 api_router.include_router(google_auth_router)
+api_router.include_router(social_auth_router)
 api_router.include_router(onboarding_router)
 api_router.include_router(persona_router)
 api_router.include_router(content_router)
