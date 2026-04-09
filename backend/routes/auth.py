@@ -146,44 +146,58 @@ async def debug_register(response: Response):
 
 @router.post("/register")
 async def register(data: RegisterRequest, response: Response):
-    if await db.users.find_one({"email": data.email}, {"_id": 0}):
-        raise HTTPException(status_code=400, detail="Email already registered")
+    import traceback as _tb
+    try:
+        if await db.users.find_one({"email": data.email}, {"_id": 0}):
+            raise HTTPException(status_code=400, detail="Email already registered")
 
-    user_id = f"user_{uuid.uuid4().hex[:12]}"
-    user = {
-        "user_id": user_id, "email": data.email, "name": data.name,
-        "picture": None, "auth_method": "email",
-        "hashed_password": hash_password(data.password),
-        "plan": "starter", "subscription_tier": "starter",
-        "credits": 200, "credit_allowance": 0,
-        "credits_last_refresh": datetime.now(timezone.utc),
-        "credits_refreshed_at": datetime.now(timezone.utc),
-        "onboarding_completed": False, "platforms_connected": [],
-        "created_at": datetime.now(timezone.utc)
-    }
-    users_wmajority = db.users.with_options(write_concern=WriteConcern("majority"))
-    await users_wmajority.insert_one(user)
-    token = create_jwt_token(user_id, data.email)
-    csrf_value = secrets.token_urlsafe(32)
-    set_auth_cookie(response, token)
-    set_csrf_cookie(response, csrf_value)
-    return {**safe_user(user), "token": token, "csrf_token": csrf_value}
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        user = {
+            "user_id": user_id, "email": data.email, "name": data.name,
+            "picture": None, "auth_method": "email",
+            "hashed_password": hash_password(data.password),
+            "plan": "starter", "subscription_tier": "starter",
+            "credits": 200, "credit_allowance": 0,
+            "credits_last_refresh": datetime.now(timezone.utc).isoformat(),
+            "credits_refreshed_at": datetime.now(timezone.utc).isoformat(),
+            "onboarding_completed": False, "platforms_connected": [],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        users_wmajority = db.users.with_options(write_concern=WriteConcern("majority"))
+        await users_wmajority.insert_one(user)
+        token = create_jwt_token(user_id, data.email)
+        csrf_value = secrets.token_urlsafe(32)
+        set_auth_cookie(response, token)
+        set_csrf_cookie(response, csrf_value)
+        return {**safe_user(user), "token": token, "csrf_token": csrf_value}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Register crash: %s\n%s", e, _tb.format_exc())
+        raise HTTPException(status_code=500, detail=f"Registration failed: {type(e).__name__}: {e}")
 
 
 @router.post("/login")
 async def login(data: LoginRequest, response: Response):
-    user = await db.users.find_one({"email": data.email}, {"_id": 0})
-    if not user or user.get("auth_method") == "google":
-        logger.warning("Failed login attempt: email=%s (user not found or wrong auth method)", data.email)
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    if not verify_password(data.password, user.get("hashed_password", "")):
-        logger.warning("Failed login attempt: email=%s (wrong password)", data.email)
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    token = create_jwt_token(user["user_id"], data.email)
-    csrf_value = secrets.token_urlsafe(32)
-    set_auth_cookie(response, token)
-    set_csrf_cookie(response, csrf_value)
-    return {**safe_user(user), "token": token, "csrf_token": csrf_value}
+    import traceback as _tb
+    try:
+        user = await db.users.find_one({"email": data.email}, {"_id": 0})
+        if not user or user.get("auth_method") == "google":
+            logger.warning("Failed login attempt: email=%s (user not found or wrong auth method)", data.email)
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        if not verify_password(data.password, user.get("hashed_password", "")):
+            logger.warning("Failed login attempt: email=%s (wrong password)", data.email)
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        token = create_jwt_token(user["user_id"], data.email)
+        csrf_value = secrets.token_urlsafe(32)
+        set_auth_cookie(response, token)
+        set_csrf_cookie(response, csrf_value)
+        return {**safe_user(user), "token": token, "csrf_token": csrf_value}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Login crash: %s\n%s", e, _tb.format_exc())
+        raise HTTPException(status_code=500, detail=f"Login failed: {type(e).__name__}: {e}")
 
 
 @router.get("/me")
