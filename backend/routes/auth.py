@@ -77,6 +77,17 @@ def safe_user(user: dict) -> dict:
     return {k: v for k, v in user.items() if k not in ("hashed_password", "_id")}
 
 
+@router.get("/debug-hash")
+async def debug_hash():
+    """Temporary debug endpoint — remove after fixing bcrypt."""
+    try:
+        h = hash_password("test123")
+        ok = verify_password("test123", h)
+        return {"hash": h[:20] + "...", "verify": ok, "engine": "direct-bcrypt"}
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+
+
 @router.post("/register")
 async def register(data: RegisterRequest, response: Response):
     if await db.users.find_one({"email": data.email}, {"_id": 0}):
