@@ -88,6 +88,45 @@ async def debug_hash():
         return {"error": str(e), "type": type(e).__name__}
 
 
+@router.post("/debug-register")
+async def debug_register(response: Response):
+    """Temporary: mimics register flow step by step to find crash."""
+    import traceback
+    steps = {}
+    try:
+        steps["1_hash"] = "start"
+        h = hash_password("test123")
+        steps["1_hash"] = "ok"
+
+        steps["2_jwt"] = "start"
+        token = create_jwt_token("user_debug123", "debug@test.com")
+        steps["2_jwt"] = "ok"
+
+        steps["3_csrf"] = "start"
+        csrf_value = secrets.token_urlsafe(32)
+        steps["3_csrf"] = "ok"
+
+        steps["4_cookie_auth"] = "start"
+        set_auth_cookie(response, token)
+        steps["4_cookie_auth"] = "ok"
+
+        steps["5_cookie_csrf"] = "start"
+        set_csrf_cookie(response, csrf_value)
+        steps["5_cookie_csrf"] = "ok"
+
+        steps["6_db_find"] = "start"
+        await db.users.find_one({"email": "nonexistent@debug.test"})
+        steps["6_db_find"] = "ok"
+
+        steps["7_db_insert"] = "skipped"
+
+        return {"status": "all_ok", "steps": steps, "token_len": len(token)}
+    except Exception as e:
+        steps["error"] = f"{type(e).__name__}: {e}"
+        steps["trace"] = traceback.format_exc()[-500:]
+        return {"status": "failed", "steps": steps}
+
+
 @router.post("/register")
 async def register(data: RegisterRequest, response: Response):
     if await db.users.find_one({"email": data.email}, {"_id": 0}):
