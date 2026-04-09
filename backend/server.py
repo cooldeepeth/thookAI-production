@@ -324,7 +324,19 @@ app.include_router(api_router)
 # ==================== MIDDLEWARE STACK ====================
 # Order matters! Middleware is executed in reverse order (bottom to top)
 
-allowed_origins = [o.strip() for o in settings.security.cors_origins if o.strip()]
+_raw_origins = [o.strip() for o in settings.security.cors_origins if o.strip()]
+
+# When credentials=True, CORSMiddleware rejects wildcard "*".
+# Default to known production origins if CORS_ORIGINS is unset or "*".
+if _raw_origins == ["*"] or not _raw_origins:
+    allowed_origins = [
+        "https://www.thook.ai",
+        "https://thook.ai",
+        "https://thook-ai-production.vercel.app",
+        "http://localhost:3000",
+    ]
+else:
+    allowed_origins = _raw_origins
 
 # 1. CORS - must be first (closest to response)
 app.add_middleware(

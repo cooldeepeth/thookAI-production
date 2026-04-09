@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class DatabaseConfig:
     """Database configuration"""
     mongo_url: str = field(default_factory=lambda: os.environ.get('MONGO_URL', 'mongodb://localhost:27017'))
-    db_name: str = field(default_factory=lambda: os.environ.get('DB_NAME', 'thook_database'))
+    db_name: str = field(default_factory=lambda: os.environ.get('DB_NAME', 'thook'))
     max_pool_size: int = field(default_factory=lambda: int(os.environ.get('MONGO_MAX_POOL_SIZE', '100')))
     min_pool_size: int = field(default_factory=lambda: int(os.environ.get('MONGO_MIN_POOL_SIZE', '10')))
     server_selection_timeout_ms: int = field(default_factory=lambda: int(os.environ.get('MONGO_TIMEOUT_MS', '5000')))
