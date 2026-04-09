@@ -118,7 +118,24 @@ async def debug_register(response: Response):
         await db.users.find_one({"email": "nonexistent@debug.test"})
         steps["6_db_find"] = "ok"
 
-        steps["7_db_insert"] = "skipped"
+        steps["7_write_concern"] = "start"
+        users_wm = db.users.with_options(write_concern=WriteConcern("majority"))
+        steps["7_write_concern"] = "ok"
+
+        steps["8_db_insert"] = "start"
+        test_doc = {
+            "user_id": f"debug_{uuid.uuid4().hex[:8]}",
+            "email": f"debug-{uuid.uuid4().hex[:6]}@test.internal",
+            "name": "debug", "auth_method": "email",
+            "hashed_password": h, "_debug": True,
+            "created_at": datetime.now(timezone.utc),
+        }
+        result = await users_wm.insert_one(test_doc)
+        steps["8_db_insert"] = f"ok:{result.inserted_id}"
+
+        # Clean up debug doc
+        await db.users.delete_one({"_debug": True, "user_id": test_doc["user_id"]})
+        steps["9_cleanup"] = "ok"
 
         return {"status": "all_ok", "steps": steps, "token_len": len(token)}
     except Exception as e:
