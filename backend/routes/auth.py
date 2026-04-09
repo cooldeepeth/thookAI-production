@@ -2,7 +2,6 @@ import logging
 import secrets
 
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from jose import jwt
 from datetime import datetime, timezone, timedelta
@@ -78,130 +77,46 @@ def safe_user(user: dict) -> dict:
     return {k: v for k, v in user.items() if k not in ("hashed_password", "_id")}
 
 
-@router.get("/debug-hash")
-async def debug_hash():
-    """Temporary debug endpoint — remove after fixing bcrypt."""
-    try:
-        h = hash_password("test123")
-        ok = verify_password("test123", h)
-        return {"hash": h[:20] + "...", "verify": ok, "engine": "direct-bcrypt"}
-    except Exception as e:
-        return {"error": str(e), "type": type(e).__name__}
-
-
-@router.post("/debug-register")
-async def debug_register(response: Response):
-    """Temporary: mimics register flow step by step to find crash."""
-    import traceback
-    steps = {}
-    try:
-        steps["1_hash"] = "start"
-        h = hash_password("test123")
-        steps["1_hash"] = "ok"
-
-        steps["2_jwt"] = "start"
-        token = create_jwt_token("user_debug123", "debug@test.com")
-        steps["2_jwt"] = "ok"
-
-        steps["3_csrf"] = "start"
-        csrf_value = secrets.token_urlsafe(32)
-        steps["3_csrf"] = "ok"
-
-        steps["4_cookie_auth"] = "start"
-        set_auth_cookie(response, token)
-        steps["4_cookie_auth"] = "ok"
-
-        steps["5_cookie_csrf"] = "start"
-        set_csrf_cookie(response, csrf_value)
-        steps["5_cookie_csrf"] = "ok"
-
-        steps["6_db_find"] = "start"
-        await db.users.find_one({"email": "nonexistent@debug.test"})
-        steps["6_db_find"] = "ok"
-
-        steps["7_write_concern"] = "start"
-        users_wm = db.users.with_options(write_concern=WriteConcern("majority"))
-        steps["7_write_concern"] = "ok"
-
-        steps["8_db_insert"] = "start"
-        test_doc = {
-            "user_id": f"debug_{uuid.uuid4().hex[:8]}",
-            "email": f"debug-{uuid.uuid4().hex[:6]}@test.internal",
-            "name": "debug", "auth_method": "email",
-            "hashed_password": h, "_debug": True,
-            "created_at": datetime.now(timezone.utc),
-        }
-        result = await users_wm.insert_one(test_doc)
-        steps["8_db_insert"] = f"ok:{result.inserted_id}"
-
-        # Clean up debug doc
-        await db.users.delete_one({"_debug": True, "user_id": test_doc["user_id"]})
-        steps["9_cleanup"] = "ok"
-
-        return {"status": "all_ok", "steps": steps, "token_len": len(token)}
-    except Exception as e:
-        steps["error"] = f"{type(e).__name__}: {e}"
-        steps["trace"] = traceback.format_exc()[-500:]
-        return {"status": "failed", "steps": steps}
-
-
 @router.post("/register")
 async def register(data: RegisterRequest, response: Response):
-    import traceback as _tb
-    try:
-        if await db.users.find_one({"email": data.email}, {"_id": 0}):
-            raise HTTPException(status_code=400, detail="Email already registered")
+    if await db.users.find_one({"email": data.email}, {"_id": 0}):
+        raise HTTPException(status_code=400, detail="Email already registered")
 
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        user = {
-            "user_id": user_id, "email": data.email, "name": data.name,
-            "picture": None, "auth_method": "email",
-            "hashed_password": hash_password(data.password),
-            "plan": "starter", "subscription_tier": "starter",
-            "credits": 200, "credit_allowance": 0,
-            "credits_last_refresh": datetime.now(timezone.utc).isoformat(),
-            "credits_refreshed_at": datetime.now(timezone.utc).isoformat(),
-            "onboarding_completed": False, "platforms_connected": [],
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.users.insert_one(user)
-        token = create_jwt_token(user_id, data.email)
-        csrf_value = secrets.token_urlsafe(32)
-        body = {**safe_user(user), "token": token, "csrf_token": csrf_value}
-        resp = JSONResponse(content=body)
-        set_auth_cookie(resp, token)
-        set_csrf_cookie(resp, csrf_value)
-        return resp
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Register crash: %s\n%s", e, _tb.format_exc())
-        return JSONResponse(status_code=500, content={"detail": f"Registration failed: {type(e).__name__}: {e}"})
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    user = {
+        "user_id": user_id, "email": data.email, "name": data.name,
+        "picture": None, "auth_method": "email",
+        "hashed_password": hash_password(data.password),
+        "plan": "starter", "subscription_tier": "starter",
+        "credits": 200, "credit_allowance": 0,
+        "credits_last_refresh": datetime.now(timezone.utc),
+        "credits_refreshed_at": datetime.now(timezone.utc),
+        "onboarding_completed": False, "platforms_connected": [],
+        "created_at": datetime.now(timezone.utc)
+    }
+    users_wmajority = db.users.with_options(write_concern=WriteConcern("majority"))
+    await users_wmajority.insert_one(user)
+    token = create_jwt_token(user_id, data.email)
+    csrf_value = secrets.token_urlsafe(32)
+    set_auth_cookie(response, token)
+    set_csrf_cookie(response, csrf_value)
+    return {**safe_user(user), "token": token, "csrf_token": csrf_value}
 
 
 @router.post("/login")
 async def login(data: LoginRequest, response: Response):
-    import traceback as _tb
-    try:
-        user = await db.users.find_one({"email": data.email}, {"_id": 0})
-        if not user or user.get("auth_method") == "google":
-            logger.warning("Failed login attempt: email=%s (user not found or wrong auth method)", data.email)
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-        if not verify_password(data.password, user.get("hashed_password", "")):
-            logger.warning("Failed login attempt: email=%s (wrong password)", data.email)
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-        token = create_jwt_token(user["user_id"], data.email)
-        csrf_value = secrets.token_urlsafe(32)
-        body = {**safe_user(user), "token": token, "csrf_token": csrf_value}
-        resp = JSONResponse(content=body)
-        set_auth_cookie(resp, token)
-        set_csrf_cookie(resp, csrf_value)
-        return resp
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Login crash: %s\n%s", e, _tb.format_exc())
-        return JSONResponse(status_code=500, content={"detail": f"Login failed: {type(e).__name__}: {e}"})
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+    if not user or user.get("auth_method") == "google":
+        logger.warning("Failed login attempt: email=%s (user not found or wrong auth method)", data.email)
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not verify_password(data.password, user.get("hashed_password", "")):
+        logger.warning("Failed login attempt: email=%s (wrong password)", data.email)
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = create_jwt_token(user["user_id"], data.email)
+    csrf_value = secrets.token_urlsafe(32)
+    set_auth_cookie(response, token)
+    set_csrf_cookie(response, csrf_value)
+    return {**safe_user(user), "token": token, "csrf_token": csrf_value}
 
 
 @router.get("/me")

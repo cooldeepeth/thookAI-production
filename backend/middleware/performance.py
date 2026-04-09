@@ -12,7 +12,7 @@ import time
 import json
 import hashlib
 import logging
-from typing import Callable, Dict, Optional, Set
+from typing import Callable, Dict, Optional
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
@@ -67,39 +67,49 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         body = b''
         async for chunk in response.body_iterator:
             body += chunk
-        
+
+        # Preserve all raw headers (including duplicate set-cookie entries)
+        # dict(response.headers) deduplicates keys and loses multi-valued
+        # headers like set-cookie, so we work with the raw header list instead.
+        raw_headers = list(response.raw_headers)
+
+        def _rebuild_response(content: bytes, extra_headers: dict[str, str] | None = None) -> Response:
+            """Build a Response from raw_headers, replacing content-length and
+            adding any extra headers.  Preserves duplicate set-cookie entries."""
+            filtered = [
+                (k, v) for k, v in raw_headers
+                if k.lower() != b"content-length"
+            ]
+            filtered.append((b"content-length", str(len(content)).encode("latin-1")))
+            if extra_headers:
+                for hk, hv in extra_headers.items():
+                    filtered.append((hk.lower().encode("latin-1"), hv.encode("latin-1")))
+            resp = Response(
+                status_code=response.status_code,
+                media_type=response.media_type,
+            )
+            resp.body = content
+            resp.raw_headers = filtered
+            return resp
+
         # Skip small responses
         if len(body) < self.minimum_size:
-            return Response(
-                content=body,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.media_type
-            )
-        
+            return _rebuild_response(body)
+
         # Compress
         compressed = gzip.compress(body, compresslevel=self.compression_level)
-        
+
         # Only use compressed if it's smaller
         if len(compressed) < len(body):
-            headers = dict(response.headers)
-            headers['Content-Encoding'] = 'gzip'
-            headers['Content-Length'] = str(len(compressed))
-            headers['Vary'] = 'Accept-Encoding'
-            
-            return Response(
-                content=compressed,
-                status_code=response.status_code,
-                headers=headers,
-                media_type=response.media_type
+            return _rebuild_response(
+                compressed,
+                extra_headers={
+                    "content-encoding": "gzip",
+                    "vary": "Accept-Encoding",
+                },
             )
-        
-        return Response(
-            content=body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type=response.media_type
-        )
+
+        return _rebuild_response(body)
 
 
 class CacheMiddleware(BaseHTTPMiddleware):
@@ -221,16 +231,21 @@ class CacheMiddleware(BaseHTTPMiddleware):
                 except Exception as exc:
                     logger.warning("Redis cache write failed: %s", exc)
 
-            headers = dict(response.headers)
-            headers['X-Cache'] = 'MISS'
-            headers['Cache-Control'] = f'public, max-age={ttl}'
+            # Preserve all raw headers (including any duplicate entries)
+            raw = list(response.raw_headers)
+            # Replace content-length with the actual body length
+            raw = [(k, v) for k, v in raw if k.lower() != b"content-length"]
+            raw.append((b"content-length", str(len(body)).encode("latin-1")))
+            raw.append((b"x-cache", b"MISS"))
+            raw.append((b"cache-control", f"public, max-age={ttl}".encode("latin-1")))
 
-            return Response(
-                content=body,
+            resp = Response(
                 status_code=response.status_code,
-                headers=headers,
-                media_type=response.media_type
+                media_type=response.media_type,
             )
+            resp.body = body
+            resp.raw_headers = raw
+            return resp
 
         return response
 
