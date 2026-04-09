@@ -402,3 +402,9 @@ async def global_exception_handler(request, exc):
         return JSONResponse(status_code=500, content={"detail": "An internal error occurred"})
     
     return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__})
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("server:app", host="0.0.0.0", port=port)
