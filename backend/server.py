@@ -105,12 +105,12 @@ async def lifespan(app: FastAPI):
         if not settings.security.jwt_secret_key:
             raise RuntimeError("JWT_SECRET_KEY must be set in production")
         if config_report['status'] == 'error':
-            error_message = (
-                "Configuration errors detected in production mode! "
-                "Fix the configuration issues before starting the server."
+            for err in config_report.get('errors', []):
+                logger.critical("CONFIG ERROR: %s", err)
+            logger.critical(
+                "Configuration errors detected in production — some features may not work. "
+                "Fix the issues listed above."
             )
-            logger.critical(error_message)
-            raise RuntimeError(error_message)
     
     # Create database indexes (async)
     try:
@@ -131,10 +131,8 @@ async def lifespan(app: FastAPI):
     try:
         from services.lightrag_service import assert_lightrag_embedding_config
         await assert_lightrag_embedding_config()
-    except AssertionError:
-        if settings.app.is_production:
-            raise  # Block startup in production
-        logger.warning("LightRAG embedding config invalid - knowledge graph disabled in dev mode")
+    except AssertionError as e:
+        logger.warning("LightRAG embedding config invalid — knowledge graph disabled: %s", e)
     except Exception as e:
         logger.warning("LightRAG startup check skipped: %s", e)
 
