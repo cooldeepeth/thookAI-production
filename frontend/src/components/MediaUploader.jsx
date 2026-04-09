@@ -86,6 +86,9 @@ export default function MediaUploader({ items, onItemsChange, onUploadComplete }
       });
       xhr.open('POST', `${API_BASE_URL}/api/uploads/media`);
       xhr.withCredentials = true;
+      // Inject CSRF token from cookie (required by CSRF middleware for POST + cookie auth)
+      const csrfMatch = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
+      if (csrfMatch) xhr.setRequestHeader('X-CSRF-Token', decodeURIComponent(csrfMatch[1]));
       xhr.send(fd);
       const data = await p;
       setFileProgress(100);

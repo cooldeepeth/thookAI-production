@@ -191,6 +191,13 @@ INDEXES = {
         IndexModel([('expires_at', ASCENDING)], name='idx_expires_at'),
     ],
 
+    # ========== MEDIA ASSETS (presigned URL uploads) ==========
+    'media_assets': [
+        IndexModel([('media_id', ASCENDING)], unique=True, name='idx_media_id'),
+        IndexModel([('user_id', ASCENDING), ('status', ASCENDING), ('created_at', DESCENDING)], name='idx_user_status_created'),
+        IndexModel([('job_id', ASCENDING)], sparse=True, name='idx_job_id'),
+    ],
+
     # ========== CONTEXT UPLOADS (content creation) ==========
     'uploads': [
         IndexModel([('upload_id', ASCENDING)], unique=True, name='idx_upload_id'),
