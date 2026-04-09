@@ -33,8 +33,60 @@ task_routes = {
     "tasks.content_tasks.*": {"queue": "content"},
 }
 
-# Beat schedule — MIGRATED TO n8n (Phase 9)
-# All 7 periodic tasks now run via n8n cron triggers calling
-# POST /api/n8n/execute/{task_name} endpoints.
-# See: backend/routes/n8n_bridge.py
-beat_schedule = {}
+# Beat schedule — restored from n8n migration.
+# All periodic tasks run via Celery Beat calling the same logic
+# that was previously in n8n bridge endpoints.
+from celery.schedules import crontab
+
+beat_schedule = {
+    # Every 5 minutes: publish scheduled posts
+    "process-scheduled-posts": {
+        "task": "tasks.scheduled_tasks.process_scheduled_posts",
+        "schedule": crontab(minute="*/5"),
+    },
+    # Every 10 minutes: mark stale running jobs as errored
+    "cleanup-stale-jobs": {
+        "task": "tasks.scheduled_tasks.cleanup_stale_jobs",
+        "schedule": crontab(minute="*/10"),
+    },
+    # Midnight UTC: reset daily content creation counters
+    "reset-daily-limits": {
+        "task": "tasks.scheduled_tasks.reset_daily_limits",
+        "schedule": crontab(hour=0, minute=0),
+    },
+    # 1st of month midnight: refresh monthly credits
+    "refresh-monthly-credits": {
+        "task": "tasks.scheduled_tasks.refresh_monthly_credits",
+        "schedule": crontab(day_of_month=1, hour=0, minute=0),
+    },
+    # 1am UTC daily: run nightly strategist
+    "run-nightly-strategist": {
+        "task": "tasks.scheduled_tasks.run_nightly_strategist",
+        "schedule": crontab(hour=1, minute=0),
+    },
+    # 2am UTC daily: aggregate daily analytics
+    "aggregate-daily-analytics": {
+        "task": "tasks.scheduled_tasks.aggregate_daily_analytics",
+        "schedule": crontab(hour=2, minute=0),
+    },
+    # 3am UTC daily: delete old failed jobs
+    "cleanup-old-jobs": {
+        "task": "tasks.scheduled_tasks.cleanup_old_jobs",
+        "schedule": crontab(hour=3, minute=0),
+    },
+    # 4am UTC daily: deactivate expired persona shares
+    "cleanup-expired-shares": {
+        "task": "tasks.scheduled_tasks.cleanup_expired_shares",
+        "schedule": crontab(hour=4, minute=0),
+    },
+    # Every 8 hours: poll 24h post analytics
+    "poll-analytics-24h": {
+        "task": "tasks.scheduled_tasks.poll_analytics_24h",
+        "schedule": crontab(hour="*/8", minute=0),
+    },
+    # Monday 6am: poll 7-day post analytics
+    "poll-analytics-7d": {
+        "task": "tasks.scheduled_tasks.poll_analytics_7d",
+        "schedule": crontab(day_of_week=1, hour=6, minute=0),
+    },
+}
