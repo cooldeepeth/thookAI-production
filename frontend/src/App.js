@@ -51,7 +51,7 @@ function AppRouter() {
       <Route
         path="/dashboard/*"
         element={
-          <ProtectedRoute requireOnboarding>
+          <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
         }
