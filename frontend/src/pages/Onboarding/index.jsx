@@ -34,6 +34,7 @@ export default function OnboardingWizard() {
   };
 
   const submitPersona = async (answers) => {
+    if (generating) return; // Prevent double-submit
     setPhase(3);
     setGenerating(true);
     setError('');

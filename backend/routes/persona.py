@@ -81,13 +81,16 @@ async def get_my_persona(current_user: dict = Depends(get_current_user)):
 @router.put("/me")
 async def update_my_persona(data: PersonaCardUpdate, current_user: dict = Depends(get_current_user)):
     import re
+    from html import unescape
 
     update = {"updated_at": datetime.now(timezone.utc)}
     if data.card:
         # Strip HTML tags from all string values to prevent stored XSS
+        # Unescape first to catch &lt;script&gt; style bypasses
         def _strip_html(obj):
             if isinstance(obj, str):
-                return re.sub(r"<[^>]+>", "", obj)
+                unescaped = unescape(obj)
+                return re.sub(r"<[^>]+>", "", unescaped)
             if isinstance(obj, dict):
                 return {k: _strip_html(v) for k, v in obj.items()}
             if isinstance(obj, list):
