@@ -128,6 +128,22 @@ def _resolve_key(provider: str, constructor_key: str) -> str:
     return constructor_key
 
 
+def _is_transient_error(e: Exception) -> bool:
+    """Check if an LLM API error is transient (worth retrying)."""
+    error_str = str(e).lower()
+    # Rate limit / overloaded
+    if any(kw in error_str for kw in ("rate limit", "429", "overloaded", "503", "502", "500")):
+        return True
+    # Timeouts
+    if any(kw in error_str for kw in ("timeout", "timed out", "connection")):
+        return True
+    # Check HTTP status code attributes from SDK exceptions
+    status = getattr(e, "status_code", None) or getattr(e, "status", None)
+    if isinstance(status, int) and status >= 500:
+        return True
+    return False
+
+
 def _openai_reasoning_style_model(model: str) -> bool:
     return bool(re.match(r"^o[0-9]", model))
 
@@ -175,8 +191,8 @@ class LlmChat:
         if not key:
             raise ValueError(f"No API key available for provider {self._provider!r}")
 
-        last_error = None
-        for attempt in range(max_retries + 1):
+        last_error: Exception = RuntimeError("No LLM call attempted")
+        for attempt in range(max(1, max_retries + 1)):
             try:
                 if self._provider == "openai":
                     return await self._send_openai(key, message)
@@ -188,9 +204,13 @@ class LlmChat:
             except (ValueError, RuntimeError):
                 raise  # Non-transient — don't retry
             except Exception as e:
+                # Only retry on transient errors (rate limit, server error, timeout)
+                is_transient = _is_transient_error(e)
+                if not is_transient:
+                    raise
                 last_error = e
                 if attempt < max_retries:
-                    await asyncio.sleep(1.0)  # 1s backoff before retry
+                    await asyncio.sleep(1.0)
 
         raise last_error
 
