@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
     try {
       // session_token cookie is sent automatically via credentials: 'include' (apiFetch default)
       // No Authorization header — cookie is the source of truth
-      const res = await apiFetch('/api/auth/me');
+      const res = await apiFetch('/api/auth/me', { _skipAuthRedirect: true });
       if (!res.ok) {
         setUser(null);
         return;
@@ -39,6 +39,7 @@ export function AuthProvider({ children }) {
         try {
           const res = await apiFetch('/api/auth/me', {
             headers: { Authorization: `Bearer ${token}` },
+            _skipAuthRedirect: true,
           });
           if (!res.ok) throw new Error('Invalid token');
           const userData = await res.json();
