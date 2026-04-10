@@ -40,7 +40,7 @@ function ShareTemplateDialog({ onClose, onSubmit }) {
       setLoadingJobs(true);
       try {
         // Fetch approved content jobs
-        const res = await apiFetch('/api/content?status=approved');
+        const res = await apiFetch('/api/content/jobs?status=approved');
         if (res.ok) {
           const data = await res.json();
           setJobs(data.jobs || []);
