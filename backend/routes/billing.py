@@ -19,24 +19,24 @@ router = APIRouter(prefix="/billing", tags=["billing"])
 
 class PlanBuilderRequest(BaseModel):
     """Request to preview or subscribe to a custom plan."""
-    text_posts: int = Field(default=0, ge=0)
-    images: int = Field(default=0, ge=0)
-    videos: int = Field(default=0, ge=0)
-    carousels: int = Field(default=0, ge=0)
-    repurposes: int = Field(default=0, ge=0)
-    voice_narrations: int = Field(default=0, ge=0)
-    series_plans: int = Field(default=0, ge=0)
+    text_posts: int = Field(default=0, ge=0, le=500)
+    images: int = Field(default=0, ge=0, le=500)
+    videos: int = Field(default=0, ge=0, le=100)
+    carousels: int = Field(default=0, ge=0, le=200)
+    repurposes: int = Field(default=0, ge=0, le=500)
+    voice_narrations: int = Field(default=0, ge=0, le=200)
+    series_plans: int = Field(default=0, ge=0, le=100)
 
 
 class PlanCheckoutRequest(BaseModel):
     """Request to create checkout for a custom plan."""
-    text_posts: int = Field(default=0, ge=0)
-    images: int = Field(default=0, ge=0)
-    videos: int = Field(default=0, ge=0)
-    carousels: int = Field(default=0, ge=0)
-    repurposes: int = Field(default=0, ge=0)
-    voice_narrations: int = Field(default=0, ge=0)
-    series_plans: int = Field(default=0, ge=0)
+    text_posts: int = Field(default=0, ge=0, le=500)
+    images: int = Field(default=0, ge=0, le=500)
+    videos: int = Field(default=0, ge=0, le=100)
+    carousels: int = Field(default=0, ge=0, le=200)
+    repurposes: int = Field(default=0, ge=0, le=500)
+    voice_narrations: int = Field(default=0, ge=0, le=200)
+    series_plans: int = Field(default=0, ge=0, le=100)
     success_url: Optional[str] = None
     cancel_url: Optional[str] = None
 
