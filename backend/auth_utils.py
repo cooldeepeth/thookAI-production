@@ -216,19 +216,25 @@ async def get_optional_user(request: Request):
 
 # ==================== TOKEN ENCRYPTION (for OAuth tokens) ====================
 
+_dev_fernet_key: str | None = None
+
+
 def get_fernet():
     """Get Fernet instance for encrypting OAuth tokens"""
+    global _dev_fernet_key
     from cryptography.fernet import Fernet
-    
+
     key = settings.security.fernet_key
     if not key:
-        # Generate a key if not configured (development only)
         if settings.app.is_production:
             logger.error("FERNET_KEY not configured in production!")
             raise ValueError("FERNET_KEY must be configured in production")
-        key = Fernet.generate_key().decode()
-        logger.warning("Using auto-generated Fernet key - set FERNET_KEY in production!")
-    
+        # Cache generated key for process lifetime to prevent per-call regeneration
+        if _dev_fernet_key is None:
+            _dev_fernet_key = Fernet.generate_key().decode()
+            logger.warning("Using auto-generated Fernet key — set FERNET_KEY for persistent token encryption")
+        key = _dev_fernet_key
+
     return Fernet(key.encode() if isinstance(key, str) else key)
 
 

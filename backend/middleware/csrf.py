@@ -42,7 +42,7 @@ _EXEMPT_EXACT: frozenset[str] = frozenset({
     "/api/auth/google",
     "/api/auth/google/callback",
     "/api/auth/forgot-password",
-    "/api/billing/webhook",
+    "/api/billing/webhook/stripe",
     "/health",
 })
 
