@@ -23,7 +23,7 @@ function ProtectedRoute({ children, requireOnboarding = false }) {
       </div>
     );
   if (!user) return <Navigate to="/auth" replace />;
-  // Redirect to onboarding if user hasn't completed it (unless already on onboarding)
+  // Redirect to onboarding if user hasn't completed it (onboarding route itself doesn't set this flag)
   if (requireOnboarding && !user.onboarding_completed) {
     return <Navigate to="/onboarding" replace />;
   }
