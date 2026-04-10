@@ -239,6 +239,17 @@ export default function DashboardHome() {
       </div>
 
       {/* Recent Content */}
+      {stats && (!stats.recent_jobs || stats.recent_jobs.length === 0) && user?.onboarding_completed && (
+        <div className="card-thook p-6 text-center">
+          <p className="text-zinc-500 text-sm mb-2">No content created yet</p>
+          <button
+            onClick={() => navigate("/dashboard/studio")}
+            className="text-lime text-sm font-medium hover:text-lime/80 transition-colors"
+          >
+            Create your first post →
+          </button>
+        </div>
+      )}
       {stats?.recent_jobs && stats.recent_jobs.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">

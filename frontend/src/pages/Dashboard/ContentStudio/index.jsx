@@ -162,9 +162,9 @@ export default function ContentStudio() {
   const isDone = job && (job.status === "completed" || job.status === "reviewing" || job.status === "approved");
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden" data-testid="content-studio">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)] overflow-hidden" data-testid="content-studio">
       {/* Left: Input Panel */}
-      <div className="w-[400px] flex-shrink-0 border-r border-white/5 overflow-y-auto">
+      <div className="w-full md:w-[400px] flex-shrink-0 border-b md:border-b-0 md:border-r border-white/5 overflow-y-auto">
         <InputPanel
           platform={platform}
           contentType={contentType}

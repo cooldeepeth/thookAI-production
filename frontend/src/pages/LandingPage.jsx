@@ -15,28 +15,54 @@ function Navbar() {
   }, []);
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 h-16 transition-all ${scrolled ? "bg-[#050505]/90 backdrop-blur-md border-b border-white/5" : ""}`} data-testid="landing-navbar">
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 h-16 transition-all ${scrolled ? "bg-[#050505]/90 backdrop-blur-md border-b border-white/5" : ""}`}
+      data-testid="landing-navbar"
+    >
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 bg-lime rounded-lg flex items-center justify-center">
           <Zap size={16} className="text-black" fill="black" />
         </div>
         <span className="font-display font-bold text-lg text-white">Thook</span>
-        <span className="text-[10px] font-mono text-lime bg-lime/10 px-1.5 py-0.5 rounded-md">AI</span>
+        <span className="text-[10px] font-mono text-lime bg-lime/10 px-1.5 py-0.5 rounded-md">
+          AI
+        </span>
       </div>
 
       <div className="hidden md:flex items-center gap-8 text-sm text-zinc-400">
-        <a href="#features" className="hover:text-white transition-colors">Product</a>
-        <a href="#agents" className="hover:text-white transition-colors">Agents</a>
-        <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-        <button onClick={() => navigate("/discover")} className="text-lime hover:text-[#B8E600] transition-colors flex items-center gap-1.5 font-medium">
+        <a href="#features" className="hover:text-white transition-colors">
+          Product
+        </a>
+        <a href="#agents" className="hover:text-white transition-colors">
+          Agents
+        </a>
+        <a href="#pricing" className="hover:text-white transition-colors">
+          Pricing
+        </a>
+        <button
+          onClick={() => navigate("/discover")}
+          className="text-lime hover:text-[#B8E600] transition-colors flex items-center gap-1.5 font-medium"
+        >
           <Sparkles size={14} />
           Discover Your Voice
         </button>
       </div>
 
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate("/auth")} data-testid="nav-signin-btn" className="text-sm text-zinc-400 hover:text-white transition-colors hidden md:block">Sign in</button>
-        <button onClick={() => navigate("/auth")} data-testid="nav-cta-btn" className="btn-primary text-sm py-2 px-5">Get started</button>
+        <button
+          onClick={() => navigate("/auth")}
+          data-testid="nav-signin-btn"
+          className="text-sm text-zinc-400 hover:text-white transition-colors hidden md:block"
+        >
+          Sign in
+        </button>
+        <button
+          onClick={() => navigate("/auth")}
+          data-testid="nav-cta-btn"
+          className="btn-primary text-sm py-2 px-5"
+        >
+          Get started
+        </button>
       </div>
     </nav>
   );
@@ -46,7 +72,10 @@ function Navbar() {
 function Hero() {
   const navigate = useNavigate();
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-6 pt-16 overflow-hidden" data-testid="hero-section">
+    <section
+      className="relative min-h-screen flex items-center justify-center px-6 pt-16 overflow-hidden"
+      data-testid="hero-section"
+    >
       {/* Background */}
       <div className="absolute inset-0 hero-glow" />
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-violet/8 rounded-full blur-[120px]" />
@@ -60,7 +89,9 @@ function Hero() {
         >
           <div className="inline-flex items-center gap-2 bg-lime/10 border border-lime/20 rounded-full px-4 py-1.5 mb-8 text-sm">
             <span className="w-2 h-2 bg-lime rounded-full animate-pulse" />
-            <span className="text-lime font-medium">Early Bird Launch — Save up to 38% for a limited time</span>
+            <span className="text-lime font-medium">
+              Early Bird Launch — Save up to 38% for a limited time
+            </span>
             <ChevronRight size={14} className="text-lime/60" />
           </div>
         </motion.div>
@@ -71,9 +102,7 @@ function Hero() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white leading-[1.05] mb-6"
         >
-          Your Voice.{" "}
-          <span className="text-lime">Infinite</span>{" "}
-          Content.
+          Your Voice. <span className="text-lime">Infinite</span> Content.
         </motion.h1>
 
         <motion.p
@@ -82,7 +111,9 @@ function Hero() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          15+ specialized AI agents that learn your exact voice and style — then craft platform-native content for LinkedIn, X, and Instagram. <strong className="text-white">Without burning you out.</strong>
+          15+ specialized AI agents that learn your exact voice and style — then
+          craft platform-native content for LinkedIn, X, and Instagram.{" "}
+          <strong className="text-white">Without burning you out.</strong>
         </motion.p>
 
         <motion.div
@@ -91,7 +122,11 @@ function Hero() {
           transition={{ duration: 0.4, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <button onClick={() => navigate("/auth")} data-testid="hero-cta-primary" className="btn-primary text-base px-8 py-3.5 flex items-center gap-2">
+          <button
+            onClick={() => navigate("/auth")}
+            data-testid="hero-cta-primary"
+            className="btn-primary text-base px-8 py-3.5 flex items-center gap-2"
+          >
             Get Started
             <ArrowRight size={16} />
           </button>
@@ -117,10 +152,24 @@ function Hero() {
 
       {/* Platform logos */}
       <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-6 opacity-40">
-        <span className="text-xs text-zinc-600 uppercase tracking-wider">Publishes to</span>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" alt="LinkedIn" className="h-5 w-5 object-contain" />
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/450px-X_logo_2023.svg.png" alt="X" className="h-5 w-5 object-contain invert" />
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Instagram_logo_2016.svg/2048px-Instagram_logo_2016.svg.png" alt="Instagram" className="h-5 w-5 object-contain" />
+        <span className="text-xs text-zinc-600 uppercase tracking-wider">
+          Publishes to
+        </span>
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png"
+          alt="LinkedIn"
+          className="h-5 w-5 object-contain"
+        />
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/450px-X_logo_2023.svg.png"
+          alt="X"
+          className="h-5 w-5 object-contain invert"
+        />
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Instagram_logo_2016.svg/2048px-Instagram_logo_2016.svg.png"
+          alt="Instagram"
+          className="h-5 w-5 object-contain"
+        />
       </div>
     </section>
   );
@@ -128,7 +177,13 @@ function Hero() {
 
 // ─── Features Bento ──────────────────────────────────────
 function Features() {
-  const voicePoints = ["Sentence rhythm & length", "Vocabulary complexity", "Emoji frequency & style", "Hook patterns (question/stat/bold)","CTA fingerprint"];
+  const voicePoints = [
+    "Sentence rhythm & length",
+    "Vocabulary complexity",
+    "Emoji frequency & style",
+    "Hook patterns (question/stat/bold)",
+    "CTA fingerprint",
+  ];
   return (
     <section id="features" className="px-6 md:px-12 py-24 max-w-7xl mx-auto">
       <motion.div
@@ -137,9 +192,15 @@ function Features() {
         viewport={{ once: true }}
         className="text-center mb-16"
       >
-        <p className="text-lime text-sm font-semibold uppercase tracking-wider mb-3">Core Features</p>
-        <h2 className="font-display font-bold text-4xl md:text-5xl text-white">Anti-generic AI.</h2>
-        <p className="text-zinc-500 mt-3 max-w-xl mx-auto">Built around your unique voice, not a generic template.</p>
+        <p className="text-lime text-sm font-semibold uppercase tracking-wider mb-3">
+          Core Features
+        </p>
+        <h2 className="font-display font-bold text-4xl md:text-5xl text-white">
+          Anti-generic AI.
+        </h2>
+        <p className="text-zinc-500 mt-3 max-w-xl mx-auto">
+          Built around your unique voice, not a generic template.
+        </p>
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 auto-rows-[minmax(180px,auto)] gap-4">
@@ -158,13 +219,18 @@ function Features() {
               <Zap size={12} />
               Core Differentiator
             </div>
-            <h3 className="font-display font-bold text-2xl text-white mb-2">The Persona Engine</h3>
+            <h3 className="font-display font-bold text-2xl text-white mb-2">
+              The Persona Engine
+            </h3>
             <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
-              Your AI voice clone. Learns from every post, edit, and approval to create content that sounds exactly like you — not like AI.
+              Your AI voice clone. Learns from every post, edit, and approval to
+              create content that sounds exactly like you — not like AI.
             </p>
             {/* Voice fingerprint visualization */}
             <div className="bg-[#0A0A0B] rounded-xl p-4 border border-white/5">
-              <p className="text-xs text-zinc-600 mb-3 font-mono">VOICE FINGERPRINT</p>
+              <p className="text-xs text-zinc-600 mb-3 font-mono">
+                VOICE FINGERPRINT
+              </p>
               <div className="space-y-2">
                 {voicePoints.map((pt, i) => (
                   <div key={pt} className="flex items-center gap-3">
@@ -175,8 +241,8 @@ function Features() {
                           className="w-1 rounded-sm transition-all"
                           style={{
                             height: `${8 + Math.sin((i * 3 + j) * 0.8) * 6}px`,
-                            backgroundColor: j < 5 + i ? '#D4FF00' : '#27272A',
-                            opacity: j < 5 + i ? 0.7 + j * 0.04 : 1
+                            backgroundColor: j < 5 + i ? "#D4FF00" : "#27272A",
+                            opacity: j < 5 + i ? 0.7 + j * 0.04 : 1,
                           }}
                         />
                       ))}
@@ -198,8 +264,12 @@ function Features() {
           className="md:col-span-2 card-thook p-5 relative overflow-hidden"
           data-testid="feature-pipeline"
         >
-          <h3 className="font-display font-semibold text-lg text-white mb-1">Raw in, ready out</h3>
-          <p className="text-zinc-500 text-xs mb-4">Drop a rough idea. Get platform-ready content.</p>
+          <h3 className="font-display font-semibold text-lg text-white mb-1">
+            Raw in, ready out
+          </h3>
+          <p className="text-zinc-500 text-xs mb-4">
+            Drop a rough idea. Get platform-ready content.
+          </p>
           <div className="flex items-center gap-1.5 flex-wrap">
             {["Scout", "Thinker", "Writer", "QC", "Publish"].map((step, i) => (
               <div key={step} className="flex items-center gap-1.5">
@@ -221,16 +291,26 @@ function Features() {
           className="md:col-span-2 card-thook p-5"
           data-testid="feature-platforms"
         >
-          <h3 className="font-display font-semibold text-lg text-white mb-1">Platform-native UX</h3>
-          <p className="text-zinc-500 text-xs mb-4">Editors that mimic LinkedIn, X, and Instagram — zero learning curve.</p>
+          <h3 className="font-display font-semibold text-lg text-white mb-1">
+            Platform-native UX
+          </h3>
+          <p className="text-zinc-500 text-xs mb-4">
+            Editors that mimic LinkedIn, X, and Instagram — zero learning curve.
+          </p>
           <div className="flex gap-2">
             {[
               { name: "LinkedIn", color: "#0A66C2", tag: "Post / Carousel" },
               { name: "X", color: "#1D9BF0", tag: "Thread" },
-              { name: "Instagram", color: "#E1306C", tag: "Caption" }
-            ].map(p => (
-              <div key={p.name} className="flex-1 bg-surface-2 rounded-lg p-2.5 border border-white/5 text-center">
-                <div className="w-1.5 h-1.5 rounded-full mx-auto mb-1.5" style={{ backgroundColor: p.color }} />
+              { name: "Instagram", color: "#E1306C", tag: "Caption" },
+            ].map((p) => (
+              <div
+                key={p.name}
+                className="flex-1 bg-surface-2 rounded-lg p-2.5 border border-white/5 text-center"
+              >
+                <div
+                  className="w-1.5 h-1.5 rounded-full mx-auto mb-1.5"
+                  style={{ backgroundColor: p.color }}
+                />
                 <p className="text-xs font-medium text-white">{p.name}</p>
                 <p className="text-[10px] text-zinc-600 mt-0.5">{p.tag}</p>
               </div>
@@ -249,7 +329,9 @@ function Features() {
         >
           <p className="text-4xl font-display font-bold text-lime mb-1">0</p>
           <p className="text-white font-semibold text-sm">Burnout</p>
-          <p className="text-zinc-500 text-xs mt-1">Adaptive AI adjusts to your energy level automatically</p>
+          <p className="text-zinc-500 text-xs mt-1">
+            Adaptive AI adjusts to your energy level automatically
+          </p>
         </motion.div>
 
         {/* 15+ agents */}
@@ -261,9 +343,13 @@ function Features() {
           className="md:col-span-1 card-thook p-5"
           data-testid="feature-agents-count"
         >
-          <p className="text-4xl font-display font-bold text-white mb-1">15<span className="text-lime">+</span></p>
+          <p className="text-4xl font-display font-bold text-white mb-1">
+            15<span className="text-lime">+</span>
+          </p>
           <p className="text-white font-semibold text-sm">AI Agents</p>
-          <p className="text-zinc-500 text-xs mt-1">Each specialized for one task. All working as one team.</p>
+          <p className="text-zinc-500 text-xs mt-1">
+            Each specialized for one task. All working as one team.
+          </p>
         </motion.div>
       </div>
     </section>
@@ -293,7 +379,9 @@ function DiscoverBanner() {
               Discover Your Creator DNA
             </h3>
             <p className="text-zinc-400 text-sm md:text-base leading-relaxed max-w-lg">
-              Paste your posts and get an AI-powered persona card that reveals your writing voice, content archetype, and strengths. No signup needed.
+              Paste your posts and get an AI-powered persona card that reveals
+              your writing voice, content archetype, and strengths. No signup
+              needed.
             </p>
           </div>
           <div className="flex-shrink-0">
@@ -341,9 +429,16 @@ function AgentCouncil() {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <p className="text-zinc-500 text-sm font-semibold uppercase tracking-wider mb-3">The Agent Council</p>
-          <h2 className="font-display font-bold text-4xl md:text-5xl text-white">15 specialists. <span className="text-lime">One team.</span></h2>
-          <p className="text-zinc-500 mt-3 max-w-xl mx-auto text-sm">Each agent is purpose-built with the world's best model for its job. Orchestrated by Commander GPT-4o.</p>
+          <p className="text-zinc-500 text-sm font-semibold uppercase tracking-wider mb-3">
+            The Agent Council
+          </p>
+          <h2 className="font-display font-bold text-4xl md:text-5xl text-white">
+            15 specialists. <span className="text-lime">One team.</span>
+          </h2>
+          <p className="text-zinc-500 mt-3 max-w-xl mx-auto text-sm">
+            Each agent is purpose-built with the world's best model for its job.
+            Orchestrated by Commander GPT-4o.
+          </p>
         </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -358,10 +453,14 @@ function AgentCouncil() {
               data-testid={`agent-card-${agent.name.toLowerCase()}`}
             >
               <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center mb-3 group-hover:bg-lime/10 transition-colors">
-                <span className="text-xs font-bold text-zinc-400 group-hover:text-lime transition-colors">{agent.name[0]}</span>
+                <span className="text-xs font-bold text-zinc-400 group-hover:text-lime transition-colors">
+                  {agent.name[0]}
+                </span>
               </div>
               <p className="text-sm font-semibold text-white">{agent.name}</p>
-              <p className="text-[10px] text-lime/70 font-mono mb-1">{agent.model}</p>
+              <p className="text-[10px] text-lime/70 font-mono mb-1">
+                {agent.model}
+              </p>
               <p className="text-xs text-zinc-600">{agent.role}</p>
             </motion.div>
           ))}
@@ -378,7 +477,13 @@ const plans = [
     price: "$0",
     period: "",
     desc: "Try ThookAI with 200 free credits",
-    features: ["200 one-time credits", "LinkedIn platform", "Persona Engine", "Text posts", "Content library"],
+    features: [
+      "200 one-time credits",
+      "LinkedIn platform",
+      "Persona Engine",
+      "Text posts",
+      "Content library",
+    ],
     cta: "Start free",
     highlight: false,
   },
@@ -387,7 +492,14 @@ const plans = [
     price: "$15",
     period: "/month",
     desc: "For consistent creators posting weekly",
-    features: ["~300 credits/month", "All 3 platforms", "Full Persona Engine", "Images & carousels", "Content repurposing", "30-day analytics"],
+    features: [
+      "~300 credits/month",
+      "All 3 platforms",
+      "Full Persona Engine",
+      "Images & carousels",
+      "Content repurposing",
+      "30-day analytics",
+    ],
     cta: "Build your plan",
     highlight: false,
     example: "~20 posts + 5 images + 5 repurposes",
@@ -397,7 +509,14 @@ const plans = [
     price: "$79",
     period: "/month",
     desc: "For serious creators scaling output",
-    features: ["~1,800 credits/month", "Voice narration", "10 personas", "5 team members", "90-day analytics", "Priority support"],
+    features: [
+      "~1,800 credits/month",
+      "Voice narration",
+      "10 personas",
+      "5 team members",
+      "90-day analytics",
+      "Priority support",
+    ],
     cta: "Build your plan",
     highlight: true,
     badge: "Most Popular",
@@ -408,7 +527,14 @@ const plans = [
     price: "$149+",
     period: "/month",
     desc: "For agencies and power users",
-    features: ["5,000+ credits/month", "Video generation", "API access", "10+ team members", "365-day analytics", "Custom integrations"],
+    features: [
+      "5,000+ credits/month",
+      "Video generation",
+      "API access",
+      "10+ team members",
+      "365-day analytics",
+      "Custom integrations",
+    ],
     cta: "Build your plan",
     highlight: false,
     badge: "Best Value",
@@ -429,11 +555,20 @@ function Pricing() {
         >
           <div className="inline-flex items-center gap-2 bg-lime/10 border border-lime/20 rounded-full px-4 py-1.5 mb-4 text-sm">
             <span className="w-2 h-2 bg-lime rounded-full animate-pulse" />
-            <span className="text-lime font-medium">Volume Discounts — The More You Use, The Less You Pay</span>
+            <span className="text-lime font-medium">
+              Volume Discounts — The More You Use, The Less You Pay
+            </span>
           </div>
-          <p className="text-lime text-sm font-semibold uppercase tracking-wider mb-3">Pricing</p>
-          <h2 className="font-display font-bold text-4xl md:text-5xl text-white">Build your own plan.</h2>
-          <p className="text-zinc-500 mt-3 text-sm">Pick your usage, we calculate the price. Credits refresh monthly. Start free.</p>
+          <p className="text-lime text-sm font-semibold uppercase tracking-wider mb-3">
+            Pricing
+          </p>
+          <h2 className="font-display font-bold text-4xl md:text-5xl text-white">
+            Build your own plan.
+          </h2>
+          <p className="text-zinc-500 mt-3 text-sm">
+            Pick your usage, we calculate the price. Credits refresh monthly.
+            Start free.
+          </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -448,24 +583,39 @@ function Pricing() {
               data-testid={`pricing-${plan.name.toLowerCase()}`}
             >
               {plan.badge && (
-                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold rounded-full px-3 py-1 ${
-                  plan.highlight ? "bg-lime text-black" : "bg-violet text-white"
-                }`}>
+                <div
+                  className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold rounded-full px-3 py-1 ${
+                    plan.highlight
+                      ? "bg-lime text-black"
+                      : "bg-violet text-white"
+                  }`}
+                >
                   {plan.badge}
                 </div>
               )}
-              <p className="text-sm font-semibold text-zinc-400 mb-1">{plan.name}</p>
+              <p className="text-sm font-semibold text-zinc-400 mb-1">
+                {plan.name}
+              </p>
               <div className="flex items-end gap-2 mb-1">
-                <span className="font-display font-bold text-4xl text-white">{plan.price}</span>
+                <span className="font-display font-bold text-4xl text-white">
+                  {plan.price}
+                </span>
                 {plan.originalPrice && (
-                  <span className="text-zinc-500 text-lg line-through mb-1">{plan.originalPrice}</span>
+                  <span className="text-zinc-500 text-lg line-through mb-1">
+                    {plan.originalPrice}
+                  </span>
                 )}
-                <span className="text-zinc-500 text-sm mb-1">{plan.period}</span>
+                <span className="text-zinc-500 text-sm mb-1">
+                  {plan.period}
+                </span>
               </div>
               <p className="text-xs text-zinc-500 mb-5">{plan.desc}</p>
               <ul className="space-y-2.5 mb-6">
-                {plan.features.map(f => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-zinc-300">
+                {plan.features.map((f) => (
+                  <li
+                    key={f}
+                    className="flex items-center gap-2 text-sm text-zinc-300"
+                  >
                     <Check size={14} className="text-lime flex-shrink-0" />
                     {f}
                   </li>
@@ -499,13 +649,26 @@ function Footer() {
           <div className="w-6 h-6 bg-lime rounded-md flex items-center justify-center">
             <Zap size={12} className="text-black" fill="black" />
           </div>
-          <span className="font-display font-bold text-sm text-white">Thook AI</span>
+          <span className="font-display font-bold text-sm text-white">
+            Thook AI
+          </span>
         </div>
-        <p className="text-zinc-600 text-xs">© 2025 ThookAI. Your AI Creative Agency.</p>
+        <p className="text-zinc-600 text-xs">
+          © 2025 ThookAI. Your AI Creative Agency.
+        </p>
         <div className="flex gap-5 text-xs text-zinc-600">
-          <a href="#" className="hover:text-white transition-colors">Privacy</a>
-          <a href="#" className="hover:text-white transition-colors">Terms</a>
-          <a href="#" className="hover:text-white transition-colors">Contact</a>
+          <a href="/privacy" className="hover:text-white transition-colors">
+            Privacy
+          </a>
+          <a href="/terms" className="hover:text-white transition-colors">
+            Terms
+          </a>
+          <a
+            href="mailto:support@thookai.com"
+            className="hover:text-white transition-colors"
+          >
+            Contact
+          </a>
         </div>
       </div>
     </footer>
@@ -515,7 +678,10 @@ function Footer() {
 // ─── Main Page ────────────────────────────────────────────
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden" data-testid="landing-page">
+    <div
+      className="min-h-screen bg-[#050505] text-white overflow-x-hidden"
+      data-testid="landing-page"
+    >
       <Navbar />
       <Hero />
       <Features />

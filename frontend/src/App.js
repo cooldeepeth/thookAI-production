@@ -10,6 +10,9 @@ import Dashboard from "@/pages/Dashboard";
 import OnboardingWizard from "@/pages/Onboarding";
 import PersonaCardPublic from "@/pages/Public/PersonaCardPublic";
 import ViralCard from "@/pages/ViralCard";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
+import CookieConsent from "@/components/CookieConsent";
 
 function ProtectedRoute({ children, requireOnboarding = false }) {
   const { user, loading } = useAuth();
@@ -40,6 +43,8 @@ function AppRouter() {
       <Route path="/p/:shareToken" element={<PersonaCardPublic />} />
       <Route path="/discover" element={<ViralCard />} />
       <Route path="/discover/:cardId" element={<ViralCard />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
       <Route
         path="/onboarding"
         element={
@@ -68,6 +73,7 @@ function App() {
         <AuthProvider>
           <ToastProvider>
             <AppRouter />
+            <CookieConsent />
           </ToastProvider>
         </AuthProvider>
       </BrowserRouter>
