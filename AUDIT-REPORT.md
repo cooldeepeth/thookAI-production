@@ -10,14 +10,14 @@
 
 ThookAI production codebase is in **good shape**. No critical security vulnerabilities found. The 12 bugs from the March 2026 audit remain fixed. Architecture is sound — proper separation of concerns, atomic DB operations, CSRF protection, and comprehensive indexing.
 
-**All issues below have been resolved in PR #38** (`fix/audit-april-2026`).
+**Actionable issues resolved in PR #38** (`fix/audit-april-2026`). Two LOW items (L-02 fragile heuristic, L-03 TODOs) deferred as non-blocking.
 
-| Severity | Count | Status                                |
-| -------- | ----- | ------------------------------------- |
-| CRITICAL | 0     | N/A                                   |
-| HIGH     | 3     | FIXED                                 |
-| MEDIUM   | 5     | FIXED                                 |
-| LOW      | 4     | FIXED (L-01 moot, L-02/L-03 deferred) |
+| Severity | Count | Status                                 |
+| -------- | ----- | -------------------------------------- |
+| CRITICAL | 0     | N/A                                    |
+| HIGH     | 3     | FIXED in PR #38                        |
+| MEDIUM   | 5     | FIXED in PR #38                        |
+| LOW      | 4     | 2 FIXED, L-01 moot, L-02/L-03 deferred |
 
 ---
 
