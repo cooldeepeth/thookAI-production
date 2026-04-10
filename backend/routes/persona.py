@@ -310,7 +310,8 @@ async def get_public_persona(share_token: str):
 @router.get("/regional-english/options")
 async def get_regional_english_options():
     """Get available regional English format options."""
-    return {
+    from fastapi.responses import JSONResponse
+    data = {
         "success": True,
         "options": [
             {
@@ -324,6 +325,7 @@ async def get_regional_english_options():
             for code, config in REGIONAL_ENGLISH_CONFIG.items()
         ]
     }
+    return JSONResponse(content=data, headers={"Cache-Control": "no-transform"})
 
 
 @router.put("/regional-english")

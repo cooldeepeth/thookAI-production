@@ -117,8 +117,15 @@ async def get_persona_suggestions(
     current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Get AI suggestions for persona updates."""
+    import asyncio
     from services.persona_refinement import suggest_persona_updates
-    return await suggest_persona_updates(current_user["user_id"])
+    try:
+        return await asyncio.wait_for(
+            suggest_persona_updates(current_user["user_id"]),
+            timeout=12.0,
+        )
+    except asyncio.TimeoutError:
+        return {"success": False, "should_update": False, "confidence": 0, "suggestions": [], "message": "Suggestion generation timed out. Try again later."}
 
 
 @router.post("/persona/refine")
