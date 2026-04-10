@@ -9,16 +9,11 @@ Features:
 
 from motor.motor_asyncio import AsyncIOMotorClient
 import logging
-import os
 from config import settings
 
 logger = logging.getLogger(__name__)
 
-MONGO_URL = (
-    os.getenv("MONGODB_URL")
-    or os.getenv("MONGO_URL")
-    or "mongodb://localhost:27017/thookai"
-)
+MONGO_URL = settings.database.mongo_url
 
 # ==================== CONNECTION CONFIGURATION ====================
 

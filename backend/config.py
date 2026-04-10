@@ -111,7 +111,6 @@ class R2Config:
 
 
 @dataclass
-
 class EmailConfig:
     """Email (Resend) configuration"""
     resend_api_key: Optional[str] = field(default_factory=lambda: os.environ.get('RESEND_API_KEY'))

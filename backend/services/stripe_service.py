@@ -381,7 +381,7 @@ async def cancel_stripe_subscription(user_id: str, at_period_end: bool = True) -
                 user["stripe_subscription_id"],
                 cancel_at_period_end=True
             )
-            message = f"Subscription will be cancelled at period end: {datetime.fromtimestamp(subscription.current_period_end).isoformat()}"
+            message = f"Subscription will be cancelled at period end: {datetime.fromtimestamp(subscription.current_period_end, tz=timezone.utc).isoformat()}"
         else:
             subscription = stripe.Subscription.delete(user["stripe_subscription_id"])
             message = "Subscription cancelled immediately"
