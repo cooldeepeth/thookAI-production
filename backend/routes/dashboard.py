@@ -22,15 +22,31 @@ PERPLEXITY_API_KEY = settings.llm.perplexity_key or ''
 DAILY_BRIEF_CACHE_HOURS = 6
 
 
+class FeedbackRequest(BaseModel):
+    message: str
+    sentiment: str = "neutral"
+    page: str = "unknown"
+
+
+VALID_SENTIMENTS = {"happy", "neutral", "sad"}
+
+
 @router.post("/feedback")
-async def submit_feedback(body: dict, user=Depends(get_current_user)):
+async def submit_feedback(body: FeedbackRequest, user=Depends(get_current_user)):
     """Simple user feedback collection."""
+    from fastapi import HTTPException
+
+    if len(body.message.strip()) < 3:
+        raise HTTPException(status_code=400, detail="Feedback message too short")
+    if body.sentiment not in VALID_SENTIMENTS:
+        raise HTTPException(status_code=400, detail=f"sentiment must be one of: {', '.join(VALID_SENTIMENTS)}")
+
     feedback = {
         "feedback_id": f"fb_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"],
-        "message": body.get("message", "")[:2000],
-        "sentiment": body.get("sentiment", "neutral"),  # happy|neutral|sad
-        "page": body.get("page", "unknown"),
+        "message": body.message[:2000],
+        "sentiment": body.sentiment,
+        "page": body.page[:100],
         "created_at": datetime.now(timezone.utc),
     }
     await db.user_feedback.insert_one(feedback)
@@ -592,10 +608,12 @@ async def publish_content_now(
     })
     
     if not job:
-        return {"success": False, "error": "Content not found"}
-    
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Content not found")
+
     if job.get("status") not in ["approved", "scheduled"]:
-        return {"success": False, "error": "Content must be approved before publishing"}
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Content must be approved before publishing")
     
     content = job.get("final_content", "")
     media_assets = job.get("media_assets", [])

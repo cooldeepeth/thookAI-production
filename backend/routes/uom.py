@@ -1,7 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import Optional
 from auth_utils import get_current_user
 
 router = APIRouter(prefix="/uom", tags=["uom"])
+
+
+class UomUpdateRequest(BaseModel):
+    risk_tolerance: Optional[str] = None  # conservative | balanced | bold
+    focus_preference: Optional[str] = None  # single-platform | multi-platform
+    content_velocity: Optional[str] = None  # low | medium | high
+    preferred_content_depth: Optional[str] = None  # shallow | balanced | deep
 
 
 @router.get("/")
@@ -18,7 +27,6 @@ async def get_directives(agent_name: str, user=Depends(get_current_user)):
     from services.uom_service import get_agent_directives
     valid_agents = ["thinker", "writer", "qc", "commander", "analyst", "planner", "consigliere"]
     if agent_name not in valid_agents:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail=f"Invalid agent. Must be one of: {valid_agents}")
     directives = await get_agent_directives(user["user_id"], agent_name)
     return {"success": True, "agent": agent_name, "directives": directives}
@@ -33,19 +41,31 @@ async def refresh_uom(user=Depends(get_current_user)):
 
 
 @router.patch("/")
-async def update_uom_fields(body: dict, user=Depends(get_current_user)):
+async def update_uom_fields(body: UomUpdateRequest, user=Depends(get_current_user)):
     """
     Manually override specific UOM fields.
     Only certain fields are user-adjustable: risk_tolerance, focus_preference, content_velocity.
     Other fields are inferred and cannot be manually set.
     """
     from services.uom_service import update_uom
-    from fastapi import HTTPException
 
-    user_adjustable = {"risk_tolerance", "focus_preference", "content_velocity", "preferred_content_depth"}
-    invalid_fields = set(body.keys()) - user_adjustable
-    if invalid_fields:
-        raise HTTPException(status_code=400, detail=f"Cannot manually set: {invalid_fields}. Only {user_adjustable} are adjustable.")
+    VALID_VALUES = {
+        "risk_tolerance": {"conservative", "balanced", "bold"},
+        "focus_preference": {"single-platform", "multi-platform"},
+        "content_velocity": {"low", "medium", "high"},
+        "preferred_content_depth": {"shallow", "balanced", "deep"},
+    }
 
-    updated = await update_uom(user["user_id"], body)
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    for field, value in updates.items():
+        if field in VALID_VALUES and value not in VALID_VALUES[field]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid value for {field}: '{value}'. Must be one of: {', '.join(VALID_VALUES[field])}"
+            )
+
+    updated = await update_uom(user["user_id"], updates)
     return {"success": True, "uom": updated}

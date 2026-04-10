@@ -195,6 +195,16 @@ async def register_webhook(
     if not url or not url.startswith(("http://", "https://")):
         raise ValueError("Webhook URL must start with http:// or https://")
 
+    # Block internal/private IPs to prevent SSRF
+    from urllib.parse import urlparse
+    hostname = urlparse(url).hostname or ""
+    blocked = ("localhost", "127.0.0.1", "0.0.0.0", "10.", "172.16.", "192.168.", "169.254.", "[::1]")
+    if any(hostname.startswith(b) for b in blocked):
+        raise ValueError("Webhook URL must not point to internal/private addresses")
+
+    if len(events) > 10:
+        raise ValueError("Maximum 10 events per webhook")
+
     webhook_id = f"wh_{uuid.uuid4().hex[:12]}"
     secret = _generate_webhook_secret()
     now = datetime.now(timezone.utc)

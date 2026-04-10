@@ -26,8 +26,8 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
 class WebhookCreateRequest(BaseModel):
-    url: str
-    events: List[str]
+    url: str  # Validated in service: must start with https://
+    events: List[str]  # Max 10 events per webhook
 
 
 @router.post("", status_code=201)
