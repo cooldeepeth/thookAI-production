@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
       const data = await res.json();
       setUser(data);
     } catch {
-      // apiFetch may redirect to /auth on 401 before we get here — that's correct behavior
+      // 401 is expected for unauthenticated visitors — _skipAuthRedirect prevents page redirect
       setUser(null);
     } finally {
       setLoading(false);

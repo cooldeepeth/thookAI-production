@@ -7,7 +7,7 @@
  *   - Timeout: 15-second AbortController timeout (override via options.timeout)
  *   - Retry: 1 automatic retry after 1s backoff on any 5xx response
  *   - Global error handling:
- *       401 → redirect to /auth?expired=1
+ *       401 → redirect to /auth?expired=1 (skip with _skipAuthRedirect: true)
  *       403 → permission-denied toast
  *       5xx (after retry) → server-error toast
  *
@@ -101,8 +101,10 @@ export async function apiFetch(path, options = {}) {
     }
   }
 
+  // Strip internal flags before passing to native fetch
+  const { _skipAuthRedirect: _, ...cleanOptions } = options;
   const fetchOptions = {
-    ...options,
+    ...cleanOptions,
     headers,
     credentials: "include",
   };
