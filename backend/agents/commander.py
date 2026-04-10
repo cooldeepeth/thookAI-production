@@ -113,8 +113,8 @@ async def run_commander(
             timeout=20.0,
         )
         return json.loads(_clean_json(response))
-    except Exception as e:
-        logger.error("Commander agent failed, using mock: %s", e)
+    except Exception:
+        logger.exception("Commander agent failed, using mock")
         return _mock_commander(raw_input, platform, content_type)
 
 

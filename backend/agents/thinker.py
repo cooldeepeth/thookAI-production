@@ -93,6 +93,7 @@ async def run_thinker(
     persona_card: dict,
     fatigue_context: Optional[dict] = None,
     user_id: str = "",
+    platform: str = "linkedin",
 ) -> dict:
     # Fetch UOM directives for the Thinker agent (non-fatal)
     uom_directives = {}
@@ -134,7 +135,7 @@ async def run_thinker(
             commander_summary=commander_output.get("primary_angle", ""),
             research_summary=scout_output.get("findings", "")[:500],
             content_niche=persona_card.get("content_niche_signature", "Thought leadership"),
-            platform=commander_output.get("platform", commander_output.get("content_type", "post"))
+            platform=platform
         )
 
         # Inject UOM constraints when directives are available
@@ -166,8 +167,8 @@ async def run_thinker(
 
         response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=25.0)
         return json.loads(_clean_json(response))
-    except Exception as e:
-        logger.error("Thinker agent failed, using mock: %s", e)
+    except Exception:
+        logger.exception("Thinker agent failed, using mock")
         return _mock_thinker(raw_input, commander_output)
 
 

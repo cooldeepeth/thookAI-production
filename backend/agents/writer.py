@@ -221,8 +221,8 @@ async def run_writer(
         draft = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=30.0)
         word_count = len(draft.split())
         return {"draft": draft.strip(), "word_count": word_count, "character_count": len(draft), "platform": platform, "regional_english": regional_english}
-    except Exception as e:
-        logger.error("Writer agent failed, using mock: %s", e)
+    except Exception:
+        logger.exception("Writer agent failed, using mock")
         return _mock_writer(platform, content_type, persona_card)
 
 
