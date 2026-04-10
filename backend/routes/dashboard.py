@@ -519,13 +519,20 @@ async def get_weekly_schedule(
     current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Generate a weekly posting schedule."""
+    import asyncio
     from agents.planner import get_weekly_schedule
     platform_list = [p.strip() for p in platforms.split(",") if p.strip()]
-    return await get_weekly_schedule(
-        user_id=current_user["user_id"],
-        platforms=platform_list,
-        posts_per_week=posts_per_week
-    )
+    try:
+        return await asyncio.wait_for(
+            get_weekly_schedule(
+                user_id=current_user["user_id"],
+                platforms=platform_list,
+                posts_per_week=posts_per_week
+            ),
+            timeout=12.0,
+        )
+    except asyncio.TimeoutError:
+        return {"suggested_slots": [], "message": "Schedule generation timed out. Try again later."}
 
 
 @router.post("/schedule/content")
