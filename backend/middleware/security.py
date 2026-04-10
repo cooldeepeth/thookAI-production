@@ -210,6 +210,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             '/api/content/create': 20,
             '/api/viral/predict': 30,
             '/api/viral/improve': 20,
+            '/api/viral-card/analyze': 5,  # Public LLM endpoint — strict limit
+            '/api/billing/webhook/stripe': 120,  # Stripe may burst webhooks
+            '/api/uploads/media': 10,
         }
     
     def _get_client_ip(self, request: Request) -> str:

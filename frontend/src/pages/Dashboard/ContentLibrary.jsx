@@ -51,7 +51,7 @@ export default function ContentLibrary() {
 
   const fetchContent = async () => {
     try {
-      const res = await apiFetch('/api/content');
+      const res = await apiFetch('/api/content/jobs');
 
       if (!res.ok) throw new Error("Failed to fetch content");
       const data = await res.json();

@@ -68,8 +68,8 @@ async def run_scout(
                     "citations": citations[:3],
                     "sources_found": len(citations),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Scout Perplexity call failed: %s", e)
 
     if result is None:
         result = _mock_research(topic, platform)

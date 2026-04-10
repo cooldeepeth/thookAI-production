@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Optional
 from services.llm_client import LlmChat, UserMessage
-from services.llm_keys import chat_constructor_key, openai_available
+from services.llm_keys import chat_constructor_key, openai_available, anthropic_available
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,7 @@ async def run_thinker(
     persona_card: dict,
     fatigue_context: Optional[dict] = None,
     user_id: str = "",
+    platform: str = "linkedin",
 ) -> dict:
     # Fetch UOM directives for the Thinker agent (non-fatal)
     uom_directives = {}
@@ -118,21 +119,23 @@ async def run_thinker(
         except Exception:
             pass  # Non-fatal — proceed without graph context
 
-    if not openai_available():
+    if not openai_available() and not anthropic_available():
         return _mock_thinker(raw_input, commander_output)
     try:
+        provider = "openai" if openai_available() else "anthropic"
+        model = "gpt-4o-mini" if provider == "openai" else "claude-sonnet-4-20250514"
         chat = LlmChat(
             api_key=chat_constructor_key(),
             session_id=f"thinker-{uuid.uuid4().hex[:8]}",
             system_message="You are the Thinker Agent for ThookAI. Return only valid JSON, no markdown."
-        ).with_model("openai", "gpt-4o-mini")
+        ).with_model(provider, model)
 
         prompt = THINKER_PROMPT.format(
             raw_input=raw_input,
             commander_summary=commander_output.get("primary_angle", ""),
             research_summary=scout_output.get("findings", "")[:500],
             content_niche=persona_card.get("content_niche_signature", "Thought leadership"),
-            platform=commander_output.get("content_type", "post")
+            platform=platform
         )
 
         # Inject UOM constraints when directives are available
@@ -165,6 +168,7 @@ async def run_thinker(
         response = await asyncio.wait_for(chat.send_message(UserMessage(text=prompt)), timeout=25.0)
         return json.loads(_clean_json(response))
     except Exception:
+        logger.exception("Thinker agent failed, using mock")
         return _mock_thinker(raw_input, commander_output)
 
 
