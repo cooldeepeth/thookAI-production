@@ -33,7 +33,7 @@ PLATFORM_CONTENT_TYPES = {
 class ContentCreateRequest(BaseModel):
     platform: str
     content_type: str
-    raw_input: str
+    raw_input: str  # Validated in endpoint: min 5 chars, max 50000 chars
     attachment_url: Optional[str] = None  # For Visual Agent
     upload_ids: Optional[List[str]] = None
     campaign_id: Optional[str] = None  # Link job to a campaign/project
@@ -99,6 +99,8 @@ async def create_content(
 ):
     if len(data.raw_input.strip()) < 5:
         raise HTTPException(status_code=400, detail="Please provide more context for your content idea")
+    if len(data.raw_input) > 50000:
+        raise HTTPException(status_code=400, detail="Content input too long (max 50,000 characters)")
 
     valid_types = PLATFORM_CONTENT_TYPES.get(data.platform.lower(), [])
     if data.content_type not in valid_types:
