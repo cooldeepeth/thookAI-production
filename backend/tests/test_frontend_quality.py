@@ -214,10 +214,10 @@ class TestAuthRedirect:
         self.auth_content = _read("context/AuthContext.jsx")
         self.app_content = _read("App.js")
 
-    def test_auth_context_uses_thook_token_key(self):
-        """AuthContext must use 'thook_token' as the localStorage key for the JWT."""
-        assert "thook_token" in self.auth_content, (
-            "AuthContext.jsx must store the JWT under the localStorage key 'thook_token'"
+    def test_auth_context_uses_cookie_auth(self):
+        """AuthContext must use cookie-based auth via apiFetch (session_token cookie)."""
+        assert "apiFetch" in self.auth_content, (
+            "AuthContext.jsx must use apiFetch (which sends session_token cookie via credentials: 'include')"
         )
 
     def test_auth_context_has_logout_function(self):
@@ -226,15 +226,10 @@ class TestAuthRedirect:
             "AuthContext.jsx must define a 'logout' function to clear auth state"
         )
 
-    def test_auth_context_clears_token_on_logout(self):
-        """AuthContext logout must remove the token from localStorage."""
-        has_clear = (
-            "localStorage.removeItem" in self.auth_content
-            or "localStorage.clear" in self.auth_content
-        )
-        assert has_clear, (
-            "AuthContext.jsx must call localStorage.removeItem() or localStorage.clear() "
-            "during logout to clear the JWT token"
+    def test_auth_context_clears_session_on_logout(self):
+        """AuthContext logout must call the backend logout endpoint to clear cookies."""
+        assert "/api/auth/logout" in self.auth_content, (
+            "AuthContext.jsx must call POST /api/auth/logout to clear session cookies"
         )
 
     def test_app_has_protected_route(self):

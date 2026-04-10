@@ -476,8 +476,8 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
     setEditedContent(newContent);
   };
 
-  const handleMediaUpdate = (media) => {
-    console.log("Media updated:", media);
+  const handleMediaUpdate = () => {
+    // No-op handler for future use
   };
 
   const handleCopy = async () => {
@@ -590,7 +590,7 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
 
       {/* Publish Panel (for approved content) */}
       {isApproved && job.status !== "published" && job.status !== "scheduled" && (
-        <PublishPanel job={job} onPublished={() => console.log("Published/Scheduled")} />
+        <PublishPanel job={job} onPublished={() => {}} />
       )}
 
       {/* Show status for published/scheduled */}

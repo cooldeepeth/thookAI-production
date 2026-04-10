@@ -46,7 +46,7 @@ _EXEMPT_EXACT: frozenset[str] = frozenset({
     "/api/auth/x",
     "/api/auth/x/callback",
     "/api/auth/forgot-password",
-    "/api/billing/webhook",
+    "/api/billing/webhook/stripe",
     "/health",
 })
 
