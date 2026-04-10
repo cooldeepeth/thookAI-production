@@ -80,16 +80,19 @@ async def confirm_upload_endpoint(
     
     Call this after successfully uploading to the presigned URL.
     """
-    asset = await confirm_upload(
-        user_id=current_user["user_id"],
-        storage_key=data.storage_key,
-        file_type=data.file_type,
-        filename=data.filename,
-        content_type=data.content_type,
-        file_size_bytes=data.file_size_bytes,
-        job_id=data.job_id
-    )
-    
+    try:
+        asset = await confirm_upload(
+            user_id=current_user["user_id"],
+            storage_key=data.storage_key,
+            file_type=data.file_type,
+            filename=data.filename,
+            content_type=data.content_type,
+            file_size_bytes=data.file_size_bytes,
+            job_id=data.job_id
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     return {
         "success": True,
         "media_id": asset["media_id"],

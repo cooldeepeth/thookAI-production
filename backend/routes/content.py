@@ -371,7 +371,12 @@ async def generate_image(
         except Exception as e:
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
     
-    # Fallback: synchronous direct agent call
+    # Fallback: synchronous direct agent call — deduct credits first
+    from services.credits import deduct_credits, CreditOperation
+    deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.IMAGE_GENERATE)
+    if not deduct_result.get("success"):
+        raise HTTPException(status_code=402, detail="Insufficient credits for image generation")
+
     result = await designer_generate(
         prompt=prompt,
         style=data.style,
@@ -430,6 +435,12 @@ async def generate_carousel(
         thinker = job.get("agent_outputs", {}).get("thinker", {})
         key_points = thinker.get("key_insights", []) or ["Key point 1", "Key point 2", "Key point 3"]
     
+    # Deduct credits for carousel generation
+    from services.credits import deduct_credits, CreditOperation
+    deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CAROUSEL_GENERATE)
+    if not deduct_result.get("success"):
+        raise HTTPException(status_code=402, detail="Insufficient credits for carousel generation")
+
     result = await designer_carousel(
         topic=topic,
         key_points=key_points,
@@ -501,8 +512,13 @@ async def narrate_content(
             )
         except Exception as e:
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
-    
-    # Fallback: synchronous direct agent call
+
+    # Fallback: synchronous direct agent call — deduct credits first
+    from services.credits import deduct_credits, CreditOperation
+    deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VOICE_NARRATION)
+    if not deduct_result.get("success"):
+        raise HTTPException(status_code=402, detail="Insufficient credits for voice narration")
+
     result = await generate_voice_narration(
         text=content,
         voice_id=data.voice_id,
@@ -511,7 +527,7 @@ async def narrate_content(
         provider=data.provider,
         model=data.model
     )
-    
+
     # Store audio in job
     if result.get("generated"):
         await db.content_jobs.update_one(
@@ -646,8 +662,13 @@ async def generate_video(
             )
         except Exception as e:
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
-    
-    # Fallback: synchronous direct agent call
+
+    # Fallback: synchronous direct agent call — deduct credits first
+    from services.credits import deduct_credits, CreditOperation
+    deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VIDEO_GENERATE)
+    if not deduct_result.get("success"):
+        raise HTTPException(status_code=402, detail="Insufficient credits for video generation")
+
     result = await video_generate(
         prompt=prompt,
         duration=data.duration,

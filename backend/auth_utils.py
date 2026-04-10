@@ -10,7 +10,7 @@ Features:
 
 from fastapi import Depends, HTTPException, Request
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from datetime import datetime, timezone
 import re
 import logging
@@ -20,17 +20,18 @@ logger = logging.getLogger(__name__)
 
 # ==================== PASSWORD HASHING ====================
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt directly (no passlib dependency)"""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """Verify a password against its hash"""
-    return pwd_context.verify(plain, hashed)
+    """Verify a password against its bcrypt hash"""
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
 
 
 # ==================== PASSWORD POLICY ====================

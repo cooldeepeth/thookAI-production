@@ -243,9 +243,18 @@ async def confirm_upload(
     Returns:
         The saved media asset document (without _id)
     """
+    # Validate storage_key ownership — prevent IDOR
+    if not storage_key.startswith(f"{user_id}/"):
+        raise ValueError(f"Storage key does not belong to user {user_id}")
+
+    # Validate file_size_bytes against MAX_FILE_SIZE
+    max_size = MAX_FILE_SIZE.get(file_type, MAX_FILE_SIZE.get("document", 10 * 1024 * 1024))
+    if file_size_bytes > max_size:
+        raise ValueError(f"File size {file_size_bytes} exceeds maximum {max_size} for {file_type}")
+
     media_id = str(uuid4())
     public_url = get_public_url(storage_key)
-    
+
     asset = {
         "media_id": media_id,
         "user_id": user_id,

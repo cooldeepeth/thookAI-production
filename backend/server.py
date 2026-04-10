@@ -30,6 +30,7 @@ from middleware.csrf import CSRFMiddleware
 from routes.auth import router as auth_router
 from routes.password_reset import router as password_reset_router
 from routes.auth_google import router as google_auth_router
+from routes.auth_social import router as social_auth_router
 from routes.onboarding import router as onboarding_router
 from routes.persona import router as persona_router
 from routes.content import router as content_router
@@ -111,87 +112,68 @@ async def lifespan(app: FastAPI):
                 "Configuration errors detected in production — some features may not work. "
                 "Fix the issues listed above."
             )
-    
-    # Create database indexes (async)
-    try:
-        from database import db
-        from db_indexes import create_indexes
-        
-        logger.info("Checking database indexes...")
-        result = await create_indexes(db)
-        logger.info(f"Index check complete: {result['created']} created, {result['skipped']} existing")
-        
-        if result['errors']:
-            for error in result['errors']:
-                logger.warning(f"Index error: {error}")
-    except Exception as e:
-        logger.warning(f"Could not check/create indexes: {e}")
 
-    # Validate LightRAG embedding config (fail-fast on misconfiguration)
-    try:
-        from services.lightrag_service import assert_lightrag_embedding_config
-        await assert_lightrag_embedding_config()
-    except AssertionError as e:
-        logger.warning("LightRAG embedding config invalid — knowledge graph disabled: %s", e)
-    except Exception as e:
-        logger.warning("LightRAG startup check skipped: %s", e)
-
-    # Seed templates if collection is empty
-    try:
-        from database import db
-        template_count = await db.templates.count_documents({})
-        if template_count == 0:
-            from scripts.seed_templates import seed_templates
-            await seed_templates()
-            logger.info(f"Seeded {await db.templates.count_documents({})} templates")
-    except Exception as e:
-        logger.warning(f"Could not seed templates: {e}")
-
-    # Check encryption key for OAuth tokens
+    # Log config warnings (fast, non-blocking)
     if settings.app.is_production and not settings.platforms.encryption_key:
         logger.critical("ENCRYPTION_KEY not set! Platform OAuth tokens will be unreadable after restart!")
-
-    # Check media storage
     if not settings.r2.has_r2():
         if settings.app.is_production:
-            logger.critical(  # FIXED: use critical severity
-                "R2 media storage not configured in production! "
-                "File uploads will fail. Set R2_* environment variables."
-            )
+            logger.critical("R2 media storage not configured in production! File uploads will fail. Set R2_* environment variables.")
         else:
-            logger.warning(
-                "R2 media storage not configured — uploads use /tmp fallback in dev mode."
-            )
-
-    # Check Google OAuth
+            logger.warning("R2 media storage not configured — uploads use /tmp fallback in dev mode.")
     if not settings.google.is_configured():
-        logger.warning(
-            "Google OAuth not configured — GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing. "
-            "Google sign-in will return 503."
-        )
-
-    # Check Stripe billing
+        logger.warning("Google OAuth not configured — GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing. Google sign-in will return 503.")
     if settings.app.is_production:
         if not settings.stripe.is_fully_configured():
-            logger.critical(  # FIXED: use critical severity
-                "Stripe is not fully configured for production! "
-                "Billing features will fail. Check STRIPE_SECRET_KEY, "
-                "STRIPE_WEBHOOK_SECRET, and all STRIPE_PRICE_* env vars."
-            )
-    else:
-        if not settings.stripe.secret_key:
-            logger.warning(
-                "Stripe secret key not configured — billing features will run in simulated mode."
-            )
-
-    # Log LLM configuration
-    # FIXED: correct attribute name (anthropic_key, not anthropic_api_key)
+            logger.critical("Stripe is not fully configured for production! Billing features will fail. Check STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, and all STRIPE_PRICE_* env vars.")
+    elif not settings.stripe.secret_key:
+        logger.warning("Stripe secret key not configured — billing features will run in simulated mode.")
     if settings.llm.anthropic_key:
         logger.info("LLM model configured: claude-sonnet-4-20250514")
     else:
         logger.warning("ANTHROPIC_API_KEY not set — LLM features will use fallback/mock responses")
 
     logger.info("ThookAI API started successfully!")
+
+    # Run slow startup tasks in the background so the server accepts connections immediately.
+    # This prevents Railway from killing the container during health check timeout.
+    async def _deferred_startup():
+        # Create database indexes
+        try:
+            from database import db
+            from db_indexes import create_indexes
+            logger.info("Checking database indexes...")
+            result = await create_indexes(db)
+            logger.info(f"Index check complete: {result['created']} created, {result['skipped']} existing")
+            if result['errors']:
+                for error in result['errors']:
+                    logger.warning(f"Index error: {error}")
+        except Exception as e:
+            logger.warning(f"Could not check/create indexes: {e}")
+
+        # Validate LightRAG embedding config
+        try:
+            from services.lightrag_service import assert_lightrag_embedding_config
+            await assert_lightrag_embedding_config()
+        except AssertionError as e:
+            logger.warning("LightRAG embedding config invalid — knowledge graph disabled: %s", e)
+        except Exception as e:
+            logger.warning("LightRAG startup check skipped: %s", e)
+
+        # Seed templates if collection is empty
+        try:
+            from database import db
+            template_count = await db.templates.count_documents({})
+            if template_count == 0:
+                from scripts.seed_templates import seed_templates
+                await seed_templates()
+                logger.info(f"Seeded {await db.templates.count_documents({})} templates")
+        except Exception as e:
+            logger.warning(f"Could not seed templates: {e}")
+
+        logger.info("Deferred startup tasks complete.")
+
+    asyncio.create_task(_deferred_startup())
 
     yield
     
@@ -291,6 +273,7 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
 api_router.include_router(password_reset_router)
 api_router.include_router(google_auth_router)
+api_router.include_router(social_auth_router)
 api_router.include_router(onboarding_router)
 api_router.include_router(persona_router)
 api_router.include_router(content_router)
@@ -341,7 +324,19 @@ app.include_router(api_router)
 # ==================== MIDDLEWARE STACK ====================
 # Order matters! Middleware is executed in reverse order (bottom to top)
 
-allowed_origins = [o.strip() for o in settings.security.cors_origins if o.strip()]
+_raw_origins = [o.strip() for o in settings.security.cors_origins if o.strip()]
+
+# When credentials=True, CORSMiddleware rejects wildcard "*".
+# Default to known production origins if CORS_ORIGINS is unset or "*".
+if _raw_origins == ["*"] or not _raw_origins:
+    allowed_origins = [
+        "https://www.thook.ai",
+        "https://thook.ai",
+        "https://thook-ai-production.vercel.app",
+        "http://localhost:3000",
+    ]
+else:
+    allowed_origins = _raw_origins
 
 # 1. CORS - must be first (closest to response)
 app.add_middleware(
@@ -402,3 +397,9 @@ async def global_exception_handler(request, exc):
         return JSONResponse(status_code=500, content={"detail": "An internal error occurred"})
     
     return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__})
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("server:app", host="0.0.0.0", port=port)

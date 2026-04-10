@@ -22,7 +22,7 @@ INDEXES = {
     # ========== USERS ==========
     'users': [
         IndexModel([('user_id', ASCENDING)], unique=True, name='idx_user_id'),
-        IndexModel([('email', ASCENDING)], unique=True, name='idx_email'),
+        IndexModel([('email', ASCENDING)], unique=True, name='users_email_unique'),
         IndexModel([('google_id', ASCENDING)], sparse=True, name='idx_google_id'),
         IndexModel([('subscription_tier', ASCENDING)], name='idx_subscription_tier'),
         IndexModel([('created_at', DESCENDING)], name='idx_created_at'),
@@ -189,6 +189,13 @@ INDEXES = {
         IndexModel([('token_hash', ASCENDING)], unique=True, name='idx_token_hash'),
         IndexModel([('user_id', ASCENDING)], name='idx_user_id'),
         IndexModel([('expires_at', ASCENDING)], name='idx_expires_at'),
+    ],
+
+    # ========== MEDIA ASSETS (presigned URL uploads) ==========
+    'media_assets': [
+        IndexModel([('media_id', ASCENDING)], unique=True, name='idx_media_id'),
+        IndexModel([('user_id', ASCENDING), ('status', ASCENDING), ('created_at', DESCENDING)], name='idx_user_status_created'),
+        IndexModel([('job_id', ASCENDING)], sparse=True, name='idx_job_id'),
     ],
 
     # ========== CONTEXT UPLOADS (content creation) ==========

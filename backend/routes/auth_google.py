@@ -121,11 +121,19 @@ async def google_callback(request: Request):
 
     existing = await db.users.find_one({"email": email}, {"_id": 0})
     if existing:
+        existing_method = existing.get("auth_method", "email")
+        if existing_method not in ("google", "email"):
+            # Account exists with a different social provider — don't merge silently
+            return RedirectResponse(
+                url=f"{frontend}/auth?error=account_exists&method={existing_method}",
+                status_code=302,
+            )
         user_id = existing["user_id"]
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {"name": name, "picture": picture}},
-        )
+        update_fields = {"name": name, "picture": picture}
+        if existing_method == "email":
+            # Link Google to existing email account (safe — Google verified the email)
+            update_fields["auth_method"] = "google"
+        await db.users.update_one({"user_id": user_id}, {"$set": update_fields})
     else:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         await db.users.insert_one(

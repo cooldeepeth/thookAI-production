@@ -737,3 +737,52 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes` for code review.
 3. Use `get_affected_flows` to understand impact.
 4. Use `query_graph` pattern="tests_for" to check coverage.
+
+## MCP Tools: Additional Servers
+
+The following MCP servers are configured in `.mcp.json` and available in all sessions:
+
+### Context7 — Library Documentation
+Use `mcp__context7__*` tools FIRST when writing code that uses any third-party library
+(FastAPI, Motor, Stripe SDK, Anthropic SDK, etc.). Fetches current, version-specific
+documentation to prevent API hallucinations. Append "use context7" to prompts when needed.
+
+### Resend — Transactional Email
+Use `mcp__resend__*` tools for email operations: sending transactional emails (password
+reset, agency invites, notifications), managing contacts, verifying domains.
+
+### Playwright — Browser Testing
+Use `mcp__playwright__*` tools for E2E browser testing, form interaction, screenshot
+capture, and verifying deployed features. Uses accessibility snapshots.
+
+### PostHog — Product Analytics
+Use `mcp__posthog__*` tools for analytics queries (HogQL), feature flag management,
+A/B experiment setup, session recordings, and user cohort analysis.
+
+### n8n — Workflow Automation
+Use `mcp__n8n-mcp__*` tools for designing and deploying n8n workflows. ThookAI uses
+n8n for all scheduled operations (publishing, analytics, credit resets, strategist).
+
+## Available Skills & Commands
+
+### Token Efficiency
+- `/caveman` — Ultra-compressed communication mode (~65-75% token reduction)
+- `/caveman-commit` — Compressed commit messages
+- `/caveman-review` — Compressed code review output
+- `/compress` — Compress natural language memory files
+
+### Development Workflow
+- `/gsd:*` — Full GSD workflow (discuss → plan → execute → verify → ship)
+- `/team:deploy` — Specialist analysis → plan → execute → verify pipeline
+- Superpowers: brainstorming, writing-plans, executing-plans, TDD, code-review, debugging, git-worktrees, verification (14 skills total)
+
+### Founder Tools
+- `/founder:product-brief`, `/founder:go-to-market`, `/founder:pricing-strategy`
+- `/founder:competitor-matrix`, `/founder:pitch-deck`, `/founder:validate-idea`
+- `/founder:landing-page`, `/founder:email-sequence`, `/founder:mvp-scope`
+
+### Design & Engineering
+- `/engineering:architecture`, `/engineering:code-review`, `/engineering:deploy-checklist`
+- `/design:design-critique`, `/design:accessibility-review`, `/design:design-handoff`
+- `/marketing:campaign-plan`, `/marketing:seo-audit`, `/marketing:competitive-brief`
+- `/ui-ux-pro-max` — 67 styles, design intelligence
