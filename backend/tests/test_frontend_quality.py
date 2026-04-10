@@ -228,11 +228,7 @@ class TestAuthRedirect:
 
     def test_auth_context_clears_session_on_logout(self):
         """AuthContext logout must call the backend logout endpoint to clear cookies."""
-        has_logout_call = (
-            "/api/auth/logout" in self.auth_content
-            or "logout" in self.auth_content
-        )
-        assert has_logout_call, (
+        assert "/api/auth/logout" in self.auth_content, (
             "AuthContext.jsx must call POST /api/auth/logout to clear session cookies"
         )
 

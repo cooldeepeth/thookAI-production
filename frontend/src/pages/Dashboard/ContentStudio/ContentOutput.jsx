@@ -476,8 +476,8 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
     setEditedContent(newContent);
   };
 
-  const handleMediaUpdate = (media) => {
-    // Media state updated — no-op handler for future use
+  const handleMediaUpdate = () => {
+    // No-op handler for future use
   };
 
   const handleCopy = async () => {

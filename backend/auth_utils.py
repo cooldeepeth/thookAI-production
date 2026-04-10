@@ -229,7 +229,7 @@ def get_fernet():
         if settings.app.is_production:
             logger.error("FERNET_KEY not configured in production!")
             raise ValueError("FERNET_KEY must be configured in production")
-        # Cache generated key for process lifetime so encrypted tokens survive restarts
+        # Cache generated key for process lifetime to prevent per-call regeneration
         if _dev_fernet_key is None:
             _dev_fernet_key = Fernet.generate_key().decode()
             logger.warning("Using auto-generated Fernet key — set FERNET_KEY for persistent token encryption")
