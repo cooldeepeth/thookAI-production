@@ -186,22 +186,34 @@ async def admin_list_users(
         .limit(per_page)
     )
 
-    users: List[Dict[str, Any]] = []
+    raw_users: List[Dict[str, Any]] = []
     async for u in cursor:
-        # Get job count for this user
-        job_count = await db.content_jobs.count_documents(
-            {"user_id": u.get("user_id")}
-        )
+        raw_users.append(u)
+
+    # Batch job count query — avoids N+1 (one count_documents per user)
+    user_ids = [u.get("user_id") for u in raw_users if u.get("user_id")]
+    job_counts: Dict[str, int] = {}
+    if user_ids:
+        pipeline = [
+            {"$match": {"user_id": {"$in": user_ids}}},
+            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+        ]
+        async for doc in db.content_jobs.aggregate(pipeline):
+            job_counts[doc["_id"]] = doc["count"]
+
+    users: List[Dict[str, Any]] = []
+    for u in raw_users:
+        uid = u.get("user_id")
         users.append(
             {
-                "user_id": u.get("user_id"),
+                "user_id": uid,
                 "email": u.get("email"),
                 "name": u.get("name"),
                 "subscription_tier": u.get("subscription_tier", "starter"),
                 "credits": u.get("credits", 0),
                 "role": u.get("role", "user"),
                 "active": u.get("active", True),
-                "jobs_count": job_count,
+                "jobs_count": job_counts.get(uid, 0),
                 "created_at": (
                     u["created_at"].isoformat() if u.get("created_at") else None
                 ),
