@@ -7,6 +7,8 @@ router = APIRouter(prefix="/uom", tags=["uom"])
 
 
 class UomUpdateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
     risk_tolerance: Optional[str] = None  # conservative | balanced | bold
     focus_preference: Optional[str] = None  # single-platform | multi-platform
     content_velocity: Optional[str] = None  # low | medium | high
@@ -44,7 +46,7 @@ async def refresh_uom(user=Depends(get_current_user)):
 async def update_uom_fields(body: UomUpdateRequest, user=Depends(get_current_user)):
     """
     Manually override specific UOM fields.
-    Only certain fields are user-adjustable: risk_tolerance, focus_preference, content_velocity.
+    Adjustable: risk_tolerance, focus_preference, content_velocity, preferred_content_depth.
     Other fields are inferred and cannot be manually set.
     """
     from services.uom_service import update_uom
@@ -64,7 +66,7 @@ async def update_uom_fields(body: UomUpdateRequest, user=Depends(get_current_use
         if field in VALID_VALUES and value not in VALID_VALUES[field]:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid value for {field}: '{value}'. Must be one of: {', '.join(VALID_VALUES[field])}"
+                detail=f"Invalid value for {field}: '{value}'. Must be one of: {', '.join(sorted(VALID_VALUES[field]))}"
             )
 
     updated = await update_uom(user["user_id"], updates)

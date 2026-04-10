@@ -39,7 +39,7 @@ async def submit_feedback(body: FeedbackRequest, user=Depends(get_current_user))
     if len(body.message.strip()) < 3:
         raise HTTPException(status_code=400, detail="Feedback message too short")
     if body.sentiment not in VALID_SENTIMENTS:
-        raise HTTPException(status_code=400, detail=f"sentiment must be one of: {', '.join(VALID_SENTIMENTS)}")
+        raise HTTPException(status_code=400, detail=f"sentiment must be one of: {', '.join(sorted(VALID_SENTIMENTS))}")
 
     feedback = {
         "feedback_id": f"fb_{uuid.uuid4().hex[:12]}",
