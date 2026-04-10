@@ -79,18 +79,20 @@ async def run_commander(
     Returns:
         Content strategy dictionary
     """
-    if not openai_available():
+    if not openai_available() and not anthropic_available():
         return _mock_commander(raw_input, platform, content_type)
     try:
         system_msg = COMMANDER_SYSTEM
         if media_system_suffix:
             system_msg = f"{COMMANDER_SYSTEM}\n\n{media_system_suffix}"
 
+        provider = "openai" if openai_available() else "anthropic"
+        model = "gpt-4o" if provider == "openai" else "claude-sonnet-4-20250514"
         chat = LlmChat(
             api_key=chat_constructor_key(),
             session_id=f"cmd-{uuid.uuid4().hex[:8]}",
             system_message=system_msg,
-        ).with_model("openai", "gpt-4o")
+        ).with_model(provider, model)
 
         prompt = COMMANDER_PROMPT.format(
             voice_descriptor=persona_card.get("writing_voice_descriptor", "Professional content creator"),
@@ -111,7 +113,8 @@ async def run_commander(
             timeout=20.0,
         )
         return json.loads(_clean_json(response))
-    except Exception:
+    except Exception as e:
+        logger.error("Commander agent failed, using mock: %s", e)
         return _mock_commander(raw_input, platform, content_type)
 
 

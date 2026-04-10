@@ -1,4 +1,3 @@
-import os
 import json
 import asyncio
 import uuid
@@ -76,15 +75,17 @@ async def run_qc(draft: str, persona_card: dict, platform: str, content_type: st
     ai_risk_threshold = uom_directives.get("ai_risk_threshold", 35)
 
     # Start with base QC
-    if not openai_available():
+    if not openai_available() and not anthropic_available():
         result = _mock_qc(draft)
     else:
         try:
+            provider = "openai" if openai_available() else "anthropic"
+            model = "gpt-4o-mini" if provider == "openai" else "claude-sonnet-4-20250514"
             chat = LlmChat(
                 api_key=chat_constructor_key(),
                 session_id=f"qc-{uuid.uuid4().hex[:8]}",
                 system_message=QC_SYSTEM
-            ).with_model("openai", "gpt-4o-mini")
+            ).with_model(provider, model)
 
             prompt = QC_PROMPT.format(
                 platform=platform, content_type=content_type,
