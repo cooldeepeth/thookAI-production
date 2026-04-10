@@ -126,11 +126,13 @@ async def login(data: LoginRequest, response: Response):
                 locked_until = datetime.fromisoformat(locked_until)
             if locked_until.tzinfo is None:
                 locked_until = locked_until.replace(tzinfo=timezone.utc)
-            if locked_until > datetime.now(timezone.utc):
+            remaining = locked_until - datetime.now(timezone.utc)
+            if remaining.total_seconds() > 0:
+                mins_left = max(1, int(remaining.total_seconds() / 60) + 1)
                 logger.warning("Locked account login attempt: email=%s", data.email)
                 raise HTTPException(
                     status_code=429,
-                    detail=f"Too many failed login attempts. Try again in {LOCKOUT_MINUTES} minutes."
+                    detail=f"Too many failed login attempts. Try again in {mins_left} minute{'s' if mins_left != 1 else ''}."
                 )
             # Lockout expired — reset
             await db.login_attempts.delete_one({"email": data.email})
@@ -226,8 +228,9 @@ async def get_csrf_token(response: Response, current_user: dict = Depends(get_cu
 async def export_user_data(current_user: dict = Depends(get_current_user)):
     """GDPR data export — return all user data as JSON.
 
-    Collects data from: users, persona_engines, content_jobs, scheduled_posts,
+    Collects data from: users, persona_engines, content_jobs,
     platform_tokens (redacted), credit_transactions, user_feedback, uploads.
+    Limited to most recent 500 jobs/transactions. Contact support for full archives.
     """
     user_id = current_user["user_id"]
 
@@ -325,7 +328,14 @@ async def delete_account(
     # Revoke all sessions
     await db.user_sessions.delete_many({"user_id": user_id})
 
-    # Delete uploads metadata
+    # Anonymize content jobs (keep for analytics, remove PII link)
+    anonymized_id = f"deleted-{user_id[:8]}"
+    await db.content_jobs.update_many(
+        {"user_id": user_id},
+        {"$set": {"user_id": anonymized_id, "raw_input": "[deleted]"}}
+    )
+
+    # Delete uploads metadata (R2 media files are retained — future: add R2 cleanup)
     await db.uploads.delete_many({"user_id": user_id})
 
     # Delete feedback
