@@ -208,7 +208,7 @@ async def linkedin_callback(code: str = "", state: str = "", error: str = ""):
                 timeout=30.0,
             )
             if token_resp.status_code != 200:
-                logger.error("LinkedIn token exchange failed: %s", token_resp.text)
+                logger.error("LinkedIn token exchange failed: status=%s", token_resp.status_code)
                 return RedirectResponse(url=err_redirect, status_code=302)
 
             token_data = token_resp.json()
@@ -343,7 +343,7 @@ async def x_callback(code: str = "", state: str = "", error: str = ""):
                 timeout=30.0,
             )
             if token_resp.status_code != 200:
-                logger.error("X token exchange failed: %s", token_resp.text)
+                logger.error("X token exchange failed: status=%s", token_resp.status_code)
                 return RedirectResponse(url=err_redirect, status_code=302)
 
             token_data = token_resp.json()
