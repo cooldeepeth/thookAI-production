@@ -532,7 +532,7 @@ async def get_weekly_schedule(
             timeout=12.0,
         )
     except asyncio.TimeoutError:
-        return {"suggested_slots": [], "message": "Schedule generation timed out. Try again later."}
+        return {"schedule": [], "total_posts": 0, "platforms": platform_list, "message": "Schedule generation timed out. Try again later."}
 
 
 @router.post("/schedule/content")

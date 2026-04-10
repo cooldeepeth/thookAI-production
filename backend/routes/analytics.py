@@ -125,7 +125,7 @@ async def get_persona_suggestions(
             timeout=12.0,
         )
     except asyncio.TimeoutError:
-        return {"success": False, "suggestions": [], "message": "Suggestion generation timed out. Try again later."}
+        return {"success": False, "should_update": False, "confidence": 0, "suggestions": [], "message": "Suggestion generation timed out. Try again later."}
 
 
 @router.post("/persona/refine")
