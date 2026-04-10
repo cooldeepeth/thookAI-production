@@ -337,7 +337,7 @@ async def run_agent_pipeline_legacy(
         # THINKER — strategy + structure
         await update_job(job_id, {"current_agent": "thinker"})
         thinker_output = await asyncio.wait_for(
-            run_thinker(raw_input, commander_output, scout_output, persona_card, fatigue_context=fatigue_data, user_id=user_id), timeout=30.0
+            run_thinker(raw_input, commander_output, scout_output, persona_card, fatigue_context=fatigue_data, user_id=user_id, platform=platform), timeout=30.0
         )
         await update_job(job_id, {
             "agent_outputs.thinker": thinker_output,

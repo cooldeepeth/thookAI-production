@@ -222,6 +222,7 @@ async def run_writer(
         word_count = len(draft.split())
         return {"draft": draft.strip(), "word_count": word_count, "character_count": len(draft), "platform": platform, "regional_english": regional_english}
     except Exception:
+        logger.exception("Writer agent failed, using mock")
         return _mock_writer(platform, content_type, persona_card)
 
 
