@@ -197,7 +197,7 @@ async def callback_linkedin(code: str, state: str):
             )
             
             if response.status_code != 200:
-                logger.error(f"LinkedIn token exchange failed: {response.text}")
+                logger.error("LinkedIn token exchange failed: status=%s", response.status_code)
                 return RedirectResponse(f"{FRONTEND_URL}/dashboard/connections?error=token_exchange_failed")
             
             token_data = response.json()
@@ -324,7 +324,7 @@ async def callback_x(code: str, state: str):
             )
             
             if response.status_code != 200:
-                logger.error(f"X token exchange failed: {response.text}")
+                logger.error("X token exchange failed: status=%s", response.status_code)
                 return RedirectResponse(f"{FRONTEND_URL}/dashboard/connections?error=token_exchange_failed")
             
             token_data = response.json()
@@ -435,7 +435,7 @@ async def callback_instagram(code: str, state: str):
             )
             
             if response.status_code != 200:
-                logger.error(f"Instagram token exchange failed: {response.text}")
+                logger.error("Instagram token exchange failed: status=%s", response.status_code)
                 return RedirectResponse(f"{FRONTEND_URL}/dashboard/connections?error=token_exchange_failed")
             
             token_data = response.json()

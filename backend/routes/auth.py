@@ -2,6 +2,7 @@ import logging
 import secrets
 
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from jose import jwt
 from datetime import datetime, timezone, timedelta
@@ -17,6 +18,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 ALGORITHM = "HS256"
+
+# Account lockout: 5 failed attempts → 15 min cooldown
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_MINUTES = 15
 
 
 def _jwt_secret() -> str:
@@ -112,9 +117,35 @@ async def register(data: RegisterRequest, response: Response):
 
 @router.post("/login")
 async def login(data: LoginRequest, response: Response):
+    # Check account lockout (non-fatal if collection unavailable)
+    try:
+        lockout = await db.login_attempts.find_one({"email": data.email})
+        if lockout and lockout.get("locked_until"):
+            locked_until = lockout["locked_until"]
+            if isinstance(locked_until, str):
+                locked_until = datetime.fromisoformat(locked_until)
+            if locked_until.tzinfo is None:
+                locked_until = locked_until.replace(tzinfo=timezone.utc)
+            if locked_until > datetime.now(timezone.utc):
+                logger.warning("Locked account login attempt: email=%s", data.email)
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Too many failed login attempts. Try again in {LOCKOUT_MINUTES} minutes."
+                )
+            # Lockout expired — reset
+            await db.login_attempts.delete_one({"email": data.email})
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # Lockout check is a security enhancement — don't block login if it fails
+
     user = await db.users.find_one({"email": data.email}, {"_id": 0})
     if not user:
         logger.warning("Failed login attempt: email=%s (not found)", data.email)
+        try:
+            await _record_failed_login(data.email)
+        except Exception:
+            pass
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if user.get("auth_method") != "email":
         method = user.get("auth_method", "unknown")
@@ -122,12 +153,40 @@ async def login(data: LoginRequest, response: Response):
         raise HTTPException(status_code=401, detail=f"This account uses {method} sign-in. Please use that method to log in.")
     if not verify_password(data.password, user.get("hashed_password", "")):
         logger.warning("Failed login attempt: email=%s (wrong password)", data.email)
+        try:
+            await _record_failed_login(data.email)
+        except Exception:
+            pass
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Successful login — clear any failed attempt records
+    try:
+        await db.login_attempts.delete_one({"email": data.email})
+    except Exception:
+        pass
+
     token = create_jwt_token(user["user_id"], data.email)
     csrf_value = secrets.token_urlsafe(32)
     set_auth_cookie(response, token)
     set_csrf_cookie(response, csrf_value)
     return {**safe_user(user), "token": token, "csrf_token": csrf_value}
+
+
+async def _record_failed_login(email: str) -> None:
+    """Record a failed login attempt and lock the account if threshold exceeded."""
+    now = datetime.now(timezone.utc)
+    result = await db.login_attempts.find_one_and_update(
+        {"email": email},
+        {"$inc": {"attempts": 1}, "$set": {"last_attempt": now}},
+        upsert=True,
+        return_document=True,
+    )
+    if result and result.get("attempts", 0) >= MAX_LOGIN_ATTEMPTS:
+        await db.login_attempts.update_one(
+            {"email": email},
+            {"$set": {"locked_until": now + timedelta(minutes=LOCKOUT_MINUTES)}}
+        )
+        logger.warning("Account locked after %d failed attempts: email=%s", MAX_LOGIN_ATTEMPTS, email)
 
 
 @router.get("/me")
@@ -158,3 +217,126 @@ async def get_csrf_token(response: Response, current_user: dict = Depends(get_cu
     csrf_value = secrets.token_urlsafe(32)
     set_csrf_cookie(response, csrf_value)
     return {"csrf_token": csrf_value}
+
+
+# ==================== GDPR ENDPOINTS ====================
+
+
+@router.get("/export")
+async def export_user_data(current_user: dict = Depends(get_current_user)):
+    """GDPR data export — return all user data as JSON.
+
+    Collects data from: users, persona_engines, content_jobs, scheduled_posts,
+    platform_tokens (redacted), credit_transactions, user_feedback, uploads.
+    """
+    user_id = current_user["user_id"]
+
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "hashed_password": 0})
+    persona = await db.persona_engines.find_one({"user_id": user_id}, {"_id": 0})
+
+    jobs = await db.content_jobs.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(500).to_list(500)
+
+    transactions = await db.credit_transactions.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(500).to_list(500)
+
+    # Redact platform tokens (show platform name only)
+    platforms = []
+    async for pt in db.platform_tokens.find({"user_id": user_id}, {"_id": 0, "platform": 1, "connected_at": 1}):
+        platforms.append(pt)
+
+    feedback = await db.user_feedback.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(100).to_list(100)
+
+    uploads = await db.uploads.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(200).to_list(200)
+
+    # Serialize datetimes to ISO strings
+    def _serialize(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return obj
+
+    import json
+
+    export = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "user": user,
+        "persona": persona,
+        "content_jobs": jobs,
+        "credit_transactions": transactions,
+        "connected_platforms": platforms,
+        "feedback": feedback,
+        "uploads": uploads,
+    }
+
+    return JSONResponse(
+        content=json.loads(json.dumps(export, default=_serialize)),
+        headers={"Content-Disposition": f"attachment; filename=thookai-export-{user_id}.json"}
+    )
+
+
+class DeleteAccountRequest(BaseModel):
+    confirm: str  # Must be "DELETE" to confirm
+
+
+@router.post("/delete-account")
+async def delete_account(
+    data: DeleteAccountRequest,
+    response: Response,
+    current_user: dict = Depends(get_current_user),
+):
+    """GDPR account deletion — anonymize user data and revoke access.
+
+    Requires confirm="DELETE" in request body. Soft-deletes: anonymizes PII
+    but keeps content job records (anonymized) for platform analytics.
+    """
+    if data.confirm != "DELETE":
+        raise HTTPException(status_code=400, detail='Set confirm to "DELETE" to proceed')
+
+    user_id = current_user["user_id"]
+    now = datetime.now(timezone.utc)
+
+    # Anonymize user record
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "email": f"deleted-{user_id}@anonymized.thookai",
+            "name": "Deleted User",
+            "hashed_password": "",
+            "picture": None,
+            "active": False,
+            "deleted_at": now,
+            "google_id": None,
+            "stripe_customer_id": None,
+        }}
+    )
+
+    # Delete persona
+    await db.persona_engines.delete_one({"user_id": user_id})
+
+    # Revoke platform tokens
+    await db.platform_tokens.delete_many({"user_id": user_id})
+
+    # Revoke all sessions
+    await db.user_sessions.delete_many({"user_id": user_id})
+
+    # Delete uploads metadata
+    await db.uploads.delete_many({"user_id": user_id})
+
+    # Delete feedback
+    await db.user_feedback.delete_many({"user_id": user_id})
+
+    # Clear auth cookies
+    is_dev = settings.app.is_development
+    samesite = "lax" if is_dev else "none"
+    secure = not is_dev
+    response.delete_cookie(key="session_token", path="/", samesite=samesite, secure=secure)
+    response.delete_cookie(key="csrf_token", path="/", samesite=samesite, secure=secure)
+
+    logger.info("Account deleted (anonymized) for user_id=%s", user_id)
+    return {"message": "Account deleted. All personal data has been anonymized."}

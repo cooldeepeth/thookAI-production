@@ -191,6 +191,12 @@ INDEXES = {
         IndexModel([('expires_at', ASCENDING)], name='idx_expires_at'),
     ],
 
+    # ========== LOGIN ATTEMPTS (account lockout) ==========
+    'login_attempts': [
+        IndexModel([('email', ASCENDING)], unique=True, name='idx_email'),
+        IndexModel([('locked_until', ASCENDING)], expireAfterSeconds=900, name='idx_locked_ttl'),  # 15 min TTL auto-cleanup
+    ],
+
     # ========== MEDIA ASSETS (presigned URL uploads) ==========
     'media_assets': [
         IndexModel([('media_id', ASCENDING)], unique=True, name='idx_media_id'),
