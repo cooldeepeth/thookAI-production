@@ -20,12 +20,15 @@ export default function CookieConsent() {
   const accept = () => {
     localStorage.setItem(CONSENT_KEY, "accepted");
     setVisible(false);
+    // Re-enable PostHog if previously opted out
+    if (window.posthog && window.posthog.has_opted_out_capturing?.()) {
+      window.posthog.opt_in_capturing();
+    }
   };
 
   const decline = () => {
     localStorage.setItem(CONSENT_KEY, "declined");
     setVisible(false);
-    // Disable PostHog tracking if user declines
     if (window.posthog) {
       window.posthog.opt_out_capturing();
     }
@@ -66,7 +69,7 @@ export default function CookieConsent() {
                   </button>
                 </div>
               </div>
-              <button onClick={decline} className="text-zinc-600 hover:text-zinc-400 transition-colors">
+              <button onClick={decline} aria-label="Dismiss cookie banner" className="text-zinc-600 hover:text-zinc-400 transition-colors">
                 <X size={14} />
               </button>
             </div>
