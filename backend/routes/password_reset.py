@@ -83,7 +83,7 @@ async def reset_password(data: ResetPasswordRequest):
     try:
         await db.user_sessions.delete_many({"user_id": user_id})
         logger.info("All sessions invalidated after password reset for user_id=%s", user_id)
-    except Exception:
-        pass  # Session invalidation is best-effort
+    except Exception as e:
+        logger.warning("Session invalidation after password reset failed (non-fatal): %s", e)
 
     return RESET_SUCCESS
