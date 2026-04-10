@@ -80,9 +80,21 @@ async def get_my_persona(current_user: dict = Depends(get_current_user)):
 
 @router.put("/me")
 async def update_my_persona(data: PersonaCardUpdate, current_user: dict = Depends(get_current_user)):
+    import re
+
     update = {"updated_at": datetime.now(timezone.utc)}
     if data.card:
-        update["card"] = data.card
+        # Strip HTML tags from all string values to prevent stored XSS
+        def _strip_html(obj):
+            if isinstance(obj, str):
+                return re.sub(r"<[^>]+>", "", obj)
+            if isinstance(obj, dict):
+                return {k: _strip_html(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_strip_html(v) for v in obj]
+            return obj
+
+        update["card"] = _strip_html(data.card)
     await db.persona_engines.update_one({"user_id": current_user["user_id"]}, {"$set": update})
     return {"message": "Persona updated successfully"}
 

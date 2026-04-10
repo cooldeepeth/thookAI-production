@@ -20,6 +20,7 @@ export default function OnboardingWizard() {
   const [personaCard, setPersonaCard] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
+  const [lastAnswers, setLastAnswers] = useState(null);
   const { user, checkAuth } = useAuth();
   const navigate = useNavigate();
 
@@ -32,10 +33,11 @@ export default function OnboardingWizard() {
     setPhase(2);
   };
 
-  const handlePhaseTwoComplete = async (answers) => {
+  const submitPersona = async (answers) => {
     setPhase(3);
     setGenerating(true);
     setError('');
+    setLastAnswers(answers);
     try {
       const res = await apiFetch('/api/onboarding/generate-persona', {
         method: 'POST',
@@ -44,11 +46,21 @@ export default function OnboardingWizard() {
       if (!res.ok) throw new Error('Failed to generate persona');
       const data = await res.json();
       setPersonaCard(data.persona_card);
-      await checkAuth(); // refresh user state (onboarding_completed = true)
+      await checkAuth();
     } catch (e) {
       setError('Something went wrong generating your persona. Please try again.');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handlePhaseTwoComplete = (answers) => submitPersona(answers);
+
+  const handleRetry = () => {
+    if (lastAnswers) {
+      submitPersona(lastAnswers);
+    } else {
+      setPhase(2);
     }
   };
 
@@ -106,7 +118,7 @@ export default function OnboardingWizard() {
           )}
           {phase === 3 && (
             <motion.div key="phase3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="flex-1">
-              <PhaseThree personaCard={personaCard} generating={generating} error={error} user={user} onRetry={() => setPhase(2)} />
+              <PhaseThree personaCard={personaCard} generating={generating} error={error} user={user} onRetry={handleRetry} />
             </motion.div>
           )}
         </AnimatePresence>
