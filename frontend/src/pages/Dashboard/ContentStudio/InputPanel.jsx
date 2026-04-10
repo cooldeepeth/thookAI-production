@@ -211,7 +211,10 @@ export default function InputPanel({
           )}
         </button>
 
-        <p className="text-center text-zinc-700 text-xs mt-2">~45–60 seconds · 5 agents · your voice</p>
+        <div className="flex items-center justify-center gap-2 mt-2">
+          <span className="text-zinc-700 text-xs">~45–60 seconds · 5 agents</span>
+          <span className="text-xs text-lime font-mono bg-lime/10 px-1.5 py-0.5 rounded">10 credits</span>
+        </div>
       </div>
     </div>
   );
