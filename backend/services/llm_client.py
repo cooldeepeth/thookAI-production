@@ -128,6 +128,22 @@ def _resolve_key(provider: str, constructor_key: str) -> str:
     return constructor_key
 
 
+def _is_transient_error(e: Exception) -> bool:
+    """Check if an LLM API error is transient (worth retrying)."""
+    error_str = str(e).lower()
+    # Rate limit / overloaded
+    if any(kw in error_str for kw in ("rate limit", "429", "overloaded", "503", "502", "500")):
+        return True
+    # Timeouts
+    if any(kw in error_str for kw in ("timeout", "timed out", "connection")):
+        return True
+    # Check HTTP status code attributes from SDK exceptions
+    status = getattr(e, "status_code", None) or getattr(e, "status", None)
+    if isinstance(status, int) and status >= 500:
+        return True
+    return False
+
+
 def _openai_reasoning_style_model(model: str) -> bool:
     return bool(re.match(r"^o[0-9]", model))
 
@@ -163,21 +179,40 @@ class LlmChat:
         self._model = model
         return self
 
-    async def send_message(self, message: UserMessage) -> str:
+    async def send_message(self, message: UserMessage, max_retries: int = 1) -> str:
+        """Send message with automatic retry on transient failures.
+
+        Retries once after a 1-second backoff for 5xx/rate-limit/timeout errors.
+        Non-transient errors (auth, validation) raise immediately.
+        """
         if not self._provider or not self._model:
             raise RuntimeError("LlmChat.with_model(provider, model) must be called before send_message")
         key = _resolve_key(self._provider, self._api_key)
         if not key:
             raise ValueError(f"No API key available for provider {self._provider!r}")
 
-        if self._provider == "openai":
-            return await self._send_openai(key, message)
-        if self._provider == "anthropic":
-            return await self._send_anthropic(key, message)
-        if self._provider in ("google", "gemini"):
-            return await self._send_google(key, message)
+        last_error: Exception = RuntimeError("No LLM call attempted")
+        for attempt in range(max(1, max_retries + 1)):
+            try:
+                if self._provider == "openai":
+                    return await self._send_openai(key, message)
+                if self._provider == "anthropic":
+                    return await self._send_anthropic(key, message)
+                if self._provider in ("google", "gemini"):
+                    return await self._send_google(key, message)
+                raise ValueError(f"Unsupported LLM provider: {self._provider!r}")
+            except (ValueError, RuntimeError):
+                raise  # Non-transient — don't retry
+            except Exception as e:
+                # Only retry on transient errors (rate limit, server error, timeout)
+                is_transient = _is_transient_error(e)
+                if not is_transient:
+                    raise
+                last_error = e
+                if attempt < max_retries:
+                    await asyncio.sleep(1.0)
 
-        raise ValueError(f"Unsupported LLM provider: {self._provider!r}")
+        raise last_error
 
     async def _send_openai(self, api_key: str, message: UserMessage) -> str:
         from openai import AsyncOpenAI

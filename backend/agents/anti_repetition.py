@@ -19,7 +19,6 @@ for backward compatibility but the authoritative pattern-fatigue analysis now
 lives in services/persona_refinement.get_pattern_fatigue_shield(), which is
 called in the generation pipeline (pipeline.py) before the Thinker step.
 """
-import os
 import json
 import asyncio
 import logging

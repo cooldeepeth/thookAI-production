@@ -5,7 +5,6 @@ Handles publishing content to connected social media platforms:
 - X/Twitter
 - Instagram
 """
-import os
 import logging
 import asyncio
 from datetime import datetime, timezone
@@ -104,8 +103,7 @@ async def publish_to_linkedin(
                     "published_at": datetime.now(timezone.utc).isoformat()
                 }
             else:
-                error_detail = post_response.text
-                logger.error(f"LinkedIn publish failed: {error_detail}")
+                logger.error("LinkedIn publish failed: status=%s", post_response.status_code)
                 return {"success": False, "error": f"LinkedIn API error: {post_response.status_code}"}
     
     except Exception as e:
@@ -171,7 +169,7 @@ async def publish_to_x(
                     tweet_urls.append(f"https://twitter.com/i/status/{tweet_id}")
                     reply_to = tweet_id  # Next tweet replies to this one
                 else:
-                    logger.error(f"X publish failed for tweet {i+1}: {response.text}")
+                    logger.error("X publish failed for tweet %d: status=%s", i + 1, response.status_code)
                     if i == 0:
                         return {"success": False, "error": f"X API error: {response.status_code}"}
                     break
@@ -280,7 +278,7 @@ async def publish_to_instagram(
             )
             
             if container_response.status_code != 200:
-                logger.error(f"Instagram container creation failed: {container_response.text}")
+                logger.error("Instagram container creation failed: status=%s", container_response.status_code)
                 return {"success": False, "error": "Failed to create Instagram media container"}
             
             container_data = container_response.json()
@@ -345,7 +343,7 @@ async def publish_to_instagram(
                     "published_at": datetime.now(timezone.utc).isoformat()
                 }
             else:
-                logger.error(f"Instagram publish failed: {publish_response.text}")
+                logger.error("Instagram publish failed: status=%s", publish_response.status_code)
                 return {"success": False, "error": "Failed to publish to Instagram"}
     
     except Exception as e:
