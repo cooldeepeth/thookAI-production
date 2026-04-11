@@ -488,3 +488,190 @@ class TestSmartFallback:
         ]
         for field in required:
             assert field in result, f"Field '{field}' missing from smart fallback result"
+
+
+# ---------------------------------------------------------------------------
+# Extended test fixtures
+# ---------------------------------------------------------------------------
+
+MOCK_PERSONA_CARD_EXTENDED = {
+    **MOCK_PERSONA_CARD,
+    "personality_traits": ["Analytical", "Strategic", "Authentic"],
+    "voice_style": "Direct professional voice with numbered frameworks and data-backed insights",
+}
+
+
+# ---------------------------------------------------------------------------
+# TestGeneratePersonaExtendedRequest (ONBD-05)
+# ---------------------------------------------------------------------------
+
+class TestGeneratePersonaExtendedRequest:
+    """Tests that generate_persona accepts the three new optional request fields."""
+
+    def _run_with_request(self, extra_fields: dict):
+        """Run generate_persona with given extra fields and return without exception."""
+        mock_chat_instance = MagicMock()
+        mock_chat_instance.with_model.return_value = mock_chat_instance
+        mock_chat_instance.send_message = AsyncMock(return_value=json.dumps(MOCK_PERSONA_CARD_EXTENDED))
+
+        mock_db = MagicMock()
+        mock_db.persona_engines.update_one = AsyncMock()
+        mock_db.users.update_one = AsyncMock()
+
+        import asyncio
+        from routes.onboarding import generate_persona
+        from pydantic import BaseModel
+        from typing import List, Dict, Any, Optional
+
+        class FakeExtendedRequest(BaseModel):
+            answers: List[Dict[str, Any]]
+            posts_analysis: Optional[str] = None
+            voice_sample_url: Optional[str] = None
+            visual_preference: Optional[str] = None
+            writing_samples: Optional[List[str]] = None
+
+        request = FakeExtendedRequest(answers=SAMPLE_ANSWERS, **extra_fields)
+        current_user = {"user_id": "test-user-ext"}
+
+        with patch("routes.onboarding.anthropic_available", return_value=True), \
+             patch("routes.onboarding.LlmChat", return_value=mock_chat_instance), \
+             patch("routes.onboarding.db", mock_db):
+            asyncio.run(generate_persona(request, current_user))
+
+    def test_generate_persona_accepts_voice_sample_url(self):
+        """generate_persona must accept voice_sample_url field without error."""
+        self._run_with_request({"voice_sample_url": "https://r2.example.com/voice.webm"})
+
+    def test_generate_persona_accepts_visual_preference(self):
+        """generate_persona must accept visual_preference field without error."""
+        self._run_with_request({"visual_preference": "bold"})
+
+    def test_generate_persona_accepts_writing_samples(self):
+        """generate_persona must accept writing_samples field without error."""
+        self._run_with_request({"writing_samples": ["post1 text", "post2 text"]})
+
+    def test_generate_persona_accepts_all_new_fields_together(self):
+        """generate_persona must accept all three new fields simultaneously without error."""
+        self._run_with_request({
+            "voice_sample_url": "https://r2.example.com/voice.webm",
+            "visual_preference": "creative",
+            "writing_samples": ["post1", "post2", "post3"],
+        })
+
+
+# ---------------------------------------------------------------------------
+# TestNewPersonaFields (ONBD-06)
+# ---------------------------------------------------------------------------
+
+class TestNewPersonaFields:
+    """Tests that persona_doc written to DB includes the four new fields."""
+
+    def _run_extended(self, visual_preference="bold", writing_samples=None, voice_sample_url=None):
+        """Same pattern as TestPersonaGeneration._run_generate_persona but with new fields."""
+        mock_chat_instance = MagicMock()
+        mock_chat_instance.with_model.return_value = mock_chat_instance
+        mock_chat_instance.send_message = AsyncMock(return_value=json.dumps(MOCK_PERSONA_CARD_EXTENDED))
+
+        mock_db = MagicMock()
+        captured_docs = []
+
+        async def capture_update(filter_, update, **kwargs):
+            captured_docs.append(update.get("$set", {}))
+            return MagicMock()
+
+        mock_db.persona_engines.update_one = capture_update
+        mock_db.users.update_one = AsyncMock()
+
+        import asyncio
+        from routes.onboarding import generate_persona
+        from pydantic import BaseModel
+        from typing import List, Dict, Any, Optional
+
+        class FakeExtendedRequest(BaseModel):
+            answers: List[Dict[str, Any]]
+            posts_analysis: Optional[str] = None
+            voice_sample_url: Optional[str] = None
+            visual_preference: Optional[str] = None
+            writing_samples: Optional[List[str]] = None
+
+        request = FakeExtendedRequest(
+            answers=SAMPLE_ANSWERS,
+            visual_preference=visual_preference,
+            writing_samples=writing_samples,
+            voice_sample_url=voice_sample_url,
+        )
+        current_user = {"user_id": "test-user-newfields"}
+
+        with patch("routes.onboarding.anthropic_available", return_value=True), \
+             patch("routes.onboarding.LlmChat", return_value=mock_chat_instance), \
+             patch("routes.onboarding.db", mock_db):
+            asyncio.run(generate_persona(request, current_user))
+
+        assert len(captured_docs) > 0, "persona_engines.update_one was never called"
+        return captured_docs[0]
+
+    def test_persona_doc_has_voice_style(self):
+        """persona_doc must have voice_style field as a non-empty str."""
+        doc = self._run_extended()
+        assert "voice_style" in doc, "voice_style missing from persona_doc"
+        assert isinstance(doc["voice_style"], str), "voice_style must be a str"
+
+    def test_persona_doc_has_visual_preferences(self):
+        """persona_doc must have visual_preferences equal to the visual_preference passed in."""
+        doc = self._run_extended(visual_preference="bold")
+        assert "visual_preferences" in doc, "visual_preferences missing from persona_doc"
+        assert doc["visual_preferences"] == "bold"
+
+    def test_persona_doc_has_writing_samples(self):
+        """persona_doc must have writing_samples equal to the list passed in."""
+        samples = ["sample post 1", "sample post 2"]
+        doc = self._run_extended(writing_samples=samples)
+        assert "writing_samples" in doc, "writing_samples missing from persona_doc"
+        assert doc["writing_samples"] == samples
+
+    def test_persona_doc_has_personality_traits(self):
+        """persona_doc must have personality_traits as a list."""
+        doc = self._run_extended()
+        assert "personality_traits" in doc, "personality_traits missing from persona_doc"
+        assert isinstance(doc["personality_traits"], list)
+
+    def test_visual_preferences_defaults_to_minimal_when_none(self):
+        """When visual_preference is None, persona_doc visual_preferences must default to 'minimal'."""
+        doc = self._run_extended(visual_preference=None)
+        assert doc.get("visual_preferences") == "minimal"
+
+    def test_writing_samples_defaults_to_empty_list_when_none(self):
+        """When writing_samples is None, persona_doc writing_samples must default to []."""
+        doc = self._run_extended(writing_samples=None)
+        assert doc.get("writing_samples") == []
+
+
+# ---------------------------------------------------------------------------
+# TestSmartFallbackNewFields (ONBD-05 / ONBD-06)
+# ---------------------------------------------------------------------------
+
+class TestSmartFallbackNewFields:
+    """Tests that _generate_smart_persona fallback includes personality_traits and voice_style."""
+
+    def test_smart_fallback_includes_personality_traits(self):
+        """_generate_smart_persona must return personality_traits key with at least one element."""
+        from routes.onboarding import _generate_smart_persona
+        result = _generate_smart_persona(SAMPLE_ANSWERS)
+        assert "personality_traits" in result, "personality_traits missing from smart fallback"
+        assert isinstance(result["personality_traits"], list)
+        assert len(result["personality_traits"]) >= 1
+
+    def test_smart_fallback_includes_voice_style(self):
+        """_generate_smart_persona must return voice_style key as a non-empty str."""
+        from routes.onboarding import _generate_smart_persona
+        result = _generate_smart_persona(SAMPLE_ANSWERS)
+        assert "voice_style" in result, "voice_style missing from smart fallback"
+        assert isinstance(result["voice_style"], str)
+        assert len(result["voice_style"]) > 0
+
+    def test_smart_fallback_personality_traits_are_strings(self):
+        """Each element of personality_traits in smart fallback must be a str."""
+        from routes.onboarding import _generate_smart_persona
+        result = _generate_smart_persona(SAMPLE_ANSWERS)
+        for trait in result["personality_traits"]:
+            assert isinstance(trait, str), f"personality_traits element must be str, got {type(trait)}"
