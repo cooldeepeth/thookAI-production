@@ -21,9 +21,9 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 ### Onboarding
 
 - [x] **ONBD-01**: User completes multi-step onboarding wizard with progress indicator and animations
-- [ ] **ONBD-02**: User can record voice sample in browser or upload audio file during onboarding
+- [x] **ONBD-02**: User can record voice sample in browser or upload audio file during onboarding
 - [x] **ONBD-03**: User can paste 3-5 past posts for writing style analysis during onboarding
-- [ ] **ONBD-04**: User can pick visual identity preferences (color palette, aesthetic) during onboarding
+- [x] **ONBD-04**: User can pick visual identity preferences (color palette, aesthetic) during onboarding
 - [ ] **ONBD-05**: Persona generation uses all inputs (questions + voice + writing + visual) to produce rich persona
 - [ ] **ONBD-06**: Persona stores voice_style, visual_preferences, writing_samples, personality_traits
 - [x] **ONBD-07**: Onboarding supports save-as-you-go, skip/back navigation, and error recovery at every step
@@ -169,9 +169,9 @@ Which phases cover which requirements.
 | BACK-07     | 26    | Complete |
 | BACK-08     | 26    | Complete |
 | ONBD-01     | 27    | Complete |
-| ONBD-02     | 27    | Pending  |
+| ONBD-02     | 27    | Complete |
 | ONBD-03     | 27    | Complete |
-| ONBD-04     | 27    | Pending  |
+| ONBD-04     | 27    | Complete |
 | ONBD-05     | 27    | Pending  |
 | ONBD-06     | 27    | Pending  |
 | ONBD-07     | 27    | Complete |

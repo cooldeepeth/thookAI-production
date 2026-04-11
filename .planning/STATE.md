@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Completed 27-onboarding-reimagination-02-PLAN.md
-last_updated: "2026-04-11T18:35:21.488Z"
+stopped_at: Checkpoint reached — Task 3 human-verify in 27-04-PLAN.md
+last_updated: "2026-04-11T18:42:49.394Z"
 last_activity: 2026-04-11
 progress:
   total_phases: 27
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
-  percent: 70
+  completed_plans: 9
+  percent: 90
 ---
 
 # Project State
@@ -76,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase 26]: viral_card.py POST /api/viral-card/analyze is MISSING auth guard — flagged for follow-up (add Depends(get_current_user) or document as intentional public)
 - [Phase 27-onboarding-reimagination]: Steps 2-3 use intentional placeholder divs wired to handleVoiceComplete/handleVisualComplete — replaced in Plan 04 with VoiceRecordingStep and VisualPaletteStep
 - [Phase 27-onboarding-reimagination]: Draft restore in OnboardingWizard caps at step 4 — step 5 (PersonaRevealStep) always requires fresh generation; onContinue in PhaseOne now takes (result, parsedSamples) signature
+- [Phase 27]: Back button in PhaseTwo always visible (not conditional at Q=0) — enables onBack signal at first question per UI-SPEC navigation contract
+- [Phase 27]: VoiceRecordingStep onSkip wired as () => handleVoiceComplete(null) inline lambda matching UI-SPEC skip behavior (voice_sample_url: null)
 
 ### Pending Todos
 
@@ -92,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T18:35:21.484Z
-Stopped at: Completed 27-onboarding-reimagination-02-PLAN.md
+Last session: 2026-04-11T18:42:44.291Z
+Stopped at: Checkpoint reached — Task 3 human-verify in 27-04-PLAN.md
 Resume file: None
