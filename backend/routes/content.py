@@ -11,7 +11,7 @@ from database import db
 from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
 from agents.learning import capture_learning_signal
-from services.credits import deduct_credits, CreditOperation
+from services.credits import deduct_credits, add_credits, CreditOperation
 
 # Celery task imports
 from tasks import is_redis_configured, get_task_status as celery_get_task_status
@@ -378,20 +378,30 @@ async def generate_image(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
     
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    from services.credits import deduct_credits, add_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.IMAGE_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for image generation")
 
-    result = await designer_generate(
-        prompt=prompt,
-        style=data.style,
-        platform=job.get("platform", "linkedin"),
-        persona_card=persona_card,
-        provider=data.provider,
-        model=data.model
-    )
-    
+    try:
+        result = await designer_generate(
+            prompt=prompt,
+            style=data.style,
+            platform=job.get("platform", "linkedin"),
+            persona_card=persona_card,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as exc:
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.IMAGE_GENERATE.value,
+            source="image_generation_failure_refund",
+            description=f"Auto-refund for failed image generation on job {data.job_id}",
+        )
+        logger.error("Image generation failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Image generation failed. Credits refunded.")
+
     # Store in job's media_assets
     if result.get("generated"):
         await db.content_jobs.update_one(
@@ -442,19 +452,29 @@ async def generate_carousel(
         key_points = thinker.get("key_insights", []) or ["Key point 1", "Key point 2", "Key point 3"]
     
     # Deduct credits for carousel generation
-    from services.credits import deduct_credits, CreditOperation
+    from services.credits import deduct_credits, add_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CAROUSEL_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for carousel generation")
 
-    result = await designer_carousel(
-        topic=topic,
-        key_points=key_points,
-        style=data.style,
-        platform=job.get("platform", "linkedin"),
-        persona_card=persona_card
-    )
-    
+    try:
+        result = await designer_carousel(
+            topic=topic,
+            key_points=key_points,
+            style=data.style,
+            platform=job.get("platform", "linkedin"),
+            persona_card=persona_card
+        )
+    except Exception as exc:
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.CAROUSEL_GENERATE.value,
+            source="carousel_generation_failure_refund",
+            description=f"Auto-refund for failed carousel generation on job {data.job_id}",
+        )
+        logger.error("Carousel generation failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Carousel generation failed. Credits refunded.")
+
     # Store carousel in job
     if result.get("generated"):
         await db.content_jobs.update_one(
@@ -520,19 +540,29 @@ async def narrate_content(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
 
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    from services.credits import deduct_credits, add_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VOICE_NARRATION)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for voice narration")
 
-    result = await generate_voice_narration(
-        text=content,
-        voice_id=data.voice_id,
-        stability=data.stability,
-        similarity_boost=data.similarity_boost,
-        provider=data.provider,
-        model=data.model
-    )
+    try:
+        result = await generate_voice_narration(
+            text=content,
+            voice_id=data.voice_id,
+            stability=data.stability,
+            similarity_boost=data.similarity_boost,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as exc:
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.VOICE_NARRATION.value,
+            source="voice_narration_failure_refund",
+            description=f"Auto-refund for failed voice narration on job {data.job_id}",
+        )
+        logger.error("Voice narration failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Voice narration failed. Credits refunded.")
 
     # Store audio in job
     if result.get("generated"):
@@ -670,18 +700,28 @@ async def generate_video(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
 
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    from services.credits import deduct_credits, add_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VIDEO_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for video generation")
 
-    result = await video_generate(
-        prompt=prompt,
-        duration=data.duration,
-        provider=data.provider,
-        model=data.model
-    )
-    
+    try:
+        result = await video_generate(
+            prompt=prompt,
+            duration=data.duration,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as exc:
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.VIDEO_GENERATE.value,
+            source="video_generation_failure_refund",
+            description=f"Auto-refund for failed video generation on job {data.job_id}",
+        )
+        logger.error("Video generation failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Video generation failed. Credits refunded.")
+
     # Store in job
     if result.get("generated"):
         await db.content_jobs.update_one(
