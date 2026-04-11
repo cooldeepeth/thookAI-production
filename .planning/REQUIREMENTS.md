@@ -9,14 +9,14 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 
 ### Backend Hardening
 
-- [ ] **BACK-01**: Every route file (26 files) tested against production with curl — each endpoint returns correct data
+- [x] **BACK-01**: Every route file (26 files) tested against production with curl — each endpoint returns correct data
 - [x] **BACK-02**: Every endpoint has Pydantic input validation with field constraints
 - [ ] **BACK-03**: All error responses follow standardized format (status code, detail message, error_code)
-- [ ] **BACK-04**: Every protected endpoint rejects unauthenticated requests with 401
+- [x] **BACK-04**: Every protected endpoint rejects unauthenticated requests with 401
 - [x] **BACK-05**: Every endpoint handles missing/malformed request body gracefully (400, not 500)
 - [x] **BACK-06**: Credit-consuming endpoints check balance before executing and refund on failure
 - [ ] **BACK-07**: Rate limiting configured per endpoint (auth endpoints stricter)
-- [ ] **BACK-08**: Endpoint registry document (.planning/audit/BACKEND-API-AUDIT.md) with status per endpoint
+- [x] **BACK-08**: Endpoint registry document (.planning/audit/BACKEND-API-AUDIT.md) with status per endpoint
 
 ### Onboarding
 
@@ -160,14 +160,14 @@ Which phases cover which requirements.
 
 | Requirement | Phase | Status  |
 | ----------- | ----- | ------- |
-| BACK-01     | 26    | Pending |
+| BACK-01     | 26    | Complete |
 | BACK-02     | 26    | Complete |
 | BACK-03     | 26    | Pending |
-| BACK-04     | 26    | Pending |
+| BACK-04     | 26    | Complete |
 | BACK-05     | 26    | Complete |
 | BACK-06     | 26    | Complete |
 | BACK-07     | 26    | Pending |
-| BACK-08     | 26    | Pending |
+| BACK-08     | 26    | Complete |
 | ONBD-01     | 27    | Pending |
 | ONBD-02     | 27    | Pending |
 | ONBD-03     | 27    | Pending |

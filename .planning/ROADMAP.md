@@ -63,7 +63,7 @@
 
 **Milestone Goal:** Transform ThookAI from "code exists" to "every feature works perfectly end-to-end" — a new user can register, onboard interactively, generate multi-format content, schedule, and publish to real social accounts with zero errors. Ready for real users at scale.
 
-- [ ] **Phase 26: Backend Endpoint Hardening** - Audit and harden all 26 route files against production: every endpoint tested with curl, Pydantic validation enforced, standardized error format, auth guards verified, credit-safety checks, rate limiting tuned
+- [x] **Phase 26: Backend Endpoint Hardening** - Audit and harden all 26 route files against production: every endpoint tested with curl, Pydantic validation enforced, standardized error format, auth guards verified, credit-safety checks, rate limiting tuned (completed 2026-04-11)
 - [ ] **Phase 27: Onboarding Reimagination** - Rebuild the onboarding wizard with voice sample recording, writing style analysis, visual identity selection, multi-step progress, save-as-you-go, and fix the LLM model name bug in onboarding.py
 - [ ] **Phase 28: Content Generation Multi-Format** - Implement platform-specific content generation for all 9 formats (LinkedIn post/article/carousel, X tweet/thread, Instagram feed/reel/story) with persona-aware Writer prompts and real-time pipeline progress
 - [ ] **Phase 29: Media Generation Pipeline** - Wire and verify the full media pipeline: auto-images via DALL-E/FAL.ai, carousel slides via Remotion, video via Runway/Luma, voice narration via ElevenLabs, R2 upload flow end-to-end, media display in UI
@@ -211,7 +211,7 @@
    - [x] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
    - [x] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
    - [x] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   - [x] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
    **UI hint**: yes
 
 ### Phase 16: E2E Audit + Security Hardening + Production Ship
@@ -411,9 +411,9 @@
    **Plans**: 5 plans
    Plans:
    - [x] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
+   - [x] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
    - [x] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
+   - [x] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
    - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
 
 ### Phase 27: Onboarding Reimagination
@@ -431,9 +431,9 @@
 6. Closing the browser mid-onboarding and returning later resumes from the last completed step — no answers are lost
    **Plans**: 5 plans
    Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
+   - [x] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
    - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
+   - [x] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
    - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
    - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
    **UI hint**: yes
@@ -612,7 +612,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 
 | Phase                                | Plans Complete | Status      | Completed |
 | ------------------------------------ | -------------- | ----------- | --------- |
-| 26. Backend Endpoint Hardening       | 4/5 | In Progress|  |
+| 26. Backend Endpoint Hardening       | 5/5 | Complete   | 2026-04-11 |
 | 27. Onboarding Reimagination         | 0/TBD          | Not started | -         |
 | 28. Content Generation Multi-Format  | 0/TBD          | Not started | -         |
 | 29. Media Generation Pipeline        | 0/TBD          | Not started | -         |
