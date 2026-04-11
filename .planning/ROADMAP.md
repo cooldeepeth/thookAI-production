@@ -431,11 +431,11 @@
 6. Closing the browser mid-onboarding and returning later resumes from the last completed step — no answers are lost
    **Plans**: 5 plans
    Plans:
-   - [x] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [x] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   - [ ] 27-01-PLAN.md — Backend TDD: test stubs + extended GeneratePersonaRequest + persona_doc new fields
+   - [ ] 27-02-PLAN.md — Wizard container (5-step stepper, localStorage draft) + WritingStyleStep fingerprint confirm
+   - [ ] 27-03-PLAN.md — VoiceRecordingStep + VisualPaletteStep new components
+   - [ ] 27-04-PLAN.md — Wire new steps into wizard + InterviewStep counter + human verification checkpoint
+   - [ ] 27-05-PLAN.md — Backend audit + edge case tests + full suite gate
    **UI hint**: yes
 
 ### Phase 28: Content Generation Multi-Format
