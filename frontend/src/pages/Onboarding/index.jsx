@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import PhaseOne from './PhaseOne';
 import PhaseTwo from './PhaseTwo';
 import PhaseThree from './PhaseThree';
+import VoiceRecordingStep from './VoiceRecordingStep';
+import VisualPaletteStep from './VisualPaletteStep';
 import { Zap, ChevronLeft } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
@@ -188,29 +190,24 @@ export default function OnboardingWizard() {
           )}
           {phase === 2 && (
             <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="flex-1">
-              {/* VoiceRecordingStep — wired in Plan 04 */}
-              <div className="flex items-center justify-center min-h-full p-8">
-                <div className="text-center">
-                  <p className="text-zinc-500 text-sm">Voice recording step coming soon...</p>
-                  <button onClick={() => handleVoiceComplete(null)} className="mt-4 btn-primary text-sm">Skip for now</button>
-                </div>
-              </div>
+              <VoiceRecordingStep
+                onComplete={handleVoiceComplete}
+                onSkip={() => handleVoiceComplete(null)}
+              />
             </motion.div>
           )}
           {phase === 3 && (
             <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="flex-1">
-              {/* VisualPaletteStep — wired in Plan 04 */}
-              <div className="flex items-center justify-center min-h-full p-8">
-                <div className="text-center">
-                  <p className="text-zinc-500 text-sm">Visual style step coming soon...</p>
-                  <button onClick={() => handleVisualComplete('minimal')} className="mt-4 btn-primary text-sm">Continue</button>
-                </div>
-              </div>
+              <VisualPaletteStep onComplete={handleVisualComplete} />
             </motion.div>
           )}
           {phase === 4 && (
             <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="flex-1">
-              <PhaseTwo onComplete={handleInterviewComplete} postsAnalysis={postsAnalysis} />
+              <PhaseTwo
+                onComplete={handleInterviewComplete}
+                postsAnalysis={postsAnalysis}
+                onBack={() => setPhase(3)}
+              />
             </motion.div>
           )}
           {phase === 5 && (
