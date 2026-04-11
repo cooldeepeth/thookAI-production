@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import json
@@ -89,17 +89,17 @@ Be specific and authentic based on their actual answers. No generic templates.""
 
 
 class ImportHistoryRequest(BaseModel):
-    posts: List[Dict[str, Any]]  # [{content, platform, date}, ...]
+    posts: List[Dict[str, Any]] = Field(min_length=1, max_length=50)  # [{content, platform, date}, ...]
     source: str = "manual_paste"  # manual_paste | linkedin_export | twitter_archive
 
 
 class AnalyzePostsRequest(BaseModel):
-    posts_text: str
+    posts_text: str = Field(min_length=1, description="At least one character required")
     platform: Optional[str] = "general"
 
 
 class GeneratePersonaRequest(BaseModel):
-    answers: List[Dict[str, Any]]
+    answers: List[Dict[str, Any]] = Field(min_length=1, description="At least one answer required")
     posts_analysis: Optional[str] = None
 
 
