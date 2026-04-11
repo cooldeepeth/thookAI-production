@@ -8,8 +8,10 @@ Production-ready FastAPI application with:
 - Comprehensive logging
 """
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -387,16 +389,75 @@ app.add_middleware(
 
 # ==================== ERROR HANDLERS ====================
 
+STATUS_TO_ERROR_CODE = {
+    400: "BAD_REQUEST",
+    401: "UNAUTHORIZED",
+    402: "PAYMENT_REQUIRED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    409: "CONFLICT",
+    413: "PAYLOAD_TOO_LARGE",
+    422: "VALIDATION_ERROR",
+    429: "RATE_LIMITED",
+    500: "INTERNAL_ERROR",
+    503: "SERVICE_UNAVAILABLE",
+}
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Standardize all HTTPException responses to include error_code field (BACK-03, BACK-04)."""
+    error_code = STATUS_TO_ERROR_CODE.get(exc.status_code, "ERROR")
+    if isinstance(exc.detail, dict):
+        # detail is already a structured dict (e.g., from validate_password_strength)
+        # Merge error_code in without wrapping
+        content = {**exc.detail, "error_code": error_code}
+    else:
+        content = {"detail": exc.detail, "error_code": error_code}
+    return JSONResponse(status_code=exc.status_code, content=content)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def starlette_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Standardize Starlette HTTP exceptions (e.g., route-not-found 404) to include error_code."""
+    error_code = STATUS_TO_ERROR_CODE.get(exc.status_code, "ERROR")
+    if isinstance(exc.detail, dict):
+        content = {**exc.detail, "error_code": error_code}
+    else:
+        content = {"detail": exc.detail, "error_code": error_code}
+    return JSONResponse(status_code=exc.status_code, content=content)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Standardize Pydantic validation errors to include error_code and field-level errors (BACK-02, BACK-05)."""
+    errors = [
+        {
+            "field": ".".join(str(loc) for loc in e["loc"] if loc != "body"),
+            "message": e["msg"],
+        }
+        for e in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Validation failed",
+            "error_code": "VALIDATION_ERROR",
+            "errors": errors,
+        },
+    )
+
+
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled errors"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    
+
     # In production, don't expose internal error details
     if settings.app.is_production:
-        return JSONResponse(status_code=500, content={"detail": "An internal error occurred"})
-    
-    return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__})
+        return JSONResponse(status_code=500, content={"detail": "An internal error occurred", "error_code": "INTERNAL_ERROR"})
+
+    return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__, "error_code": "INTERNAL_ERROR"})
 
 
 if __name__ == "__main__":

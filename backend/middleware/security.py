@@ -251,7 +251,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 status_code=429,
                 content={
                     "detail": "Too many requests. Please wait.",
-                    "retry_after": retry_seconds
+                    "retry_after": retry_seconds,
+                    "error_code": "RATE_LIMITED"
                 },
                 headers={
                     "Retry-After": str(retry_seconds),
@@ -300,7 +301,7 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
         if content_length and int(content_length) > self.MAX_BODY_SIZE:
             return JSONResponse(
                 status_code=413,
-                content={"detail": "Request body too large"}
+                content={"detail": "Request body too large", "error_code": "PAYLOAD_TOO_LARGE"}
             )
         
         # Validate content type for POST/PUT/PATCH

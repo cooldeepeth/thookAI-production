@@ -1,0 +1,313 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e9]: Thook
+      - generic [ref=e10]: AI
+    - generic [ref=e11]:
+      - link "Product" [ref=e12] [cursor=pointer]:
+        - /url: "#features"
+      - link "Agents" [ref=e13] [cursor=pointer]:
+        - /url: "#agents"
+      - link "Pricing" [ref=e14] [cursor=pointer]:
+        - /url: "#pricing"
+      - button "Discover Your Voice" [ref=e15] [cursor=pointer]:
+        - img [ref=e16]
+        - text: Discover Your Voice
+    - generic [ref=e18]:
+      - button "Sign in" [ref=e19] [cursor=pointer]
+      - button "Get started" [ref=e20] [cursor=pointer]
+  - generic [ref=e21]:
+    - generic [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e29]: Early Bird Launch — Save up to 38% for a limited time
+        - img [ref=e30]
+      - heading "Your Voice. Infinite Content." [level=1] [ref=e32]
+      - paragraph [ref=e33]:
+        - text: 15+ specialized AI agents that learn your exact voice and style — then craft platform-native content for LinkedIn, X, and Instagram.
+        - strong [ref=e34]: Without burning you out.
+      - generic [ref=e35]:
+        - button "Get Started" [ref=e36] [cursor=pointer]:
+          - text: Get Started
+          - img [ref=e37]
+        - link "See how it works" [ref=e39] [cursor=pointer]:
+          - /url: "#features"
+          - img [ref=e40]
+          - generic [ref=e42]: See how it works
+      - paragraph [ref=e43]: 50 free credits on signup · No credit card for Free tier
+    - generic [ref=e44]:
+      - generic [ref=e45]: Publishes to
+      - img "LinkedIn" [ref=e46]
+      - img "X" [ref=e47]
+      - img "Instagram" [ref=e48]
+  - generic [ref=e49]:
+    - generic [ref=e50]:
+      - paragraph [ref=e51]: Core Features
+      - heading "Anti-generic AI." [level=2] [ref=e52]
+      - paragraph [ref=e53]: Built around your unique voice, not a generic template.
+    - generic [ref=e54]:
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - img [ref=e59]
+          - text: Core Differentiator
+        - heading "The Persona Engine" [level=3] [ref=e61]
+        - paragraph [ref=e62]: Your AI voice clone. Learns from every post, edit, and approval to create content that sounds exactly like you — not like AI.
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: VOICE FINGERPRINT
+          - generic [ref=e65]:
+            - generic [ref=e76]: Sentence rhythm & length
+            - generic [ref=e87]: Vocabulary complexity
+            - generic [ref=e98]: Emoji frequency & style
+            - generic [ref=e109]: Hook patterns (question/stat/bold)
+            - generic [ref=e120]: CTA fingerprint
+      - generic [ref=e121]:
+        - heading "Raw in, ready out" [level=3] [ref=e122]
+        - paragraph [ref=e123]: Drop a rough idea. Get platform-ready content.
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - generic [ref=e126]: Scout
+            - img [ref=e127]
+          - generic [ref=e129]:
+            - generic [ref=e130]: Thinker
+            - img [ref=e131]
+          - generic [ref=e133]:
+            - generic [ref=e134]: Writer
+            - img [ref=e135]
+          - generic [ref=e137]:
+            - generic [ref=e138]: QC
+            - img [ref=e139]
+          - generic [ref=e142]: Publish
+      - generic [ref=e143]:
+        - heading "Platform-native UX" [level=3] [ref=e144]
+        - paragraph [ref=e145]: Editors that mimic LinkedIn, X, and Instagram — zero learning curve.
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - paragraph [ref=e149]: LinkedIn
+            - paragraph [ref=e150]: Post / Carousel
+          - generic [ref=e151]:
+            - paragraph [ref=e153]: X
+            - paragraph [ref=e154]: Thread
+          - generic [ref=e155]:
+            - paragraph [ref=e157]: Instagram
+            - paragraph [ref=e158]: Caption
+      - generic [ref=e159]:
+        - paragraph [ref=e160]: "0"
+        - paragraph [ref=e161]: Burnout
+        - paragraph [ref=e162]: Adaptive AI adjusts to your energy level automatically
+      - generic [ref=e163]:
+        - paragraph [ref=e164]: 15+
+        - paragraph [ref=e165]: AI Agents
+        - paragraph [ref=e166]: Each specialized for one task. All working as one team.
+  - generic [ref=e169]:
+    - generic [ref=e170]:
+      - generic [ref=e171]:
+        - img [ref=e172]
+        - generic [ref=e174]: Free Tool
+      - heading "Discover Your Creator DNA" [level=3] [ref=e175]
+      - paragraph [ref=e176]: Paste your posts and get an AI-powered persona card that reveals your writing voice, content archetype, and strengths. No signup needed.
+    - button "Try It Free" [ref=e178] [cursor=pointer]:
+      - img [ref=e179]
+      - text: Try It Free
+      - img [ref=e181]
+  - generic [ref=e184]:
+    - generic [ref=e185]:
+      - paragraph [ref=e186]: The Agent Council
+      - heading "15 specialists. One team." [level=2] [ref=e187]
+      - paragraph [ref=e188]: Each agent is purpose-built with the world's best model for its job. Orchestrated by Commander GPT-4o.
+    - generic [ref=e189]:
+      - generic [ref=e190]:
+        - generic [ref=e192]: C
+        - paragraph [ref=e193]: Commander
+        - paragraph [ref=e194]: GPT-4o
+        - paragraph [ref=e195]: Orchestrates all flows
+      - generic [ref=e196]:
+        - generic [ref=e198]: S
+        - paragraph [ref=e199]: Scout
+        - paragraph [ref=e200]: Perplexity
+        - paragraph [ref=e201]: Research & trends
+      - generic [ref=e202]:
+        - generic [ref=e204]: T
+        - paragraph [ref=e205]: Thinker
+        - paragraph [ref=e206]: o1-mini
+        - paragraph [ref=e207]: Content strategy
+      - generic [ref=e208]:
+        - generic [ref=e210]: W
+        - paragraph [ref=e211]: Writer
+        - paragraph [ref=e212]: Claude 3.5
+        - paragraph [ref=e213]: Voice-matched copy
+      - generic [ref=e214]:
+        - generic [ref=e216]: P
+        - paragraph [ref=e217]: Persona
+        - paragraph [ref=e218]: GPT-4o
+        - paragraph [ref=e219]: Identity cloning
+      - generic [ref=e220]:
+        - generic [ref=e222]: V
+        - paragraph [ref=e223]: Visual
+        - paragraph [ref=e224]: Gemini Vision
+        - paragraph [ref=e225]: Media analysis
+      - generic [ref=e226]:
+        - generic [ref=e228]: D
+        - paragraph [ref=e229]: Designer
+        - paragraph [ref=e230]: DALL-E
+        - paragraph [ref=e231]: Carousels & graphics
+      - generic [ref=e232]:
+        - generic [ref=e234]: D
+        - paragraph [ref=e235]: Director
+        - paragraph [ref=e236]: Kling/Runway
+        - paragraph [ref=e237]: Video generation
+      - generic [ref=e238]:
+        - generic [ref=e240]: C
+        - paragraph [ref=e241]: Clone
+        - paragraph [ref=e242]: HeyGen
+        - paragraph [ref=e243]: AI avatar videos
+      - generic [ref=e244]:
+        - generic [ref=e246]: V
+        - paragraph [ref=e247]: Voice
+        - paragraph [ref=e248]: ElevenLabs
+        - paragraph [ref=e249]: Voice cloning
+      - generic [ref=e250]:
+        - generic [ref=e252]: Q
+        - paragraph [ref=e253]: QC
+        - paragraph [ref=e254]: GPT-4o-mini
+        - paragraph [ref=e255]: Quality control
+      - generic [ref=e256]:
+        - generic [ref=e258]: A
+        - paragraph [ref=e259]: Analyst
+        - paragraph [ref=e260]: GPT-4o
+        - paragraph [ref=e261]: Performance tracking
+      - generic [ref=e262]:
+        - generic [ref=e264]: P
+        - paragraph [ref=e265]: Planner
+        - paragraph [ref=e266]: GPT-4o-mini
+        - paragraph [ref=e267]: Optimal scheduling
+      - generic [ref=e268]:
+        - generic [ref=e270]: E
+        - paragraph [ref=e271]: Editor
+        - paragraph [ref=e272]: Vizard
+        - paragraph [ref=e273]: Video editing
+      - generic [ref=e274]:
+        - generic [ref=e276]: S
+        - paragraph [ref=e277]: Sound
+        - paragraph [ref=e278]: Suno
+        - paragraph [ref=e279]: Audio branding
+  - generic [ref=e281]:
+    - generic [ref=e282]:
+      - generic [ref=e285]: Volume Discounts — The More You Use, The Less You Pay
+      - paragraph [ref=e286]: Pricing
+      - heading "Build your own plan." [level=2] [ref=e287]
+      - paragraph [ref=e288]: Pick your usage, we calculate the price. Credits refresh monthly. Start free.
+    - generic [ref=e289]:
+      - generic [ref=e290]:
+        - paragraph [ref=e291]: Starter
+        - generic [ref=e293]: $0
+        - paragraph [ref=e294]: Try ThookAI with 200 free credits
+        - list [ref=e295]:
+          - listitem [ref=e296]:
+            - img [ref=e297]
+            - text: 200 one-time credits
+          - listitem [ref=e299]:
+            - img [ref=e300]
+            - text: LinkedIn platform
+          - listitem [ref=e302]:
+            - img [ref=e303]
+            - text: Persona Engine
+          - listitem [ref=e305]:
+            - img [ref=e306]
+            - text: Text posts
+          - listitem [ref=e308]:
+            - img [ref=e309]
+            - text: Content library
+        - button "Start free" [ref=e311] [cursor=pointer]
+      - generic [ref=e312]:
+        - paragraph [ref=e313]: Creator
+        - generic [ref=e314]:
+          - generic [ref=e315]: $15
+          - generic [ref=e316]: /month
+        - paragraph [ref=e317]: For consistent creators posting weekly
+        - list [ref=e318]:
+          - listitem [ref=e319]:
+            - img [ref=e320]
+            - text: ~300 credits/month
+          - listitem [ref=e322]:
+            - img [ref=e323]
+            - text: All 3 platforms
+          - listitem [ref=e325]:
+            - img [ref=e326]
+            - text: Full Persona Engine
+          - listitem [ref=e328]:
+            - img [ref=e329]
+            - text: Images & carousels
+          - listitem [ref=e331]:
+            - img [ref=e332]
+            - text: Content repurposing
+          - listitem [ref=e334]:
+            - img [ref=e335]
+            - text: 30-day analytics
+        - button "Build your plan" [ref=e337] [cursor=pointer]
+      - generic [ref=e338]:
+        - generic [ref=e339]: Most Popular
+        - paragraph [ref=e340]: Growth
+        - generic [ref=e341]:
+          - generic [ref=e342]: $79
+          - generic [ref=e343]: /month
+        - paragraph [ref=e344]: For serious creators scaling output
+        - list [ref=e345]:
+          - listitem [ref=e346]:
+            - img [ref=e347]
+            - text: ~1,800 credits/month
+          - listitem [ref=e349]:
+            - img [ref=e350]
+            - text: Voice narration
+          - listitem [ref=e352]:
+            - img [ref=e353]
+            - text: 10 personas
+          - listitem [ref=e355]:
+            - img [ref=e356]
+            - text: 5 team members
+          - listitem [ref=e358]:
+            - img [ref=e359]
+            - text: 90-day analytics
+          - listitem [ref=e361]:
+            - img [ref=e362]
+            - text: Priority support
+        - button "Build your plan" [ref=e364] [cursor=pointer]
+      - generic [ref=e365]:
+        - generic [ref=e366]: Best Value
+        - paragraph [ref=e367]: Scale
+        - generic [ref=e368]:
+          - generic [ref=e369]: $149+
+          - generic [ref=e370]: /month
+        - paragraph [ref=e371]: For agencies and power users
+        - list [ref=e372]:
+          - listitem [ref=e373]:
+            - img [ref=e374]
+            - text: 5,000+ credits/month
+          - listitem [ref=e376]:
+            - img [ref=e377]
+            - text: Video generation
+          - listitem [ref=e379]:
+            - img [ref=e380]
+            - text: API access
+          - listitem [ref=e382]:
+            - img [ref=e383]
+            - text: 10+ team members
+          - listitem [ref=e385]:
+            - img [ref=e386]
+            - text: 365-day analytics
+          - listitem [ref=e388]:
+            - img [ref=e389]
+            - text: Custom integrations
+        - button "Build your plan" [ref=e391] [cursor=pointer]
+  - contentinfo [ref=e392]:
+    - generic [ref=e393]:
+      - generic [ref=e394]:
+        - img [ref=e396]
+        - generic [ref=e398]: Thook AI
+      - paragraph [ref=e399]: © 2025 ThookAI. Your AI Creative Agency.
+      - generic [ref=e400]:
+        - link "Privacy" [ref=e401] [cursor=pointer]:
+          - /url: "#"
+        - link "Terms" [ref=e402] [cursor=pointer]:
+          - /url: "#"
+        - link "Contact" [ref=e403] [cursor=pointer]:
+          - /url: "#"

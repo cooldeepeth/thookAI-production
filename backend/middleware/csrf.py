@@ -108,7 +108,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             )
             return JSONResponse(
                 status_code=403,
-                content={"detail": "CSRF token missing"},
+                content={"detail": "CSRF token missing", "error_code": "CSRF_INVALID"},
             )
 
         if csrf_header != csrf_cookie:
@@ -120,7 +120,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             )
             return JSONResponse(
                 status_code=403,
-                content={"detail": "CSRF token invalid"},
+                content={"detail": "CSRF token invalid", "error_code": "CSRF_INVALID"},
             )
 
         return await call_next(request)

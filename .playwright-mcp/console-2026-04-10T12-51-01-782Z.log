@@ -1,0 +1,36 @@
+[   11348ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://www.thook.ai/auth:0
+[   58037ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://www.thook.ai/auth:0
+[   58481ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://gallant-intuition-production-698a.up.railway.app/api/auth/me:0
+[   70862ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://gallant-intuition-production-698a.up.railway.app/api/auth/login:0
+[   71046ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://www.thook.ai/auth?expired=1:0
+[   71321ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://gallant-intuition-production-698a.up.railway.app/api/auth/me:0
+[  113525ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://gallant-intuition-production-698a.up.railway.app/api/auth/login:0
+[  113833ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://www.thook.ai/auth?expired=1:0
+[  114519ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://gallant-intuition-production-698a.up.railway.app/api/auth/me:0
+[  189219ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://www.thook.ai/auth:0
+[  189621ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://gallant-intuition-production-698a.up.railway.app/api/auth/me:0
+[  225278ms] [ERROR] Fetch error: TypeError: Failed to fetch
+    at https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:99133
+    at Generator.next (<anonymous>)
+    at t (https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:66)
+    at o (https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:269) @ https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:0
+[  229559ms] [ERROR] Failed to fetch templates: TypeError: Failed to fetch
+    at https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:99133
+    at Generator.next (<anonymous>)
+    at t (https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:66)
+    at o (https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:269) @ https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:0
+[  235603ms] [ERROR] Access to fetch at 'https://gallant-intuition-production-698a.up.railway.app/api/billing/plan/preview' from origin 'https://www.thook.ai' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://www.thook.ai/dashboard/settings:0
+[  235604ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://gallant-intuition-production-698a.up.railway.app/api/billing/plan/preview:0
+[  255159ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://www.thook.ai/auth:0
+[  256752ms] [ERROR] Stats fetch error: TypeError: Failed to fetch
+    at https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:99133
+    at Generator.next (<anonymous>)
+    at t (https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:66)
+    at o (https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:269) @ https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:0
+[  256752ms] [ERROR] Brief fetch error: TypeError: Failed to fetch
+    at https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:99133
+    at Generator.next (<anonymous>)
+    at t (https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:66)
+    at o (https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:1:269) @ https://us-assets.i.posthog.com/static/posthog-recorder.js?v=1.367.0:0
+[  256896ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://www.thook.ai/reset-password:0
+[  256896ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://www.thook.ai/reset-password:0

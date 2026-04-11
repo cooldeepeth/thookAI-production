@@ -42,12 +42,15 @@ async def test_missing_body_on_content_create_returns_422_with_error_code():
     # Use fake token to pass auth header format check (will still 401 or 422 on body)
     # We send no body to get the Pydantic validation error
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Send with no session cookie — unauthenticated request
+        # CSRF only applies when session_token cookie is present (cookie-based auth)
+        # Without cookie, FastAPI auth dependency fires first → 401 or 422 on body
         resp = await client.post(
             "/api/content/create",
             content=b"{}",
-            headers={"Content-Type": "application/json", "Cookie": "session_token=fakejwt"}
+            headers={"Content-Type": "application/json"}
         )
-    # 422 for missing required fields OR 401 for bad token — either way, never 500
+    # 422 for missing required fields OR 401 for bad/missing token — either way, never 500
     assert resp.status_code in (401, 422), f"Expected 401 or 422 but got {resp.status_code}: {resp.text}"
     assert resp.status_code != 500
 
