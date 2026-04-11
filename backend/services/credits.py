@@ -70,12 +70,13 @@ STARTER_CONFIG = {
 
 # ============ VOLUME PRICING ============
 
-# Price per credit in USD, tiered by total monthly credits
+# Price per credit in USD, tiered by total monthly credits.
+# Aligned with credit package rates: 100@$0.06, 500@$0.056, 1000@$0.045.
 VOLUME_TIERS = [
-    {"up_to": 500,   "price_per_credit": 0.06},
-    {"up_to": 1500,  "price_per_credit": 0.05},
-    {"up_to": 5000,  "price_per_credit": 0.035},
-    {"up_to": None,  "price_per_credit": 0.03},   # 5000+
+    {"up_to": 200,   "price_per_credit": 0.06},     # Starter tier
+    {"up_to": 800,   "price_per_credit": 0.056},     # Growth tier (matches 500-pack rate)
+    {"up_to": 2000,  "price_per_credit": 0.045},     # Scale tier (matches 1000-pack rate)
+    {"up_to": None,  "price_per_credit": 0.035},     # Enterprise tier (5000+ credits)
 ]
 
 # Feature unlock thresholds based on monthly spend
@@ -228,12 +229,12 @@ def build_plan_preview(
     for vt in VOLUME_TIERS:
         if vt["up_to"] is None or total_credits <= vt["up_to"]:
             rate = vt["price_per_credit"]
-            if rate <= 0.03:
+            if rate <= 0.035:
+                volume_label = "enterprise"
+            elif rate <= 0.045:
                 volume_label = "scale"
-            elif rate <= 0.035:
+            elif rate <= 0.056:
                 volume_label = "growth"
-            elif rate <= 0.05:
-                volume_label = "pro"
             break
 
     return {
