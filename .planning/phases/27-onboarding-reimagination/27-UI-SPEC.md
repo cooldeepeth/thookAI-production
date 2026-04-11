@@ -58,20 +58,23 @@ Source: existing `index.jsx` stepper, DESIGN-SYSTEM.md, WCAG 2.5.5
 
 ## Typography
 
+4 sizes, 2 weights. No exceptions.
+
 | Role | Size | Weight | Line Height | Class / Notes |
 |------|------|--------|-------------|---------------|
-| Display heading | 28–36px (`text-3xl` / `text-4xl`) | 700 | 1.2 | `font-display font-bold` — step main question text |
-| Section heading | 20px (`text-xl`) | 700 | 1.2 | `font-display font-bold` — card/panel titles |
+| Heading | 28px (`text-3xl`) | 700 | 1.2 | `font-display font-bold` — step main question text AND recorded state heading; also covers card/panel titles at 28px |
 | Body | 16px (`text-base`) | 400 | 1.5 | Default; step description, hint text at `text-zinc-500` |
-| Label / small | 14px (`text-sm`) | 500 | 1.4 | Button labels, input placeholder, fingerprint tag chips |
-| Micro / mono | 12px (`text-xs`) | 400 mono | 1.3 | Step counter "1 / 5", progress labels, agent status, timer countdown |
+| Label | 14px (`text-sm`) | 400 | 1.4 | Button labels, input placeholder, fingerprint tag chips, palette card labels, hint text below questions |
+| Micro / mono | 12px (`text-xs`) | 400 | 1.3 | Step counter "1 / 5", progress labels, agent status, timer countdown; mono variant uses `font-mono` |
 
 Rules:
-- All question text uses `font-display font-bold`.
+- All question text uses `font-display font-bold` at `text-3xl` (28px).
 - Hint text below each question uses `text-zinc-600 text-sm italic` (matches existing PhaseTwo pattern).
-- Timer countdown ("0:28 remaining") uses `font-mono text-lime text-sm`.
-- Palette card labels use `text-sm font-semibold text-white`.
-- Fingerprint tag chips use `text-xs font-medium`.
+- Timer countdown ("0:28 remaining") uses `font-mono text-lime text-xs`.
+- Palette card labels use `text-sm font-bold text-white` (weight 700 — not semibold).
+- Fingerprint tag chips use `text-xs` (weight 400).
+- "Voice sample recorded" heading reuses `text-3xl font-display font-bold` — same heading role, not a separate size.
+- Analysis intro label uses `text-xs text-zinc-600 uppercase tracking-widest font-mono`.
 
 Source: `PhaseOne.jsx`, `PhaseTwo.jsx`, `DESIGN-SYSTEM.md`, `tailwind.config.js`
 
@@ -172,7 +175,7 @@ This is an extension of the existing PhaseOne. The existing two-card selection U
 After `analyze-posts` API call returns, instead of a single prose analysis block:
 
 1. Show a `card-thook p-5` container with:
-   - Section heading: "Your writing fingerprint" (`font-display font-bold text-xl text-white`)
+   - Section heading: "Your writing fingerprint" (`font-display font-bold text-3xl text-white`)
    - Prose analysis in `text-sm text-zinc-300 leading-relaxed` (existing `result.analysis` text)
    - If `result.detected_patterns` is an array: render each pattern as a tag chip: `badge-lime` class (from `index.css`)
 2. Below the card, two buttons side by side:
@@ -194,7 +197,7 @@ Full-page centered layout matching existing step pattern (`flex items-center jus
 ### States
 
 **Idle (no recording yet):**
-- Step label: `text-lime text-xs font-semibold uppercase tracking-widest mb-3` — "Step 2 of 5"
+- Step label: `text-lime text-xs font-bold uppercase tracking-widest mb-3` — "Step 2 of 5"
 - Heading: "Let's hear your voice" (`font-display font-bold text-3xl text-white`)
 - Subheading: "Read any sentence aloud for 15–30 seconds. We use voice patterns to calibrate your Persona Engine." (`text-zinc-500 text-sm max-w-md mx-auto text-center`)
 - Mic button: 80px × 80px circle (`w-20 h-20`), `bg-lime/10 border-2 border-lime/20 rounded-full`, centered Mic icon `text-lime` size 32. On hover: `border-lime/50 bg-lime/20`.
@@ -203,13 +206,13 @@ Full-page centered layout matching existing step pattern (`flex items-center jus
 
 **Recording active:**
 - Mic button changes to Stop icon (`Square` from lucide), `bg-red-500/10 border-2 border-red-400/40`, pulse ring: `animate-pulse-lime` on outer ring div (`w-24 h-24 rounded-full border border-lime/20`)
-- Timer: `00:28` countdown in `font-mono text-lime text-xl font-bold` centered below the button
+- Timer: `00:28` countdown in `font-mono text-lime text-xs font-bold` centered below the button
 - Recording indicator dot: `w-2 h-2 bg-red-400 rounded-full animate-pulse` left of timer text
 - Progress arc: not required — use text timer only (keeps implementation simple)
 
 **Recorded (playback state):**
 - Green checkmark icon in a `w-12 h-12 bg-lime/15 rounded-2xl` container centered above controls
-- Heading: "Voice sample recorded" (`font-display font-bold text-2xl text-white`)
+- Heading: "Voice sample recorded" (`font-display font-bold text-3xl text-white`)
 - Native HTML `<audio controls>` element with `src={audioUrl}` — styled with `w-full rounded-xl` and `className="audio-player"`. No custom audio player — use browser native controls.
 - Two buttons:
   - Ghost: "Record again" — resets state to idle
@@ -233,7 +236,7 @@ Full-page centered layout. Heading centered, palette grid below.
 
 ### Layout
 
-- Step label: "Step 3 of 5" in `text-lime text-xs font-semibold uppercase tracking-widest mb-3`
+- Step label: "Step 3 of 5" in `text-lime text-xs font-bold uppercase tracking-widest mb-3`
 - Heading: "Pick your visual style" (`font-display font-bold text-3xl text-white text-center mb-2`)
 - Subheading: "Choose the aesthetic that best represents your brand. This shapes how your content looks visually." (`text-zinc-500 text-sm text-center max-w-md mx-auto mb-8`)
 - Grid: `grid grid-cols-2 md:grid-cols-3 gap-4` — 6 cards, 2 columns mobile, 3 columns tablet+
@@ -246,7 +249,7 @@ Each option uses `card-thook-interactive` base class, plus:
 - Unselected: default `card-thook` hover behavior
 - Layout inside card:
   - Color swatch row: 4 small circles (`w-4 h-4 rounded-full`) in the palette's representative colors, displayed as `flex gap-1.5 mb-3`
-  - Label: `font-display font-semibold text-white text-sm mb-1` — palette name
+  - Label: `font-display font-bold text-white text-sm mb-1` — palette name (weight 700 — not semibold)
   - Description: `text-zinc-500 text-xs leading-relaxed` — one-line description
   - Selected indicator: `Check` icon `text-lime` size 14 in top-right corner, only visible when selected
 
