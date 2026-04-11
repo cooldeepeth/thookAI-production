@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Phase 27 UI-SPEC approved
-last_updated: "2026-04-11T18:28:06.071Z"
-last_activity: 2026-04-11 -- Phase 27 execution started
+stopped_at: Completed 27-onboarding-reimagination-02-PLAN.md
+last_updated: "2026-04-11T18:35:21.488Z"
+last_activity: 2026-04-11
 progress:
   total_phases: 27
   completed_phases: 1
   total_plans: 10
-  completed_plans: 5
-  percent: 50
+  completed_plans: 7
+  percent: 70
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-12)
 ## Current Position
 
 Phase: 27 (Onboarding Reimagination) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 27
-Last activity: 2026-04-11 -- Phase 27 execution started
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-04-11
 
 Progress: [░░░░░░░░░░] 0% (v3.0) — Phases 1-25 shipped across v1.0/v2.0/v2.1/v2.2
 
@@ -55,6 +55,7 @@ _Updated after each plan completion_
 | Phase 26-backend-endpoint-hardening P03 | 8 | 2 tasks | 6 files |
 | Phase 26-backend-endpoint-hardening P04 | 6 | 2 tasks | 3 files |
 | Phase 26 P05 | 5 | 3 tasks | 3 files |
+| Phase 27-onboarding-reimagination P02 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 26-backend-endpoint-hardening]: Use app.dependency_overrides[get_current_user] in tests instead of session cookie to bypass CSRF middleware
 - [Phase 26]: 404 responses treated as skip in auth guard tests to prevent false failures from router prefix mismatches between audit paths and actual registration
 - [Phase 26]: viral_card.py POST /api/viral-card/analyze is MISSING auth guard — flagged for follow-up (add Depends(get_current_user) or document as intentional public)
+- [Phase 27-onboarding-reimagination]: Steps 2-3 use intentional placeholder divs wired to handleVoiceComplete/handleVisualComplete — replaced in Plan 04 with VoiceRecordingStep and VisualPaletteStep
+- [Phase 27-onboarding-reimagination]: Draft restore in OnboardingWizard caps at step 4 — step 5 (PersonaRevealStep) always requires fresh generation; onContinue in PhaseOne now takes (result, parsedSamples) signature
 
 ### Pending Todos
 
@@ -89,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T18:05:04.152Z
-Stopped at: Phase 27 UI-SPEC approved
-Resume file: .planning/phases/27-onboarding-reimagination/27-UI-SPEC.md
+Last session: 2026-04-11T18:35:21.484Z
+Stopped at: Completed 27-onboarding-reimagination-02-PLAN.md
+Resume file: None

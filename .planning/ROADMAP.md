@@ -431,8 +431,8 @@
 6. Closing the browser mid-onboarding and returning later resumes from the last completed step — no answers are lost
    **Plans**: 5 plans
    Plans:
-   - [ ] 27-01-PLAN.md — Backend TDD: test stubs + extended GeneratePersonaRequest + persona_doc new fields
-   - [ ] 27-02-PLAN.md — Wizard container (5-step stepper, localStorage draft) + WritingStyleStep fingerprint confirm
+   - [x] 27-01-PLAN.md — Backend TDD: test stubs + extended GeneratePersonaRequest + persona_doc new fields
+   - [x] 27-02-PLAN.md — Wizard container (5-step stepper, localStorage draft) + WritingStyleStep fingerprint confirm
    - [ ] 27-03-PLAN.md — VoiceRecordingStep + VisualPaletteStep new components
    - [ ] 27-04-PLAN.md — Wire new steps into wizard + InterviewStep counter + human verification checkpoint
    - [ ] 27-05-PLAN.md — Backend audit + edge case tests + full suite gate
@@ -613,7 +613,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | Phase                                | Plans Complete | Status      | Completed |
 | ------------------------------------ | -------------- | ----------- | --------- |
 | 26. Backend Endpoint Hardening       | 5/5 | Complete    | 2026-04-11 |
-| 27. Onboarding Reimagination         | 0/TBD          | Not started | -         |
+| 27. Onboarding Reimagination         | 2/5 | In Progress|  |
 | 28. Content Generation Multi-Format  | 0/TBD          | Not started | -         |
 | 29. Media Generation Pipeline        | 0/TBD          | Not started | -         |
 | 30. Social Publishing End-to-End     | 0/TBD          | Not started | -         |
