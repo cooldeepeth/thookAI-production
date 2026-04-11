@@ -18,7 +18,7 @@ import httpx
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field
 
 from auth_utils import get_current_user
 from config import settings
@@ -87,7 +87,7 @@ def _validate_context_mime(context_type: str, content_type: str, filename: str) 
 
 
 class UrlUploadRequest(BaseModel):
-    url: HttpUrl
+    url: str = Field(min_length=10, max_length=2048, description="URL to upload content from")
     context_type: str = "link"
 
 

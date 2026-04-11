@@ -3,7 +3,7 @@ import secrets
 
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from jose import jwt
 from datetime import datetime, timezone, timedelta
 from pymongo import WriteConcern
@@ -34,8 +34,8 @@ def _jwt_secret() -> str:
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str
-    name: str
+    password: str = Field(min_length=1, max_length=200)
+    name: str = Field(min_length=1, max_length=100)
 
 
 class LoginRequest(BaseModel):
@@ -284,7 +284,7 @@ async def export_user_data(current_user: dict = Depends(get_current_user)):
 
 
 class DeleteAccountRequest(BaseModel):
-    confirm: str  # Must be "DELETE" to confirm
+    confirm: str = Field(min_length=1)  # Must be "DELETE" to confirm
 
 
 @router.post("/delete-account")

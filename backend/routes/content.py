@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse, PlainTextResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime, timezone
 import csv
@@ -33,23 +33,32 @@ PLATFORM_CONTENT_TYPES = {
 class ContentCreateRequest(BaseModel):
     platform: str
     content_type: str
-    raw_input: str  # Validated in endpoint: min 5 chars, max 50000 chars
+    raw_input: str = Field(min_length=5, max_length=50000)
     attachment_url: Optional[str] = None  # For Visual Agent
     upload_ids: Optional[List[str]] = None
     campaign_id: Optional[str] = None  # Link job to a campaign/project
     generate_video: bool = False  # Trigger async video generation after pipeline
     video_style: str = "cinematic"  # cinematic, talking_head, slideshow, abstract
 
+    @field_validator("platform")
+    @classmethod
+    def normalize_platform(cls, v: str) -> str:
+        normalized = v.lower()
+        allowed = {"linkedin", "x", "instagram"}
+        if normalized not in allowed:
+            raise ValueError(f"platform must be one of {sorted(allowed)}")
+        return normalized
+
 
 class ContentStatusUpdate(BaseModel):
-    status: str  # approved | rejected
+    status: str = Field(pattern="^(approved|rejected)$")
     edited_content: Optional[str] = None
     rejection_reason: Optional[str] = None
     notes: Optional[str] = None  # Rejection notes
 
 
 class ImageGenerateRequest(BaseModel):
-    job_id: str
+    job_id: str = Field(min_length=1)
     style: str = "minimal"  # minimal, bold, data-viz, personal, cinematic, etc.
     prompt_override: Optional[str] = None
     provider: Optional[str] = None  # openai, stability, fal, replicate, leonardo, ideogram
@@ -64,18 +73,18 @@ class CarouselGenerateRequest(BaseModel):
 
 
 class VoiceGenerateRequest(BaseModel):
-    job_id: str
+    job_id: str = Field(min_length=1)
     voice_id: Optional[str] = None
-    stability: float = 0.5
-    similarity_boost: float = 0.75
+    stability: float = Field(default=0.5, ge=0.0, le=1.0)
+    similarity_boost: float = Field(default=0.75, ge=0.0, le=1.0)
     provider: Optional[str] = None  # elevenlabs, openai_tts, playht, murf, google_tts
     model: Optional[str] = None
 
 
 class VideoGenerateRequest(BaseModel):
-    job_id: str
+    job_id: str = Field(min_length=1)
     prompt_override: Optional[str] = None
-    duration: int = 5
+    duration: int = Field(default=5, ge=1, le=300)
     provider: Optional[str] = None  # runway, kling, pika, luma
     model: Optional[str] = None
 
@@ -97,11 +106,6 @@ async def create_content(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
-    if len(data.raw_input.strip()) < 5:
-        raise HTTPException(status_code=400, detail="Please provide more context for your content idea")
-    if len(data.raw_input) > 50000:
-        raise HTTPException(status_code=400, detail="Content input too long (max 50,000 characters)")
-
     valid_types = PLATFORM_CONTENT_TYPES.get(data.platform.lower(), [])
     if data.content_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid content type for {data.platform}")

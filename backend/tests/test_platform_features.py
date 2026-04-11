@@ -600,7 +600,7 @@ class TestPostHistoryImport:
             app.dependency_overrides.pop(get_current_user, None)
 
     async def test_import_history_empty_posts_returns_400(self):
-        """POST /api/onboarding/import-history with empty posts returns 400."""
+        """POST /api/onboarding/import-history with empty posts returns 422 (Pydantic min_length=1)."""
         mock_persona = {"user_id": "test-user-feat", "card": {}}
         app.dependency_overrides[get_current_user] = _override_current_user
         try:
@@ -613,7 +613,8 @@ class TestPostHistoryImport:
                         "/api/onboarding/import-history",
                         json={"posts": [], "source": "manual"},
                     )
-            assert response.status_code == 400
+            # Pydantic Field(min_length=1) on posts list now returns 422 instead of 400
+            assert response.status_code == 422
         finally:
             app.dependency_overrides.pop(get_current_user, None)
 

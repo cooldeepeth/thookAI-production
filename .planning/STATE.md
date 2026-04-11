@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Completed 26-backend-endpoint-hardening/26-02-PLAN.md
-last_updated: "2026-04-11T17:22:07.174Z"
+stopped_at: Completed 26-backend-endpoint-hardening/26-03-PLAN.md
+last_updated: "2026-04-11T17:25:03.485Z"
 last_activity: 2026-04-11
 progress:
   total_phases: 27
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -52,7 +52,7 @@ Progress: [░░░░░░░░░░] 0% (v3.0) — Phases 1-25 shipped acr
 - Trend: -
 
 _Updated after each plan completion_
-| Phase 26 P02 | 12 | 3 tasks | 5 files |
+| Phase 26-backend-endpoint-hardening P03 | 8 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -66,7 +66,7 @@ Recent decisions affecting current work:
 - Every phase includes audit, testing, and edge case mitigation — not just implementation
 - Decision authority: AUTONOMOUS — make best decisions, document in .planning/DECISIONS.md
 - Granularity: TINY grain — each phase completable in 1 CLI session (~2-4 hours)
-- [Phase 26]: Registered separate StarletteHTTPException handler alongside FastAPI HTTPException handler — route-not-found 404 uses Starlette variant which FastAPI's handler does not intercept
+- [Phase 26-03]: Applied Field() constraints to actual existing field names (answers, expiry_days) not plan aliases; UrlUploadRequest.url changed from HttpUrl to str+Field since handler validates via urlparse
 
 ### Pending Todos
 
@@ -83,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T17:22:07.170Z
-Stopped at: Completed 26-backend-endpoint-hardening/26-02-PLAN.md
+Last session: 2026-04-11T17:25:03.482Z
+Stopped at: Completed 26-backend-endpoint-hardening/26-03-PLAN.md
 Resume file: None

@@ -3,7 +3,7 @@ import uuid
 import secrets
 
 from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
 from database import db
@@ -63,7 +63,7 @@ class PersonaCardUpdate(BaseModel):
 
 
 class SharePersonaRequest(BaseModel):
-    expiry_days: Optional[int] = 30  # Default 30 days, -1 for permanent (Pro+)
+    expiry_days: int = Field(default=7, ge=1, le=30)  # Default 7 days; must be 1-30
 
 
 class RegionalEnglishUpdate(BaseModel):
