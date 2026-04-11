@@ -50,25 +50,25 @@ def generate_video(
     async def _generate():
         from database import db
         from services.creative_providers import CreativeProvidersService
-        from services.credits import deduct_credits, CreditOperation
-        
+        from services.credits import deduct_credits, add_credits, CreditOperation
+
         try:
             # Update job status
             await db.content_jobs.update_one(
                 {"job_id": job_id},
                 {"$set": {"video_status": "generating", "video_started_at": datetime.now(timezone.utc)}}
             )
-            
+
             # Deduct credits
             credit_result = await deduct_credits(
                 user_id=user_id,
                 operation=CreditOperation.VIDEO_GENERATE,
                 description=f"Video generation: {provider}"
             )
-            
+
             if not credit_result.get("success"):
                 raise Exception(credit_result.get("error", "Insufficient credits"))
-            
+
             # Generate video
             service = CreativeProvidersService()
             result = await service.generate_video(
@@ -77,7 +77,7 @@ def generate_video(
                 style=style,
                 duration=duration
             )
-            
+
             if result.get("success"):
                 import uuid as _uuid
                 completed_at = datetime.now(timezone.utc)
@@ -102,13 +102,23 @@ def generate_video(
                 return {"success": True, "video_url": result.get("video_url")}
             else:
                 raise Exception(result.get("error", "Video generation failed"))
-                
+
         except Exception as e:
             logger.error(f"Video generation failed for job {job_id}: {e}")
             await db.content_jobs.update_one(
                 {"job_id": job_id},
                 {"$set": {"video_status": "failed", "video_error": str(e)}}
             )
+            # Refund credits on task failure
+            try:
+                await add_credits(
+                    user_id,
+                    CreditOperation.VIDEO_GENERATE.value,
+                    source="video_task_failure_refund",
+                    description=f"Auto-refund for failed video generation task on job {job_id}",
+                )
+            except Exception as refund_err:
+                logger.error(f"Failed to refund video credits for job {job_id}: {refund_err}")
             raise
     
     try:
@@ -140,8 +150,8 @@ def generate_image(
     async def _generate():
         from database import db
         from services.creative_providers import CreativeProvidersService
-        from services.credits import deduct_credits, CreditOperation
-        
+        from services.credits import deduct_credits, add_credits, CreditOperation
+
         try:
             # Deduct credits
             credit_result = await deduct_credits(
@@ -149,10 +159,10 @@ def generate_image(
                 operation=CreditOperation.IMAGE_GENERATE,
                 description=f"Image generation: {provider}"
             )
-            
+
             if not credit_result.get("success"):
                 raise Exception(credit_result.get("error", "Insufficient credits"))
-            
+
             # Generate image
             service = CreativeProvidersService()
             result = await service.generate_image(
@@ -161,7 +171,7 @@ def generate_image(
                 style=style,
                 size=size
             )
-            
+
             if result.get("success"):
                 import uuid as _uuid
                 # Update job with image URL
@@ -183,9 +193,18 @@ def generate_image(
                 return {"success": True, "image_url": result.get("image_url")}
             else:
                 raise Exception(result.get("error", "Image generation failed"))
-                
+
         except Exception as e:
             logger.error(f"Image generation failed for job {job_id}: {e}")
+            try:
+                await add_credits(
+                    user_id,
+                    CreditOperation.IMAGE_GENERATE.value,
+                    source="image_task_failure_refund",
+                    description=f"Auto-refund for failed image generation task on job {job_id}",
+                )
+            except Exception as refund_err:
+                logger.error(f"Failed to refund image credits for job {job_id}: {refund_err}")
             raise
     
     try:
@@ -215,8 +234,8 @@ def generate_voice(
     async def _generate():
         from database import db
         from services.creative_providers import CreativeProvidersService
-        from services.credits import deduct_credits, CreditOperation
-        
+        from services.credits import deduct_credits, add_credits, CreditOperation
+
         try:
             # Deduct credits
             credit_result = await deduct_credits(
@@ -224,10 +243,10 @@ def generate_voice(
                 operation=CreditOperation.VOICE_NARRATION,
                 description=f"Voice synthesis: {provider}"
             )
-            
+
             if not credit_result.get("success"):
                 raise Exception(credit_result.get("error", "Insufficient credits"))
-            
+
             # Generate voice
             service = CreativeProvidersService()
             result = await service.generate_voice(
@@ -235,7 +254,7 @@ def generate_voice(
                 provider=provider,
                 voice_id=voice_id
             )
-            
+
             if result.get("success"):
                 import uuid as _uuid
                 await db.content_jobs.update_one(
@@ -255,9 +274,18 @@ def generate_voice(
                 return {"success": True, "audio_url": result.get("audio_url")}
             else:
                 raise Exception(result.get("error", "Voice generation failed"))
-                
+
         except Exception as e:
             logger.error(f"Voice generation failed for job {job_id}: {e}")
+            try:
+                await add_credits(
+                    user_id,
+                    CreditOperation.VOICE_NARRATION.value,
+                    source="voice_task_failure_refund",
+                    description=f"Auto-refund for failed voice generation task on job {job_id}",
+                )
+            except Exception as refund_err:
+                logger.error(f"Failed to refund voice credits for job {job_id}: {refund_err}")
             raise
     
     try:
