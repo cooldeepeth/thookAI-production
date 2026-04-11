@@ -154,6 +154,9 @@ class TestModelCorrectness:
             class FakeRequest(BaseModel):
                 answers: List[Dict[str, Any]]
                 posts_analysis: Optional[str] = None
+                voice_sample_url: Optional[str] = None
+                visual_preference: Optional[str] = None
+                writing_samples: Optional[List[str]] = None
 
             request = FakeRequest(answers=SAMPLE_ANSWERS)
             current_user = {"user_id": "test-user-123"}
@@ -199,6 +202,9 @@ class TestPersonaGeneration:
         class FakeRequest(BaseModel):
             answers: List[Dict[str, Any]]
             posts_analysis: Optional[str] = None
+            voice_sample_url: Optional[str] = None
+            visual_preference: Optional[str] = None
+            writing_samples: Optional[List[str]] = None
 
         request = FakeRequest(answers=SAMPLE_ANSWERS)
         current_user = {"user_id": "test-user-456"}
@@ -299,6 +305,9 @@ class TestPersonaGeneration:
         class FakeRequest(BaseModel):
             answers: List[Dict[str, Any]]
             posts_analysis: Optional[str] = None
+            voice_sample_url: Optional[str] = None
+            visual_preference: Optional[str] = None
+            writing_samples: Optional[List[str]] = None
 
         request = FakeRequest(answers=SAMPLE_ANSWERS)
         current_user = {"user_id": "test-user-789"}
@@ -348,6 +357,9 @@ class TestPersonaGeneration:
         class FakeRequest(BaseModel):
             answers: List[Dict[str, Any]]
             posts_analysis: Optional[str] = None
+            voice_sample_url: Optional[str] = None
+            visual_preference: Optional[str] = None
+            writing_samples: Optional[List[str]] = None
 
         request = FakeRequest(answers=SAMPLE_ANSWERS)
         current_user = {"user_id": "test-user-fallback"}
