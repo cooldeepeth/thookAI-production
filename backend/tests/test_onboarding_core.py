@@ -570,6 +570,91 @@ class TestGeneratePersonaExtendedRequest:
             "writing_samples": ["post1", "post2", "post3"],
         })
 
+    def test_generate_persona_writing_samples_stored_in_doc(self):
+        """writing_samples passed in request must be stored verbatim in persona_doc."""
+        mock_chat_instance = MagicMock()
+        mock_chat_instance.with_model.return_value = mock_chat_instance
+        mock_chat_instance.send_message = AsyncMock(return_value=json.dumps(MOCK_PERSONA_CARD_EXTENDED))
+
+        mock_db = MagicMock()
+        captured_docs = []
+
+        async def capture_update(filter_, update, **kwargs):
+            captured_docs.append(update.get("$set", {}))
+            return MagicMock()
+
+        mock_db.persona_engines.update_one = capture_update
+        mock_db.users.update_one = AsyncMock()
+
+        import asyncio
+        from routes.onboarding import generate_persona
+        from pydantic import BaseModel
+        from typing import List, Dict, Any, Optional
+
+        class FakeExtendedRequest(BaseModel):
+            answers: List[Dict[str, Any]]
+            posts_analysis: Optional[str] = None
+            voice_sample_url: Optional[str] = None
+            visual_preference: Optional[str] = None
+            writing_samples: Optional[List[str]] = None
+
+        samples = ["post1 text here", "post2 text here"]
+        request = FakeExtendedRequest(answers=SAMPLE_ANSWERS, writing_samples=samples)
+        current_user = {"user_id": "test-user-ws-stored"}
+
+        with patch("routes.onboarding.anthropic_available", return_value=True), \
+             patch("routes.onboarding.LlmChat", return_value=mock_chat_instance), \
+             patch("routes.onboarding.db", mock_db):
+            asyncio.run(generate_persona(request, current_user))
+
+        assert len(captured_docs) > 0, "persona_engines.update_one was never called"
+        doc = captured_docs[0]
+        assert doc.get("writing_samples") == samples, (
+            f"Expected writing_samples={samples!r}, got {doc.get('writing_samples')!r}"
+        )
+
+    def test_generate_persona_visual_preference_stored_in_doc(self):
+        """visual_preference passed in request must be stored as visual_preferences in persona_doc."""
+        mock_chat_instance = MagicMock()
+        mock_chat_instance.with_model.return_value = mock_chat_instance
+        mock_chat_instance.send_message = AsyncMock(return_value=json.dumps(MOCK_PERSONA_CARD_EXTENDED))
+
+        mock_db = MagicMock()
+        captured_docs = []
+
+        async def capture_update(filter_, update, **kwargs):
+            captured_docs.append(update.get("$set", {}))
+            return MagicMock()
+
+        mock_db.persona_engines.update_one = capture_update
+        mock_db.users.update_one = AsyncMock()
+
+        import asyncio
+        from routes.onboarding import generate_persona
+        from pydantic import BaseModel
+        from typing import List, Dict, Any, Optional
+
+        class FakeExtendedRequest(BaseModel):
+            answers: List[Dict[str, Any]]
+            posts_analysis: Optional[str] = None
+            voice_sample_url: Optional[str] = None
+            visual_preference: Optional[str] = None
+            writing_samples: Optional[List[str]] = None
+
+        request = FakeExtendedRequest(answers=SAMPLE_ANSWERS, visual_preference="creative")
+        current_user = {"user_id": "test-user-vp-stored"}
+
+        with patch("routes.onboarding.anthropic_available", return_value=True), \
+             patch("routes.onboarding.LlmChat", return_value=mock_chat_instance), \
+             patch("routes.onboarding.db", mock_db):
+            asyncio.run(generate_persona(request, current_user))
+
+        assert len(captured_docs) > 0, "persona_engines.update_one was never called"
+        doc = captured_docs[0]
+        assert doc.get("visual_preferences") == "creative", (
+            f"Expected visual_preferences='creative', got {doc.get('visual_preferences')!r}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # TestNewPersonaFields (ONBD-06)
@@ -656,6 +741,37 @@ class TestNewPersonaFields:
         """When writing_samples is None, persona_doc writing_samples must default to []."""
         doc = self._run_extended(writing_samples=None)
         assert doc.get("writing_samples") == []
+
+    def test_persona_doc_personality_traits_is_list(self):
+        """persona_doc personality_traits must be a list instance (not None or str)."""
+        doc = self._run_extended()
+        assert isinstance(doc["personality_traits"], list), (
+            f"personality_traits must be a list, got {type(doc['personality_traits'])}"
+        )
+
+    def test_persona_doc_voice_style_is_string(self):
+        """persona_doc voice_style must be a str instance (not None or list)."""
+        doc = self._run_extended()
+        assert isinstance(doc["voice_style"], str), (
+            f"voice_style must be a str, got {type(doc['voice_style'])}"
+        )
+
+    def test_persona_doc_has_voice_style_from_llm_output(self):
+        """voice_style in persona_doc must equal the LLM-returned voice_style value."""
+        doc = self._run_extended()
+        # MOCK_PERSONA_CARD_EXTENDED has voice_style set; persona_doc should mirror it
+        expected_voice_style = MOCK_PERSONA_CARD_EXTENDED["voice_style"]
+        assert doc["voice_style"] == expected_voice_style, (
+            f"Expected voice_style={expected_voice_style!r}, got {doc['voice_style']!r}"
+        )
+
+    def test_persona_doc_personality_traits_from_llm_output(self):
+        """personality_traits in persona_doc must equal the LLM-returned personality_traits list."""
+        doc = self._run_extended()
+        expected_traits = MOCK_PERSONA_CARD_EXTENDED["personality_traits"]
+        assert doc["personality_traits"] == expected_traits, (
+            f"Expected personality_traits={expected_traits!r}, got {doc['personality_traits']!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
