@@ -1,116 +1,174 @@
-# Requirements: ThookAI v2.2 — Frontend Hardening & Production Ship
+# Requirements: ThookAI v3.0 — Distribution-Ready Platform Rebuild
 
-**Defined:** 2026-04-04
-**Core Value:** Frontend hardened for production launch — no raw fetch, no localStorage JWT, no CI blind spots, tested and ship-ready.
+**Defined:** 2026-04-12
+**Core Value:** Proactive, personalized content creation at scale — every feature works perfectly end-to-end, ready for real users.
 
-## v2.2 Requirements
+## v3.0 Requirements
 
-### CI Strictness
+Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 
-- [x] **CI-01**: Remove all `continue-on-error: true` from `.github/workflows/ci.yml` — all 4 backend test jobs must block on failure
-- [x] **CI-02**: Remove `continue-on-error: true` from `.github/workflows/e2e.yml` — Playwright must block on failure
-- [x] **CI-03**: All CI checks pass green on dev branch after changes
+### Backend Hardening
 
-### Auth Migration
+- [ ] **BACK-01**: Every route file (26 files) tested against production with curl — each endpoint returns correct data
+- [ ] **BACK-02**: Every endpoint has Pydantic input validation with field constraints
+- [ ] **BACK-03**: All error responses follow standardized format (status code, detail message, error_code)
+- [ ] **BACK-04**: Every protected endpoint rejects unauthenticated requests with 401
+- [ ] **BACK-05**: Every endpoint handles missing/malformed request body gracefully (400, not 500)
+- [ ] **BACK-06**: Credit-consuming endpoints check balance before executing and refund on failure
+- [ ] **BACK-07**: Rate limiting configured per endpoint (auth endpoints stricter)
+- [ ] **BACK-08**: Endpoint registry document (.planning/audit/BACKEND-API-AUDIT.md) with status per endpoint
 
-- [x] **AUTH-01**: Backend sets httpOnly secure cookie on login/register (alongside existing JWT response for backward compat)
-- [x] **AUTH-02**: Backend middleware reads auth from cookie first, falls back to Authorization header
-- [x] **AUTH-03**: Frontend AuthContext reads from cookie-based session (no more localStorage.getItem for JWT)
-- [x] **AUTH-04**: Frontend removes `localStorage.setItem("thook_token", ...)` after cookie migration confirmed
-- [x] **AUTH-05**: CSRF protection added for cookie-based auth (double-submit or synchronizer token pattern)
+### Onboarding
 
-### API Client
+- [ ] **ONBD-01**: User completes multi-step onboarding wizard with progress indicator and animations
+- [ ] **ONBD-02**: User can record voice sample in browser or upload audio file during onboarding
+- [ ] **ONBD-03**: User can paste 3-5 past posts for writing style analysis during onboarding
+- [ ] **ONBD-04**: User can pick visual identity preferences (color palette, aesthetic) during onboarding
+- [ ] **ONBD-05**: Persona generation uses all inputs (questions + voice + writing + visual) to produce rich persona
+- [ ] **ONBD-06**: Persona stores voice_style, visual_preferences, writing_samples, personality_traits
+- [ ] **ONBD-07**: Onboarding supports save-as-you-go, skip/back navigation, and error recovery at every step
+- [ ] **ONBD-08**: LLM model name bug in onboarding.py fixed — real persona generation works
 
-- [x] **API-01**: Create `frontend/src/lib/apiFetch.js` — centralized fetch wrapper with base URL, auth headers, timeout (15s default), JSON parsing
-- [x] **API-02**: Add automatic retry (1 retry on 5xx, exponential backoff) to apiFetch
-- [x] **API-03**: Add global error handler — 401 redirects to /auth, 403 shows permission error, 5xx shows toast
-- [x] **API-04**: Create `frontend/src/lib/constants.js` — API base URL, feature flags, app config
-- [x] **API-05**: Replace all 41 raw `fetch()` calls across frontend with `apiFetch()`
-- [ ] **API-06**: Zero raw `fetch()` calls remain in `frontend/src/` (grep verification)
+### Content Generation
 
-### Frontend Tests
+- [ ] **CONT-01**: User can generate LinkedIn text post with persona-aware voice
+- [ ] **CONT-02**: User can generate LinkedIn article with persona-aware voice
+- [ ] **CONT-03**: User can generate LinkedIn carousel (text + design slides)
+- [ ] **CONT-04**: User can generate X tweet with persona-aware voice
+- [ ] **CONT-05**: User can generate X thread (3-10 tweets with hooks)
+- [ ] **CONT-06**: User can generate Instagram feed caption with persona-aware voice
+- [ ] **CONT-07**: User can generate Instagram reel script
+- [ ] **CONT-08**: User can generate Instagram story sequence
+- [ ] **CONT-09**: Each format uses platform-specific Writer prompts (not generic)
+- [ ] **CONT-10**: ContentStudio UI has format selection per platform
+- [ ] **CONT-11**: User can edit, approve, and schedule generated content
+- [ ] **CONT-12**: Content generation shows real-time pipeline progress (Commander→Scout→Thinker→Writer→QC)
 
-- [ ] **TEST-01**: Install `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `msw` (v2)
-- [ ] **TEST-02**: Configure Jest via CRA defaults — no eject, no custom webpack
-- [ ] **TEST-03**: Write 45+ unit/component tests across 10+ test files
-- [ ] **TEST-04**: Add `frontend-test` CI job to `.github/workflows/ci.yml`
-- [ ] **TEST-05**: Tests cover: AuthContext, apiFetch, StrategyDashboard, ContentStudio, Sidebar, NotificationBell, key hooks
+### Media Pipeline
 
-### Content Download & Redirect
+- [ ] **MDIA-01**: Auto-generate featured image for every post (DALL-E/FAL.ai)
+- [ ] **MDIA-02**: Generate LinkedIn carousel slides (text + design) via Remotion
+- [ ] **MDIA-03**: Generate short-form video from script (Runway/Luma)
+- [ ] **MDIA-04**: Generate voice narration from post text (ElevenLabs/OpenAI TTS)
+- [ ] **MDIA-05**: Remotion renders compositions into downloadable video files
+- [ ] **MDIA-06**: Generated media attached to content jobs and downloadable
+- [ ] **MDIA-07**: Media display works in content preview (images, videos, audio players)
+- [ ] **MDIA-08**: R2 upload flow works end-to-end (presigned URL, browser upload, confirm)
 
-- [x] **DL-01**: Download text content as `.txt` file from content detail view
-- [x] **DL-02**: Download generated images individually or as `.zip` for carousels
-- [x] **DL-03**: "Open in LinkedIn" button with pre-filled compose URL
-- [x] **DL-04**: "Open in X" button with pre-filled tweet intent URL
-- [x] **DL-05**: "Open in Instagram" info tooltip (Instagram has no compose URL — explain copy workflow)
-- [x] **DL-06**: Download/redirect buttons appear alongside existing Publish button
+### Social Publishing
 
-### E2E & Production Ship
+- [ ] **PUBL-01**: User can connect LinkedIn account via OAuth and publish UGC posts with media
+- [ ] **PUBL-02**: User can connect X account via OAuth and publish tweets/threads with media
+- [ ] **PUBL-03**: User can connect Instagram account via Meta OAuth and publish posts with media
+- [ ] **PUBL-04**: OAuth token auto-refresh before expiry for all platforms
+- [ ] **PUBL-05**: Publishing status tracked: pending → publishing → published/failed
+- [ ] **PUBL-06**: Platform token encryption verified working in production (Fernet)
+- [ ] **PUBL-07**: Published content shows real engagement metrics when available
 
-- [x] **SHIP-01**: Full Playwright E2E passes green (critical path, billing, agency, download/redirect)
-- [ ] **SHIP-02**: `npm audit` reports 0 critical/high vulnerabilities in frontend
-- [ ] **SHIP-03**: `pip-audit` or `safety check` reports 0 critical vulnerabilities in backend
-- [ ] **SHIP-04**: All environment variables documented in `.env.example` with descriptions
-- [ ] **SHIP-05**: Production deployment checklist document created
-- [ ] **SHIP-06**: Final security sweep — no hardcoded secrets, no debug endpoints, no console.log in production
+### Smart Scheduling
+
+- [ ] **SCHD-01**: AI suggests optimal posting times per platform based on engagement patterns
+- [ ] **SCHD-02**: User can approve/modify suggested schedule
+- [ ] **SCHD-03**: Calendar view shows all scheduled posts across platforms
+- [ ] **SCHD-04**: Scheduled posts publish automatically at scheduled time via Celery Beat
+
+### Frontend Polish
+
+- [ ] **FEND-01**: Auth page works flawlessly — social login buttons, password validation, error messages
+- [ ] **FEND-02**: Dashboard shows stats, recent content, quick actions with loading/empty states
+- [ ] **FEND-03**: ContentStudio has format picker, generation progress, preview, edit, schedule
+- [ ] **FEND-04**: Settings page works: billing, connections, profile, notifications
+- [ ] **FEND-05**: Every page handles loading, error, and empty states
+- [ ] **FEND-06**: Every page is responsive (375px mobile, 768px tablet, 1440px desktop)
+- [ ] **FEND-07**: Keyboard navigation works on all interactive elements
+
+### Design & Landing
+
+- [ ] **DSGN-01**: Consistent design system applied across all pages (colors, typography, spacing, components)
+- [ ] **DSGN-02**: Landing page has hero, features, how-it-works, pricing (plan builder), CTA, footer
+- [ ] **DSGN-03**: Landing page is conversion-optimized with animations and social proof section
+- [ ] **DSGN-04**: Mobile-first responsive design on landing page
+- [ ] **DSGN-05**: SEO meta tags and Open Graph tags on all public pages
+
+### Security & GDPR
+
+- [ ] **SECR-01**: Every POST endpoint has Pydantic models with field constraints (input validation)
+- [ ] **SECR-02**: All text inputs sanitized for XSS before storage
+- [ ] **SECR-03**: No string interpolation in MongoDB queries (injection prevention)
+- [ ] **SECR-04**: Every state-changing endpoint has CSRF protection
+- [ ] **SECR-05**: Rate limiting tuned per endpoint with per-user limits
+- [ ] **SECR-06**: No hardcoded secrets in codebase (grep verification)
+- [ ] **SECR-07**: No stack traces in production error responses
+- [ ] **SECR-08**: Dependency audit passes — 0 critical/high vulnerabilities
+- [ ] **SECR-09**: GDPR: user can export all their data via API
+- [ ] **SECR-10**: GDPR: user can delete account and all data is anonymized
+- [ ] **SECR-11**: GDPR: cookie consent banner implemented
+- [ ] **SECR-12**: Privacy policy page at /privacy
+- [ ] **SECR-13**: Terms of service page at /terms
+
+### Performance & Launch
+
+- [ ] **PERF-01**: All API endpoints respond in <500ms (p95)
+- [ ] **PERF-02**: Frontend bundle optimized (code splitting, lazy loading, tree shaking)
+- [ ] **PERF-03**: Lighthouse performance score >90 on key pages
+- [ ] **PERF-04**: Sentry monitoring active and clean (zero unresolved errors for 48 hours)
+- [ ] **PERF-05**: PostHog analytics verified tracking user flows
+- [ ] **PERF-06**: E2E smoke test passes: register → onboard → generate → schedule → publish
+- [ ] **PERF-07**: Load test passes: 50 concurrent users, <2s response time
+- [ ] **PERF-08**: Cross-browser verified: Chrome, Firefox, Safari, Mobile Safari
+- [ ] **PERF-09**: Pre-launch checklist complete and signed off
 
 ## Future Requirements
 
-- **FE-F01**: Component library documentation (Storybook) — v3.0
-- **FE-F02**: Accessibility audit (WCAG 2.1 AA) — v3.0
-- **FE-F03**: Progressive Web App (offline support) — v3.0
+Deferred to v4.0 or later. Tracked but not in current roadmap.
+
+### Advanced Media
+
+- **MDIA-F01**: A-roll / B-roll video editing workflow
+- **MDIA-F02**: Meme generation from content
+- **MDIA-F03**: Voice cloning (user's actual voice) for narration
+
+### Platform Expansion
+
+- **PLAT-F01**: Multi-language content generation (Sarvam AI, regional languages)
+- **PLAT-F02**: Platform-native mobile apps (iOS/Android)
+- **PLAT-F03**: Platform-specific workspaces per social account
+- **PLAT-F04**: Real-time collaboration for agency teams
+
+### Developer Experience
+
+- **DX-F01**: Component library documentation (Storybook)
+- **DX-F02**: API documentation (OpenAPI/Swagger auto-generated)
 
 ## Out of Scope
 
-| Feature | Reason |
-|---------|--------|
-| Backend feature development | Frontend-only milestone |
-| Mobile native apps | Web-first, deferred to v3.0 |
-| Full UI/UX redesign | Incremental improvements only |
-| Multi-language | Deferred to v3.0 |
-| Storybook | Deferred to v3.0 |
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature                    | Reason                                                  |
+| -------------------------- | ------------------------------------------------------- |
+| A-roll / B-roll video      | No codebase support, high complexity — deferred to v4.0 |
+| Meme generation            | No codebase support — deferred to v4.0                  |
+| Multi-language (Sarvam AI) | Regional languages need separate infrastructure — v4.0  |
+| Mobile native apps         | Web-first approach — v4.0                               |
+| Real-time collaboration    | Not needed for solo creators / small agencies yet       |
+| Storybook                  | Nice-to-have, not launch-blocking                       |
+| New feature development    | v3.0 is about making existing features work perfectly   |
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| CI-01 | Phase 21 | Complete |
-| CI-02 | Phase 21 | Complete |
-| CI-03 | Phase 21 | Complete |
-| AUTH-01 | Phase 21 | Complete |
-| AUTH-02 | Phase 21 | Complete |
-| AUTH-03 | Phase 21 | Complete |
-| AUTH-04 | Phase 21 | Complete |
-| AUTH-05 | Phase 21 | Complete |
-| API-01 | Phase 22 | Complete |
-| API-02 | Phase 22 | Complete |
-| API-03 | Phase 22 | Complete |
-| API-04 | Phase 22 | Complete |
-| API-05 | Phase 22 | Complete |
-| API-06 | Phase 22 | Pending |
-| TEST-01 | Phase 23 | Pending |
-| TEST-02 | Phase 23 | Pending |
-| TEST-03 | Phase 23 | Pending |
-| TEST-04 | Phase 23 | Pending |
-| TEST-05 | Phase 23 | Pending |
-| DL-01 | Phase 24 | Complete |
-| DL-02 | Phase 24 | Complete |
-| DL-03 | Phase 24 | Complete |
-| DL-04 | Phase 24 | Complete |
-| DL-05 | Phase 24 | Complete |
-| DL-06 | Phase 24 | Complete |
-| SHIP-01 | Phase 25 | Complete |
-| SHIP-02 | Phase 25 | Pending |
-| SHIP-03 | Phase 25 | Pending |
-| SHIP-04 | Phase 25 | Pending |
-| SHIP-05 | Phase 25 | Pending |
-| SHIP-06 | Phase 25 | Pending |
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement               | Phase | Status |
+| ------------------------- | ----- | ------ |
+| (populated by roadmapper) |       |        |
 
 **Coverage:**
-- v2.2 requirements: 31 total
-- Mapped to phases: 31
-- Unmapped: 0
+
+- v3.0 requirements: 71 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 71 ⚠️
 
 ---
-*Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 — traceability complete, all 31 requirements mapped to phases 21-25*
+
+_Requirements defined: 2026-04-12_
+_Last updated: 2026-04-12 after initial definition_
