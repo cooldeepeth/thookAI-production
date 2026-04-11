@@ -11,11 +11,11 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 
 - [x] **BACK-01**: Every route file (26 files) tested against production with curl — each endpoint returns correct data
 - [x] **BACK-02**: Every endpoint has Pydantic input validation with field constraints
-- [ ] **BACK-03**: All error responses follow standardized format (status code, detail message, error_code)
+- [x] **BACK-03**: All error responses follow standardized format (status code, detail message, error_code)
 - [x] **BACK-04**: Every protected endpoint rejects unauthenticated requests with 401
 - [x] **BACK-05**: Every endpoint handles missing/malformed request body gracefully (400, not 500)
 - [x] **BACK-06**: Credit-consuming endpoints check balance before executing and refund on failure
-- [ ] **BACK-07**: Rate limiting configured per endpoint (auth endpoints stricter)
+- [x] **BACK-07**: Rate limiting configured per endpoint (auth endpoints stricter)
 - [x] **BACK-08**: Endpoint registry document (.planning/audit/BACKEND-API-AUDIT.md) with status per endpoint
 
 ### Onboarding
@@ -158,89 +158,89 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements.
 
-| Requirement | Phase | Status  |
-| ----------- | ----- | ------- |
+| Requirement | Phase | Status   |
+| ----------- | ----- | -------- |
 | BACK-01     | 26    | Complete |
 | BACK-02     | 26    | Complete |
-| BACK-03     | 26    | Pending |
+| BACK-03     | 26    | Complete |
 | BACK-04     | 26    | Complete |
 | BACK-05     | 26    | Complete |
 | BACK-06     | 26    | Complete |
-| BACK-07     | 26    | Pending |
+| BACK-07     | 26    | Complete |
 | BACK-08     | 26    | Complete |
-| ONBD-01     | 27    | Pending |
-| ONBD-02     | 27    | Pending |
-| ONBD-03     | 27    | Pending |
-| ONBD-04     | 27    | Pending |
-| ONBD-05     | 27    | Pending |
-| ONBD-06     | 27    | Pending |
-| ONBD-07     | 27    | Pending |
-| ONBD-08     | 27    | Pending |
-| CONT-01     | 28    | Pending |
-| CONT-02     | 28    | Pending |
-| CONT-03     | 28    | Pending |
-| CONT-04     | 28    | Pending |
-| CONT-05     | 28    | Pending |
-| CONT-06     | 28    | Pending |
-| CONT-07     | 28    | Pending |
-| CONT-08     | 28    | Pending |
-| CONT-09     | 28    | Pending |
-| CONT-10     | 28    | Pending |
-| CONT-11     | 28    | Pending |
-| CONT-12     | 28    | Pending |
-| MDIA-01     | 29    | Pending |
-| MDIA-02     | 29    | Pending |
-| MDIA-03     | 29    | Pending |
-| MDIA-04     | 29    | Pending |
-| MDIA-05     | 29    | Pending |
-| MDIA-06     | 29    | Pending |
-| MDIA-07     | 29    | Pending |
-| MDIA-08     | 29    | Pending |
-| PUBL-01     | 30    | Pending |
-| PUBL-02     | 30    | Pending |
-| PUBL-03     | 30    | Pending |
-| PUBL-04     | 30    | Pending |
-| PUBL-05     | 30    | Pending |
-| PUBL-06     | 30    | Pending |
-| PUBL-07     | 30    | Pending |
-| SCHD-01     | 31    | Pending |
-| SCHD-02     | 31    | Pending |
-| SCHD-03     | 31    | Pending |
-| SCHD-04     | 31    | Pending |
-| FEND-01     | 32    | Pending |
-| FEND-02     | 32    | Pending |
-| FEND-03     | 32    | Pending |
-| FEND-04     | 32    | Pending |
-| FEND-05     | 32    | Pending |
-| FEND-06     | 32    | Pending |
-| FEND-07     | 32    | Pending |
-| DSGN-01     | 33    | Pending |
-| DSGN-02     | 33    | Pending |
-| DSGN-03     | 33    | Pending |
-| DSGN-04     | 33    | Pending |
-| DSGN-05     | 33    | Pending |
-| SECR-01     | 34    | Pending |
-| SECR-02     | 34    | Pending |
-| SECR-03     | 34    | Pending |
-| SECR-04     | 34    | Pending |
-| SECR-05     | 34    | Pending |
-| SECR-06     | 34    | Pending |
-| SECR-07     | 34    | Pending |
-| SECR-08     | 34    | Pending |
-| SECR-09     | 34    | Pending |
-| SECR-10     | 34    | Pending |
-| SECR-11     | 34    | Pending |
-| SECR-12     | 34    | Pending |
-| SECR-13     | 34    | Pending |
-| PERF-01     | 35    | Pending |
-| PERF-02     | 35    | Pending |
-| PERF-03     | 35    | Pending |
-| PERF-04     | 35    | Pending |
-| PERF-05     | 35    | Pending |
-| PERF-06     | 35    | Pending |
-| PERF-07     | 35    | Pending |
-| PERF-08     | 35    | Pending |
-| PERF-09     | 35    | Pending |
+| ONBD-01     | 27    | Pending  |
+| ONBD-02     | 27    | Pending  |
+| ONBD-03     | 27    | Pending  |
+| ONBD-04     | 27    | Pending  |
+| ONBD-05     | 27    | Pending  |
+| ONBD-06     | 27    | Pending  |
+| ONBD-07     | 27    | Pending  |
+| ONBD-08     | 27    | Pending  |
+| CONT-01     | 28    | Pending  |
+| CONT-02     | 28    | Pending  |
+| CONT-03     | 28    | Pending  |
+| CONT-04     | 28    | Pending  |
+| CONT-05     | 28    | Pending  |
+| CONT-06     | 28    | Pending  |
+| CONT-07     | 28    | Pending  |
+| CONT-08     | 28    | Pending  |
+| CONT-09     | 28    | Pending  |
+| CONT-10     | 28    | Pending  |
+| CONT-11     | 28    | Pending  |
+| CONT-12     | 28    | Pending  |
+| MDIA-01     | 29    | Pending  |
+| MDIA-02     | 29    | Pending  |
+| MDIA-03     | 29    | Pending  |
+| MDIA-04     | 29    | Pending  |
+| MDIA-05     | 29    | Pending  |
+| MDIA-06     | 29    | Pending  |
+| MDIA-07     | 29    | Pending  |
+| MDIA-08     | 29    | Pending  |
+| PUBL-01     | 30    | Pending  |
+| PUBL-02     | 30    | Pending  |
+| PUBL-03     | 30    | Pending  |
+| PUBL-04     | 30    | Pending  |
+| PUBL-05     | 30    | Pending  |
+| PUBL-06     | 30    | Pending  |
+| PUBL-07     | 30    | Pending  |
+| SCHD-01     | 31    | Pending  |
+| SCHD-02     | 31    | Pending  |
+| SCHD-03     | 31    | Pending  |
+| SCHD-04     | 31    | Pending  |
+| FEND-01     | 32    | Pending  |
+| FEND-02     | 32    | Pending  |
+| FEND-03     | 32    | Pending  |
+| FEND-04     | 32    | Pending  |
+| FEND-05     | 32    | Pending  |
+| FEND-06     | 32    | Pending  |
+| FEND-07     | 32    | Pending  |
+| DSGN-01     | 33    | Pending  |
+| DSGN-02     | 33    | Pending  |
+| DSGN-03     | 33    | Pending  |
+| DSGN-04     | 33    | Pending  |
+| DSGN-05     | 33    | Pending  |
+| SECR-01     | 34    | Pending  |
+| SECR-02     | 34    | Pending  |
+| SECR-03     | 34    | Pending  |
+| SECR-04     | 34    | Pending  |
+| SECR-05     | 34    | Pending  |
+| SECR-06     | 34    | Pending  |
+| SECR-07     | 34    | Pending  |
+| SECR-08     | 34    | Pending  |
+| SECR-09     | 34    | Pending  |
+| SECR-10     | 34    | Pending  |
+| SECR-11     | 34    | Pending  |
+| SECR-12     | 34    | Pending  |
+| SECR-13     | 34    | Pending  |
+| PERF-01     | 35    | Pending  |
+| PERF-02     | 35    | Pending  |
+| PERF-03     | 35    | Pending  |
+| PERF-04     | 35    | Pending  |
+| PERF-05     | 35    | Pending  |
+| PERF-06     | 35    | Pending  |
+| PERF-07     | 35    | Pending  |
+| PERF-08     | 35    | Pending  |
+| PERF-09     | 35    | Pending  |
 
 **Coverage:**
 

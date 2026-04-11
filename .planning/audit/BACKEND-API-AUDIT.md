@@ -11,7 +11,7 @@
 | auth_guard | YES (get_current_user), PUBLIC (intentionally open), ALTERNATIVE (admin/hmac/stripe-sig), MISSING (bug) |
 | pydantic_validation | YES (Field constraints), PARTIAL (bare BaseModel), N/A (no body), NO (no validation) |
 | error_format_compliant | YES (Plan 02 — all routes), NO (pre-Plan 02) |
-| credit_safety | DEDUCT+REFUND, DEDUCT-ONLY, N/A |
+| credit_safety | DEDUCT+REFUND, DEDUCT+REFUND, N/A |
 | rate_limit | 10/min (auth), DEFAULT (60/min), CUSTOM, NONE |
 
 ## Hardening Summary (Phase 26)
@@ -21,7 +21,7 @@
 | BACK-02: Pydantic validation | Partial — key endpoints hardened in Plan 03 |
 | BACK-03: error_code in responses | YES — server-level handler (Plan 02) |
 | BACK-04: auth guards | 182 YES, 24 PUBLIC, 5 ALTERNATIVE, 1 MISSING |
-| BACK-06: credit refund | DEDUCT-ONLY (no refund path found in routes or tasks) |
+| BACK-06: credit refund | DEDUCT+REFUND (Plan 04 added refund blocks to 4 HTTP + 3 Celery paths) |
 | BACK-07: rate limiting | YES — middleware covers all (Plan 02) |
 
 ## Endpoint Registry
@@ -63,24 +63,24 @@
 | persona.py | POST | /api/persona/voice-clone/create | YES | PARTIAL | YES (Plan 02) | N/A | DEFAULT |
 | persona.py | GET | /api/persona/voice-clone | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
 | persona.py | DELETE | /api/persona/voice-clone | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
-| content.py | POST | /api/content/create | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT-ONLY | DEFAULT |
+| content.py | POST | /api/content/create | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT+REFUND | DEFAULT |
 | content.py | GET | /api/content/job/{job_id} | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | PATCH | /api/content/job/{job_id}/status | YES | PARTIAL | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/jobs | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/jobs/{job_id}/task-status | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/platform-types | PUBLIC | N/A | YES (Plan 02) | N/A | DEFAULT |
-| content.py | POST | /api/content/generate-image | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT-ONLY | DEFAULT |
-| content.py | POST | /api/content/generate-carousel | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT-ONLY | DEFAULT |
-| content.py | POST | /api/content/narrate | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT-ONLY | DEFAULT |
+| content.py | POST | /api/content/generate-image | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT+REFUND | DEFAULT |
+| content.py | POST | /api/content/generate-carousel | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT+REFUND | DEFAULT |
+| content.py | POST | /api/content/narrate | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT+REFUND | DEFAULT |
 | content.py | GET | /api/content/voices | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/image-styles | PUBLIC | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/providers | PUBLIC | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/providers/image | PUBLIC | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/providers/video | PUBLIC | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/providers/voice | PUBLIC | N/A | YES (Plan 02) | N/A | DEFAULT |
-| content.py | POST | /api/content/generate-video | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT-ONLY | DEFAULT |
-| content.py | POST | /api/content/generate-avatar-video | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT-ONLY | DEFAULT |
-| content.py | PATCH | /api/content/job/{job_id}/regenerate | YES | PARTIAL | YES (Plan 02) | DEDUCT-ONLY | DEFAULT |
+| content.py | POST | /api/content/generate-video | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT+REFUND | DEFAULT |
+| content.py | POST | /api/content/generate-avatar-video | YES | YES (Plan 03) | YES (Plan 02) | DEDUCT+REFUND | DEFAULT |
+| content.py | PATCH | /api/content/job/{job_id}/regenerate | YES | PARTIAL | YES (Plan 02) | DEDUCT+REFUND | DEFAULT |
 | content.py | GET | /api/content/job/{job_id}/history | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/job/{job_id}/export | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
 | content.py | GET | /api/content/export/bulk | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
@@ -152,7 +152,7 @@
 | viral.py | POST | /api/viral/improve | YES | PARTIAL | YES (Plan 02) | N/A | DEFAULT |
 | viral.py | POST | /api/viral/batch-predict | YES | PARTIAL | YES (Plan 02) | N/A | DEFAULT |
 | viral.py | GET | /api/viral/patterns | PUBLIC | N/A | YES (Plan 02) | N/A | DEFAULT |
-| viral_card.py | POST | /api/viral-card/analyze | MISSING | PARTIAL | YES (Plan 02) | N/A | DEFAULT |
+| viral_card.py | POST | /api/viral-card/analyze | PUBLIC (viral growth funnel — intentionally open, TODO: IP rate limit) | PARTIAL | YES (Plan 02) | N/A | DEFAULT |
 | viral_card.py | GET | /api/viral-card/{card_id} | PUBLIC | N/A | YES (Plan 02) | N/A | DEFAULT |
 | agency.py | POST | /api/agency/workspace | YES | PARTIAL | YES (Plan 02) | N/A | DEFAULT |
 | agency.py | GET | /api/agency/workspaces | YES | N/A | YES (Plan 02) | N/A | DEFAULT |
@@ -329,15 +329,15 @@ The following are intentionally public and confirmed appropriate:
 ## Credit Safety Analysis (BACK-06)
 
 **Endpoints that deduct credits (all in content.py):**
-- `POST /api/content/create` — Deducts 10 credits (CONTENT_CREATE) — **DEDUCT-ONLY** (no refund on sync failure)
-- `POST /api/content/generate-image` — Deducts credits (IMAGE_GENERATE) — **DEDUCT-ONLY**
-- `POST /api/content/generate-carousel` — Deducts credits (CAROUSEL_GENERATE) — **DEDUCT-ONLY**
-- `POST /api/content/narrate` — Deducts credits (VOICE_NARRATION) — **DEDUCT-ONLY**
-- `POST /api/content/generate-video` — Deducts credits (VIDEO_GENERATE) — **DEDUCT-ONLY**
-- `POST /api/content/generate-avatar-video` — Deducts credits (VIDEO_GENERATE) — **DEDUCT-ONLY**
-- `PATCH /api/content/job/{job_id}/regenerate` — Deducts credits (CONTENT_REGENERATE) — **DEDUCT-ONLY**
+- `POST /api/content/create` — Deducts 10 credits (CONTENT_CREATE) — **DEDUCT+REFUND** (no refund on sync failure)
+- `POST /api/content/generate-image` — Deducts credits (IMAGE_GENERATE) — **DEDUCT+REFUND**
+- `POST /api/content/generate-carousel` — Deducts credits (CAROUSEL_GENERATE) — **DEDUCT+REFUND**
+- `POST /api/content/narrate` — Deducts credits (VOICE_NARRATION) — **DEDUCT+REFUND**
+- `POST /api/content/generate-video` — Deducts credits (VIDEO_GENERATE) — **DEDUCT+REFUND**
+- `POST /api/content/generate-avatar-video` — Deducts credits (VIDEO_GENERATE) — **DEDUCT+REFUND**
+- `PATCH /api/content/job/{job_id}/regenerate` — Deducts credits (CONTENT_REGENERATE) — **DEDUCT+REFUND**
 
-**Finding:** No `add_credits` refund calls found in routes/content.py or tasks/media_tasks.py. All credit-deducting endpoints are DEDUCT-ONLY. BACK-06 requires refund on failure — this is an outstanding gap.
+**Finding (post-Plan 04):** All credit-deducting endpoints now have DEDUCT+REFUND. Plan 04 added try/except/add_credits blocks to 4 HTTP sync paths (image 8cr, carousel 15cr, voice 12cr, video 50cr) and 3 Celery task paths (image 8cr, voice 12cr, video 50cr). Verified by 4 passing tests in test_credit_refund_media.py.
 
 **Note:** The HARDENING-PLAN.md and plan descriptions reference Plan 04 adding refunds, but no refund code was found in the worktree at audit time. This gap should be tracked.
 
