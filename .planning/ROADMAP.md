@@ -207,9 +207,9 @@
 5. A path traversal attempt (configuring vault path outside the designated subdirectory) is blocked at the service level with a logged error
    **Plans**: 5 plans
    Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
+   - [x] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
    - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
+   - [x] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
    - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
    - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
    **UI hint**: yes
@@ -612,7 +612,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 
 | Phase                                | Plans Complete | Status      | Completed |
 | ------------------------------------ | -------------- | ----------- | --------- |
-| 26. Backend Endpoint Hardening       | 0/TBD          | Not started | -         |
+| 26. Backend Endpoint Hardening       | 2/5 | In Progress|  |
 | 27. Onboarding Reimagination         | 0/TBD          | Not started | -         |
 | 28. Content Generation Multi-Format  | 0/TBD          | Not started | -         |
 | 29. Media Generation Pipeline        | 0/TBD          | Not started | -         |
