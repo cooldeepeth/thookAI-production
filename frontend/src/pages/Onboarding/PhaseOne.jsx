@@ -30,24 +30,58 @@ export default function PhaseOne({ onContinue }) {
   const platformIcons = { LinkedIn: Linkedin, 'X (Twitter)': Twitter, Instagram };
 
   if (result) {
+    // Parse writing samples from the textarea (split on double-newlines or triple-dashes)
+    const parsedSamples = postsText.trim()
+      ? postsText.split(/\n{2,}|---+/).map(s => s.trim()).filter(Boolean)
+      : [];
+
     return (
       <div className="flex items-center justify-center min-h-full p-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-xl w-full">
-          <div className="w-12 h-12 bg-lime/15 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <span className="text-xl">✓</span>
-          </div>
-          <h2 className="font-display font-bold text-2xl text-white text-center mb-2">Posts analyzed</h2>
-          <p className="text-zinc-500 text-sm text-center mb-6">Here's what we learned from your writing</p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-xl w-full"
+          data-testid="fingerprint-confirm"
+        >
+          <p className="text-xs text-zinc-600 uppercase tracking-widest font-mono text-center mb-6">
+            Style Analysis
+          </p>
           <div className="card-thook p-5 mb-6">
-            <p className="text-sm text-zinc-300 leading-relaxed">{result.analysis}</p>
+            <h2 className="font-display font-bold text-3xl text-white mb-3">
+              Your writing fingerprint
+            </h2>
+            <p className="text-sm text-zinc-300 leading-relaxed mb-4">
+              {result.analysis}
+            </p>
+            {Array.isArray(result.detected_patterns) && result.detected_patterns.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {result.detected_patterns.map((pattern, i) => (
+                  <span
+                    key={i}
+                    className="badge-lime text-xs px-2.5 py-1 rounded-full"
+                  >
+                    {pattern}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-          <button
-            onClick={() => onContinue(result)}
-            data-testid="proceed-to-interview-btn"
-            className="w-full btn-primary flex items-center justify-center gap-2"
-          >
-            Continue to interview <ArrowRight size={16} />
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setResult(null)}
+              data-testid="fingerprint-edit-btn"
+              className="btn-ghost flex-1 text-sm"
+            >
+              Edit my posts
+            </button>
+            <button
+              onClick={() => onContinue(result, parsedSamples)}
+              data-testid="fingerprint-confirm-btn"
+              className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm"
+            >
+              This is me <ArrowRight size={15} />
+            </button>
+          </div>
         </motion.div>
       </div>
     );
