@@ -583,7 +583,7 @@ export default function Settings() {
                   <div className="space-y-4">
                     <div className="text-center py-2">
                       <p className="text-4xl font-bold text-white">
-                        ${planPreview.monthly_price || 0}
+                        ${planPreview.monthly_price_usd || 0}
                       </p>
                       <p className="text-sm text-zinc-500">/month</p>
                     </div>

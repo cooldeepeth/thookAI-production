@@ -99,7 +99,7 @@ class TestCalculatePlanCredits:
 
 
 class TestCalculatePlanPrice:
-    """Volume tiers: ≤500 @$0.06, ≤1500 @$0.05, ≤5000 @$0.035, >5000 @$0.03."""
+    """Volume tiers: ≤200 @$0.06, ≤800 @$0.056, ≤2000 @$0.045, >2000 @$0.035."""
 
     def test_zero_credits_returns_zero(self):
         from services.credits import calculate_plan_price
@@ -111,41 +111,37 @@ class TestCalculatePlanPrice:
 
     def test_500_credits_tier1_boundary(self):
         from services.credits import calculate_plan_price
-        # 500 is AT tier1 boundary (up_to=500)
-        assert calculate_plan_price(500) == math.ceil(500 * 0.06)  # 30
+        # 500 is in tier2 (201-800 @$0.056)
+        assert calculate_plan_price(500) == math.ceil(500 * 0.056)  # 28
 
     def test_501_credits_tier2(self):
         from services.credits import calculate_plan_price
-        # 501 crosses into tier2 (up_to=1500 @$0.05)
-        assert calculate_plan_price(501) == math.ceil(501 * 0.05)  # 26
+        # 501 still in tier2 (201-800 @$0.056)
+        assert calculate_plan_price(501) == math.ceil(501 * 0.056)  # 29
 
     def test_1000_credits_tier2(self):
         from services.credits import calculate_plan_price
-        assert calculate_plan_price(1000) == math.ceil(1000 * 0.05)  # 50
+        # 1000 in tier3 (801-2000 @$0.045)
+        assert calculate_plan_price(1000) == math.ceil(1000 * 0.045)  # 45
 
     def test_1500_credits_tier2_boundary(self):
         from services.credits import calculate_plan_price
-        assert calculate_plan_price(1500) == math.ceil(1500 * 0.05)  # 75
+        # 1500 in tier3 (801-2000 @$0.045)
+        assert calculate_plan_price(1500) == math.ceil(1500 * 0.045)  # 68
 
     def test_1501_credits_tier3(self):
         from services.credits import calculate_plan_price
-        assert calculate_plan_price(1501) == math.ceil(1501 * 0.035)  # 53
-
-    def test_3000_credits_tier3(self):
-        from services.credits import calculate_plan_price
-        assert calculate_plan_price(3000) == math.ceil(3000 * 0.035)  # 105
-
-    def test_5000_credits_tier3_boundary(self):
-        from services.credits import calculate_plan_price
-        assert calculate_plan_price(5000) == math.ceil(5000 * 0.035)  # 175
+        # 1501 still in tier3 (801-2000 @$0.045)
+        assert calculate_plan_price(1501) == math.ceil(1501 * 0.045)  # 68
 
     def test_5001_credits_tier4(self):
         from services.credits import calculate_plan_price
-        assert calculate_plan_price(5001) == math.ceil(5001 * 0.03)  # 151
+        # 5001 in tier4 (2000+ @$0.035)
+        assert calculate_plan_price(5001) == math.ceil(5001 * 0.035)  # 176
 
     def test_6000_credits_tier4(self):
         from services.credits import calculate_plan_price
-        assert calculate_plan_price(6000) == math.ceil(6000 * 0.03)  # 180
+        assert calculate_plan_price(6000) == math.ceil(6000 * 0.035)  # 211
 
     def test_price_always_rounded_up(self):
         """Price should be rounded UP to the nearest dollar (math.ceil)."""
@@ -804,7 +800,7 @@ class TestBoundaryValuesPure:
         """Very large credit count (50000) → handled without error."""
         from services.credits import calculate_plan_price
         result = calculate_plan_price(50000)
-        assert result == math.ceil(50000 * 0.03)  # tier4: $0.03/credit
+        assert result == math.ceil(50000 * 0.035)  # tier4: $0.035/credit
 
     def test_calculate_plan_credits_all_operations(self):
         """All operations combined produces correct sum."""

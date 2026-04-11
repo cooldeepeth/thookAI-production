@@ -397,13 +397,13 @@ def test_build_plan_preview_volume_discount():
     """Higher credit volumes get lower per-credit pricing."""
     from services.credits import build_plan_preview
 
-    # Small plan: 500 credits -> $0.06/credit -> $30
+    # Small plan: 500 credits → tier 2 (201-800 @$0.056/credit)
     small = build_plan_preview(text_posts=50)  # 50 * 10 = 500 credits
     assert small["total_credits"] == 500
-    assert small["price_per_credit"] == 0.06
+    assert small["price_per_credit"] == 0.056
 
-    # Large plan: 2000 credits -> $0.035/credit
+    # Large plan: 2000 credits → tier 3 (801-2000 @$0.045/credit)
     large = build_plan_preview(text_posts=200)  # 200 * 10 = 2000 credits
     assert large["total_credits"] == 2000
-    assert large["price_per_credit"] == 0.035
+    assert large["price_per_credit"] == 0.045
     assert large["monthly_price_usd"] > small["monthly_price_usd"]

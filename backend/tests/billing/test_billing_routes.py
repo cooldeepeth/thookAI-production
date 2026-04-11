@@ -837,17 +837,17 @@ class TestBillingServiceCoverage:
     async def test_calculate_plan_price_volume_tiers(self):
         """calculate_plan_price applies correct volume tiers."""
         from services.credits import calculate_plan_price
-        # Under 500: 6 cents/credit
+        # Under 200: 6 cents/credit
         price_small = calculate_plan_price(100)
         assert price_small == 6  # ceil(100 * 0.06) = 6
 
-        # 500-1500: 5 cents/credit
-        price_mid = calculate_plan_price(1000)
-        assert price_mid == 50  # ceil(1000 * 0.05) = 50
+        # 201-800: 5.6 cents/credit
+        price_mid = calculate_plan_price(500)
+        assert price_mid == 28  # ceil(500 * 0.056) = 28
 
-        # Over 5000: 3 cents/credit
+        # Over 2000: 3.5 cents/credit
         price_large = calculate_plan_price(6000)
-        assert price_large == 180  # ceil(6000 * 0.03) = 180
+        assert price_large == 211  # ceil(6000 * 0.035) = 211
 
     async def test_calculate_plan_price_zero_returns_zero(self):
         """calculate_plan_price(0) returns 0."""
@@ -1390,26 +1390,26 @@ class TestBillingServiceCoverage:
         cost = get_operation_cost("NONEXISTENT_OP")
         assert cost == 0
 
-    async def test_build_plan_preview_large_plan_scale_label(self):
-        """build_plan_preview returns scale volume_tier for large credit plans."""
+    async def test_build_plan_preview_large_plan_enterprise_label(self):
+        """build_plan_preview returns enterprise volume_tier for large credit plans."""
         from services.credits import build_plan_preview
-        # 6000+ credits (>5000 threshold) → scale tier
-        preview = build_plan_preview(videos=120)  # 120 * 50 = 6000 credits
+        # 5000 credits (>2000 threshold @$0.035) → enterprise tier
+        preview = build_plan_preview(videos=100)  # 100 * 50 = 5000 credits
+        assert preview["volume_tier"] == "enterprise"
+
+    async def test_build_plan_preview_scale_label(self):
+        """build_plan_preview returns scale volume_tier for 801-2000 range."""
+        from services.credits import build_plan_preview
+        # 1000 credits (801-2000 @$0.045) → scale tier
+        preview = build_plan_preview(text_posts=100)  # 100 * 10 = 1000 credits
         assert preview["volume_tier"] == "scale"
 
-    async def test_build_plan_preview_mid_plan_growth_label(self):
-        """build_plan_preview returns growth volume_tier for mid-range plans."""
+    async def test_build_plan_preview_growth_label(self):
+        """build_plan_preview returns growth volume_tier for 201-800 credit range."""
         from services.credits import build_plan_preview
-        # ~2000 credits (between 1500-5000) → growth tier
-        preview = build_plan_preview(videos=40)  # 40 * 50 = 2000 credits
+        # 500 credits (201-800 @$0.056) → growth tier
+        preview = build_plan_preview(text_posts=50)  # 50 * 10 = 500 credits
         assert preview["volume_tier"] == "growth"
-
-    async def test_build_plan_preview_pro_label(self):
-        """build_plan_preview returns pro volume_tier for 500-1500 credit range."""
-        from services.credits import build_plan_preview
-        # 1000 credits (between 500-1500 at 5 cents) → pro tier
-        preview = build_plan_preview(text_posts=100)  # 100 * 10 = 1000 credits
-        assert preview["volume_tier"] == "pro"
 
     async def test_handle_payment_succeeded_no_subscription_id(self, mongomock_db):
         """handle_payment_succeeded with no subscription_id returns silently."""

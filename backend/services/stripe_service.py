@@ -79,8 +79,8 @@ validate_stripe_config()
 
 CREDIT_PACKAGES = {
     "small": {"credits": 100, "price": 600, "stripe_price": settings.stripe.price_credits_100 or ''},
-    "medium": {"credits": 500, "price": 2500, "stripe_price": settings.stripe.price_credits_500 or ''},
-    "large": {"credits": 1000, "price": 4000, "stripe_price": settings.stripe.price_credits_1000 or ''},
+    "medium": {"credits": 500, "price": 2800, "stripe_price": settings.stripe.price_credits_500 or ''},
+    "large": {"credits": 1000, "price": 4500, "stripe_price": settings.stripe.price_credits_1000 or ''},
 }
 
 

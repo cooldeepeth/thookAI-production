@@ -71,9 +71,9 @@ def test_build_plan_preview_mixed_usage():
 
     assert result["total_credits"] == expected_credits == 285
 
-    # 285 credits <= 500 threshold → $0.06/credit → ceil(285 * 0.06) = ceil(17.1) = 18
-    assert result["monthly_price_usd"] == math.ceil(285 * 0.06)
-    assert result["volume_tier"] == "standard"
+    # 285 credits in tier 2 (201-800) at $0.056/credit → ceil(285 * 0.056) = ceil(15.96) = 16
+    assert result["monthly_price_usd"] == math.ceil(285 * 0.056)
+    assert result["volume_tier"] == "growth"
 
 
 def test_build_plan_preview_zero_returns_zero():
@@ -90,18 +90,18 @@ def test_calculate_plan_price_volume_tiers():
     """Verify each volume tier boundary applies the correct per-credit rate."""
     from services.credits import calculate_plan_price
 
-    # Tier 1: up to 500 credits at $0.06
+    # Tier 1: up to 200 credits at $0.06
     assert calculate_plan_price(100) == math.ceil(100 * 0.06)   # = 6
-    assert calculate_plan_price(500) == math.ceil(500 * 0.06)   # = 30
+    assert calculate_plan_price(200) == math.ceil(200 * 0.06)   # = 12
 
-    # Tier 2: 501–1500 at $0.05
-    assert calculate_plan_price(1000) == math.ceil(1000 * 0.05)  # = 50
+    # Tier 2: 201–800 at $0.056
+    assert calculate_plan_price(500) == math.ceil(500 * 0.056)  # = 28
 
-    # Tier 3: 1501–5000 at $0.035
+    # Tier 3: 801–2000 at $0.045
+    assert calculate_plan_price(1000) == math.ceil(1000 * 0.045) # = 45
+
+    # Tier 4: 2000+ at $0.035
     assert calculate_plan_price(3000) == math.ceil(3000 * 0.035) # = 105
-
-    # Tier 4: 5000+ at $0.03
-    assert calculate_plan_price(6000) == math.ceil(6000 * 0.03)  # = 180
 
     # Zero credits → free
     assert calculate_plan_price(0) == 0
