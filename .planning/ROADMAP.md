@@ -64,7 +64,7 @@
 **Milestone Goal:** Transform ThookAI from "code exists" to "every feature works perfectly end-to-end" — a new user can register, onboard interactively, generate multi-format content, schedule, and publish to real social accounts with zero errors. Ready for real users at scale.
 
 - [x] **Phase 26: Backend Endpoint Hardening** - Audit and harden all 26 route files against production: every endpoint tested with curl, Pydantic validation enforced, standardized error format, auth guards verified, credit-safety checks, rate limiting tuned (completed 2026-04-11)
-- [ ] **Phase 27: Onboarding Reimagination** - Rebuild the onboarding wizard with voice sample recording, writing style analysis, visual identity selection, multi-step progress, save-as-you-go, and fix the LLM model name bug in onboarding.py
+- [x] **Phase 27: Onboarding Reimagination** - Rebuild the onboarding wizard with voice sample recording, writing style analysis, visual identity selection, multi-step progress, save-as-you-go, and fix the LLM model name bug in onboarding.py (completed 2026-04-11)
 - [ ] **Phase 28: Content Generation Multi-Format** - Implement platform-specific content generation for all 9 formats (LinkedIn post/article/carousel, X tweet/thread, Instagram feed/reel/story) with persona-aware Writer prompts and real-time pipeline progress
 - [ ] **Phase 29: Media Generation Pipeline** - Wire and verify the full media pipeline: auto-images via DALL-E/FAL.ai, carousel slides via Remotion, video via Runway/Luma, voice narration via ElevenLabs, R2 upload flow end-to-end, media display in UI
 - [ ] **Phase 30: Social Publishing End-to-End** - Fix and verify LinkedIn UGC, X v2, and Instagram Meta Graph publishing with OAuth connect/refresh, token encryption, publish status tracking, and real engagement metrics display
@@ -435,7 +435,7 @@
    - [x] 27-02-PLAN.md — Wizard container (5-step stepper, localStorage draft) + WritingStyleStep fingerprint confirm
    - [x] 27-03-PLAN.md — VoiceRecordingStep + VisualPaletteStep new components
    - [x] 27-04-PLAN.md — Wire new steps into wizard + InterviewStep counter + human verification checkpoint
-   - [ ] 27-05-PLAN.md — Backend audit + edge case tests + full suite gate
+   - [x] 27-05-PLAN.md — Backend audit + edge case tests + full suite gate
    **UI hint**: yes
 
 ### Phase 28: Content Generation Multi-Format
@@ -613,7 +613,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | Phase                                | Plans Complete | Status      | Completed |
 | ------------------------------------ | -------------- | ----------- | --------- |
 | 26. Backend Endpoint Hardening       | 5/5 | Complete    | 2026-04-11 |
-| 27. Onboarding Reimagination         | 4/5 | In Progress|  |
+| 27. Onboarding Reimagination         | 5/5 | Complete   | 2026-04-11 |
 | 28. Content Generation Multi-Format  | 0/TBD          | Not started | -         |
 | 29. Media Generation Pipeline        | 0/TBD          | Not started | -         |
 | 30. Social Publishing End-to-End     | 0/TBD          | Not started | -         |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Checkpoint reached — Task 3 human-verify in 27-04-PLAN.md
-last_updated: "2026-04-11T18:42:49.394Z"
+stopped_at: Completed 27-onboarding-reimagination/27-05-PLAN.md
+last_updated: "2026-04-11T18:56:15.580Z"
 last_activity: 2026-04-11
 progress:
   total_phases: 27
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-12)
 ## Current Position
 
 Phase: 27 (Onboarding Reimagination) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-04-11
 
@@ -56,6 +56,7 @@ _Updated after each plan completion_
 | Phase 26-backend-endpoint-hardening P04 | 6 | 2 tasks | 3 files |
 | Phase 26 P05 | 5 | 3 tasks | 3 files |
 | Phase 27-onboarding-reimagination P02 | 4 | 2 tasks | 4 files |
+| Phase 27 P05 | 20 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 27-onboarding-reimagination]: Draft restore in OnboardingWizard caps at step 4 — step 5 (PersonaRevealStep) always requires fresh generation; onContinue in PhaseOne now takes (result, parsedSamples) signature
 - [Phase 27]: Back button in PhaseTwo always visible (not conditional at Q=0) — enables onBack signal at first question per UI-SPEC navigation contract
 - [Phase 27]: VoiceRecordingStep onSkip wired as () => handleVoiceComplete(null) inline lambda matching UI-SPEC skip behavior (voice_sample_url: null)
+- [Phase 27]: pytest.ini gets pythonpath=. — eliminates PYTHONPATH env var requirement for all backend test invocations
+- [Phase 27]: 6 edge-case tests added to TestNewPersonaFields and TestGeneratePersonaExtendedRequest — type assertions and LLM-value passthrough verification close ONBD-05/06 traceability gaps
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T18:42:44.291Z
-Stopped at: Checkpoint reached — Task 3 human-verify in 27-04-PLAN.md
+Last session: 2026-04-11T18:56:15.577Z
+Stopped at: Completed 27-onboarding-reimagination/27-05-PLAN.md
 Resume file: None
