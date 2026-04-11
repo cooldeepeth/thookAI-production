@@ -14,7 +14,7 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 - [ ] **BACK-03**: All error responses follow standardized format (status code, detail message, error_code)
 - [ ] **BACK-04**: Every protected endpoint rejects unauthenticated requests with 401
 - [x] **BACK-05**: Every endpoint handles missing/malformed request body gracefully (400, not 500)
-- [ ] **BACK-06**: Credit-consuming endpoints check balance before executing and refund on failure
+- [x] **BACK-06**: Credit-consuming endpoints check balance before executing and refund on failure
 - [ ] **BACK-07**: Rate limiting configured per endpoint (auth endpoints stricter)
 - [ ] **BACK-08**: Endpoint registry document (.planning/audit/BACKEND-API-AUDIT.md) with status per endpoint
 
@@ -165,7 +165,7 @@ Which phases cover which requirements.
 | BACK-03     | 26    | Pending |
 | BACK-04     | 26    | Pending |
 | BACK-05     | 26    | Complete |
-| BACK-06     | 26    | Pending |
+| BACK-06     | 26    | Complete |
 | BACK-07     | 26    | Pending |
 | BACK-08     | 26    | Pending |
 | ONBD-01     | 27    | Pending |
