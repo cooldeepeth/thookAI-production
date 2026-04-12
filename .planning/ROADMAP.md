@@ -473,11 +473,11 @@
 5. A failed media generation (e.g., provider timeout) logs the error to Sentry, refunds the media credits to the user, and shows a retry button in the UI — no silent failures
    **Plans**: 5 plans
    Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   - [ ] 29-01-PLAN.md — Wave 0 test scaffolding (3 failing tests: CreativeProvidersService, voice R2, carousel Remotion)
+   - [ ] 29-02-PLAN.md — Fix Celery tasks: remove CreativeProvidersService, call agent functions directly (Bug 1)
+   - [ ] 29-03-PLAN.md — Voice narration R2 upload in narrate_content() + Sentry capture in media except blocks (Bug 2, Bug 5)
+   - [ ] 29-04-PLAN.md — Wire _call_remotion(ImageCarousel) into generate_carousel() route (Bug 4)
+   - [ ] 29-05-PLAN.md — Frontend MediaPanel 202 async polling + R2 CORS verification checkpoint (Bug 3, MDIA-08)
    **UI hint**: yes
 
 ### Phase 30: Social Publishing End-to-End
