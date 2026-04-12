@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Completed 27-onboarding-reimagination/27-05-PLAN.md
-last_updated: "2026-04-12T04:08:52.984Z"
+stopped_at: Completed 28-02-PLAN.md
+last_updated: "2026-04-12T05:24:30.002Z"
 last_activity: 2026-04-12
 progress:
   total_phases: 27
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_plans: 15
+  completed_plans: 11
+  percent: 73
 ---
 
 # Project State
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** Proactive, personalized content creation at scale — the platform recommends what to create, generates multi-format media, and learns from real social performance data to improve every cycle.
-**Current focus:** Phase 27 — Onboarding Reimagination
+**Current focus:** Phase 28 — Content Generation Multi-Format
 
 ## Current Position
 
-Phase: 28
-Plan: Not started
+Phase: 28 (Content Generation Multi-Format) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
 Last activity: 2026-04-12
 
@@ -57,6 +57,7 @@ _Updated after each plan completion_
 | Phase 26 P05 | 5 | 3 tasks | 3 files |
 | Phase 27-onboarding-reimagination P02 | 4 | 2 tasks | 4 files |
 | Phase 27 P05 | 20 | 2 tasks | 2 files |
+| Phase 28 P02 | 197 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,9 @@ Recent decisions affecting current work:
 - [Phase 27]: VoiceRecordingStep onSkip wired as () => handleVoiceComplete(null) inline lambda matching UI-SPEC skip behavior (voice_sample_url: null)
 - [Phase 27]: pytest.ini gets pythonpath=. — eliminates PYTHONPATH env var requirement for all backend test invocations
 - [Phase 27]: 6 edge-case tests added to TestNewPersonaFields and TestGeneratePersonaExtendedRequest — type assertions and LLM-value passthrough verification close ONBD-05/06 traceability gaps
+- [Phase 28]: FORMAT_RULES uses content_type keys (not platform keys) so each of the 8 formats gets distinct Writer instructions
+- [Phase 28]: WORD_COUNT_DEFAULTS applied as floor override in run_commander after LLM JSON parsing to prevent articles getting 200-word estimates
+- [Phase 28]: story_sequence added to instagram allowlist in PLATFORM_CONTENT_TYPES to prevent 400 errors on Instagram story generation
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T18:56:15.577Z
-Stopped at: Completed 27-onboarding-reimagination/27-05-PLAN.md
+Last session: 2026-04-12T05:24:29.999Z
+Stopped at: Completed 28-02-PLAN.md
 Resume file: None

@@ -31,15 +31,15 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 
 ### Content Generation
 
-- [ ] **CONT-01**: User can generate LinkedIn text post with persona-aware voice
-- [ ] **CONT-02**: User can generate LinkedIn article with persona-aware voice
-- [ ] **CONT-03**: User can generate LinkedIn carousel (text + design slides)
-- [ ] **CONT-04**: User can generate X tweet with persona-aware voice
-- [ ] **CONT-05**: User can generate X thread (3-10 tweets with hooks)
-- [ ] **CONT-06**: User can generate Instagram feed caption with persona-aware voice
-- [ ] **CONT-07**: User can generate Instagram reel script
-- [ ] **CONT-08**: User can generate Instagram story sequence
-- [ ] **CONT-09**: Each format uses platform-specific Writer prompts (not generic)
+- [x] **CONT-01**: User can generate LinkedIn text post with persona-aware voice
+- [x] **CONT-02**: User can generate LinkedIn article with persona-aware voice
+- [x] **CONT-03**: User can generate LinkedIn carousel (text + design slides)
+- [x] **CONT-04**: User can generate X tweet with persona-aware voice
+- [x] **CONT-05**: User can generate X thread (3-10 tweets with hooks)
+- [x] **CONT-06**: User can generate Instagram feed caption with persona-aware voice
+- [x] **CONT-07**: User can generate Instagram reel script
+- [x] **CONT-08**: User can generate Instagram story sequence
+- [x] **CONT-09**: Each format uses platform-specific Writer prompts (not generic)
 - [ ] **CONT-10**: ContentStudio UI has format selection per platform
 - [ ] **CONT-11**: User can edit, approve, and schedule generated content
 - [ ] **CONT-12**: Content generation shows real-time pipeline progress (Commander→Scout→Thinker→Writer→QC)
@@ -176,15 +176,15 @@ Which phases cover which requirements.
 | ONBD-06     | 27    | Complete |
 | ONBD-07     | 27    | Complete |
 | ONBD-08     | 27    | Complete |
-| CONT-01     | 28    | Pending  |
-| CONT-02     | 28    | Pending  |
-| CONT-03     | 28    | Pending  |
-| CONT-04     | 28    | Pending  |
-| CONT-05     | 28    | Pending  |
-| CONT-06     | 28    | Pending  |
-| CONT-07     | 28    | Pending  |
-| CONT-08     | 28    | Pending  |
-| CONT-09     | 28    | Pending  |
+| CONT-01     | 28    | Complete |
+| CONT-02     | 28    | Complete |
+| CONT-03     | 28    | Complete |
+| CONT-04     | 28    | Complete |
+| CONT-05     | 28    | Complete |
+| CONT-06     | 28    | Complete |
+| CONT-07     | 28    | Complete |
+| CONT-08     | 28    | Complete |
+| CONT-09     | 28    | Complete |
 | CONT-10     | 28    | Pending  |
 | CONT-11     | 28    | Pending  |
 | CONT-12     | 28    | Pending  |
