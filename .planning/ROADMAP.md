@@ -530,8 +530,14 @@
 3. Resizing the browser from 375px to 1440px on any core page (auth, dashboard, ContentStudio, settings) shows a properly laid-out page at every width — no horizontal scroll, no overlapping elements, no truncated text
 4. A user can complete the full ContentStudio workflow (select platform → select format → type topic → generate → edit → approve → schedule) using only the keyboard — Tab, Enter, Space, and arrow keys are sufficient
 5. Every page shows a skeleton loader during data fetching, a user-friendly error message with retry option on API failure, and an appropriate empty state on first use — no page ever shows a blank white screen or a raw JavaScript error
-   **Plans**: TBD
-   Plans: [To be planned]
+   **Plans**: 6 plans
+   Plans:
+   - [ ] 32-01-PLAN.md — AuthPage: password validation, ARIA error, button types, focus-ring (FEND-01)
+   - [ ] 32-02-PLAN.md — DashboardHome: error+retry state, empty CTA, responsive grid fix (FEND-02, FEND-05, FEND-06)
+   - [ ] 32-03-PLAN.md — Settings: 4-tab layout (Radix Tabs), BillingTab skeleton/error, MSW handlers (FEND-04, FEND-05, FEND-07)
+   - [ ] 32-04-PLAN.md — ContentStudio: video toggle keyboard, responsive layout, AgentPipeline aria-live (FEND-03, FEND-06, FEND-07)
+   - [ ] 32-05-PLAN.md — ErrorBoundary: design token fixes, AlertTriangle icon, focus-ring (FEND-05, FEND-07)
+   - [ ] 32-06-PLAN.md — Test suite: AuthPage, DashboardHome, Settings test files (FEND-01/02/04/05/07)
    **UI hint**: yes
 
 ### Phase 33: Design System & Landing Page
@@ -596,7 +602,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 29. Media Generation Pipeline        | 5/5 | Complete    | 2026-04-12 |
 | 30. Social Publishing End-to-End     | 4/4 | Complete    | 2026-04-12 |
 | 31. Smart Scheduling                 | 4/4 | Complete    | 2026-04-12 |
-| 32. Frontend Core Flows Polish       | 0/TBD          | Not started | -         |
+| 32. Frontend Core Flows Polish       | 0/6            | In progress | -         |
 | 33. Design System & Landing Page     | 0/TBD          | Not started | -         |
 | 34. Security & GDPR                  | 0/TBD          | Not started | -         |
 | 35. Performance, Monitoring & Launch | 0/TBD          | Not started | -         |
