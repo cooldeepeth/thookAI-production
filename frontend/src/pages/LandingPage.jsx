@@ -41,7 +41,7 @@ function Navbar() {
         </a>
         <button
           onClick={() => navigate("/discover")}
-          className="text-lime hover:text-[#B8E600] transition-colors flex items-center gap-1.5 font-medium"
+          className="text-lime hover:text-lime/80 transition-colors flex items-center gap-1.5 font-medium"
         >
           <Sparkles size={14} />
           Discover Your Voice
@@ -227,7 +227,7 @@ function Features() {
               create content that sounds exactly like you — not like AI.
             </p>
             {/* Voice fingerprint visualization */}
-            <div className="bg-[#0A0A0B] rounded-xl p-4 border border-white/5">
+            <div className="bg-surface rounded-xl p-4 border border-white/5">
               <p className="text-xs text-zinc-600 mb-3 font-mono">
                 VOICE FINGERPRINT
               </p>
@@ -238,10 +238,11 @@ function Features() {
                       {Array.from({ length: 8 }).map((_, j) => (
                         <div
                           key={j}
-                          className="w-1 rounded-sm transition-all"
+                          className={`w-1 rounded-sm transition-all ${
+                            j < 5 + i ? "bg-lime" : "bg-border-subtle"
+                          }`}
                           style={{
                             height: `${8 + Math.sin((i * 3 + j) * 0.8) * 6}px`,
-                            backgroundColor: j < 5 + i ? "#D4FF00" : "#27272A",
                             opacity: j < 5 + i ? 0.7 + j * 0.04 : 1,
                           }}
                         />
@@ -626,7 +627,7 @@ function Pricing() {
                 data-testid={`pricing-cta-${plan.name.toLowerCase()}`}
                 className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                   plan.highlight
-                    ? "bg-lime text-black hover:bg-[#B8E600]"
+                    ? "bg-lime text-black hover:bg-lime/90"
                     : "bg-white/8 text-white hover:bg-white/14 border border-white/10"
                 }`}
               >

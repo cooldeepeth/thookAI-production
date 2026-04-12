@@ -199,7 +199,7 @@ export default function AuthPage() {
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     required
-                    className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
+                    className="w-full bg-surface-2 border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                   />
                   <button
                     type="submit"
@@ -226,7 +226,7 @@ export default function AuthPage() {
             <>
               {/* Tabs */}
               <div
-                className="flex gap-1 bg-[#18181B] rounded-lg p-1 mb-6"
+                className="flex gap-1 bg-surface-2 rounded-lg p-1 mb-6"
                 data-testid="auth-tabs"
               >
                 {["login", "register"].map((t) => (
@@ -241,7 +241,7 @@ export default function AuthPage() {
                     data-testid={`tab-${t}`}
                     className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus-ring ${
                       tab === t
-                        ? "bg-[#27272A] text-white"
+                        ? "bg-border-subtle text-white"
                         : "text-zinc-500 hover:text-zinc-300"
                     }`}
                   >
@@ -307,7 +307,7 @@ export default function AuthPage() {
                         }
                         data-testid="input-name"
                         required={tab === "register"}
-                        className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
+                        className="w-full bg-surface-2 border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                       />
                     </motion.div>
                   )}
@@ -320,7 +320,7 @@ export default function AuthPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   data-testid="input-email"
                   required
-                  className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
+                  className="w-full bg-surface-2 border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                 />
                 <input
                   type="password"
@@ -332,7 +332,7 @@ export default function AuthPage() {
                   onFocus={() => setPasswordTouched(true)}
                   data-testid="input-password"
                   required
-                  className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
+                  className="w-full bg-surface-2 border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                 />
                 {tab === "register" && passwordTouched && (
                   <ul
