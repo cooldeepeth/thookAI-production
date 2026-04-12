@@ -556,9 +556,9 @@
 Plans:
 - [x] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
 - [x] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
-- [ ] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
-- [ ] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
-- [ ] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
+- [x] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
+- [x] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
+- [x] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
 - [ ] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
 - [ ] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
    **UI hint**: yes
@@ -606,8 +606,8 @@ Plans:
 Plans:
 - [x] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
 - [x] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
-- [ ] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
-- [ ] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
+- [x] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
+- [x] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
 - [ ] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
 - [ ] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
 - [ ] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
@@ -628,4 +628,4 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 32. Frontend Core Flows Polish       | 7/7            | Complete    | 2026-04-13 |
 | 33. Design System & Landing Page     | 6/6            | Complete    | 2026-04-13 |
 | 34. Security & GDPR                  | 9/9            | Complete    | 2026-04-13 |
-| 35. Performance, Monitoring & Launch | 2/7 | In Progress|  |
+| 35. Performance, Monitoring & Launch | 5/7 | In Progress|  |
