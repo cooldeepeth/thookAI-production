@@ -95,11 +95,28 @@ async def lifespan(app: FastAPI):
     # Initialize Sentry error tracking (early, before DB, so it catches startup errors)
     if settings.app.sentry_dsn:
         import sentry_sdk
+
+        def _scrub_pii(event, hint):
+            """Remove PII fields from Sentry error events (GDPR + SECR-07 compliance)."""
+            pii_keys = frozenset({
+                "email", "password", "hashed_password", "access_token",
+                "refresh_token", "session_token", "csrf_token", "name",
+                "google_id", "stripe_customer_id",
+            })
+            if "request" in event and isinstance(event["request"].get("data"), dict):
+                for key in pii_keys:
+                    event["request"]["data"].pop(key, None)
+            if isinstance(event.get("extra"), dict):
+                for key in pii_keys:
+                    event["extra"].pop(key, None)
+            return event
+
         sentry_sdk.init(
             dsn=settings.app.sentry_dsn,
             environment=settings.app.environment,
             traces_sample_rate=0.1 if settings.app.is_production else 1.0,
             profiles_sample_rate=0.1 if settings.app.is_production else 1.0,
+            before_send=_scrub_pii,
         )
         logger.info("Sentry error tracking initialized")
 
@@ -460,7 +477,5 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__, "error_code": "INTERNAL_ERROR"})
 
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("server:app", host="0.0.0.0", port=port)
+# Server is started via Procfile: uvicorn server:app --host 0.0.0.0 --port $PORT
+# No __main__ block needed — see backend/Procfile
