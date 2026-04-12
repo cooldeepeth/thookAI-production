@@ -437,6 +437,24 @@ function RejectionModal({ isOpen, onClose, onSubmit }) {
   );
 }
 
+const FORMAT_LABEL_MAP = {
+  post: "Post",
+  article: "Article",
+  carousel_caption: "Carousel",
+  tweet: "Tweet",
+  thread: "Thread",
+  feed_caption: "Feed",
+  reel_caption: "Reel",
+  story_sequence: "Story",
+};
+
+const PLATFORM_LABEL_MAP = {
+  linkedin: "LinkedIn",
+  x: "X",
+  twitter: "X",
+  instagram: "Instagram",
+};
+
 function finalContentToText(fc) {
   if (fc == null) return "";
   if (typeof fc === "string") return fc;
@@ -492,12 +510,32 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
     }
   };
 
+  const contentType = job.content_type || "post";
+  const formatLabel = FORMAT_LABEL_MAP[contentType] || "Post";
+  const platformLabel = PLATFORM_LABEL_MAP[platform] || platform;
+
   return (
     <div className="max-w-2xl mx-auto" data-testid="content-output">
+      {/* Output header */}
+      <div className="flex items-center justify-between mb-3">
+        <h2
+          data-testid="content-output-header"
+          className="font-display font-bold text-3xl text-white"
+        >
+          Your {formatLabel} is ready
+        </h2>
+        <span
+          data-testid="content-format-badge"
+          className="text-xs font-mono text-zinc-400 bg-white/5 px-2 py-1 rounded"
+        >
+          {platformLabel} · {formatLabel}
+        </span>
+      </div>
+
       {/* Version indicator */}
       {version > 1 && (
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded">
+          <span className="text-xs font-mono text-zinc-600 bg-white/5 px-2 py-1 rounded">
             Version {version}
           </span>
         </div>
@@ -655,10 +693,11 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
         <div className="flex gap-2 mt-2">
           <button
             onClick={handleApprove}
-            data-testid="approve-btn"
+            data-testid="approve-content-btn"
+            aria-label="Approve content"
             className="flex-1 btn-primary flex items-center justify-center gap-2 text-sm"
           >
-            <Check size={14} /> {editing ? "Save & Approve" : "Looks great"}
+            <Check size={14} /> {editing ? "Save & Approve" : "Approve Content"}
           </button>
           <button
             onClick={() => setEditing(!editing)}
@@ -761,8 +800,13 @@ function PublishPanel({ job, onPublished }) {
     try {
       const scheduledAt = new Date(`${selectedDate}T${selectedTime}:00`).toISOString();
 
-      const res = await apiFetch(`/api/dashboard/schedule/content?job_id=${job.job_id}&scheduled_at=${scheduledAt}&platforms=${platform}`, {
-        method: "POST"
+      const res = await apiFetch(`/api/dashboard/schedule/content`, {
+        method: "POST",
+        body: JSON.stringify({
+          job_id: job.job_id,
+          scheduled_at: scheduledAt,
+          platforms: [platform],
+        }),
       });
       
       const data = await res.json();
@@ -844,6 +888,8 @@ function PublishPanel({ job, onPublished }) {
               setShowSchedule(!showSchedule);
               if (!showSchedule && !optimalTimes) fetchOptimalTimes();
             }}
+            data-testid="schedule-content-btn"
+            aria-label="Open schedule options"
             className="w-full mt-3 py-2 text-xs text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-2"
           >
             <Calendar size={12} />
@@ -892,6 +938,7 @@ function PublishPanel({ job, onPublished }) {
                       <label className="text-xs text-zinc-500 block mb-1">Date</label>
                       <input
                         type="date"
+                        data-testid="schedule-datetime-input"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         min={minDate}
@@ -911,6 +958,7 @@ function PublishPanel({ job, onPublished }) {
 
                   <button
                     onClick={handleSchedule}
+                    data-testid="schedule-submit-btn"
                     disabled={scheduling || !selectedDate || !selectedTime}
                     className="w-full mt-4 py-2.5 bg-violet/20 text-violet rounded-lg text-sm font-medium hover:bg-violet/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                   >
