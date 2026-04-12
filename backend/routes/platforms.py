@@ -553,26 +553,45 @@ async def disconnect_platform(platform: str, current_user: dict = Depends(get_cu
 # ============ HELPER FUNCTIONS ============
 
 async def get_platform_token(user_id: str, platform: str) -> Optional[str]:
-    """Get decrypted access token for a platform."""
+    """Get decrypted access token for a platform.
+
+    Proactively refreshes tokens expiring within 24 hours to avoid
+    sending stale credentials to platform APIs.
+    """
     token_doc = await db.platform_tokens.find_one({
         "user_id": user_id,
         "platform": platform
     })
-    
+
     if not token_doc:
         return None
-    
-    # Check expiry
+
     expires_at = token_doc.get("expires_at")
-    if expires_at and expires_at < datetime.now(timezone.utc):
-        # Try refresh if available
-        refresh_token = token_doc.get("refresh_token")
-        if refresh_token:
-            new_token = await _refresh_token(user_id, platform, _decrypt_token(refresh_token))
-            if new_token:
-                return new_token
-        return None
-    
+    now = datetime.now(timezone.utc)
+
+    if expires_at:
+        time_until_expiry = expires_at - now
+
+        # Proactive 24h refresh window — refresh before token goes stale
+        if time_until_expiry < timedelta(hours=24):
+            refresh_token_enc = token_doc.get("refresh_token")
+            # For Instagram, pass the access token as the "refresh token"
+            # (Instagram renews via fb_exchange_token with existing token)
+            if refresh_token_enc is None and platform == "instagram":
+                refresh_token_enc = token_doc.get("access_token")
+
+            if refresh_token_enc:
+                new_token = await _refresh_token(
+                    user_id, platform, _decrypt_token(refresh_token_enc)
+                )
+                if new_token:
+                    return new_token
+
+            # If refresh failed or no refresh token: fall back to current token
+            # if it's still technically valid, otherwise return None
+            if expires_at < now:
+                return None  # Actually expired — cannot use
+
     return _decrypt_token(token_doc["access_token"])
 
 
