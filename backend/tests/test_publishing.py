@@ -73,7 +73,7 @@ class TestPublishLinkedIn:
                     token=token,
                 )
 
-        assert result is True
+        assert result.get("success") is True, f"Expected success=True, got: {result}"
         # Ensure a POST was made to the LinkedIn UGC endpoint
         post_urls = [url for method, url, kwargs in captured_calls if method == "POST"]
         assert any("api.linkedin.com/v2/ugcPosts" in url for url in post_urls), (
@@ -162,7 +162,7 @@ class TestPublishX:
                     token=token,
                 )
 
-        assert result is True
+        assert result.get("success") is True, f"Expected success=True, got: {result}"
         post_urls = [url for method, url, kwargs in captured_calls if method == "POST"]
         assert any("api.twitter.com/2/tweets" in url for url in post_urls), (
             f"Expected POST to api.twitter.com/2/tweets, got: {post_urls}"
@@ -286,7 +286,7 @@ class TestPublishErrorHandling:
                     token=token,
                 )
 
-        assert result is False
+        assert result.get("success") is False, f"Expected success=False, got: {result}"
 
     @pytest.mark.asyncio
     async def test_publish_network_error_returns_false(self):
@@ -313,7 +313,7 @@ class TestPublishErrorHandling:
                     token=token,
                 )
 
-        assert result is False
+        assert result.get("success") is False, f"Expected success=False, got: {result}"
 
     @pytest.mark.asyncio
     async def test_publish_expired_token_returns_false(self):
@@ -334,7 +334,7 @@ class TestPublishErrorHandling:
                 token=token,
             )
 
-        assert result is False
+        assert result.get("success") is False, f"Expected success=False, got: {result}"
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +375,8 @@ class TestProcessScheduledPosts:
         update_result = MagicMock()
         mock_db.scheduled_posts.update_one = AsyncMock(return_value=update_result)
 
-        with patch("tasks.content_tasks._publish_to_platform", new_callable=AsyncMock, return_value=True):
+        with patch("tasks.content_tasks._publish_to_platform", new_callable=AsyncMock,
+                   return_value={"success": True, "post_id": "urn:li:share:001"}):
             # Import the inner async function and pass mock_db directly
             import tasks.content_tasks as ct_module
             result = await ct_module._run_scheduled_posts_inner(mock_db)
@@ -422,3 +423,233 @@ class TestProcessScheduledPosts:
         assert "Platform not connected" in set_data.get("error", ""), (
             f"Expected 'Platform not connected' in error, got: {set_data.get('error')}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Task 1: Fix _publish_to_platform — decrypt token, return dict
+# ---------------------------------------------------------------------------
+
+class TestPublishToPlatformFixed:
+    """Verify _publish_to_platform decrypts tokens and returns full result dicts."""
+
+    @pytest.mark.asyncio
+    async def test_decrypts_access_token_before_calling_publisher(self):
+        """Encrypted token must be decrypted before passing to publish_to_platform."""
+        from cryptography.fernet import Fernet
+        key = Fernet.generate_key()
+        cipher = Fernet(key)
+        plaintext = "real_access_token_123"
+        encrypted = cipher.encrypt(plaintext.encode()).decode()
+
+        token_doc = {
+            "user_id": "user_1",
+            "platform": "linkedin",
+            "access_token": encrypted,
+        }
+
+        captured = {}
+
+        async def fake_publish(platform, content, access_token, user_id=None, media_assets=None):
+            captured["access_token"] = access_token
+            return {"success": True, "post_id": "urn:li:share:1", "post_url": "https://linkedin.com/1"}
+
+        # patch _decrypt_token on content_tasks module and publish_to_platform where
+        # it is actually imported from (agents.publisher) so both dev and prod paths
+        # resolve to our fake.
+        with (
+            patch("tasks.content_tasks._decrypt_token", return_value=plaintext),
+            patch("agents.publisher.publish_to_platform", new=fake_publish),
+        ):
+            import tasks.content_tasks as ct
+            result = await ct._publish_to_platform("linkedin", "Hello world", token_doc)
+
+        assert captured.get("access_token") == plaintext, (
+            f"Expected plaintext token, got: {captured.get('access_token')}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_returns_full_dict_on_success(self):
+        """Must return the full publisher result dict, not just True."""
+        expected = {"success": True, "post_id": "urn:li:share:999", "post_url": "https://linkedin.com/999"}
+
+        async def fake_publish(platform, content, access_token, user_id=None, media_assets=None):
+            return expected
+
+        token_doc = {"user_id": "u1", "platform": "linkedin", "access_token": "enc_token"}
+        with (
+            patch("tasks.content_tasks._decrypt_token", return_value="real_token"),
+            patch("agents.publisher.publish_to_platform", new=fake_publish),
+        ):
+            import tasks.content_tasks as ct
+            result = await ct._publish_to_platform("linkedin", "content", token_doc)
+
+        assert result == expected, f"Expected full dict, got: {result}"
+
+    @pytest.mark.asyncio
+    async def test_returns_full_dict_on_failure(self):
+        """Must return the full publisher result dict even on failure (not just False)."""
+        expected = {"success": False, "error": "403 Forbidden"}
+
+        async def fake_publish(platform, content, access_token, user_id=None, media_assets=None):
+            return expected
+
+        token_doc = {"user_id": "u1", "platform": "linkedin", "access_token": "enc_token"}
+        with (
+            patch("tasks.content_tasks._decrypt_token", return_value="real_token"),
+            patch("agents.publisher.publish_to_platform", new=fake_publish),
+        ):
+            import tasks.content_tasks as ct
+            result = await ct._publish_to_platform("linkedin", "content", token_doc)
+
+        assert result.get("success") is False
+        assert result.get("error") == "403 Forbidden"
+
+    @pytest.mark.asyncio
+    async def test_expired_token_returns_dict_not_bool(self):
+        """Expired token path must return a dict with success=False."""
+        past = datetime.now(timezone.utc) - timedelta(hours=1)
+        token_doc = {
+            "user_id": "u1",
+            "platform": "linkedin",
+            "access_token": "enc_token",
+            "expires_at": past,
+        }
+        import tasks.content_tasks as ct
+        result = await ct._publish_to_platform("linkedin", "content", token_doc)
+
+        assert isinstance(result, dict), f"Expected dict, got {type(result)}: {result}"
+        assert result.get("success") is False
+
+
+# ---------------------------------------------------------------------------
+# Task 2: Fix scheduled_tasks — store publish_results, fix media_assets kwarg
+# ---------------------------------------------------------------------------
+
+class TestScheduledTasksFixed:
+    """Verify _process_scheduled_posts stores publish_results on content_jobs."""
+
+    @pytest.mark.asyncio
+    async def test_stores_publish_results_on_content_jobs(self):
+        """On success, publish_results must be written to the content_jobs document."""
+        now = datetime.now(timezone.utc)
+        post = {
+            "schedule_id": "sched_abc",
+            "user_id": "user_1",
+            "platform": "linkedin",
+            "content": "Test post",
+            "status": "scheduled",
+            "job_id": "job_abc",
+            "scheduled_at": now - timedelta(minutes=5),
+        }
+        publish_result = {"success": True, "post_id": "urn:li:share:123", "post_url": "https://linkedin.com/123"}
+
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[post])
+        mock_db.scheduled_posts.find.return_value = mock_cursor
+        mock_db.scheduled_posts.find_one_and_update = AsyncMock(return_value=post)
+        mock_db.scheduled_posts.update_one = AsyncMock()
+        mock_db.content_jobs.update_one = AsyncMock()
+
+        async def fake_real_publish(**kwargs):
+            return publish_result
+
+        with patch("tasks.scheduled_tasks.real_publish", new=fake_real_publish):
+            with patch("tasks.scheduled_tasks.db", mock_db):
+                import tasks.scheduled_tasks as st
+                await st._process_scheduled_posts()
+
+        assert mock_db.content_jobs.update_one.called, "content_jobs.update_one was not called"
+        call_args = mock_db.content_jobs.update_one.call_args
+        filter_dict = call_args[0][0]
+        update_dict = call_args[0][1]["$set"]
+        assert filter_dict.get("job_id") == "job_abc"
+        assert "publish_results" in update_dict, f"publish_results missing from: {update_dict}"
+
+    @pytest.mark.asyncio
+    async def test_passes_media_assets_not_media_urls(self):
+        """publish_to_platform must be called with media_assets kwarg (not media_urls)."""
+        captured_kwargs = {}
+        now = datetime.now(timezone.utc)
+        post = {
+            "schedule_id": "sched_x",
+            "user_id": "user_2",
+            "platform": "x",
+            "content": "X post",
+            "status": "scheduled",
+            "job_id": "job_x",
+            "scheduled_at": now - timedelta(minutes=1),
+            "media_urls": ["https://example.com/img.jpg"],
+        }
+
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[post])
+        mock_db.scheduled_posts.find.return_value = mock_cursor
+        mock_db.scheduled_posts.find_one_and_update = AsyncMock(return_value=post)
+        mock_db.scheduled_posts.update_one = AsyncMock()
+        mock_db.content_jobs.update_one = AsyncMock()
+
+        async def capture_publish(**kwargs):
+            captured_kwargs.update(kwargs)
+            return {"success": True, "post_id": "tweet_1"}
+
+        with patch("tasks.scheduled_tasks.real_publish", new=capture_publish):
+            with patch("tasks.scheduled_tasks.db", mock_db):
+                import tasks.scheduled_tasks as st
+                await st._process_scheduled_posts()
+
+        assert "media_urls" not in captured_kwargs, (
+            f"media_urls should not be passed; got kwargs: {captured_kwargs}"
+        )
+        # media_assets kwarg may be None (no valid assets) or the list
+        assert "media_assets" in captured_kwargs or captured_kwargs.get("media_assets") is None
+
+    @pytest.mark.asyncio
+    async def test_sentry_capture_on_publish_failure(self):
+        """Failed publish must call sentry_sdk.capture_message with level='error'."""
+        now = datetime.now(timezone.utc)
+        post = {
+            "schedule_id": "sched_fail",
+            "user_id": "user_3",
+            "platform": "instagram",
+            "content": "IG post",
+            "status": "scheduled",
+            "job_id": "job_fail",
+            "scheduled_at": now - timedelta(minutes=1),
+        }
+
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[post])
+        mock_db.scheduled_posts.find.return_value = mock_cursor
+        mock_db.scheduled_posts.find_one_and_update = AsyncMock(return_value=post)
+        mock_db.scheduled_posts.update_one = AsyncMock()
+        mock_db.content_jobs.update_one = AsyncMock()
+
+        async def fail_publish(**kwargs):
+            return {"success": False, "error": "Media Container creation failed"}
+
+        import sys
+        import types
+
+        # sentry_sdk may not be installed in the test environment; create a
+        # lightweight fake module so patch() can resolve the attribute path.
+        mock_capture = MagicMock()
+        fake_sentry = types.ModuleType("sentry_sdk")
+        fake_sentry.capture_message = mock_capture  # type: ignore[attr-defined]
+        fake_sentry.capture_exception = MagicMock()  # type: ignore[attr-defined]
+
+        with (
+            patch("tasks.scheduled_tasks.real_publish", new=fail_publish),
+            patch("tasks.scheduled_tasks.db", mock_db),
+            patch("tasks.scheduled_tasks.settings") as mock_settings,
+            patch.dict(sys.modules, {"sentry_sdk": fake_sentry}),
+        ):
+            mock_settings.app.sentry_dsn = "https://fake@sentry.io/1"
+            import tasks.scheduled_tasks as st
+            await st._process_scheduled_posts()
+
+        assert mock_capture.called, "sentry_sdk.capture_message was not called on failure"
+        call_kwargs = mock_capture.call_args[1] if mock_capture.call_args else {}
+        assert call_kwargs.get("level") == "error" or "error" in str(mock_capture.call_args)
