@@ -42,20 +42,29 @@ export default function ContentCalendar() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch scheduled content
+  // Fetch calendar data for the current month
   useEffect(() => {
-    fetchScheduledContent();
-  }, []);
+    fetchCalendarData();
+  }, [currentMonth]); // Re-fetch when user navigates to a different month
 
-  const fetchScheduledContent = async () => {
+  const fetchCalendarData = async () => {
+    setLoading(true);
     try {
-      const res = await apiFetch('/api/dashboard/schedule/upcoming?limit=20');
-
-      if (!res.ok) throw new Error("Failed to fetch scheduled content");
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth() + 1; // JS months are 0-indexed
+      const res = await apiFetch(
+        `/api/dashboard/schedule/calendar?year=${year}&month=${month}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch calendar data");
       const data = await res.json();
-      setScheduledContent(data.scheduled || []);
+      setScheduledContent(data.posts || []);
     } catch (err) {
-      console.error("Error fetching scheduled:", err);
+      console.error("Calendar fetch error:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load calendar data",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -95,7 +104,7 @@ export default function ContentCalendar() {
       if (!res.ok) throw new Error("Failed to cancel");
 
       toast({ title: "Cancelled", description: "Scheduled post has been cancelled" });
-      await fetchScheduledContent();
+      await fetchCalendarData();
     } catch (err) {
       console.error("Cancel error:", err);
       toast({
@@ -125,7 +134,7 @@ export default function ContentCalendar() {
         throw new Error(data.results?.[platform]?.error || "Publish failed");
       }
 
-      await fetchScheduledContent();
+      await fetchCalendarData();
     } catch (err) {
       console.error("Publish error:", err);
       toast({
