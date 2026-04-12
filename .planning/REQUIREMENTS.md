@@ -57,9 +57,9 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 
 ### Social Publishing
 
-- [ ] **PUBL-01**: User can connect LinkedIn account via OAuth and publish UGC posts with media
-- [ ] **PUBL-02**: User can connect X account via OAuth and publish tweets/threads with media
-- [ ] **PUBL-03**: User can connect Instagram account via Meta OAuth and publish posts with media
+- [x] **PUBL-01**: User can connect LinkedIn account via OAuth and publish UGC posts with media
+- [x] **PUBL-02**: User can connect X account via OAuth and publish tweets/threads with media
+- [x] **PUBL-03**: User can connect Instagram account via Meta OAuth and publish posts with media
 - [x] **PUBL-04**: OAuth token auto-refresh before expiry for all platforms
 - [ ] **PUBL-05**: Publishing status tracked: pending → publishing → published/failed
 - [ ] **PUBL-06**: Platform token encryption verified working in production (Fernet)
@@ -196,9 +196,9 @@ Which phases cover which requirements.
 | MDIA-06     | 29    | Complete |
 | MDIA-07     | 29    | Pending  |
 | MDIA-08     | 29    | Pending  |
-| PUBL-01     | 30    | Pending  |
-| PUBL-02     | 30    | Pending  |
-| PUBL-03     | 30    | Pending  |
+| PUBL-01     | 30    | Complete |
+| PUBL-02     | 30    | Complete |
+| PUBL-03     | 30    | Complete |
 | PUBL-04     | 30    | Complete |
 | PUBL-05     | 30    | Pending  |
 | PUBL-06     | 30    | Pending  |

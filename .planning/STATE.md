@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Completed 30-social-publishing-end-to-end/30-02-PLAN.md
-last_updated: "2026-04-12T09:28:10.278Z"
+stopped_at: Completed 30-social-publishing-end-to-end/30-04-PLAN.md
+last_updated: "2026-04-12T09:35:17.661Z"
 last_activity: 2026-04-12
 progress:
   total_phases: 27
   completed_phases: 4
   total_plans: 24
-  completed_plans: 22
-  percent: 92
+  completed_plans: 23
+  percent: 96
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 30 (Social Publishing End-to-End) — EXECUTING
-Plan: 2 of 4
+Plan: 4 of 4 — checkpoint human-verify reached (Tasks 1+2 complete, Task 3 code implemented)
 Status: Ready to execute
 Last activity: 2026-04-12
 
@@ -43,15 +43,15 @@ Progress: [░░░░░░░░░░] 0%
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 29 | 5 | - | - |
+| ----- | ----- | ----- | -------- |
+| 29    | 5     | -     | -        |
 
 **Recent Trend:**
 
 - Last 5 plans: none yet
 - Trend: -
 
-*Updated after each plan completion*
+_Updated after each plan completion_
 | Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
 | Phase 19-core-features P02 | 3 | 1 tasks | 2 files |
 | Phase 19-core-features P03 | 5 | 2 tasks | 4 files |
@@ -66,6 +66,8 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 23 P03 | 17 | 2 tasks | 7 files |
 | Phase 23 P02 | 92 | 2 tasks | 5 files |
 | Phase 30 P02 | 3 | 2 tasks | 2 files |
+| Phase 30 P03 | 5 | 2 tasks | 3 files |
+| Phase 30 P04 | 20 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -105,6 +107,12 @@ Recent decisions affecting current work:
 - [Phase 23]: EventSource mock: re-assign in beforeEach (not module level) to survive resetMocks: true auto-reset between tests
 - [Phase 30]: Proactive 24h refresh window prevents silent publish failures from stale tokens
 - [Phase 30]: Instagram fb_exchange_token renewal: access_token passed as refresh input since Instagram has no separate refresh_token
+- [Phase 30-03]: token_expiring_soon defaults False in disconnected platform dict — field always present to avoid frontend null checks
+- [Phase 30-03]: Expiring-soon badge only shows when token_expiring_soon=true AND needs_reconnect=false — expired tokens use orange "Token Expired" badge
+- [Phase 30-03]: Fernet round-trip test: monkeypatch.setattr on routes.platforms.ENCRYPTION_KEY (module-level var) ensures cipher uses test key without key-length fallback path
+- [Phase 30]: LinkedIn registerUpload fallback: non-200 response falls back to text-only ensuring publishing never fails due to media upload errors
+- [Phase 30]: X media upload uses v1.1 multipart upload; media_id_string attached to first tweet only
+- [Phase 30]: Instagram publish_to_platform dispatcher confirmed to extract image_url from media_assets correctly — no code change needed
 
 ### Pending Todos
 
@@ -115,11 +123,11 @@ None yet.
 - CONCERNS.md documents race condition in credit deduction (credits.py) — fix required in Phase 5
 - Celery files exist (celery_app.py, celeryconfig.py) but Procfile missing worker/beat entries — confirm in Phase 2
 - Publishing placeholder in content_tasks.py fallback path — must be replaced in Phase 5
-- 20+ worktree-agent-* branches must be deleted before any new branches are created — Phase 1 prerequisite
+- 20+ worktree-agent-\* branches must be deleted before any new branches are created — Phase 1 prerequisite
 - Stripe Price IDs are blank in .env.example — owner must create Stripe products; flag in Phase 5
 
 ## Session Continuity
 
-Last session: 2026-04-12T09:28:10.274Z
-Stopped at: Completed 30-social-publishing-end-to-end/30-02-PLAN.md
+Last session: 2026-04-12T09:35:17.657Z
+Stopped at: Completed 30-social-publishing-end-to-end/30-04-PLAN.md
 Resume file: None
