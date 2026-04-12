@@ -39,7 +39,7 @@ export default function AgentPipeline({ job, platform, rawInput }) {
       </div>
 
       {/* Agent cards */}
-      <div className="space-y-3">
+      <div className="space-y-3" aria-live="polite" aria-label="Generation progress">
         {AGENTS.map((agent, i) => {
           const status = getAgentStatus(agent.key, currentAgent, jobStatus);
           const summary = summaries[agent.key];

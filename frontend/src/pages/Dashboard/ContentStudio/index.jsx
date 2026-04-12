@@ -162,9 +162,9 @@ export default function ContentStudio() {
   const isDone = job && (job.status === "completed" || job.status === "reviewing" || job.status === "approved");
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)] overflow-hidden" data-testid="content-studio">
+    <div className="flex flex-col md:flex-row md:h-[calc(100vh-4rem)] overflow-x-hidden" data-testid="content-studio">
       {/* Left: Input Panel */}
-      <div className="w-full md:w-[400px] flex-shrink-0 border-b md:border-b-0 md:border-r border-white/5 overflow-y-auto">
+      <div className="w-full md:w-[400px] flex-shrink-0 h-auto md:h-[calc(100vh-4rem)] overflow-y-auto border-b md:border-b-0 md:border-r border-white/5">
         <InputPanel
           platform={platform}
           contentType={contentType}
@@ -193,7 +193,7 @@ export default function ContentStudio() {
       </div>
 
       {/* Right: Output Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-[50vh] md:h-[calc(100vh-4rem)] overflow-y-auto">
         <AnimatePresence mode="wait">
           {!isRunning && !isDone && (
             <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

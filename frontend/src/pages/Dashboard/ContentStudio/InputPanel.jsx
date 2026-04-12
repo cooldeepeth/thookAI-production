@@ -182,14 +182,24 @@ export default function InputPanel({
               )}
             </div>
             <button
+              type="button"
+              role="switch"
+              aria-checked={generateVideo}
+              aria-label="Generate video with content"
               onClick={() => videoEnabled && onGenerateVideoChange?.(!generateVideo)}
+              onKeyDown={(e) => {
+                if ((e.key === "Enter" || e.key === " ") && videoEnabled) {
+                  e.preventDefault();
+                  onGenerateVideoChange?.(!generateVideo);
+                }
+              }}
               disabled={!videoEnabled}
               data-testid="video-toggle"
               className={`relative w-10 h-5 rounded-full transition-colors ${
                 generateVideo && videoEnabled
                   ? "bg-violet"
                   : "bg-white/10"
-              } ${!videoEnabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+              } ${!videoEnabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer focus-ring"}`}
             >
               <span
                 className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
