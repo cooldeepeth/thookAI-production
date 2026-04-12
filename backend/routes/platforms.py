@@ -106,24 +106,31 @@ async def get_platforms_status(current_user: dict = Depends(get_current_user)) -
     
     # Build status for each platform
     platforms = {
-        "linkedin": {"connected": False, "configured": _valid_key(LINKEDIN_CLIENT_ID)},
-        "x": {"connected": False, "configured": _valid_key(TWITTER_API_KEY)},
-        "instagram": {"connected": False, "configured": _valid_key(META_APP_ID)}
+        "linkedin": {"connected": False, "configured": _valid_key(LINKEDIN_CLIENT_ID), "token_expiring_soon": False},
+        "x": {"connected": False, "configured": _valid_key(TWITTER_API_KEY), "token_expiring_soon": False},
+        "instagram": {"connected": False, "configured": _valid_key(META_APP_ID), "token_expiring_soon": False}
     }
-    
+
     for token in tokens:
         platform = token.get("platform")
         if platform in platforms:
             expires_at = token.get("expires_at")
             is_valid = expires_at is None or expires_at > datetime.now(timezone.utc)
-            
+
+            # Proactive 24h warning: token still valid but expiring within 24 hours
+            is_expiring_soon = False
+            if expires_at and is_valid:
+                time_until_expiry = expires_at - datetime.now(timezone.utc)
+                is_expiring_soon = time_until_expiry < timedelta(hours=24)
+
             platforms[platform] = {
                 "connected": True,
                 "configured": True,
                 "account_name": token.get("account_name"),
                 "connected_at": token.get("connected_at").isoformat() if token.get("connected_at") else None,
                 "token_valid": is_valid,
-                "needs_reconnect": not is_valid
+                "needs_reconnect": not is_valid,
+                "token_expiring_soon": is_expiring_soon,
             }
     
     return {

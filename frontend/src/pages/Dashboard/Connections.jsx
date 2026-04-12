@@ -263,7 +263,7 @@ export default function Connections() {
 
                         {/* Connection Details */}
                         {platform.connected && (
-                          <div className="flex items-center gap-4 text-sm">
+                          <div className="flex flex-wrap items-center gap-3 text-sm">
                             <span className="text-zinc-400">
                               Account: <span className="text-white">{platform.account_name}</span>
                             </span>
@@ -271,6 +271,12 @@ export default function Connections() {
                               <Badge variant="outline" className="text-orange-400 border-orange-400/30">
                                 Token Expired
                               </Badge>
+                            )}
+                            {platform.token_expiring_soon && !platform.needs_reconnect && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">
+                                <AlertCircle size={12} />
+                                Expiring soon — reconnect to keep publishing
+                              </span>
                             )}
                           </div>
                         )}
