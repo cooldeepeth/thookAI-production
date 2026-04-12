@@ -261,6 +261,23 @@ async def export_user_data(current_user: dict = Depends(get_current_user)):
         {"user_id": user_id}, {"_id": 0}
     ).sort("created_at", -1).limit(200).to_list(200)
 
+    # SECR-09: additional GDPR collections — Plan 34-05
+    scheduled_posts = await db.scheduled_posts.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("scheduled_at", -1).limit(500).to_list(500)
+
+    media_assets = await db.media_assets.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(500).to_list(500)
+
+    workspace_memberships = await db.workspace_members.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).to_list(100)
+
+    authored_templates = await db.templates.find(
+        {"author_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(200).to_list(200)
+
     # Serialize datetimes to ISO strings
     def _serialize(obj):
         if isinstance(obj, datetime):
@@ -271,6 +288,7 @@ async def export_user_data(current_user: dict = Depends(get_current_user)):
 
     export = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
+        "note": "Export contains up to the 500 most recent records per collection. Contact support for full archives.",
         "user": user,
         "persona": persona,
         "content_jobs": jobs,
@@ -278,6 +296,10 @@ async def export_user_data(current_user: dict = Depends(get_current_user)):
         "connected_platforms": platforms,
         "feedback": feedback,
         "uploads": uploads,
+        "scheduled_posts": scheduled_posts,
+        "media_assets": media_assets,
+        "workspace_memberships": workspace_memberships,
+        "authored_templates": authored_templates,
     }
 
     return JSONResponse(
