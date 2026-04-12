@@ -26,6 +26,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // PERF-05: Identify the user in PostHog once they're loaded. Fires on login,
+  // cookie-resume, and Google OAuth return. Guarded on window.posthog existence
+  // because PostHog only initializes after cookie consent.
+  useEffect(() => {
+    if (!user?.user_id) return;
+    if (window.posthog && typeof window.posthog.identify === 'function') {
+      window.posthog.identify(user.user_id, {
+        email: user.email,
+        subscription_tier: user.subscription_tier,
+      });
+    }
+  }, [user?.user_id, user?.email, user?.subscription_tier]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');

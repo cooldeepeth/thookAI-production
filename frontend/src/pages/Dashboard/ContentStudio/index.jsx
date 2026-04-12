@@ -64,9 +64,23 @@ export default function ContentStudio() {
         clearInterval(pollRef.current);
         pollRef.current = null;
         setCreating(false);
+
+        // PERF-05: Track content generation funnel. Fires on successful
+        // completion, not on error. Guarded on window.posthog (consent-gated).
+        if (
+          data.status !== "error" &&
+          window.posthog &&
+          typeof window.posthog.capture === "function"
+        ) {
+          window.posthog.capture("content_generated", {
+            platform: data.platform || platform,
+            content_type: data.content_type || contentType,
+            job_id: data.job_id || id,
+          });
+        }
       }
     } catch {}
-  }, []);
+  }, [platform, contentType]);
 
   useEffect(() => {
     if (!jobId) return;

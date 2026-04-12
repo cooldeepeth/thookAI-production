@@ -122,6 +122,17 @@ export default function AuthPage() {
       // Success — session_token and csrf_token cookies are set by the backend.
       // Browser stores cookies automatically via credentials: 'include'.
       login(data);
+
+      // PERF-05: Track registration funnel. Fires only on register tab, not login.
+      // Guarded on window.posthog because PostHog is consent-gated.
+      if (
+        tab === "register" &&
+        window.posthog &&
+        typeof window.posthog.capture === "function"
+      ) {
+        window.posthog.capture("user_registered", { source: "email" });
+      }
+
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(err.message);
