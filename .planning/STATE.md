@@ -1,67 +1,66 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Distribution-Ready Platform Rebuild
+milestone: v2.2
+milestone_name: Frontend Hardening & Production Ship
 status: executing
-stopped_at: Completed 29-media-generation-pipeline/29-04-PLAN.md
-last_updated: "2026-04-12T07:41:28.830Z"
-last_activity: 2026-04-12
+stopped_at: Checkpoint reached in 29-05-PLAN.md after Task 1
+last_updated: "2026-04-12T07:41:55.887Z"
+last_activity: 2026-04-04
 progress:
-  total_phases: 27
-  completed_phases: 3
-  total_plans: 20
-  completed_plans: 19
-  percent: 95
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-12)
+See: .planning/PROJECT.md (updated 2026-03-31)
 
-**Core value:** Proactive, personalized content creation at scale — the platform recommends what to create, generates multi-format media, and learns from real social performance data to improve every cycle.
-**Current focus:** Phase 29 — Media Generation Pipeline
+**Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
+**Current focus:** Phase 25 — e2e-verification-production-ship
 
 ## Current Position
 
-Phase: 29 (Media Generation Pipeline) — EXECUTING
-Plan: 2 of 5
-Status: Ready to execute
-Last activity: 2026-04-12
+Phase: 25
+Plan: Not started
+Status: Executing Phase 25
+Last activity: 2026-04-04
 
-Progress: [░░░░░░░░░░] 0% (v3.0) — Phases 1-25 shipped across v1.0/v2.0/v2.1/v2.2
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed (v3.0): 0
+- Total plans completed: 0
 - Average duration: -
 - Total execution time: 0 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
-| ----- | ----- | ----- | -------- |
-| 27 | 5 | - | - |
-| 28 | 5 | - | - |
+|-------|-------|-------|----------|
+| - | - | - | - |
 
 **Recent Trend:**
 
-- Last 5 plans: none yet (v3.0)
+- Last 5 plans: none yet
 - Trend: -
 
-_Updated after each plan completion_
-| Phase 26-backend-endpoint-hardening P03 | 8 | 2 tasks | 6 files |
-| Phase 26-backend-endpoint-hardening P04 | 6 | 2 tasks | 3 files |
-| Phase 26 P05 | 5 | 3 tasks | 3 files |
-| Phase 27-onboarding-reimagination P02 | 4 | 2 tasks | 4 files |
-| Phase 27 P05 | 20 | 2 tasks | 2 files |
-| Phase 28 P02 | 197 | 2 tasks | 4 files |
-| Phase 28 P03 | 15 | 3 tasks | 4 files |
-| Phase 28 P05 | 15 | 3 tasks | 2 files |
-| Phase 29 P04 | 10 | 2 tasks | 1 files |
+*Updated after each plan completion*
+| Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
+| Phase 19-core-features P02 | 3 | 1 tasks | 2 files |
+| Phase 19-core-features P03 | 5 | 2 tasks | 4 files |
+| Phase 19-core-features P04 | 6 | 2 tasks | 2 files |
+| Phase 19-core-features P05 | 824 | 2 tasks | 3 files |
+| Phase 20-frontend-e2e-integration P02 | 4 | 2 tasks | 5 files |
+| Phase 20-frontend-e2e-integration P01 | 5 | 2 tasks | 10 files |
+| Phase 20-frontend-e2e-integration P05 | 8 | 2 tasks | 2 files |
+| Phase 20-frontend-e2e-integration P04 | 7 | 2 tasks | 3 files |
+| Phase 20-frontend-e2e-integration P03 | 8 | 2 tasks | 2 files |
+| Phase 23 P01 | 3 | 2 tasks | 6 files |
+| Phase 23 P03 | 17 | 2 tasks | 7 files |
+| Phase 23 P02 | 92 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -70,30 +69,35 @@ _Updated after each plan completion_
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- v2.2 ship: 16 production fixes applied April 10 (CORS, bcrypt, CompressionMiddleware, OAuth, Celery Beat)
-- v3.0 scope: Making existing features work perfectly — not adding new features
-- Every phase includes audit, testing, and edge case mitigation — not just implementation
-- Decision authority: AUTONOMOUS — make best decisions, document in .planning/DECISIONS.md
-- Granularity: TINY grain — each phase completable in 1 CLI session (~2-4 hours)
-- [Phase 26-03]: Applied Field() constraints to actual existing field names (answers, expiry_days) not plan aliases; UrlUploadRequest.url changed from HttpUrl to str+Field since handler validates via urlparse
-- [Phase 26-backend-endpoint-hardening]: Patch services.credits.* (not routes.content.*) for tests — local function-scope imports bypass module-level patches
-- [Phase 26-backend-endpoint-hardening]: Use app.dependency_overrides[get_current_user] in tests instead of session cookie to bypass CSRF middleware
-- [Phase 26]: 404 responses treated as skip in auth guard tests to prevent false failures from router prefix mismatches between audit paths and actual registration
-- [Phase 26]: viral_card.py POST /api/viral-card/analyze is MISSING auth guard — flagged for follow-up (add Depends(get_current_user) or document as intentional public)
-- [Phase 27-onboarding-reimagination]: Steps 2-3 use intentional placeholder divs wired to handleVoiceComplete/handleVisualComplete — replaced in Plan 04 with VoiceRecordingStep and VisualPaletteStep
-- [Phase 27-onboarding-reimagination]: Draft restore in OnboardingWizard caps at step 4 — step 5 (PersonaRevealStep) always requires fresh generation; onContinue in PhaseOne now takes (result, parsedSamples) signature
-- [Phase 27]: Back button in PhaseTwo always visible (not conditional at Q=0) — enables onBack signal at first question per UI-SPEC navigation contract
-- [Phase 27]: VoiceRecordingStep onSkip wired as () => handleVoiceComplete(null) inline lambda matching UI-SPEC skip behavior (voice_sample_url: null)
-- [Phase 27]: pytest.ini gets pythonpath=. — eliminates PYTHONPATH env var requirement for all backend test invocations
-- [Phase 27]: 6 edge-case tests added to TestNewPersonaFields and TestGeneratePersonaExtendedRequest — type assertions and LLM-value passthrough verification close ONBD-05/06 traceability gaps
-- [Phase 28]: FORMAT_RULES uses content_type keys (not platform keys) so each of the 8 formats gets distinct Writer instructions
-- [Phase 28]: WORD_COUNT_DEFAULTS applied as floor override in run_commander after LLM JSON parsing to prevent articles getting 200-word estimates
-- [Phase 28]: story_sequence added to instagram allowlist in PLATFORM_CONTENT_TYPES to prevent 400 errors on Instagram story generation
-- [Phase 28]: Used py-1 uniformly for all format buttons (not conditional) — minimal height diff, simpler code, prevents 375px overflow
-- [Phase 28]: storySlides detection placed outside useEffect so it recomputes on every render without lag
-- [Phase 28]: Fixed test_writer_respects_platform_rules import: test was importing PLATFORM_RULES from agents.writer but the constant was renamed to FORMAT_RULES in Plan 02 — corrected import name matches implementation
-- [Phase 29]: Module-level import pattern for _call_remotion: import module as _x rather than from-import inside function body so unittest.mock.patch is respected at call time
-- [Phase 29]: Removed redundant local credits import inside generate_carousel() that shadowed module-level import and broke test patches
+- Stabilization milestone: Fix existing features before building new ones — no new features until everything works
+- Git strategy: All work branches from dev; PRs target dev; never commit to main directly
+- PR #30 included: Custom plan builder (pricing pivot) is final direction, merge into dev in Phase 1
+- Billing changes: Flag for human review — no auto-merge on billing code
+- Verification standard: Manual E2E + automated tests required — 59 existing tests missed real bugs
+- [Phase 18-04]: Patch 'database.db' (not 'auth_utils.db') for auth_utils lazy db imports; patch 'routes.X.db' for module-level imports
+- [Phase 18-04]: Agency router self-declares prefix — mount at '/api' not '/api/agency' in test apps to avoid double prefix
+- [Phase 19-core-features]: Used function-level patch context managers for media test isolation — avoids cross-test state leakage from singleton module-level handlers
+- [Phase 19-03]: Option B (sanitized lambda) chosen for LightRAG user_id filter: re.sub strips dangerous chars, reject-on-mismatch returns empty string — no API contract change needed
+- [Phase 19-03]: LightRAG test pattern: patch LIGHTRAG_URL and LIGHTRAG_API_KEY as module-level globals directly, not via importlib.reload which re-reads real settings
+- [Phase 19-04]: Patch 'database.db' not 'routes.n8n_bridge.db' for execute endpoint tests because all endpoints use lazy 'from database import db' inside function bodies
+- [Phase 19-04]: Module-level attribute swap for strategist tests: directly replace agents.strategist.run_strategist_for_all_users with AsyncMock and restore in finally block
+- [Phase 19-05]: Split exact-match suppression test into two independent tests to avoid event-loop-closed mock reuse bug
+- [Phase 19-05]: CORE-10 85% gate applies to core v2.0 modules (strategist 87.4%, obsidian_service 92.4%, lightrag 100%, strategy routes 100%) — overall 49.78% depressed by untested media/viral/uom modules outside sprint scope
+- [Phase 20-02]: Locust excluded from requirements.txt — installed separately as dev/CI tool (pip install locust>=2.43.4)
+- [Phase 20-02]: norecursedirs used (not collect_ignore_glob) to exclude tests/load from pytest collection — collect_ignore_glob caused PytestConfigWarning
+- [Phase 20-01]: Chromium-only Playwright install to reduce CI download time and keep setup fast
+- [Phase 20-01]: Node 20 in CI for Playwright (18+ recommended, 20 best supported)
+- [Phase 20-01]: reuseExistingServer in local mode so devs don't need to restart servers for each test run
+- [Phase 20-frontend-e2e-integration]: Used isolated FastAPI app (no lifespan) with ASGITransport for route liveness tests to avoid real DB/Redis connections; dual-patched database.db and routes.<mod>.db for lazy vs module-level imports
+- [Phase 20-frontend-e2e-integration]: fetchBillingApi helper: passes API base URL as serialized arg to page.evaluate() — process.env not available in browser context
+- [Phase 20-frontend-e2e-integration]: LIFO route ordering: mockWorkspaceContext must be applied after mockAgencyEndpoints to override overlapping workspaces route
+- [Phase 20-03]: Serial test.describe used for critical path steps — each step depends on shared mock auth state from previous steps
+- [Phase 20-03]: Comma-separated CSS selectors with text= don't work in Playwright locators — use per-element visibility loops or separate getByText calls
+- [Phase 23-01]: No eject: jest.configure block added via craco.config.js jest key; MSW v2 with wildcard URL patterns; centralized lifecycle in setupTests.js
+- [Phase 23-03]: EventSource mock must be in beforeEach/afterEach (not module scope) because babel hoists imports before global assignments execute
+- [Phase 23-03]: react-router-dom v7.13.2 main field (dist/main.js) missing — Jest 27 needs explicit moduleNameMapper to dist/index.js; same for react-router/dom subpath
+- [Phase 23]: AbortError timeout test: stub global.fetch (not MSW never-resolving handler) because MSW v2 Node mode does not propagate AbortError from intercepted handlers
+- [Phase 23]: EventSource mock: re-assign in beforeEach (not module level) to survive resetMocks: true auto-reset between tests
 
 ### Pending Todos
 
@@ -101,15 +105,14 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Pre-26] Frontend auth flow in browser needs verification (CORS fixed April 10 — unverified)
-- [Pre-26] Onboarding persona generation broken: LLM model name bug in onboarding.py ("claude-4-sonnet-20250514" should be "claude-sonnet-4-20250514")
-- [Pre-26] Many frontend pages may have broken API calls, missing loading/error/empty states
-- [Pre-29] Media generation requires provider API keys configured in Railway env
-- [Pre-30] Social publishing requires OAuth app credentials for LinkedIn, X, Instagram
-- [Pre-30] Instagram publishing is stub code only — needs Meta Graph API implementation
+- CONCERNS.md documents race condition in credit deduction (credits.py) — fix required in Phase 5
+- Celery files exist (celery_app.py, celeryconfig.py) but Procfile missing worker/beat entries — confirm in Phase 2
+- Publishing placeholder in content_tasks.py fallback path — must be replaced in Phase 5
+- 20+ worktree-agent-* branches must be deleted before any new branches are created — Phase 1 prerequisite
+- Stripe Price IDs are blank in .env.example — owner must create Stripe products; flag in Phase 5
 
 ## Session Continuity
 
-Last session: 2026-04-12T07:41:28.826Z
-Stopped at: Completed 29-media-generation-pipeline/29-04-PLAN.md
+Last session: 2026-04-12T07:41:55.885Z
+Stopped at: Checkpoint reached in 29-05-PLAN.md after Task 1
 Resume file: None
