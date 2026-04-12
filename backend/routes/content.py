@@ -7,11 +7,13 @@ import csv
 import io
 import uuid
 import logging
+import sentry_sdk
 from database import db
 from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
 from agents.learning import capture_learning_signal
 from services.credits import deduct_credits, CreditOperation
+from config import settings
 
 # Celery task imports
 from tasks import is_redis_configured, get_task_status as celery_get_task_status
@@ -379,15 +381,28 @@ async def generate_image(
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for image generation")
 
-    result = await designer_generate(
-        prompt=prompt,
-        style=data.style,
-        platform=job.get("platform", "linkedin"),
-        persona_card=persona_card,
-        provider=data.provider,
-        model=data.model
-    )
-    
+    try:
+        result = await designer_generate(
+            prompt=prompt,
+            style=data.style,
+            platform=job.get("platform", "linkedin"),
+            persona_card=persona_card,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as exc:
+        if settings.app.sentry_dsn:
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.IMAGE_GENERATE.value,
+            source="image_generate_failure_refund",
+            description=f"Auto-refund for failed image generation on job {data.job_id}",
+        )
+        logger.error("Image generation failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Image generation failed. Credits refunded.")
+
     # Store in job's media_assets
     if result.get("generated"):
         await db.content_jobs.update_one(
@@ -403,7 +418,7 @@ async def generate_image(
                 "$set": {"updated_at": datetime.now(timezone.utc)}
             }
         )
-    
+
     return result
 
 
@@ -443,14 +458,27 @@ async def generate_carousel(
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for carousel generation")
 
-    result = await designer_carousel(
-        topic=topic,
-        key_points=key_points,
-        style=data.style,
-        platform=job.get("platform", "linkedin"),
-        persona_card=persona_card
-    )
-    
+    try:
+        result = await designer_carousel(
+            topic=topic,
+            key_points=key_points,
+            style=data.style,
+            platform=job.get("platform", "linkedin"),
+            persona_card=persona_card
+        )
+    except Exception as exc:
+        if settings.app.sentry_dsn:
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.CAROUSEL_GENERATE.value,
+            source="carousel_generate_failure_refund",
+            description=f"Auto-refund for failed carousel generation on job {data.job_id}",
+        )
+        logger.error("Carousel generation failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Carousel generation failed. Credits refunded.")
+
     # Store carousel in job
     if result.get("generated"):
         await db.content_jobs.update_one(
@@ -462,7 +490,7 @@ async def generate_carousel(
                 }
             }
         )
-    
+
     return result
 
 
@@ -521,28 +549,66 @@ async def narrate_content(
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for voice narration")
 
-    result = await generate_voice_narration(
-        text=content,
-        voice_id=data.voice_id,
-        stability=data.stability,
-        similarity_boost=data.similarity_boost,
-        provider=data.provider,
-        model=data.model
-    )
+    try:
+        result = await generate_voice_narration(
+            text=content,
+            voice_id=data.voice_id,
+            stability=data.stability,
+            similarity_boost=data.similarity_boost,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as exc:
+        if settings.app.sentry_dsn:
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.VOICE_NARRATION.value,
+            source="voice_narration_failure_refund",
+            description=f"Auto-refund for failed voice narration on job {data.job_id}",
+        )
+        logger.error("Voice narration failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Voice narration failed. Credits refunded.")
 
-    # Store audio in job
+    # Store audio in job — upload bytes to R2 for stable URL (Bug 2 fix)
     if result.get("generated"):
+        import base64
+        from services.media_storage import upload_bytes_to_r2
+
+        audio_url = result.get("audio_url", "")
+        audio_base64 = result.get("audio_base64", "")
+
+        if audio_base64 and not audio_url.startswith("https://"):
+            try:
+                audio_bytes = base64.b64decode(audio_base64)
+                storage_key = f"{current_user['user_id']}/audio/{uuid.uuid4()}.mp3"
+                audio_url = upload_bytes_to_r2(storage_key, audio_bytes, "audio/mpeg")
+                logger.info(f"Voice audio uploaded to R2: {storage_key}")
+            except Exception as r2_err:
+                logger.warning(
+                    f"R2 upload failed for voice narration on job {data.job_id}: {r2_err}. "
+                    "Storing data URI as fallback."
+                )
+                # Keep audio_url as data: URI only as fallback when R2 is not configured
+                audio_url = result.get("audio_url", "")
+
         await db.content_jobs.update_one(
             {"job_id": data.job_id},
             {
                 "$set": {
-                    "audio_url": result.get("audio_url"),
+                    "audio_url": audio_url,
                     "voice_used": result.get("voice_used"),
                     "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
-    
+
+        # Return modified result with stable URL (not data: URI)
+        result_to_return = {k: v for k, v in result.items() if k != "audio_base64"}
+        result_to_return["audio_url"] = audio_url
+        return result_to_return
+
     return result
 
 
