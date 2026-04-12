@@ -49,8 +49,9 @@ def generate_video(
     
     async def _generate():
         from database import db
-        from services.creative_providers import CreativeProvidersService
+        from agents.video import generate_video as video_agent_generate
         from services.credits import deduct_credits, add_credits, CreditOperation
+        import uuid as _uuid
 
         try:
             # Update job status
@@ -69,17 +70,17 @@ def generate_video(
             if not credit_result.get("success"):
                 raise Exception(credit_result.get("error", "Insufficient credits"))
 
-            # Generate video
-            service = CreativeProvidersService()
-            result = await service.generate_video(
-                script=script,
+            # Generate video using agent directly (not CreativeProvidersService)
+            # Build a prompt from the script text for the video agent
+            prompt = f"Create a {style} video: {script[:500]}"
+            result = await video_agent_generate(
+                prompt=prompt,
+                duration=duration,
                 provider=provider,
-                style=style,
-                duration=duration
+                model=None
             )
 
-            if result.get("success"):
-                import uuid as _uuid
+            if result.get("generated"):
                 completed_at = datetime.now(timezone.utc)
                 await db.content_jobs.update_one(
                     {"job_id": job_id},
@@ -96,7 +97,7 @@ def generate_video(
                     "job_id": job_id,
                     "type": "video",
                     "url": result.get("video_url"),
-                    "provider": provider,
+                    "provider": result.get("provider", provider),
                     "created_at": completed_at,
                 })
                 return {"success": True, "video_url": result.get("video_url")}
@@ -115,7 +116,7 @@ def generate_video(
                     user_id,
                     CreditOperation.VIDEO_GENERATE.value,
                     source="video_task_failure_refund",
-                    description=f"Auto-refund for failed video generation task on job {job_id}",
+                    description=f"Auto-refund for failed Celery video task on job {job_id}",
                 )
             except Exception as refund_err:
                 logger.error(f"Failed to refund video credits for job {job_id}: {refund_err}")
@@ -149,8 +150,9 @@ def generate_image(
     
     async def _generate():
         from database import db
-        from services.creative_providers import CreativeProvidersService
+        from agents.designer import generate_image as designer_generate_image
         from services.credits import deduct_credits, add_credits, CreditOperation
+        import uuid as _uuid
 
         try:
             # Deduct credits
@@ -163,21 +165,27 @@ def generate_image(
             if not credit_result.get("success"):
                 raise Exception(credit_result.get("error", "Insufficient credits"))
 
-            # Generate image
-            service = CreativeProvidersService()
-            result = await service.generate_image(
+            # Generate image using agent directly (not CreativeProvidersService)
+            result = await designer_generate_image(
                 prompt=prompt,
-                provider=provider,
                 style=style,
-                size=size
+                platform="linkedin",
+                persona_card={},
+                provider=provider,
+                model=None
             )
 
-            if result.get("success"):
-                import uuid as _uuid
+            if result.get("generated"):
+                completed_at = datetime.now(timezone.utc)
                 # Update job with image URL
                 await db.content_jobs.update_one(
                     {"job_id": job_id},
-                    {"$push": {"images": result.get("image_url")}}
+                    {"$push": {"media_assets": {
+                        "type": "image",
+                        "image_url": result.get("image_url"),
+                        "provider": result.get("provider"),
+                        "created_at": completed_at,
+                    }}}
                 )
                 # Store in media_assets so /api/media/assets shows AI-generated images
                 await db.media_assets.insert_one({
@@ -186,22 +194,23 @@ def generate_image(
                     "job_id": job_id,
                     "type": "image",
                     "url": result.get("image_url"),
-                    "provider": provider,
+                    "provider": result.get("provider", provider),
                     "prompt": prompt[:200],
-                    "created_at": datetime.now(timezone.utc),
+                    "created_at": completed_at,
                 })
                 return {"success": True, "image_url": result.get("image_url")}
             else:
-                raise Exception(result.get("error", "Image generation failed"))
+                raise Exception(result.get("error", "Image generation returned generated=False"))
 
         except Exception as e:
             logger.error(f"Image generation failed for job {job_id}: {e}")
+            # Refund credits on task failure
             try:
                 await add_credits(
                     user_id,
                     CreditOperation.IMAGE_GENERATE.value,
-                    source="image_task_failure_refund",
-                    description=f"Auto-refund for failed image generation task on job {job_id}",
+                    source="image_celery_task_failure_refund",
+                    description=f"Auto-refund for failed Celery image task on job {job_id}",
                 )
             except Exception as refund_err:
                 logger.error(f"Failed to refund image credits for job {job_id}: {refund_err}")
@@ -233,8 +242,9 @@ def generate_voice(
     
     async def _generate():
         from database import db
-        from services.creative_providers import CreativeProvidersService
+        from agents.voice import generate_voice_narration
         from services.credits import deduct_credits, add_credits, CreditOperation
+        import uuid as _uuid
 
         try:
             # Deduct credits
@@ -247,16 +257,15 @@ def generate_voice(
             if not credit_result.get("success"):
                 raise Exception(credit_result.get("error", "Insufficient credits"))
 
-            # Generate voice
-            service = CreativeProvidersService()
-            result = await service.generate_voice(
+            # Generate voice using agent directly (not CreativeProvidersService)
+            result = await generate_voice_narration(
                 text=text,
+                voice_id=voice_id,
                 provider=provider,
-                voice_id=voice_id
             )
 
-            if result.get("success"):
-                import uuid as _uuid
+            if result.get("generated"):
+                completed_at = datetime.now(timezone.utc)
                 await db.content_jobs.update_one(
                     {"job_id": job_id},
                     {"$set": {"voice_url": result.get("audio_url")}}
@@ -268,8 +277,8 @@ def generate_voice(
                     "job_id": job_id,
                     "type": "audio",
                     "url": result.get("audio_url"),
-                    "provider": provider,
-                    "created_at": datetime.now(timezone.utc),
+                    "provider": result.get("provider", provider),
+                    "created_at": completed_at,
                 })
                 return {"success": True, "audio_url": result.get("audio_url")}
             else:
@@ -277,12 +286,13 @@ def generate_voice(
 
         except Exception as e:
             logger.error(f"Voice generation failed for job {job_id}: {e}")
+            # Refund credits on task failure
             try:
                 await add_credits(
                     user_id,
                     CreditOperation.VOICE_NARRATION.value,
                     source="voice_task_failure_refund",
-                    description=f"Auto-refund for failed voice generation task on job {job_id}",
+                    description=f"Auto-refund for failed Celery voice task on job {job_id}",
                 )
             except Exception as refund_err:
                 logger.error(f"Failed to refund voice credits for job {job_id}: {refund_err}")
@@ -314,9 +324,10 @@ def generate_carousel(
     
     async def _generate():
         from database import db
-        from services.creative_providers import CreativeProvidersService
-        from services.credits import deduct_credits, CreditOperation
-        
+        from agents.designer import generate_carousel as designer_generate_carousel
+        from services.credits import deduct_credits, add_credits, CreditOperation
+        import uuid as _uuid
+
         try:
             # Deduct credits for carousel
             credit_result = await deduct_credits(
@@ -324,61 +335,78 @@ def generate_carousel(
                 operation=CreditOperation.CAROUSEL_GENERATE,
                 description=f"Carousel ({len(slides)} slides): {provider}"
             )
-            
+
             if not credit_result.get("success"):
                 raise Exception(credit_result.get("error", "Insufficient credits"))
-            
-            # Generate each slide
-            service = CreativeProvidersService()
-            generated_images = []
-            
-            for i, slide in enumerate(slides):
-                result = await service.generate_image(
-                    prompt=slide.get("prompt", slide.get("text", "")),
-                    provider=provider,
-                    style=style
-                )
-                
-                if result.get("success"):
-                    generated_images.append({
-                        "slide_number": i + 1,
-                        "image_url": result.get("image_url"),
-                        "text": slide.get("text", "")
-                    })
-                else:
-                    logger.warning(f"Failed to generate slide {i + 1}: {result.get('error')}")
-            
-            import uuid as _uuid
-            # Update job
-            await db.content_jobs.update_one(
-                {"job_id": job_id},
-                {"$set": {
-                    "carousel_images": generated_images,
-                    "carousel_status": "completed"
-                }}
+
+            # Generate carousel using agent directly (not CreativeProvidersService)
+            topic = slides[0].get("text", "Carousel") if slides else "Carousel"
+            key_points = [s.get("text", "") for s in slides]
+            result = await designer_generate_carousel(
+                topic=topic,
+                key_points=key_points,
+                style=style,
+                platform="linkedin",
+                persona_card={},
+                provider=provider,
             )
 
-            # Store each slide in media_assets so /api/media/assets shows carousel images
-            for img in generated_images:
-                await db.media_assets.insert_one({
-                    "asset_id": f"asset_{_uuid.uuid4().hex[:12]}",
-                    "user_id": user_id,
-                    "job_id": job_id,
-                    "type": "image",
-                    "url": img["image_url"],
-                    "provider": provider,
-                    "carousel_slide": img["slide_number"],
-                    "created_at": datetime.now(timezone.utc),
-                })
+            if result.get("generated"):
+                generated_slides = result.get("slides", [])
+                # Normalise slide format to match existing db schema
+                generated_images = []
+                for slide_data in generated_slides:
+                    img_url = slide_data.get("image_url") or slide_data.get("url")
+                    if img_url:
+                        generated_images.append({
+                            "slide_number": slide_data.get("slide_number", len(generated_images) + 1),
+                            "image_url": img_url,
+                            "text": slide_data.get("content", slide_data.get("text", "")),
+                        })
 
-            return {"success": True, "slides": generated_images}
-                
+                completed_at = datetime.now(timezone.utc)
+                # Update job
+                await db.content_jobs.update_one(
+                    {"job_id": job_id},
+                    {"$set": {
+                        "carousel_images": generated_images,
+                        "carousel_status": "completed"
+                    }}
+                )
+
+                # Store each slide in media_assets so /api/media/assets shows carousel images
+                for img in generated_images:
+                    await db.media_assets.insert_one({
+                        "asset_id": f"asset_{_uuid.uuid4().hex[:12]}",
+                        "user_id": user_id,
+                        "job_id": job_id,
+                        "type": "image",
+                        "url": img["image_url"],
+                        "provider": result.get("provider", provider),
+                        "carousel_slide": img["slide_number"],
+                        "created_at": completed_at,
+                    })
+
+                return {"success": True, "slides": generated_images}
+            else:
+                raise Exception(result.get("error", "Carousel generation failed"))
+
         except Exception as e:
             logger.error(f"Carousel generation failed for job {job_id}: {e}")
             await db.content_jobs.update_one(
                 {"job_id": job_id},
                 {"$set": {"carousel_status": "failed", "carousel_error": str(e)}}
             )
+            # Refund credits on task failure
+            try:
+                await add_credits(
+                    user_id,
+                    CreditOperation.CAROUSEL_GENERATE.value,
+                    source="carousel_task_failure_refund",
+                    description=f"Auto-refund for failed Celery carousel task on job {job_id}",
+                )
+            except Exception as refund_err:
+                logger.error(f"Failed to refund carousel credits for job {job_id}: {refund_err}")
             raise
     
     try:
