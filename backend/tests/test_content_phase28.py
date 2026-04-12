@@ -358,6 +358,30 @@ def test_approve_and_schedule():
 
 @pytest.mark.unit
 def test_pipeline_stage_progression():
+    """CONT-12 — Pipeline must update current_agent for all 5 stages.
+
+    Verifies pipeline.py source contains at least 5 current_agent update calls
+    and that each of the 5 stage names (commander, scout, thinker, writer, qc)
+    appears as a current_agent value.
+    """
+    import pathlib
+    pipeline_source = pathlib.Path("agents/pipeline.py").read_text()
+    # Count how many times current_agent is set in the pipeline
+    current_agent_updates = pipeline_source.count('"current_agent"')
+    assert current_agent_updates >= 5, (
+        f"Pipeline must update current_agent at least 5 times (one per stage), "
+        f"found {current_agent_updates}. Each of commander/scout/thinker/writer/qc "
+        "must call update_job with current_agent before running."
+    )
+    # Verify all 5 stage names appear as current_agent values
+    for stage in ["commander", "scout", "thinker", "writer", "qc"]:
+        assert f'"current_agent": "{stage}"' in pipeline_source or f"'current_agent': '{stage}'" in pipeline_source, (
+            f"Stage '{stage}' never set as current_agent in pipeline.py"
+        )
+
+
+@pytest.mark.unit
+def test_pipeline_signature():
     """CONT-12 — run_agent_pipeline must accept all required pipeline parameters.
 
     Verifies the function signature without executing the pipeline (no LLM calls).
@@ -375,6 +399,49 @@ def test_pipeline_stage_progression():
         f"run_agent_pipeline is missing required parameters: {sorted(missing)}. "
         f"Found parameters: {sorted(params)}"
     )
+
+
+@pytest.mark.unit
+def test_approve_status_model_validation():
+    """CONT-11: ContentStatusUpdate model must accept 'approved', reject invalid values."""
+    if not HAS_STATUS_UPDATE:
+        pytest.fail("ContentStatusUpdate not found in routes.content")
+
+    from pydantic import ValidationError
+
+    # Valid: approved
+    m = ContentStatusUpdate(status="approved")
+    assert m.status == "approved"
+
+    # Valid: rejected
+    m2 = ContentStatusUpdate(status="rejected")
+    assert m2.status == "rejected"
+
+    # Invalid: raises ValidationError
+    with pytest.raises(ValidationError):
+        ContentStatusUpdate(status="published")  # not in allowed pattern
+
+    with pytest.raises(ValidationError):
+        ContentStatusUpdate(status="pending")  # not in allowed pattern
+
+
+@pytest.mark.unit
+def test_schedule_content_request_model():
+    """CONT-11: ScheduleContentRequest model exists and validates properly."""
+    try:
+        from routes.dashboard import ScheduleContentRequest
+    except ImportError:
+        pytest.fail("ScheduleContentRequest not found in routes.dashboard — required for CONT-11 JSON body fix")
+
+    from datetime import datetime, timezone
+    req = ScheduleContentRequest(
+        job_id="test-job-123",
+        scheduled_at=datetime.now(timezone.utc),
+        platforms=["linkedin"]
+    )
+    assert req.job_id == "test-job-123"
+    assert req.platforms == ["linkedin"]
+    assert req.scheduled_at is not None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
