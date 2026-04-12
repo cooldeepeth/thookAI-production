@@ -52,7 +52,8 @@ Exceptions:
 - Format picker buttons: `py-2 px-3` (existing pattern from `InputPanel.jsx`) — no change.
 - Platform shell max-width: LinkedIn `max-w-[555px]`, X `max-w-[598px]`, Instagram `max-w-[470px]` — native platform dimensions, not on scale. Do not alter these values.
 - AgentPipeline agent cards: `p-4` (16px) — existing, unchanged.
-- Story slide indicator badge: `px-2 py-0.5` for slide-number label inside `InstagramShell` — matches existing hashtag chip pattern.
+- Story slide indicator badge: `px-2 py-1` (4px vertical) for slide-number label inside `InstagramShell` — uses `py-1` (4px) which is on the approved spacing scale.
+- Hashtag chips inside `InstagramShell`: contract specifies `py-1` (4px). Any live code using `py-0.5` (2px) must be updated to `py-1` during Phase 28 execution.
 
 Source: Phase 27 UI-SPEC, `InputPanel.jsx`, `LinkedInShell.jsx`, `XShell.jsx`, `InstagramShell.jsx`
 
@@ -60,14 +61,18 @@ Source: Phase 27 UI-SPEC, `InputPanel.jsx`, `LinkedInShell.jsx`, `XShell.jsx`, `
 
 ## Typography
 
-4 sizes, 2 weights. Identical to Phase 27 — inherited. No new type roles introduced.
+4 sizes, 2 weights. Identical to Phase 27 — inherited.
 
 | Role | Size | Weight | Line Height | Class / Notes |
 |------|------|--------|-------------|---------------|
 | Heading | 28px (`text-3xl`) | 700 | 1.2 | `font-display font-bold` — ContentStudio panel headings only (not used in shells) |
 | Body | 16px (`text-base`) | 400 | 1.5 | Platform shell content rendering (LinkedIn `text-sm text-gray-800`, X `text-[15px] text-white`) — shells use platform-native values, see Shell Typography below |
 | Label | 14px (`text-sm`) | 400 | 1.4 | Button labels, format type names, pipeline stage names |
-| Micro / mono | 12px (`text-xs`) | 400 | 1.3 | Character counters, agent model tags, section section headers (`PLATFORM`, `FORMAT` labels), credit counts |
+| Micro / mono | 12px (`text-xs`) | 400 | 1.3 | Character counters, agent model tags, section headers (`PLATFORM`, `FORMAT` labels), credit counts |
+
+Weight declarations:
+- 400 (`font-normal`) — body text, labels, micro/mono roles
+- 700 (`font-bold`) — display headings and AgentPipeline agent name labels
 
 Shell-internal typography (existing, do not change):
 - `LinkedInShell` body text: `text-sm text-gray-800` (14px) — platform-native weight rendering
@@ -75,9 +80,9 @@ Shell-internal typography (existing, do not change):
 - `InstagramShell` caption text: `text-sm text-gray-900` (14px) — platform-native
 
 Rules:
-- AgentPipeline agent name: `text-sm font-semibold` — existing, unchanged.
+- AgentPipeline agent name: `text-sm font-bold` — override existing `font-semibold` (600) → `font-bold` (700). This is a deliberate visual update in Phase 28: the previous `font-semibold` is replaced to keep the type scale at exactly 2 weights (400 regular, 700 bold). Executors must update `AgentPipeline.jsx` accordingly.
 - Format picker section label: `text-xs text-zinc-500 uppercase tracking-wider font-mono` — existing `InputPanel.jsx` pattern.
-- Story slide label inside InstagramShell: `text-[10px] font-mono text-zinc-400` — matches hashtag chip typography pattern.
+- Story slide label inside InstagramShell: `text-xs font-mono text-zinc-400` — micro/mono role at 12px.
 - All `font-mono` usage: character counters, model tags, credit badge, section sub-labels.
 
 Source: Phase 27 UI-SPEC, `InputPanel.jsx`, `AgentPipeline.jsx`, `LinkedInShell.jsx`, `XShell.jsx`, `InstagramShell.jsx`
@@ -97,7 +102,7 @@ Source: Phase 27 UI-SPEC, `InputPanel.jsx`, `AgentPipeline.jsx`, `LinkedInShell.
 | Border active | `rgba(212,255,0,0.2)` | Active agent card border (`border-lime/20`) |
 
 Accent lime (`#D4FF00`) reserved for:
-1. Primary CTA button background (`btn-primary`) — "Generate with AI", "Approve", "Schedule"
+1. Primary CTA button background (`btn-primary`) — "Generate with AI", "Approve Content", "Schedule"
 2. AgentPipeline: running-agent indicator dot (`w-2 h-2 bg-lime rounded-full animate-pulse`)
 3. AgentPipeline: running-agent card left-border glow (`border-lime/20 bg-lime/3`)
 4. AgentPipeline: done-agent status icon background (`bg-lime/15`)
@@ -136,12 +141,12 @@ This is the primary new surface for this phase. The `PLATFORMS` constant in `Inp
 
 ### Platform Tabs (unchanged visual contract)
 
-3 tabs — LinkedIn, X, Instagram — rendered as `flex gap-1.5`. Each tab:
+3 tabs — LinkedIn, X, Instagram — rendered as `flex gap-2`. Each tab:
 - Width: `flex-1`
-- Layout: `flex flex-col items-center gap-1 py-2.5 rounded-xl border`
+- Layout: `flex flex-col items-center gap-1 py-2 rounded-xl border`
 - Inactive: `border-white/5 hover:border-white/10` with platform icon at `text-zinc-600` (18px)
 - Active: `border-white/20 bg-white/5` with platform icon in its brand color
-- Label: `text-[10px] font-medium` — white when active, `text-zinc-600` when inactive
+- Label: `text-xs` — white when active, `text-zinc-600` when inactive
 
 ### Format Type Buttons (expanded to 3 for LinkedIn and Instagram)
 
@@ -150,8 +155,8 @@ Instagram now has 3 format buttons: Feed, Reel, Story.
 X remains 2: Tweet, Thread.
 
 Layout rule for 3-button rows:
-- Container: `flex gap-1.5 flex-wrap` (add `flex-wrap` for narrow screens)
-- Each button: `flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors border` — reduce from `py-2 text-xs` to `py-1.5 text-[10px]` when 3 buttons are present to prevent overflow at 375px
+- Container: `flex gap-2 flex-wrap` (add `flex-wrap` for narrow screens)
+- Each button: `flex-1 py-1 rounded-lg text-xs transition-colors border` — reduce from `py-2 text-xs` to `py-1 text-xs` when 3 buttons are present to prevent overflow at 375px
 - Inactive: `border-white/5 text-zinc-500 hover:text-zinc-300`
 - Active: `border-white/20 bg-white/8 text-white`
 - `data-testid`: `content-type-{id}` (existing pattern — extend for new types)
@@ -186,7 +191,7 @@ Source: `InputPanel.jsx` (existing pattern), `28-RESEARCH.md` (format matrix)
 
 ## AgentPipeline: Visual Contract (verified, no changes needed)
 
-The `AgentPipeline.jsx` component implements all required progress states. Visual contract is locked — do not modify styles.
+The `AgentPipeline.jsx` component implements all required progress states. Visual contract is locked — do not modify styles except for the agent name typography update noted in the Typography section.
 
 ### States per agent card
 
@@ -212,7 +217,7 @@ Running description and done description are already correct in `AgentPipeline.j
 ### Header
 
 - Running indicator: `w-2 h-2 bg-lime rounded-full animate-pulse` with `text-xs font-mono text-lime uppercase tracking-wider` — "Agents at work"
-- Platform label: `font-display font-semibold text-white text-lg` — "Creating your {platform} content"
+- Platform label: `font-display font-bold text-white text-lg` — "Creating your {platform} content"
 - Input preview: `text-zinc-500 text-sm` truncated at 60 chars — existing, unchanged
 
 ### Error block
@@ -233,7 +238,7 @@ Source: `AgentPipeline.jsx` (confirmed, fully implemented — no UI changes need
 - Container: `bg-white rounded-lg shadow-lg overflow-hidden max-w-[555px] mx-auto`
 - Character limits: Post/Article 3,000 chars (hard), warning at 2,700. Carousel 1,500 chars — **no dedicated carousel shell for v3.0**: Writer FORMAT_RULES instruct the LLM to stay within 1,500 chars for carousel; the LinkedInShell enforces 3,000 (upper bound). This is acceptable.
 - Counter colors: normal `text-gray-400`, warning `text-yellow-600`, limit `text-red-500 font-bold`
-- Hashtag/mention color: `text-[#0A66C2] font-medium`
+- Hashtag/mention color: `text-[#0A66C2]`
 - Edit mode: `<textarea>` inside the content area with `bg-transparent outline-none resize-none`
 - Read-only mode: `whitespace-pre-wrap` div rendering
 - No visual distinction between article and post shells for v3.0. Article content will have a bold first line (as produced by the Writer) rendering naturally in the existing shell.
@@ -244,7 +249,7 @@ Source: `AgentPipeline.jsx` (confirmed, fully implemented — no UI changes need
 - Container per tweet: `bg-black border border-[#2F3336] rounded-2xl overflow-hidden max-w-[598px] mx-auto space-y-3`
 - Tweet body: `text-[15px] text-white leading-relaxed whitespace-pre-wrap`
 - Char counter: SVG circle arc — blue (`#1D9BF0`) normal, yellow (`#FFD400`) at >80%, red (`#F4212E`) at limit. Remaining count shown inside circle when over.
-- Thread numbering: `{n}/{total}` in `text-[#1D9BF0] text-xs font-medium` — top-right of header row
+- Thread numbering: `{n}/{total}` in `text-[#1D9BF0] text-xs` — top-right of header row
 - "Add another tweet" button: `border-dashed border-[#2F3336] text-[#1D9BF0]` — only visible in edit mode
 - Thread parse pattern: `1/ ... 2/ ...` — already implemented in `XShell.jsx`
 
@@ -254,8 +259,8 @@ Source: `AgentPipeline.jsx` (confirmed, fully implemented — no UI changes need
 - Container: `bg-white rounded-lg shadow-lg overflow-hidden max-w-[470px] mx-auto`
 - Max chars: 2,200 — hard limit enforced in `handleChange`
 - Hashtag count: 10–15 recommended range. Counter: green when in range, yellow when below minimum, no color when over maximum.
-- Hashtag chip: `text-[10px] bg-gray-100 text-[#00376B] px-2 py-0.5 rounded-full`
-- Hashtag suggestion buttons: `text-[10px] bg-[#E1306C]/10 text-[#E1306C] px-2 py-0.5 rounded-full`
+- Hashtag chip: `text-xs bg-gray-100 text-[#00376B] px-2 py-1 rounded-full` — use `py-1` (4px, on scale). Update any live code using `py-0.5` to `py-1`.
+- Hashtag suggestion buttons: `text-xs bg-[#E1306C]/10 text-[#E1306C] px-2 py-1 rounded-full`
 
 #### Instagram Story Sequence: Slide Display Contract
 
@@ -270,12 +275,12 @@ const storySlides = content.split(/Slide \d+:\s*/i).filter(Boolean);
 
 Story slide display (within existing shell, below the image placeholder):
 - Each slide rendered as a separate block: `rounded-xl border border-white/10 bg-gray-50 p-3 mb-2`
-- Slide number badge: `text-[10px] font-mono text-zinc-400 mb-1` — "Slide {n} of {total}"
+- Slide number badge: `px-2 py-1 text-xs font-mono text-zinc-400 mb-1` — "Slide {n} of {total}". Uses `py-1` (4px) — on the approved spacing scale.
 - Slide content: `text-sm text-gray-900 leading-relaxed whitespace-pre-wrap`
 - Edit mode for stories: single `<textarea>` over the full content (do not split into per-slide inputs — v3.0 simplification)
 - If NOT story format: render existing caption single-block layout unchanged
 
-The image placeholder retains its existing styling — square aspect ratio, gray gradient, placeholder icon. For story, a note "Vertical story format (9:16)" in `text-[10px] text-gray-400` replaces the subtitle text "Your visual content here".
+The image placeholder retains its existing styling — square aspect ratio, gray gradient, placeholder icon. For story, a note "Vertical story format (9:16)" in `text-xs text-gray-400` replaces the subtitle text "Your visual content here".
 
 Source: `InstagramShell.jsx`, `28-RESEARCH.md` Pitfall 3 and Story Display pattern
 
@@ -287,16 +292,16 @@ These actions are implemented in `ContentOutput.jsx`. Visual contract is locked 
 
 ### Edit
 
-- Trigger: Edit button (`Edit2` icon, `text-zinc-400 hover:text-white`) in ContentOutput action bar
+- Trigger: Edit button (`Edit2` icon, `text-zinc-400 hover:text-white`) in ContentOutput action bar — `aria-label="Edit content"` (icon-only button, required for accessibility)
 - State change: `isEditing` flips to `true` — shell switches textarea view
 - Save: clicking shell's "Post"/"Post Thread"/"Share" button or a separate "Save edits" ghost button calls `onContentChange`
-- Cancel: `X` icon button — reverts `text` state to original `content` prop
+- Cancel: `X` icon button — reverts `text` state to original `content` prop — `aria-label="Cancel edit"` (icon-only button, required for accessibility)
 - Visual: No new elements. Existing action bar pattern unchanged.
 
 ### Approve
 
-- Trigger: "Approve" button — `btn-primary` — in the action bar row below the platform shell
-- Copy: "Approve" (verb only — existing pattern)
+- Trigger: "Approve Content" button — `btn-primary` — in the action bar row below the platform shell
+- Copy: "Approve Content" (verb + noun — explicit action target)
 - Loading state: spinner replaces Zap icon, text becomes "Approving..."
 - Success: job `status` updates to `"approved"`. Button transitions to disabled state showing `Check size={14} text-lime` with "Approved" label in `text-lime font-mono text-xs`
 - API call: `PATCH /api/content/job/{job_id}/status` with `{status: "approved", edited_content: ...}`
@@ -304,7 +309,7 @@ These actions are implemented in `ContentOutput.jsx`. Visual contract is locked 
 
 ### Schedule
 
-- Trigger: "Schedule" button — `btn-ghost` — in the action bar. Only available after `status === "approved"`.
+- Trigger: "Schedule Post" button — `btn-ghost` — in the action bar. Only available after `status === "approved"`.
 - Disabled state (before approve): `opacity-40 cursor-not-allowed` with tooltip on hover — "Approve first to enable scheduling"
 - Date/time picker: existing `PublishPanel` component with native `<input type="datetime-local">` — no new picker needed
 - Copy on submit: "Schedule Post"
@@ -325,7 +330,7 @@ Source: `ContentOutput.jsx` (existing approve/edit flow), `28-RESEARCH.md` CONT-
 | Generate hint | "~45–60 seconds · 5 agents · your voice" |
 | Credit badge (no video) | "10 credits" |
 | Credit badge (with video) | "60 credits" |
-| Approve CTA | "Approve" |
+| Approve CTA | "Approve Content" |
 | Approve loading | "Approving..." |
 | Approve success | "Approved" |
 | Schedule CTA | "Schedule Post" |
@@ -360,7 +365,7 @@ ContentStudio renders two panels side by side: InputPanel (left) and ContentOutp
 
 The right panel shows a centered empty state:
 - Icon: `Sparkles size={32} className="text-zinc-700"` centered
-- Heading: `text-zinc-600 text-sm font-medium mt-3` — "Your content will appear here"
+- Heading: `text-zinc-600 text-sm mt-3` — "Your content will appear here"
 - Body: `text-zinc-700 text-xs mt-1` — "Generate your first piece of content by filling in the topic above."
 
 This state already exists in `ContentOutput.jsx` — no new UI needed, confirm copy matches above.
@@ -368,8 +373,8 @@ This state already exists in `ContentOutput.jsx` — no new UI needed, confirm c
 **Output ready state** (after pipeline completes, job reaches `reviewing`):
 
 Header row above the platform shell:
-- `font-display font-semibold text-white` — "Your {Format} is ready" — format label from display map above
-- Format badge: `text-[10px] font-mono bg-white/5 text-zinc-400 rounded-full px-2 py-0.5` — e.g. "LinkedIn · Post" or "X · Thread"
+- `font-display font-bold text-white` — "Your {Format} is ready" — format label from display map above
+- Format badge: `text-xs font-mono bg-white/5 text-zinc-400 rounded-full px-2 py-1` — e.g. "LinkedIn · Post" or "X · Thread". Uses `py-1` (4px) — on the approved spacing scale.
 
 Source: `ContentOutput.jsx` (existing empty state pattern — verify copy matches contract)
 
@@ -396,12 +401,12 @@ Source: `AgentPipeline.jsx`, `LinkedInShell.jsx`, Phase 27 UI-SPEC animation con
 
 | Breakpoint | ContentStudio Layout |
 |------------|---------------------|
-| Mobile (<768px) | Single column: InputPanel full width, ContentOutput below. Format buttons: `flex-wrap` with `py-1.5 text-[10px]` for 3-button rows. Platform shells: full width, `max-w-full` override. |
+| Mobile (<768px) | Single column: InputPanel full width, ContentOutput below. Format buttons: `flex-wrap` with `py-1 text-xs` for 3-button rows. Platform shells: full width, `max-w-full` override. |
 | Tablet (768px+) | Two-column split: InputPanel left, ContentOutput right. Shell max-widths restored. |
 | Desktop (1024px+) | Same as tablet. `max-w-[555px]` etc. honored for shells. |
 
 Format picker 3-button rule at mobile (375px):
-- LinkedIn formats: 3 buttons with `text-[10px] py-1.5 flex-1` — 3 equal-width buttons fit without overflow.
+- LinkedIn formats: 3 buttons with `text-xs py-1 flex-1` — 3 equal-width buttons fit without overflow.
 - Instagram formats: same rule.
 - X formats: `text-xs py-2` (2 buttons — no change needed).
 
@@ -416,6 +421,9 @@ Source: `InputPanel.jsx` (existing flex layout), `28-RESEARCH.md` Pitfall 4
 - Story slide blocks: `role="list"` on slide container, `role="listitem"` on each slide div.
 - Approve button: `aria-disabled="true"` when `isRunning` — existing disabled pattern.
 - Schedule button: `aria-disabled="true"` when not yet approved; `title="Approve first to enable scheduling"` for tooltip text.
+- ContentOutput action bar — icon-only buttons require explicit `aria-label`:
+  - Edit2 button: `aria-label="Edit content"` — required because no visible label text accompanies the icon.
+  - X (cancel edit) button: `aria-label="Cancel edit"` — required because no visible label text accompanies the icon.
 - AgentPipeline: existing `data-testid` attributes satisfy test-accessibility needs. No new `aria-live` regions needed — pipeline polling is not announced to screen readers (improvement deferred).
 - Color contrast: all new elements use lime on dark backgrounds (contrast ~14:1) or zinc-400 on `#050505` (contrast ~6:1, exceeds WCAG AA).
 
