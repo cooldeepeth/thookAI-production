@@ -683,7 +683,7 @@ The planner should produce exactly these 7 plans in 3 waves.
 - Dependencies: Production URL available
 - Autonomous: true
 
-**35-05: Multi-browser E2E smoke + production smoke test (PERF-03, PERF-08)**
+**35-05: Multi-browser E2E smoke + production smoke test (PERF-06, PERF-08)**
 - Requirements: PERF-03 (production E2E), PERF-08 (cross-browser)
 - Goal: (a) Add Firefox, webkit, mobile-chrome, mobile-safari projects to
   `playwright.config.ts`; (b) Write `e2e/production-smoke.spec.ts` that hits the live
@@ -706,8 +706,8 @@ The planner should produce exactly these 7 plans in 3 waves.
 - Dependencies: None for code changes; Sentry grooming requires human
 - Autonomous: false — 48h clock MUST be started by a human after reviewing Sentry dashboard
 
-**35-07: Pre-launch checklist + final sign-off (PERF-06, PERF-09)**
-- Requirements: PERF-06 (pre-launch checklist), PERF-09 (signed off)
+**35-07: Pre-launch checklist + final sign-off (PERF-09)**
+- Requirements: PERF-09 (pre-launch checklist complete and signed off)
 - Goal: Write `LAUNCH-CHECKLIST.md` at repo root; validate all env vars in Railway and
   Vercel; verify Stripe production mode; verify CORS allow-list; verify SSL; verify n8n
   workflows active; sign off.
@@ -846,7 +846,7 @@ The executor for Plan 35-07 should produce `LAUNCH-CHECKLIST.md` containing thes
 
 - [ ] `backend/scripts/measure_p95.sh` — PERF-01 measurement script
 - [ ] `backend/scripts/launch-checklist-verify.sh` — automated portion of PERF-09
-- [ ] `e2e/production-smoke.spec.ts` — real-backend smoke against prod URL (PERF-03, PERF-08)
+- [ ] `e2e/production-smoke.spec.ts` — real-backend smoke against prod URL (PERF-06, PERF-08)
 - [ ] `e2e/helpers/production-auth.ts` — handles real login for production smoke
 - [ ] `.lighthouserc.json` — LHCI configuration with 90+ assertion thresholds
 - [ ] `LAUNCH-CHECKLIST.md` — human sign-off checklist (PERF-09)
