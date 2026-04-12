@@ -566,12 +566,20 @@
 1. Sending a POST request with a payload containing a MongoDB injection pattern (e.g., {"$where": "..."}) or an XSS payload (e.g., "<script>alert(1)</script>") to any endpoint returns 400 with the input rejected — verified with 10 payloads from the OWASP testing guide
 2. Running "grep -r 'os.environ.get' backend/" and "grep -rE '(API_KEY|SECRET|PASSWORD)\s\*=' backend/" returns zero results outside of config.py — no hardcoded secrets exist in the codebase
 3. A user can request their full data export at GET /api/auth/export and receive a JSON file containing all their content jobs, persona, scheduled posts, analytics, and billing history — the response is complete within 10 seconds
-4. A user can delete their account at DELETE /api/auth/account — within 5 seconds, their email is anonymized in the users collection, and their persona/content/scheduled posts are removed — the user can no longer log in
+4. A user can delete their account at **POST /api/auth/delete-account** with body {"confirm": "DELETE"} — within 5 seconds, their email is anonymized in the users collection, and their persona/content/scheduled posts are removed — the user can no longer log in (Note: implementation uses POST with confirmation body, not bare DELETE, for safer UX — see SECR-10)
 5. Visiting the site for the first time shows a GDPR cookie consent banner — PostHog tracking only initializes after the user clicks "Accept" — verified by checking PostHog events in an incognito session before and after consent
 6. /privacy and /terms pages exist and are accessible without authentication — both pages contain real content (not Lorem Ipsum)
-   **Plans**: TBD
-   Plans: [To be planned]
-   **UI hint**: yes
+**Plans**: 9 plans
+Plans:
+- [ ] 34-01-PLAN.md — XSS sanitization layer (SECR-01, SECR-02, SECR-03)
+- [ ] 34-02-PLAN.md — Secret audit + Sentry PII scrubbing (SECR-06, SECR-07)
+- [ ] 34-03-PLAN.md — Rate limiting + CSRF verification (SECR-04, SECR-05)
+- [ ] 34-04-PLAN.md — Dependency CVE audit (SECR-08)
+- [ ] 34-05-PLAN.md — GDPR export + delete backend gaps (SECR-09, SECR-10)
+- [ ] 34-06-PLAN.md — Settings Data tab GDPR frontend UI (SECR-09, SECR-10)
+- [ ] 34-07-PLAN.md — PostHog consent gate (SECR-11)
+- [ ] 34-08-PLAN.md — Privacy + Terms polish + routing verification (SECR-12, SECR-13)
+- [ ] 34-09-PLAN.md — Security test suite (all SECR)
 
 ### Phase 35: Performance, Monitoring & Launch
 
@@ -604,5 +612,5 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 31. Smart Scheduling                 | 4/4            | Complete    | 2026-04-12 |
 | 32. Frontend Core Flows Polish       | 7/7            | Complete    | 2026-04-13 |
 | 33. Design System & Landing Page     | 6/6            | Complete    | 2026-04-13 |
-| 34. Security & GDPR                  | 0/TBD          | Not started | -          |
+| 34. Security & GDPR                  | 0/9            | Not started | -          |
 | 35. Performance, Monitoring & Launch | 0/TBD          | Not started | -          |
