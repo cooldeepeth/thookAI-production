@@ -552,8 +552,15 @@
 3. On a 375px mobile screen, the landing page renders without horizontal scroll, the hero CTA button is easily tappable, and the navigation collapses into a mobile menu — verified in browser at 375px width
 4. The landing page /meta title includes "ThookAI", the meta description is under 160 characters and describes the product, and the Open Graph og:image is set — verified with a curl of the page HTML or browser DevTools
 5. A first-time visitor to the landing page can clearly understand what ThookAI does, see how it works in 3 steps, and find the pricing — measurable by a 5-second reading test: a person reading the hero + features sections can explain the product
-   **Plans**: TBD
-   Plans: [To be planned]
+**Plans**: 7 plans
+Plans:
+- [ ] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
+- [ ] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
+- [ ] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
+- [ ] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
+- [ ] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
+- [ ] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
+- [ ] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
    **UI hint**: yes
 
 ### Phase 34: Security & GDPR
@@ -595,8 +602,15 @@
 4. A Locust load test of 50 concurrent users running the standard content generation flow for 5 minutes shows p95 response time under 2 seconds and zero 5xx errors in the results
 5. Sentry shows zero unresolved errors for 48 consecutive hours after the final deployment — all existing error events are reviewed and resolved before the clock starts
 6. The pre-launch checklist is signed off: SSL verified, CORS configured, all env vars set in Railway and Vercel, Stripe in production mode, rate limiting active, monitoring active, backup strategy documented
-   **Plans**: TBD
-   Plans: [To be planned]
+**Plans**: 7 plans
+Plans:
+- [ ] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
+- [ ] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
+- [ ] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
+- [ ] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
+- [ ] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
+- [ ] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
+- [ ] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
 
 ## Progress
 
