@@ -67,7 +67,7 @@
 - [x] **Phase 27: Onboarding Reimagination** - Rebuild the onboarding wizard with voice sample recording, writing style analysis, visual identity selection, multi-step progress, save-as-you-go, and fix the LLM model name bug in onboarding.py (completed 2026-04-11)
 - [x] **Phase 28: Content Generation Multi-Format** - Implement platform-specific content generation for all 9 formats (LinkedIn post/article/carousel, X tweet/thread, Instagram feed/reel/story) with persona-aware Writer prompts and real-time pipeline progress (completed 2026-04-12)
 - [x] **Phase 29: Media Generation Pipeline** - Wire and verify the full media pipeline: auto-images via DALL-E/FAL.ai, carousel slides via Remotion, video via Runway/Luma, voice narration via ElevenLabs, R2 upload flow end-to-end, media display in UI (completed 2026-04-12)
-- [ ] **Phase 30: Social Publishing End-to-End** - Fix and verify LinkedIn UGC, X v2, and Instagram Meta Graph publishing with OAuth connect/refresh, token encryption, publish status tracking, and real engagement metrics display
+- [x] **Phase 30: Social Publishing End-to-End** - Fix and verify LinkedIn UGC, X v2, and Instagram Meta Graph publishing with OAuth connect/refresh, token encryption, publish status tracking, and real engagement metrics display (completed 2026-04-12)
 - [ ] **Phase 31: Smart Scheduling** - Implement AI-suggested optimal posting times, user approval/modification of schedule, calendar view of all scheduled posts, and Celery Beat automatic publishing at scheduled times
 - [ ] **Phase 32: Frontend Core Flows Polish** - Polish every core page: auth, dashboard, ContentStudio, settings — all loading/empty/error states, mobile responsive (375px/768px/1440px), keyboard navigation
 - [ ] **Phase 33: Design System & Landing Page** - Apply consistent design system across all pages, rebuild the landing page to be conversion-optimized with hero/features/how-it-works/pricing/CTA/footer, SEO meta and OG tags
@@ -496,7 +496,7 @@
    Plans:
    - [x] 30-01-PLAN.md — Fix _publish_to_platform (decrypt token, return dict) + store publish_results on content_jobs
    - [x] 30-02-PLAN.md — Proactive 24h token refresh in get_platform_token + Instagram _refresh_token branch
-   - [ ] 30-03-PLAN.md — token_expiring_soon in /api/platforms/status + Connections.jsx warning + Fernet round-trip test
+   - [x] 30-03-PLAN.md — token_expiring_soon in /api/platforms/status + Connections.jsx warning + Fernet round-trip test
    - [x] 30-04-PLAN.md — LinkedIn registerUpload + X media/upload image attachment + Instagram media wiring verification + VALIDATION.md
 
 ### Phase 31: Smart Scheduling
@@ -590,7 +590,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 27. Onboarding Reimagination         | 5/5 | Complete    | 2026-04-12 |
 | 28. Content Generation Multi-Format  | 5/5 | Complete    | 2026-04-12 |
 | 29. Media Generation Pipeline        | 5/5 | Complete    | 2026-04-12 |
-| 30. Social Publishing End-to-End     | 3/4 | In Progress|  |
+| 30. Social Publishing End-to-End     | 4/4 | Complete    | 2026-04-12 |
 | 31. Smart Scheduling                 | 0/TBD          | Not started | -         |
 | 32. Frontend Core Flows Polish       | 0/TBD          | Not started | -         |
 | 33. Design System & Landing Page     | 0/TBD          | Not started | -         |
