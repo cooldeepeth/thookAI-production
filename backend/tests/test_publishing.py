@@ -653,3 +653,241 @@ class TestScheduledTasksFixed:
         assert mock_capture.called, "sentry_sdk.capture_message was not called on failure"
         call_kwargs = mock_capture.call_args[1] if mock_capture.call_args else {}
         assert call_kwargs.get("level") == "error" or "error" in str(mock_capture.call_args)
+
+
+# ---------------------------------------------------------------------------
+# Task 1 (30-04): LinkedIn image upload via registerUpload flow
+# ---------------------------------------------------------------------------
+
+class TestPublishLinkedInMedia:
+    """publish_to_linkedin() must support image attachment via registerUpload flow."""
+
+    @pytest.mark.asyncio
+    async def test_calls_register_upload_when_media_provided(self):
+        """registerUpload must be called when media_assets contains an image_url."""
+        register_response = MagicMock()
+        register_response.status_code = 200
+        register_response.json.return_value = {
+            "value": {
+                "asset": "urn:li:digitalmediaAsset:C5522AQF_abc123",
+                "uploadMechanism": {
+                    "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                        "uploadUrl": "https://api.linkedin.com/mediaUpload/upload/abc123",
+                        "headers": {},
+                    }
+                },
+            }
+        }
+        upload_response = MagicMock()
+        upload_response.status_code = 201
+
+        post_response = MagicMock()
+        post_response.status_code = 201
+        post_response.headers = {"x-restli-id": "urn:li:share:987654"}
+        post_response.json.return_value = {}
+
+        image_response = MagicMock()
+        image_response.status_code = 200
+        image_response.content = b"fake_image_bytes"
+
+        captured_calls = []
+
+        userinfo_resp = MagicMock()
+        userinfo_resp.status_code = 200
+        userinfo_resp.json.return_value = {"sub": "person_urn_123"}
+
+        async def mock_get(url, **kw):
+            captured_calls.append(("GET", url))
+            if "r2.example.com" in url:
+                return image_response
+            return userinfo_resp
+
+        async def mock_post(url, **kw):
+            captured_calls.append(("POST", url))
+            if "registerUpload" in url:
+                return register_response
+            if "ugcPosts" in url:
+                return post_response
+            return MagicMock(status_code=201)
+
+        async def mock_put(url, **kw):
+            captured_calls.append(("PUT", url))
+            return upload_response
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+        mock_client.put = AsyncMock(side_effect=mock_put)
+        mock_client.get = AsyncMock(side_effect=mock_get)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_linkedin
+            result = await publish_to_linkedin(
+                user_id="user_test",
+                content="Test post with image",
+                media_assets=[{"image_url": "https://r2.example.com/img.jpg"}],
+                token="valid_token",
+            )
+
+        register_urls = [url for method, url in captured_calls if "registerUpload" in url]
+        assert len(register_urls) >= 1, (
+            f"registerUpload was not called. Captured calls: {captured_calls}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_ugc_body_has_image_category_when_media_provided(self):
+        """UGC post body must use shareMediaCategory=IMAGE and include media array."""
+        captured_ugc_body = {}
+
+        register_response = MagicMock()
+        register_response.status_code = 200
+        register_response.json.return_value = {
+            "value": {
+                "asset": "urn:li:digitalmediaAsset:TEST_ASSET",
+                "uploadMechanism": {
+                    "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                        "uploadUrl": "https://api.linkedin.com/mediaUpload/upload/test",
+                        "headers": {},
+                    }
+                },
+            }
+        }
+        upload_response = MagicMock()
+        upload_response.status_code = 201
+
+        post_response = MagicMock()
+        post_response.status_code = 201
+        post_response.headers = {"x-restli-id": "urn:li:share:111"}
+        post_response.json.return_value = {}
+
+        userinfo_resp = MagicMock()
+        userinfo_resp.status_code = 200
+        userinfo_resp.json.return_value = {"sub": "person_123"}
+
+        image_resp = MagicMock()
+        image_resp.status_code = 200
+        image_resp.content = b"img_bytes"
+
+        async def capture_post(url, **kwargs):
+            if "ugcPosts" in url:
+                captured_ugc_body.update(kwargs.get("json", {}))
+                return post_response
+            if "registerUpload" in url:
+                return register_response
+            return MagicMock(status_code=201)
+
+        async def mock_get(url, **kwargs):
+            if "r2.example.com" in url:
+                return image_resp
+            return userinfo_resp
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=capture_post)
+        mock_client.put = AsyncMock(return_value=upload_response)
+        mock_client.get = AsyncMock(side_effect=mock_get)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_linkedin
+            await publish_to_linkedin(
+                user_id="user_test",
+                content="Image post",
+                media_assets=[{"image_url": "https://r2.example.com/photo.jpg"}],
+                token="valid_token",
+            )
+
+        share_content = (
+            captured_ugc_body
+            .get("specificContent", {})
+            .get("com.linkedin.ugc.ShareContent", {})
+        )
+        assert share_content.get("shareMediaCategory") == "IMAGE", (
+            f"Expected IMAGE category, got: {share_content.get('shareMediaCategory')}"
+        )
+        assert len(share_content.get("media", [])) >= 1, "media array must be populated"
+
+    @pytest.mark.asyncio
+    async def test_text_only_when_no_media_assets(self):
+        """Without media_assets, must use shareMediaCategory=NONE (text-only path preserved)."""
+        captured_ugc_body = {}
+
+        post_response = MagicMock()
+        post_response.status_code = 201
+        post_response.headers = {"x-restli-id": "urn:li:share:222"}
+        post_response.json.return_value = {}
+
+        userinfo_resp = MagicMock()
+        userinfo_resp.status_code = 200
+        userinfo_resp.json.return_value = {"sub": "person_456"}
+
+        async def capture_post(url, **kwargs):
+            if "ugcPosts" in url:
+                captured_ugc_body.update(kwargs.get("json", {}))
+            return post_response
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=capture_post)
+        mock_client.get = AsyncMock(return_value=userinfo_resp)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_linkedin
+            result = await publish_to_linkedin(
+                user_id="user_test",
+                content="Text-only post",
+                media_assets=None,
+                token="valid_token",
+            )
+
+        share_content = (
+            captured_ugc_body
+            .get("specificContent", {})
+            .get("com.linkedin.ugc.ShareContent", {})
+        )
+        assert share_content.get("shareMediaCategory") == "NONE", (
+            f"Expected NONE category for text-only, got: {share_content.get('shareMediaCategory')}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_register_upload_failure_falls_back_to_text_only(self):
+        """If registerUpload fails (non-201), publish must continue as text-only rather than error."""
+        register_response = MagicMock()
+        register_response.status_code = 400
+        register_response.json.return_value = {"message": "Upload not allowed"}
+
+        post_response = MagicMock()
+        post_response.status_code = 201
+        post_response.headers = {"x-restli-id": "urn:li:share:333"}
+        post_response.json.return_value = {}
+
+        userinfo_resp = MagicMock()
+        userinfo_resp.status_code = 200
+        userinfo_resp.json.return_value = {"sub": "person_789"}
+
+        async def mock_post(url, **kwargs):
+            if "registerUpload" in url:
+                return register_response
+            return post_response
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+        mock_client.get = AsyncMock(return_value=userinfo_resp)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_linkedin
+            result = await publish_to_linkedin(
+                user_id="user_test",
+                content="Post with failed upload",
+                media_assets=[{"image_url": "https://r2.example.com/img.jpg"}],
+                token="valid_token",
+            )
+
+        # Should succeed as text-only rather than returning success=False
+        assert result.get("success") is True, (
+            f"Expected text-only fallback success, got: {result}"
+        )

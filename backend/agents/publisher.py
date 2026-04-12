@@ -57,27 +57,108 @@ async def publish_to_linkedin(
             
             profile = profile_response.json()
             person_urn = f"urn:li:person:{profile.get('sub')}"
-            
+
+            # --- Media upload via LinkedIn registerUpload flow ---
+            share_media_category = "NONE"
+            media_list: List[Dict[str, Any]] = []
+
+            image_url = (
+                media_assets[0].get("image_url")
+                if media_assets and len(media_assets) > 0
+                else None
+            )
+            if image_url:
+                try:
+                    # Fetch image bytes from the public R2 URL
+                    image_resp = await client.get(image_url, timeout=30.0)
+                    if image_resp.status_code == 200:
+                        image_bytes = image_resp.content
+
+                        # Step 1: registerUpload to get an upload URL + asset URN
+                        register_payload = {
+                            "registerUploadRequest": {
+                                "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+                                "owner": person_urn,
+                                "serviceRelationships": [
+                                    {
+                                        "relationshipType": "OWNER",
+                                        "identifier": "urn:li:userGeneratedContent",
+                                    }
+                                ],
+                            }
+                        }
+                        register_resp = await client.post(
+                            "https://api.linkedin.com/v2/assets?action=registerUpload",
+                            headers={
+                                "Authorization": f"Bearer {access_token}",
+                                "Content-Type": "application/json",
+                                "X-Restli-Protocol-Version": "2.0.0",
+                            },
+                            json=register_payload,
+                            timeout=30.0,
+                        )
+
+                        if register_resp.status_code == 200:
+                            register_data = register_resp.json()
+                            asset_urn = register_data["value"]["asset"]
+                            upload_url = (
+                                register_data["value"]["uploadMechanism"]
+                                ["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]
+                                ["uploadUrl"]
+                            )
+
+                            # Step 2: PUT image bytes to the upload URL
+                            await client.put(
+                                upload_url,
+                                content=image_bytes,
+                                headers={"Authorization": f"Bearer {access_token}"},
+                                timeout=60.0,
+                            )
+
+                            # Step 3: Attach asset URN to the UGC post
+                            share_media_category = "IMAGE"
+                            media_list = [
+                                {
+                                    "status": "READY",
+                                    "description": {"text": ""},
+                                    "media": asset_urn,
+                                    "title": {"text": ""},
+                                }
+                            ]
+                        else:
+                            logger.warning(
+                                "LinkedIn registerUpload failed (status=%s), falling back to text-only",
+                                register_resp.status_code,
+                            )
+                    else:
+                        logger.warning(
+                            "Failed to fetch image from %s (status=%s), skipping media",
+                            image_url,
+                            image_resp.status_code,
+                        )
+                except Exception as media_err:
+                    logger.warning("LinkedIn media upload error: %s — posting text-only", media_err)
+
+            # Build UGC post share content
+            share_content_body: Dict[str, Any] = {
+                "shareCommentary": {"text": content[:3000]},
+                "shareMediaCategory": share_media_category,
+            }
+            if media_list:
+                share_content_body["media"] = media_list
+
             # Prepare post payload
             post_payload = {
                 "author": person_urn,
                 "lifecycleState": "PUBLISHED",
                 "specificContent": {
-                    "com.linkedin.ugc.ShareContent": {
-                        "shareCommentary": {
-                            "text": content[:3000]  # LinkedIn limit
-                        },
-                        "shareMediaCategory": "NONE"
-                    }
+                    "com.linkedin.ugc.ShareContent": share_content_body,
                 },
                 "visibility": {
                     "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-                }
+                },
             }
-            
-            # Handle media if present (simplified - text only for MVP)
-            # Full media upload would require separate asset upload
-            
+
             # Create post
             post_response = await client.post(
                 "https://api.linkedin.com/v2/ugcPosts",
