@@ -56,7 +56,8 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
-    "test": "craco test"
+    "test": "craco test",
+    "analyze": "source-map-explorer 'build/static/js/*.js'"
   },
   "browserslist": {
     "production": [
@@ -95,6 +96,7 @@
     "globals": "15.15.0",
     "msw": "^2.12.14",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "source-map-explorer": ">=2.5.3"
   }
 }
