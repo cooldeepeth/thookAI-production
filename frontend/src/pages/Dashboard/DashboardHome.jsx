@@ -107,32 +107,37 @@ export default function DashboardHome() {
 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [statsError, setStatsError] = useState(null);
+
+  const fetchStats = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      setStatsError(null);
+      const response = await apiFetch('/api/dashboard/stats');
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch stats");
+      }
+
+      const data = await response.json();
+      setStats(data);
+    } catch (err) {
+      setStatsError(err.message || "Failed to load stats");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetryStats = () => {
+    setStatsError(null);
+    fetchStats();
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!user) return;
-      
-      try {
-        setLoading(true);
-        const response = await apiFetch('/api/dashboard/stats');
-        
-        if (!response.ok) {
-          throw new Error("Failed to fetch stats");
-        }
-        
-        const data = await response.json();
-        setStats(data);
-        setError(null);
-      } catch (err) {
-        console.error("Stats fetch error:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const displayStats = [
@@ -211,7 +216,7 @@ export default function DashboardHome() {
       {user?.onboarding_completed && <DailyBrief />}
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {loading ? (
           <>
             <StatSkeleton />
@@ -219,6 +224,20 @@ export default function DashboardHome() {
             <StatSkeleton />
             <StatSkeleton />
           </>
+        ) : statsError ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-16 px-6" role="alert" data-testid="stats-error">
+            <AlertCircle className="text-red-400 mb-3" size={28} />
+            <p className="text-red-400 text-sm text-center mb-4">{statsError}</p>
+            <button
+              type="button"
+              onClick={handleRetryStats}
+              className="btn-ghost text-sm flex items-center gap-2 focus-ring"
+              data-testid="retry-stats-btn"
+            >
+              <RefreshCw size={14} />
+              Try Again
+            </button>
+          </div>
         ) : (
           displayStats.map((stat, i) => (
             <motion.div
@@ -240,13 +259,15 @@ export default function DashboardHome() {
 
       {/* Recent Content */}
       {stats && (!stats.recent_jobs || stats.recent_jobs.length === 0) && user?.onboarding_completed && (
-        <div className="card-thook p-6 text-center">
-          <p className="text-zinc-500 text-sm mb-2">No content created yet</p>
+        <div className="card-thook p-8 text-center" data-testid="empty-content">
+          <p className="text-zinc-500 text-sm mb-3">No content generated yet.</p>
           <button
+            type="button"
             onClick={() => navigate("/dashboard/studio")}
-            className="text-lime text-sm font-medium hover:text-lime/80 transition-colors"
+            className="text-lime text-sm hover:text-lime/80 focus-ring"
+            data-testid="empty-content-cta"
           >
-            Create your first post →
+            Generate your first post →
           </button>
         </div>
       )}
