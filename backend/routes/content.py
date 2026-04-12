@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse, PlainTextResponse, JSONResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
 import csv
@@ -11,7 +11,8 @@ from database import db
 from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
 from agents.learning import capture_learning_signal
-from services.credits import deduct_credits, add_credits, CreditOperation
+from services.credits import deduct_credits, CreditOperation
+from config import settings
 
 # Celery task imports
 from tasks import is_redis_configured, get_task_status as celery_get_task_status
@@ -26,39 +27,30 @@ router = APIRouter(prefix="/content", tags=["content"])
 PLATFORM_CONTENT_TYPES = {
     "linkedin": ["post", "carousel_caption", "article"],
     "x": ["tweet", "thread"],
-    "instagram": ["feed_caption", "reel_caption", "story_sequence"],
+    "instagram": ["feed_caption", "reel_caption"],
 }
 
 
 class ContentCreateRequest(BaseModel):
     platform: str
     content_type: str
-    raw_input: str = Field(min_length=5, max_length=50000)
+    raw_input: str  # Validated in endpoint: min 5 chars, max 50000 chars
     attachment_url: Optional[str] = None  # For Visual Agent
     upload_ids: Optional[List[str]] = None
     campaign_id: Optional[str] = None  # Link job to a campaign/project
     generate_video: bool = False  # Trigger async video generation after pipeline
     video_style: str = "cinematic"  # cinematic, talking_head, slideshow, abstract
 
-    @field_validator("platform")
-    @classmethod
-    def normalize_platform(cls, v: str) -> str:
-        normalized = v.lower()
-        allowed = {"linkedin", "x", "instagram"}
-        if normalized not in allowed:
-            raise ValueError(f"platform must be one of {sorted(allowed)}")
-        return normalized
-
 
 class ContentStatusUpdate(BaseModel):
-    status: str = Field(pattern="^(approved|rejected)$")
+    status: str  # approved | rejected
     edited_content: Optional[str] = None
     rejection_reason: Optional[str] = None
     notes: Optional[str] = None  # Rejection notes
 
 
 class ImageGenerateRequest(BaseModel):
-    job_id: str = Field(min_length=1)
+    job_id: str
     style: str = "minimal"  # minimal, bold, data-viz, personal, cinematic, etc.
     prompt_override: Optional[str] = None
     provider: Optional[str] = None  # openai, stability, fal, replicate, leonardo, ideogram
@@ -73,18 +65,18 @@ class CarouselGenerateRequest(BaseModel):
 
 
 class VoiceGenerateRequest(BaseModel):
-    job_id: str = Field(min_length=1)
+    job_id: str
     voice_id: Optional[str] = None
-    stability: float = Field(default=0.5, ge=0.0, le=1.0)
-    similarity_boost: float = Field(default=0.75, ge=0.0, le=1.0)
+    stability: float = 0.5
+    similarity_boost: float = 0.75
     provider: Optional[str] = None  # elevenlabs, openai_tts, playht, murf, google_tts
     model: Optional[str] = None
 
 
 class VideoGenerateRequest(BaseModel):
-    job_id: str = Field(min_length=1)
+    job_id: str
     prompt_override: Optional[str] = None
-    duration: int = Field(default=5, ge=1, le=300)
+    duration: int = 5
     provider: Optional[str] = None  # runway, kling, pika, luma
     model: Optional[str] = None
 
@@ -106,6 +98,11 @@ async def create_content(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
+    if len(data.raw_input.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Please provide more context for your content idea")
+    if len(data.raw_input) > 50000:
+        raise HTTPException(status_code=400, detail="Content input too long (max 50,000 characters)")
+
     valid_types = PLATFORM_CONTENT_TYPES.get(data.platform.lower(), [])
     if data.content_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid content type for {data.platform}")
@@ -378,7 +375,7 @@ async def generate_image(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
     
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, add_credits, CreditOperation
+    from services.credits import deduct_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.IMAGE_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for image generation")
@@ -393,10 +390,14 @@ async def generate_image(
             model=data.model
         )
     except Exception as exc:
+        if settings.app.sentry_dsn:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
         await add_credits(
             current_user["user_id"],
             CreditOperation.IMAGE_GENERATE.value,
-            source="image_generation_failure_refund",
+            source="image_generate_failure_refund",
             description=f"Auto-refund for failed image generation on job {data.job_id}",
         )
         logger.error("Image generation failed for job %s: %s", data.job_id, exc)
@@ -417,7 +418,7 @@ async def generate_image(
                 "$set": {"updated_at": datetime.now(timezone.utc)}
             }
         )
-    
+
     return result
 
 
@@ -452,7 +453,7 @@ async def generate_carousel(
         key_points = thinker.get("key_insights", []) or ["Key point 1", "Key point 2", "Key point 3"]
     
     # Deduct credits for carousel generation
-    from services.credits import deduct_credits, add_credits, CreditOperation
+    from services.credits import deduct_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CAROUSEL_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for carousel generation")
@@ -466,10 +467,14 @@ async def generate_carousel(
             persona_card=persona_card
         )
     except Exception as exc:
+        if settings.app.sentry_dsn:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
         await add_credits(
             current_user["user_id"],
             CreditOperation.CAROUSEL_GENERATE.value,
-            source="carousel_generation_failure_refund",
+            source="carousel_generate_failure_refund",
             description=f"Auto-refund for failed carousel generation on job {data.job_id}",
         )
         logger.error("Carousel generation failed for job %s: %s", data.job_id, exc)
@@ -486,7 +491,7 @@ async def generate_carousel(
                 }
             }
         )
-    
+
     return result
 
 
@@ -540,7 +545,7 @@ async def narrate_content(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
 
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, add_credits, CreditOperation
+    from services.credits import deduct_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VOICE_NARRATION)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for voice narration")
@@ -555,6 +560,10 @@ async def narrate_content(
             model=data.model
         )
     except Exception as exc:
+        if settings.app.sentry_dsn:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
         await add_credits(
             current_user["user_id"],
             CreditOperation.VOICE_NARRATION.value,
@@ -564,19 +573,44 @@ async def narrate_content(
         logger.error("Voice narration failed for job %s: %s", data.job_id, exc)
         raise HTTPException(status_code=500, detail="Voice narration failed. Credits refunded.")
 
-    # Store audio in job
+    # Store audio in job — upload bytes to R2 for stable URL (Bug 2 fix)
     if result.get("generated"):
+        import base64
+        from services.media_storage import upload_bytes_to_r2
+
+        audio_url = result.get("audio_url", "")
+        audio_base64 = result.get("audio_base64", "")
+
+        if audio_base64 and not audio_url.startswith("https://"):
+            try:
+                audio_bytes = base64.b64decode(audio_base64)
+                storage_key = f"{current_user['user_id']}/audio/{uuid.uuid4()}.mp3"
+                audio_url = upload_bytes_to_r2(storage_key, audio_bytes, "audio/mpeg")
+                logger.info(f"Voice audio uploaded to R2: {storage_key}")
+            except Exception as r2_err:
+                logger.warning(
+                    f"R2 upload failed for voice narration on job {data.job_id}: {r2_err}. "
+                    "Storing data URI as fallback."
+                )
+                # Keep audio_url as data: URI only as fallback when R2 is not configured
+                audio_url = result.get("audio_url", "")
+
         await db.content_jobs.update_one(
             {"job_id": data.job_id},
             {
                 "$set": {
-                    "audio_url": result.get("audio_url"),
+                    "audio_url": audio_url,
                     "voice_used": result.get("voice_used"),
                     "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
-    
+
+        # Return modified result with stable URL (not data: URI)
+        result_to_return = {k: v for k, v in result.items() if k != "audio_base64"}
+        result_to_return["audio_url"] = audio_url
+        return result_to_return
+
     return result
 
 
@@ -700,28 +734,18 @@ async def generate_video(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
 
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, add_credits, CreditOperation
+    from services.credits import deduct_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VIDEO_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for video generation")
 
-    try:
-        result = await video_generate(
-            prompt=prompt,
-            duration=data.duration,
-            provider=data.provider,
-            model=data.model
-        )
-    except Exception as exc:
-        await add_credits(
-            current_user["user_id"],
-            CreditOperation.VIDEO_GENERATE.value,
-            source="video_generation_failure_refund",
-            description=f"Auto-refund for failed video generation on job {data.job_id}",
-        )
-        logger.error("Video generation failed for job %s: %s", data.job_id, exc)
-        raise HTTPException(status_code=500, detail="Video generation failed. Credits refunded.")
-
+    result = await video_generate(
+        prompt=prompt,
+        duration=data.duration,
+        provider=data.provider,
+        model=data.model
+    )
+    
     # Store in job
     if result.get("generated"):
         await db.content_jobs.update_one(
