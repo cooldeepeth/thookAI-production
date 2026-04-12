@@ -65,7 +65,7 @@
 
 - [x] **Phase 26: Backend Endpoint Hardening** - Audit and harden all 26 route files against production: every endpoint tested with curl, Pydantic validation enforced, standardized error format, auth guards verified, credit-safety checks, rate limiting tuned (completed 2026-04-11)
 - [x] **Phase 27: Onboarding Reimagination** - Rebuild the onboarding wizard with voice sample recording, writing style analysis, visual identity selection, multi-step progress, save-as-you-go, and fix the LLM model name bug in onboarding.py (completed 2026-04-11)
-- [ ] **Phase 28: Content Generation Multi-Format** - Implement platform-specific content generation for all 9 formats (LinkedIn post/article/carousel, X tweet/thread, Instagram feed/reel/story) with persona-aware Writer prompts and real-time pipeline progress
+- [x] **Phase 28: Content Generation Multi-Format** - Implement platform-specific content generation for all 9 formats (LinkedIn post/article/carousel, X tweet/thread, Instagram feed/reel/story) with persona-aware Writer prompts and real-time pipeline progress (completed 2026-04-12)
 - [ ] **Phase 29: Media Generation Pipeline** - Wire and verify the full media pipeline: auto-images via DALL-E/FAL.ai, carousel slides via Remotion, video via Runway/Luma, voice narration via ElevenLabs, R2 upload flow end-to-end, media display in UI
 - [ ] **Phase 30: Social Publishing End-to-End** - Fix and verify LinkedIn UGC, X v2, and Instagram Meta Graph publishing with OAuth connect/refresh, token encryption, publish status tracking, and real engagement metrics display
 - [ ] **Phase 31: Smart Scheduling** - Implement AI-suggested optimal posting times, user approval/modification of schedule, calendar view of all scheduled posts, and Celery Beat automatic publishing at scheduled times
@@ -456,7 +456,7 @@
    - [x] 28-02-PLAN.md — writer.py FORMAT_RULES (8 keys) + commander.py WORD_COUNT_DEFAULTS + story_sequence allowlist
    - [x] 28-03-PLAN.md — InputPanel 9 formats + InstagramShell story slides + AgentPipeline font-bold
    - [x] 28-04-PLAN.md — ContentOutput schedule API fix (JSON body) + data-testids + CONT-11/12 backend tests
-   - [ ] 28-05-PLAN.md — Full suite verification, human checkpoint, VALIDATION.md update
+   - [x] 28-05-PLAN.md — Full suite verification, human checkpoint, VALIDATION.md update
    **UI hint**: yes
 
 ### Phase 29: Media Generation Pipeline
@@ -614,7 +614,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | ------------------------------------ | -------------- | ----------- | --------- |
 | 26. Backend Endpoint Hardening       | 5/5 | Complete    | 2026-04-11 |
 | 27. Onboarding Reimagination         | 5/5 | Complete    | 2026-04-12 |
-| 28. Content Generation Multi-Format  | 4/5 | In Progress|  |
+| 28. Content Generation Multi-Format  | 5/5 | Complete   | 2026-04-12 |
 | 29. Media Generation Pipeline        | 0/TBD          | Not started | -         |
 | 30. Social Publishing End-to-End     | 0/TBD          | Not started | -         |
 | 31. Smart Scheduling                 | 0/TBD          | Not started | -         |
