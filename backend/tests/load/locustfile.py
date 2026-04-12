@@ -27,6 +27,41 @@ from locust import HttpUser, task, between, events
 
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# LOAD TEST THRESHOLDS — PERF-07
+# =============================================================================
+# This file runs 50 concurrent users for 5 minutes against a target host.
+#
+# p95 TARGETS:
+#   Fast endpoints (/api/dashboard/stats, /api/billing/credits, /api/auth/me):
+#     Target: p95 < 2000ms under 50 concurrent users.
+#     These are the gates for the PERF-07 PASS/FAIL verdict.
+#
+#   LLM pipeline endpoint (/api/content/generate):
+#     Expected: p95 5000–30000ms (wall-clock dominated by upstream Claude
+#     inference, not server compute).
+#     EXCLUDED from the PERF-07 2s gate — reported separately in the load
+#     results markdown. A p95 > 10000ms for this endpoint is NOT a failure.
+#
+#   5xx errors:
+#     Gate: zero 5xx responses across all endpoints for the full run.
+#
+# The `response.elapsed.total_seconds() > 0.5` slow-log in generate_content
+# is a DEBUG-level breadcrumb (from the earlier E2E-05 500ms experiment) and
+# is intentionally left in place — it is NOT a failure condition. Locust's
+# per-endpoint p95 in load-results_stats.csv is the authoritative number.
+#
+# Run command (headless CI):
+#   cd backend && locust \
+#     -f tests/load/locustfile.py \
+#     --headless -u 50 -r 5 --run-time 5m \
+#     --host https://api.thook.ai \
+#     --csv=load-results --html=load-results.html
+#
+# The `--host` CLI flag overrides the `host = "http://localhost:8001"` default
+# on ThookAIUser — use it to point at staging, production, or a Railway URL.
+# =============================================================================
+
 # Tracks user tokens for credit atomicity verification at test end.
 # Key: unique email, Value: JWT token
 _registered_users: dict[str, str] = {}
