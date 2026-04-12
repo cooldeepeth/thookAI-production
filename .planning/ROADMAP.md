@@ -69,7 +69,7 @@
 - [x] **Phase 29: Media Generation Pipeline** - Wire and verify the full media pipeline: auto-images via DALL-E/FAL.ai, carousel slides via Remotion, video via Runway/Luma, voice narration via ElevenLabs, R2 upload flow end-to-end, media display in UI (completed 2026-04-12)
 - [x] **Phase 30: Social Publishing End-to-End** - Fix and verify LinkedIn UGC, X v2, and Instagram Meta Graph publishing with OAuth connect/refresh, token encryption, publish status tracking, and real engagement metrics display (completed 2026-04-12)
 - [x] **Phase 31: Smart Scheduling** - Implement AI-suggested optimal posting times, user approval/modification of schedule, calendar view of all scheduled posts, and Celery Beat automatic publishing at scheduled times (completed 2026-04-12)
-- [ ] **Phase 32: Frontend Core Flows Polish** - Polish every core page: auth, dashboard, ContentStudio, settings — all loading/empty/error states, mobile responsive (375px/768px/1440px), keyboard navigation
+- [x] **Phase 32: Frontend Core Flows Polish** - Polish every core page: auth, dashboard, ContentStudio, settings — all loading/empty/error states, mobile responsive (375px/768px/1440px), keyboard navigation (completed 2026-04-12)
 - [ ] **Phase 33: Design System & Landing Page** - Apply consistent design system across all pages, rebuild the landing page to be conversion-optimized with hero/features/how-it-works/pricing/CTA/footer, SEO meta and OG tags
 - [ ] **Phase 34: Security & GDPR** - Full penetration-readiness: input validation, XSS sanitization, injection prevention, CSRF, rate limits, no secrets in code, no stack traces, dependency audit, GDPR data export/deletion, cookie consent, privacy/terms pages
 - [ ] **Phase 35: Performance, Monitoring & Launch** - Profile all endpoints to <500ms, optimize frontend bundle (code splitting, lazy loading), Lighthouse >90, Sentry clean 48h, PostHog verified, E2E smoke test, 50-user load test, cross-browser, pre-launch checklist
@@ -212,7 +212,7 @@
    - [x] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
    - [x] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
    - [x] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
-   **UI hint**: yes
+         **UI hint**: yes
 
 ### Phase 16: E2E Audit + Security Hardening + Production Ship
 
@@ -436,7 +436,7 @@
    - [x] 27-03-PLAN.md — VoiceRecordingStep + VisualPaletteStep new components
    - [x] 27-04-PLAN.md — Wire new steps into wizard + InterviewStep counter + human verification checkpoint
    - [x] 27-05-PLAN.md — Backend audit + edge case tests + full suite gate
-   **UI hint**: yes
+         **UI hint**: yes
 
 ### Phase 28: Content Generation Multi-Format
 
@@ -457,7 +457,7 @@
    - [x] 28-03-PLAN.md — InputPanel 9 formats + InstagramShell story slides + AgentPipeline font-bold
    - [x] 28-04-PLAN.md — ContentOutput schedule API fix (JSON body) + data-testids + CONT-11/12 backend tests
    - [x] 28-05-PLAN.md — Full suite verification, human checkpoint, VALIDATION.md update
-   **UI hint**: yes
+         **UI hint**: yes
 
 ### Phase 29: Media Generation Pipeline
 
@@ -476,9 +476,9 @@
    - [x] 29-01-PLAN.md — Wave 0 test scaffolding (3 failing tests: CreativeProvidersService, voice R2, carousel Remotion)
    - [x] 29-02-PLAN.md — Fix Celery tasks: remove CreativeProvidersService, call agent functions directly (Bug 1)
    - [x] 29-03-PLAN.md — Voice narration R2 upload in narrate_content() + Sentry capture in media except blocks (Bug 2, Bug 5)
-   - [x] 29-04-PLAN.md — Wire _call_remotion(ImageCarousel) into generate_carousel() route (Bug 4)
+   - [x] 29-04-PLAN.md — Wire \_call_remotion(ImageCarousel) into generate_carousel() route (Bug 4)
    - [x] 29-05-PLAN.md — Frontend MediaPanel 202 async polling + R2 CORS verification checkpoint (Bug 3, MDIA-08)
-   **UI hint**: yes
+         **UI hint**: yes
 
 ### Phase 30: Social Publishing End-to-End
 
@@ -494,8 +494,8 @@
 5. A failed publish attempt (e.g., API rate limit) shows the error message in the content job detail view with a "Retry" button — the post status changes to "failed" (not "published") and Sentry receives the error event
    **Plans**: 4 plans
    Plans:
-   - [x] 30-01-PLAN.md — Fix _publish_to_platform (decrypt token, return dict) + store publish_results on content_jobs
-   - [x] 30-02-PLAN.md — Proactive 24h token refresh in get_platform_token + Instagram _refresh_token branch
+   - [x] 30-01-PLAN.md — Fix \_publish_to_platform (decrypt token, return dict) + store publish_results on content_jobs
+   - [x] 30-02-PLAN.md — Proactive 24h token refresh in get_platform_token + Instagram \_refresh_token branch
    - [x] 30-03-PLAN.md — token_expiring_soon in /api/platforms/status + Connections.jsx warning + Fernet round-trip test
    - [x] 30-04-PLAN.md — LinkedIn registerUpload + X media/upload image attachment + Instagram media wiring verification + VALIDATION.md
 
@@ -516,7 +516,7 @@
    - [x] 31-02-PLAN.md — Fix planner.py: dual-write to scheduled_posts + wire optimal times from persona_engines
    - [x] 31-03-PLAN.md — Add /schedule/calendar and /schedule/{id}/reschedule endpoints to dashboard.py
    - [x] 31-04-PLAN.md — Frontend: ContentCalendar.jsx calendar endpoint + reschedule modal
-   **UI hint**: yes
+         **UI hint**: yes
 
 ### Phase 32: Frontend Core Flows Polish
 
@@ -532,13 +532,13 @@
 5. Every page shows a skeleton loader during data fetching, a user-friendly error message with retry option on API failure, and an appropriate empty state on first use — no page ever shows a blank white screen or a raw JavaScript error
    **Plans**: 6 plans
    Plans:
-   - [ ] 32-01-PLAN.md — AuthPage: password validation, ARIA error, button types, focus-ring (FEND-01)
-   - [ ] 32-02-PLAN.md — DashboardHome: error+retry state, empty CTA, responsive grid fix (FEND-02, FEND-05, FEND-06)
-   - [ ] 32-03-PLAN.md — Settings: 4-tab layout (Radix Tabs), BillingTab skeleton/error, MSW handlers (FEND-04, FEND-05, FEND-07)
-   - [ ] 32-04-PLAN.md — ContentStudio: video toggle keyboard, responsive layout, AgentPipeline aria-live (FEND-03, FEND-06, FEND-07)
-   - [ ] 32-05-PLAN.md — ErrorBoundary: design token fixes, AlertTriangle icon, focus-ring (FEND-05, FEND-07)
-   - [ ] 32-06-PLAN.md — Test suite: AuthPage, DashboardHome, Settings test files (FEND-01/02/04/05/07)
-   **UI hint**: yes
+   - [x] 32-01-PLAN.md — AuthPage: password validation, ARIA error, button types, focus-ring (FEND-01)
+   - [x] 32-02-PLAN.md — DashboardHome: error+retry state, empty CTA, responsive grid fix (FEND-02, FEND-05, FEND-06)
+   - [x] 32-03-PLAN.md — Settings: 4-tab layout (Radix Tabs), BillingTab skeleton/error, MSW handlers (FEND-04, FEND-05, FEND-07)
+   - [x] 32-04-PLAN.md — ContentStudio: video toggle keyboard, responsive layout, AgentPipeline aria-live (FEND-03, FEND-06, FEND-07)
+   - [x] 32-05-PLAN.md — ErrorBoundary: design token fixes, AlertTriangle icon, focus-ring (FEND-05, FEND-07)
+   - [x] 32-06-PLAN.md — Test suite: AuthPage, DashboardHome, Settings test files (FEND-01/02/04/05/07)
+         **UI hint**: yes
 
 ### Phase 33: Design System & Landing Page
 
@@ -594,15 +594,15 @@
 **Execution Order:**
 v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35
 
-| Phase                                | Plans Complete | Status      | Completed |
-| ------------------------------------ | -------------- | ----------- | --------- |
-| 26. Backend Endpoint Hardening       | 5/5 | Complete    | 2026-04-11 |
-| 27. Onboarding Reimagination         | 5/5 | Complete    | 2026-04-12 |
-| 28. Content Generation Multi-Format  | 5/5 | Complete    | 2026-04-12 |
-| 29. Media Generation Pipeline        | 5/5 | Complete    | 2026-04-12 |
-| 30. Social Publishing End-to-End     | 4/4 | Complete    | 2026-04-12 |
-| 31. Smart Scheduling                 | 4/4 | Complete    | 2026-04-12 |
-| 32. Frontend Core Flows Polish       | 0/6            | In progress | -         |
-| 33. Design System & Landing Page     | 0/TBD          | Not started | -         |
-| 34. Security & GDPR                  | 0/TBD          | Not started | -         |
-| 35. Performance, Monitoring & Launch | 0/TBD          | Not started | -         |
+| Phase                                | Plans Complete | Status      | Completed  |
+| ------------------------------------ | -------------- | ----------- | ---------- |
+| 26. Backend Endpoint Hardening       | 5/5            | Complete    | 2026-04-11 |
+| 27. Onboarding Reimagination         | 5/5            | Complete    | 2026-04-12 |
+| 28. Content Generation Multi-Format  | 5/5            | Complete    | 2026-04-12 |
+| 29. Media Generation Pipeline        | 5/5            | Complete    | 2026-04-12 |
+| 30. Social Publishing End-to-End     | 4/4            | Complete    | 2026-04-12 |
+| 31. Smart Scheduling                 | 4/4            | Complete    | 2026-04-12 |
+| 32. Frontend Core Flows Polish       | 7/7            | Complete    | 2026-04-13 |
+| 33. Design System & Landing Page     | 0/TBD          | Not started | -          |
+| 34. Security & GDPR                  | 0/TBD          | Not started | -          |
+| 35. Performance, Monitoring & Launch | 0/TBD          | Not started | -          |
