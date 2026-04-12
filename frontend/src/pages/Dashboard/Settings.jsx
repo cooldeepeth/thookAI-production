@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PlanBuilder } from "@/components/PlanBuilder";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -42,26 +43,6 @@ const TIER_GRADIENTS = {
   agency: "from-orange-500/20 to-red-500/20"
 };
 
-const PLAN_BUILDER_DEFAULTS = {
-  text_posts: 20,
-  images: 5,
-  videos: 0,
-  carousels: 2,
-  repurposes: 5,
-  voice_narrations: 0,
-  series_plans: 0
-};
-
-const PLAN_BUILDER_LABELS = {
-  text_posts: { name: "Text Posts", credits: 10, max: 200, icon: "pencil" },
-  images: { name: "Images", credits: 8, max: 100, icon: "image" },
-  videos: { name: "Videos", credits: 50, max: 20, icon: "video" },
-  carousels: { name: "Carousels", credits: 15, max: 50, icon: "layers" },
-  repurposes: { name: "Repurposes", credits: 3, max: 100, icon: "repeat" },
-  voice_narrations: { name: "Voice Narrations", credits: 12, max: 50, icon: "mic" },
-  series_plans: { name: "Series Plans", credits: 6, max: 20, icon: "calendar" }
-};
-
 // Credit costs for reference
 const CREDIT_COSTS = {
   content_create: { credits: 10, name: "Content Creation" },
@@ -88,9 +69,6 @@ function BillingTab() {
   const [upgrading, setUpgrading] = useState(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState("monthly");
-  const [planUsage, setPlanUsage] = useState({ ...PLAN_BUILDER_DEFAULTS });
-  const [planPreview, setPlanPreview] = useState(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -132,36 +110,7 @@ function BillingTab() {
     fetchData();
   };
 
-  const fetchPlanPreview = async (usage) => {
-    setPreviewLoading(true);
-    try {
-      const res = await apiFetch('/api/billing/plan/preview', {
-        method: "POST",
-        body: JSON.stringify(usage)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPlanPreview(data);
-      }
-    } catch {
-      // Silent — preview is non-critical
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
-
-  // Debounced plan preview
-  useEffect(() => {
-    const totalUsage = Object.values(planUsage).reduce((a, b) => a + b, 0);
-    if (totalUsage > 0) {
-      const timer = setTimeout(() => fetchPlanPreview(planUsage), 400);
-      return () => clearTimeout(timer);
-    } else {
-      setPlanPreview(null);
-    }
-  }, [planUsage]);
-
-  const handlePlanCheckout = async () => {
+  const handlePlanCheckout = async (planUsage) => {
     setUpgrading("custom");
     try {
       const isModify = subscription?.tier === "custom" && subscription?.stripe_subscription_id;
@@ -568,130 +517,12 @@ function BillingTab() {
           <p className="text-sm text-zinc-400 mb-6">
             Pick how much you use each month — we calculate your price with volume discounts.
           </p>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Sliders */}
-            <Card className="lg:col-span-2 bg-surface-2 border-white/5">
-              <CardContent className="py-6 space-y-5">
-                {Object.entries(PLAN_BUILDER_LABELS).map(([key, meta]) => (
-                  <div key={key}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-sm text-zinc-300">{meta.name}</label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-500">{meta.credits} credits each</span>
-                        <span className="text-sm font-mono text-white w-10 text-right">
-                          {planUsage[key]}
-                        </span>
-                      </div>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={meta.max}
-                      step={key === "text_posts" ? 5 : key === "videos" ? 1 : 1}
-                      value={planUsage[key]}
-                      onChange={(e) =>
-                        setPlanUsage((prev) => ({ ...prev, [key]: Number(e.target.value) }))
-                      }
-                      className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer
-                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-lime [&::-webkit-slider-thumb]:cursor-pointer"
-                    />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Price Summary */}
-            <Card className="bg-surface-2 border-white/5 sticky top-6">
-              <CardContent className="py-6">
-                <h3 className="text-sm font-medium text-zinc-400 mb-4">Your Plan</h3>
-
-                {planPreview ? (
-                  <div className="space-y-4">
-                    <div className="text-center py-2">
-                      <p className="text-4xl font-bold text-white">
-                        ${planPreview.monthly_price_usd || 0}
-                      </p>
-                      <p className="text-sm text-zinc-500">/month</p>
-                    </div>
-
-                    <div className="p-3 bg-white/5 rounded-lg text-center">
-                      <p className="text-lg font-semibold text-lime">
-                        {planPreview.total_credits?.toLocaleString()} credits
-                      </p>
-                      <p className="text-xs text-zinc-500">per month</p>
-                    </div>
-
-                    {/* Features unlocked */}
-                    {planPreview.features && (
-                      <div className="space-y-1.5 pt-2 border-t border-white/5">
-                        <p className="text-xs text-zinc-500 mb-2">Included features</p>
-                        {planPreview.features.voice_enabled && (
-                          <div className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check size={12} className="text-lime" /> Voice narration
-                          </div>
-                        )}
-                        {planPreview.features.video_enabled && (
-                          <div className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check size={12} className="text-lime" /> Video generation
-                          </div>
-                        )}
-                        {planPreview.features.api_access && (
-                          <div className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check size={12} className="text-lime" /> API access
-                          </div>
-                        )}
-                        {planPreview.features.priority_support && (
-                          <div className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check size={12} className="text-lime" /> Priority support
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-xs text-zinc-300">
-                          <Check size={12} className="text-lime" />
-                          {planPreview.features.max_personas || 3} personas
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-zinc-300">
-                          <Check size={12} className="text-lime" />
-                          {planPreview.features.content_per_day || 50} posts/day
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-zinc-300">
-                          <Check size={12} className="text-lime" />
-                          {planPreview.features.team_members || 1} team member{(planPreview.features.team_members || 1) > 1 ? "s" : ""}
-                        </div>
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={handlePlanCheckout}
-                      disabled={upgrading === "custom" || !planPreview.total_credits}
-                      className="w-full bg-lime text-black hover:bg-lime/90 gap-2 mt-2"
-                    >
-                      {upgrading === "custom" ? (
-                        <RefreshCw size={14} className="animate-spin" />
-                      ) : subscription?.tier === "custom" ? (
-                        <>Update Plan <ArrowRight size={14} /></>
-                      ) : (
-                        <>Subscribe <ArrowRight size={14} /></>
-                      )}
-                    </Button>
-                  </div>
-                ) : previewLoading ? (
-                  <div className="text-center py-8">
-                    <RefreshCw size={20} className="animate-spin text-zinc-500 mx-auto" />
-                    <p className="text-xs text-zinc-500 mt-2">Calculating...</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Zap size={24} className="text-zinc-600 mx-auto" />
-                    <p className="text-sm text-zinc-500 mt-2">
-                      Adjust the sliders to see your price
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <PlanBuilder
+            mode="settings"
+            onCheckout={handlePlanCheckout}
+            subscription={subscription}
+            upgrading={upgrading}
+          />
         </div>
 
         {/* Stripe Status Notice */}
