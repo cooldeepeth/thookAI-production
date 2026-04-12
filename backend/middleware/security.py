@@ -207,12 +207,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             '/api/auth/register': auth_limit,
             '/api/auth/forgot-password': auth_limit,
             '/api/auth/reset-password': auth_limit,
+            # SECR-05: GDPR endpoint limits — prevent bulk data extraction / deletion abuse
+            '/api/auth/delete-account': 3,
+            '/api/auth/export': 3,
             '/api/content/create': 20,
             '/api/viral/predict': 30,
             '/api/viral/improve': 20,
             '/api/viral-card/analyze': 5,  # Public LLM endpoint — strict limit
             '/api/billing/webhook/stripe': 120,  # Stripe may burst webhooks
             '/api/uploads/media': 10,
+            # SECR-05: Expensive LLM endpoints — protect against API cost abuse
+            '/api/onboarding/generate-persona': 2,
+            '/api/onboarding/start': 5,
         }
     
     def _get_client_ip(self, request: Request) -> str:
