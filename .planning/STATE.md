@@ -3,14 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Frontend Hardening & Production Ship
 status: executing
-stopped_at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
-last_updated: "2026-04-04T01:59:37.283Z"
+stopped_at: "Checkpoint 31-04: awaiting human-verify of ContentCalendar smart scheduling"
+last_updated: "2026-04-12T13:08:40.123Z"
 last_activity: 2026-04-04
 progress:
-  total_phases: 17
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
   percent: 0
 ---
 
@@ -65,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 23 P01 | 3 | 2 tasks | 6 files |
 | Phase 23 P03 | 17 | 2 tasks | 7 files |
 | Phase 23 P02 | 92 | 2 tasks | 5 files |
+| Phase 31 P04 | 2 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -102,6 +99,7 @@ Recent decisions affecting current work:
 - [Phase 23-03]: react-router-dom v7.13.2 main field (dist/main.js) missing — Jest 27 needs explicit moduleNameMapper to dist/index.js; same for react-router/dom subpath
 - [Phase 23]: AbortError timeout test: stub global.fetch (not MSW never-resolving handler) because MSW v2 Node mode does not propagate AbortError from intercepted handlers
 - [Phase 23]: EventSource mock: re-assign in beforeEach (not module level) to survive resetMocks: true auto-reset between tests
+- [Phase 31]: fetchCalendarData depends on currentMonth so month navigation auto-triggers re-fetch
 
 ### Pending Todos
 
@@ -117,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T00:06:39.863Z
-Stopped at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
+Last session: 2026-04-12T13:08:40.121Z
+Stopped at: Checkpoint 31-04: awaiting human-verify of ContentCalendar smart scheduling
 Resume file: None
