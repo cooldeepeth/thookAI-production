@@ -106,14 +106,36 @@
                     }),
                     (e.__SV = 1));
             })(document, window.posthog || []);
-            posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
-                api_host: "https://us.i.posthog.com",
-                person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well,
-                session_recording: {
-                    recordCrossOriginIframes: true,
-                    capturePerformance: false,
-                },
-            });
+
+            // SECR-11 / GDPR: gate posthog.init() behind explicit cookie consent.
+            // The stub above (window.posthog) is safe — it just queues calls.
+            // Real initialization (the actual analytics script) only fires after
+            // the user clicks Accept in the CookieConsent banner, which stores
+            // localStorage["thookai_cookie_consent"] = "accepted" and then
+            // calls window.__thookai_init_posthog() to run the init below.
+            window.__thookai_init_posthog = function () {
+                if (window.posthog && window.posthog.__loaded) return;
+                posthog.init(
+                    "phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs",
+                    {
+                        api_host: "https://us.i.posthog.com",
+                        person_profiles: "identified_only",
+                        session_recording: {
+                            recordCrossOriginIframes: true,
+                            capturePerformance: false,
+                        },
+                    },
+                );
+            };
+            try {
+                if (
+                    localStorage.getItem("thookai_cookie_consent") === "accepted"
+                ) {
+                    window.__thookai_init_posthog();
+                }
+            } catch (_) {
+                // localStorage blocked — do not init until user consents
+            }
         </script>
     </body>
 </html>
