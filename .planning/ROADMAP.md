@@ -510,8 +510,12 @@
 2. User can view a calendar showing all scheduled posts across LinkedIn, X, and Instagram on a monthly grid — clicking a post in the calendar opens the content detail view
 3. A post scheduled for a specific time publishes within 2 minutes of that time — verified by checking the published_at timestamp on the content job after the Celery Beat task fires
 4. Rescheduling a post (changing the scheduled_at time) cancels the existing Celery task and creates a new one at the correct time — verified by rescheduling and confirming the old time is no longer active
-   **Plans**: TBD
-   Plans: [To be planned]
+   **Plans**: 4 plans
+   Plans:
+   - [ ] 31-01-PLAN.md — Test scaffold for SCHD-01 through SCHD-04 (RED state before implementation)
+   - [ ] 31-02-PLAN.md — Fix planner.py: dual-write to scheduled_posts + wire optimal times from persona_engines
+   - [ ] 31-03-PLAN.md — Add /schedule/calendar and /schedule/{id}/reschedule endpoints to dashboard.py
+   - [ ] 31-04-PLAN.md — Frontend: ContentCalendar.jsx calendar endpoint + reschedule modal
    **UI hint**: yes
 
 ### Phase 32: Frontend Core Flows Polish
