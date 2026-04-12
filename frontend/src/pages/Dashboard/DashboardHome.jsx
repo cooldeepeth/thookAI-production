@@ -29,7 +29,7 @@ const platformIcons = {
 };
 
 const statusIcons = {
-  approved: { icon: CheckCircle2, color: "text-green-500" },
+  approved: { icon: CheckCircle2, color: "text-lime" },
   rejected: { icon: XCircle, color: "text-red-500" },
   reviewing: { icon: AlertCircle, color: "text-yellow-500" },
   completed: { icon: AlertCircle, color: "text-yellow-500" },

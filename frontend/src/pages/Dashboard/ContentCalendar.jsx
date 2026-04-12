@@ -34,7 +34,7 @@ const PLATFORM_COLORS = {
 const STATUS_STYLES = {
   scheduled: { bg: "bg-lime/10", text: "text-lime", label: "Scheduled" },
   approved: { bg: "bg-blue-500/10", text: "text-blue-400", label: "Ready" },
-  published: { bg: "bg-green-500/10", text: "text-green-400", label: "Published" },
+  published: { bg: "bg-lime/10", text: "text-lime", label: "Published" },
   failed: { bg: "bg-red-500/10", text: "text-red-400", label: "Failed" }
 };
 

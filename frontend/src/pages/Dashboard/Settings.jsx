@@ -36,9 +36,9 @@ const TIER_COLORS = {
 const TIER_GRADIENTS = {
   starter: "from-zinc-500/20 to-zinc-600/20",
   free: "from-zinc-500/20 to-zinc-600/20",
-  custom: "from-lime/20 to-green-500/20",
+  custom: "from-lime/20 to-violet/20",
   pro: "from-violet/20 to-purple-600/20",
-  studio: "from-lime/20 to-green-500/20",
+  studio: "from-lime/20 to-violet/20",
   agency: "from-orange-500/20 to-red-500/20"
 };
 

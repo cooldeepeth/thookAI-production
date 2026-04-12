@@ -137,7 +137,7 @@ export default function Admin() {
             value={stats?.new_users_7d}
             icon={TrendingUp}
             subtitle={`+${stats?.new_users_today || 0} today`}
-            color="text-emerald-400"
+            color="text-lime"
           />
         </div>
       )}

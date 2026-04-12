@@ -292,7 +292,7 @@ export default function AdminUsers() {
                           Suspended
                         </Badge>
                       ) : (
-                        <Badge className="text-[10px] bg-green-500/15 text-green-400">
+                        <Badge className="text-[10px] bg-lime/15 text-lime">
                           Active
                         </Badge>
                       )}
@@ -325,7 +325,7 @@ export default function AdminUsers() {
                           onClick={() => handleToggleSuspend(u)}
                           className={`btn-thook-ghost text-[11px] px-2 py-1 ${
                             u.active === false
-                              ? "text-green-400 hover:text-green-300"
+                              ? "text-lime hover:text-lime/80"
                               : "text-red-400 hover:text-red-300"
                           }`}
                           title={u.active === false ? "Unsuspend" : "Suspend"}

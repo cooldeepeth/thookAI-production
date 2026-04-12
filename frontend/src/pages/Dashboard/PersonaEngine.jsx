@@ -164,7 +164,7 @@ export default function PersonaEngine() {
       // Dynamically import html2canvas
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(personaCardRef.current, {
-        backgroundColor: "#0A0A0A",
+        backgroundColor: "#0F0F10",
         scale: 2,
         useCORS: true,
         logging: false,

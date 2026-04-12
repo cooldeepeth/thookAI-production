@@ -19,14 +19,14 @@ const PLATFORM_CONFIG = {
 };
 
 const TREND_ICONS = {
-  improving: { icon: TrendingUp, color: "text-green-400", bg: "bg-green-500/10" },
+  improving: { icon: TrendingUp, color: "text-lime", bg: "bg-lime/10" },
   stable: { icon: Minus, color: "text-yellow-400", bg: "bg-yellow-500/10" },
   declining: { icon: TrendingDown, color: "text-red-400", bg: "bg-red-500/10" },
   insufficient_data: { icon: Minus, color: "text-zinc-400", bg: "bg-zinc-500/10" }
 };
 
 const SHIELD_STATUS_CONFIG = {
-  healthy: { color: "bg-green-500/10 text-green-400 border-green-500/20", icon: Shield },
+  healthy: { color: "bg-lime/10 text-lime border-lime/20", icon: Shield },
   caution: { color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", icon: AlertTriangle },
   warning: { color: "bg-orange-500/10 text-orange-400 border-orange-500/20", icon: AlertTriangle },
   critical: { color: "bg-red-500/10 text-red-400 border-red-500/20", icon: AlertTriangle }
@@ -282,7 +282,7 @@ export default function Analytics() {
                                   <Badge className={
                                     rec.priority === "high" ? "bg-red-500/20 text-red-400" :
                                     rec.priority === "medium" ? "bg-yellow-500/20 text-yellow-400" :
-                                    "bg-green-500/20 text-green-400"
+                                    "bg-lime/20 text-lime"
                                   }>
                                     {rec.priority}
                                   </Badge>
@@ -352,7 +352,7 @@ export default function Analytics() {
               <Card className="bg-surface-2 border-white/5">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
-                    <TrendingUp size={18} className="text-green-400" />
+                    <TrendingUp size={18} className="text-lime" />
                     Top Performing Content
                   </CardTitle>
                 </CardHeader>

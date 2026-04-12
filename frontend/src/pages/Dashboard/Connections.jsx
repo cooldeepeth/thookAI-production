@@ -235,7 +235,7 @@ export default function Connections() {
                         <div className="flex items-center gap-3 mb-1">
                           <h3 className="text-lg font-semibold text-white">{config.name}</h3>
                           {platform.connected ? (
-                            <Badge className="bg-green-500/10 text-green-400 border-green-500/20 gap-1">
+                            <Badge className="bg-lime/10 text-lime border-lime/20 gap-1">
                               <CheckCircle2 size={12} />
                               Connected
                             </Badge>

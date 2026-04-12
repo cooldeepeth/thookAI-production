@@ -40,7 +40,7 @@ function RepetitionBadge({ score, level }) {
   if (!level || level === "none" || level === "unknown") return null;
   
   const colors = {
-    low: "text-green-400 bg-green-400/10",
+    low: "text-lime bg-lime/10",
     medium: "text-yellow-400 bg-yellow-400/10",
     high: "text-red-400 bg-red-400/10"
   };
@@ -931,12 +931,12 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className={`mt-4 p-4 rounded-xl flex items-center gap-3 ${
-            job.status === "published" ? "bg-green-500/10 border border-green-500/20" : "bg-violet/10 border border-violet/20"
+            job.status === "published" ? "bg-lime/10 border border-lime/20" : "bg-violet/10 border border-violet/20"
           }`}
         >
           {job.status === "published" ? (
             <>
-              <Check size={18} className="text-green-400" />
+              <Check size={18} className="text-lime" />
               <div>
                 <p className="text-sm text-white font-medium">Published</p>
                 <p className="text-xs text-zinc-500">
