@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Checkpoint reached in 29-05-PLAN.md after Task 1
-last_updated: "2026-04-12T09:13:50.690Z"
-last_activity: 2026-04-12 -- Phase 30 execution started
+stopped_at: Completed 30-social-publishing-end-to-end/30-02-PLAN.md
+last_updated: "2026-04-12T09:28:10.278Z"
+last_activity: 2026-04-12
 progress:
   total_phases: 27
   completed_phases: 4
   total_plans: 24
-  completed_plans: 20
-  percent: 83
+  completed_plans: 22
+  percent: 92
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 30 (Social Publishing End-to-End) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 30
-Last activity: 2026-04-12 -- Phase 30 execution started
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-12
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 23 P01 | 3 | 2 tasks | 6 files |
 | Phase 23 P03 | 17 | 2 tasks | 7 files |
 | Phase 23 P02 | 92 | 2 tasks | 5 files |
+| Phase 30 P02 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase 23-03]: react-router-dom v7.13.2 main field (dist/main.js) missing — Jest 27 needs explicit moduleNameMapper to dist/index.js; same for react-router/dom subpath
 - [Phase 23]: AbortError timeout test: stub global.fetch (not MSW never-resolving handler) because MSW v2 Node mode does not propagate AbortError from intercepted handlers
 - [Phase 23]: EventSource mock: re-assign in beforeEach (not module level) to survive resetMocks: true auto-reset between tests
+- [Phase 30]: Proactive 24h refresh window prevents silent publish failures from stale tokens
+- [Phase 30]: Instagram fb_exchange_token renewal: access_token passed as refresh input since Instagram has no separate refresh_token
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T07:41:55.885Z
-Stopped at: Checkpoint reached in 29-05-PLAN.md after Task 1
+Last session: 2026-04-12T09:28:10.274Z
+Stopped at: Completed 30-social-publishing-end-to-end/30-02-PLAN.md
 Resume file: None

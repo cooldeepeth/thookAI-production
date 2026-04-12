@@ -494,8 +494,8 @@
 5. A failed publish attempt (e.g., API rate limit) shows the error message in the content job detail view with a "Retry" button — the post status changes to "failed" (not "published") and Sentry receives the error event
    **Plans**: 4 plans
    Plans:
-   - [ ] 30-01-PLAN.md — Fix _publish_to_platform (decrypt token, return dict) + store publish_results on content_jobs
-   - [ ] 30-02-PLAN.md — Proactive 24h token refresh in get_platform_token + Instagram _refresh_token branch
+   - [x] 30-01-PLAN.md — Fix _publish_to_platform (decrypt token, return dict) + store publish_results on content_jobs
+   - [x] 30-02-PLAN.md — Proactive 24h token refresh in get_platform_token + Instagram _refresh_token branch
    - [ ] 30-03-PLAN.md — token_expiring_soon in /api/platforms/status + Connections.jsx warning + Fernet round-trip test
    - [ ] 30-04-PLAN.md — LinkedIn registerUpload + X media/upload image attachment + Instagram media wiring verification + VALIDATION.md
 
@@ -590,7 +590,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 27. Onboarding Reimagination         | 5/5 | Complete    | 2026-04-12 |
 | 28. Content Generation Multi-Format  | 5/5 | Complete    | 2026-04-12 |
 | 29. Media Generation Pipeline        | 5/5 | Complete    | 2026-04-12 |
-| 30. Social Publishing End-to-End     | 0/3            | In progress | -         |
+| 30. Social Publishing End-to-End     | 2/4 | In Progress|  |
 | 31. Smart Scheduling                 | 0/TBD          | Not started | -         |
 | 32. Frontend Core Flows Polish       | 0/TBD          | Not started | -         |
 | 33. Design System & Landing Page     | 0/TBD          | Not started | -         |
