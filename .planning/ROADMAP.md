@@ -66,7 +66,7 @@
 - [x] **Phase 26: Backend Endpoint Hardening** - Audit and harden all 26 route files against production: every endpoint tested with curl, Pydantic validation enforced, standardized error format, auth guards verified, credit-safety checks, rate limiting tuned (completed 2026-04-11)
 - [x] **Phase 27: Onboarding Reimagination** - Rebuild the onboarding wizard with voice sample recording, writing style analysis, visual identity selection, multi-step progress, save-as-you-go, and fix the LLM model name bug in onboarding.py (completed 2026-04-11)
 - [x] **Phase 28: Content Generation Multi-Format** - Implement platform-specific content generation for all 9 formats (LinkedIn post/article/carousel, X tweet/thread, Instagram feed/reel/story) with persona-aware Writer prompts and real-time pipeline progress (completed 2026-04-12)
-- [ ] **Phase 29: Media Generation Pipeline** - Wire and verify the full media pipeline: auto-images via DALL-E/FAL.ai, carousel slides via Remotion, video via Runway/Luma, voice narration via ElevenLabs, R2 upload flow end-to-end, media display in UI
+- [x] **Phase 29: Media Generation Pipeline** - Wire and verify the full media pipeline: auto-images via DALL-E/FAL.ai, carousel slides via Remotion, video via Runway/Luma, voice narration via ElevenLabs, R2 upload flow end-to-end, media display in UI (completed 2026-04-12)
 - [ ] **Phase 30: Social Publishing End-to-End** - Fix and verify LinkedIn UGC, X v2, and Instagram Meta Graph publishing with OAuth connect/refresh, token encryption, publish status tracking, and real engagement metrics display
 - [ ] **Phase 31: Smart Scheduling** - Implement AI-suggested optimal posting times, user approval/modification of schedule, calendar view of all scheduled posts, and Celery Beat automatic publishing at scheduled times
 - [ ] **Phase 32: Frontend Core Flows Polish** - Polish every core page: auth, dashboard, ContentStudio, settings — all loading/empty/error states, mobile responsive (375px/768px/1440px), keyboard navigation
@@ -477,7 +477,7 @@
    - [x] 29-02-PLAN.md — Fix Celery tasks: remove CreativeProvidersService, call agent functions directly (Bug 1)
    - [x] 29-03-PLAN.md — Voice narration R2 upload in narrate_content() + Sentry capture in media except blocks (Bug 2, Bug 5)
    - [x] 29-04-PLAN.md — Wire _call_remotion(ImageCarousel) into generate_carousel() route (Bug 4)
-   - [ ] 29-05-PLAN.md — Frontend MediaPanel 202 async polling + R2 CORS verification checkpoint (Bug 3, MDIA-08)
+   - [x] 29-05-PLAN.md — Frontend MediaPanel 202 async polling + R2 CORS verification checkpoint (Bug 3, MDIA-08)
    **UI hint**: yes
 
 ### Phase 30: Social Publishing End-to-End
@@ -615,7 +615,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 26. Backend Endpoint Hardening       | 5/5 | Complete    | 2026-04-11 |
 | 27. Onboarding Reimagination         | 5/5 | Complete    | 2026-04-12 |
 | 28. Content Generation Multi-Format  | 5/5 | Complete    | 2026-04-12 |
-| 29. Media Generation Pipeline        | 4/5 | In Progress|  |
+| 29. Media Generation Pipeline        | 5/5 | Complete    | 2026-04-12 |
 | 30. Social Publishing End-to-End     | 0/TBD          | Not started | -         |
 | 31. Smart Scheduling                 | 0/TBD          | Not started | -         |
 | 32. Frontend Core Flows Polish       | 0/TBD          | Not started | -         |
