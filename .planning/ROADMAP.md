@@ -473,10 +473,10 @@
 5. A failed media generation (e.g., provider timeout) logs the error to Sentry, refunds the media credits to the user, and shows a retry button in the UI — no silent failures
    **Plans**: 5 plans
    Plans:
-   - [ ] 29-01-PLAN.md — Wave 0 test scaffolding (3 failing tests: CreativeProvidersService, voice R2, carousel Remotion)
-   - [ ] 29-02-PLAN.md — Fix Celery tasks: remove CreativeProvidersService, call agent functions directly (Bug 1)
-   - [ ] 29-03-PLAN.md — Voice narration R2 upload in narrate_content() + Sentry capture in media except blocks (Bug 2, Bug 5)
-   - [ ] 29-04-PLAN.md — Wire _call_remotion(ImageCarousel) into generate_carousel() route (Bug 4)
+   - [x] 29-01-PLAN.md — Wave 0 test scaffolding (3 failing tests: CreativeProvidersService, voice R2, carousel Remotion)
+   - [x] 29-02-PLAN.md — Fix Celery tasks: remove CreativeProvidersService, call agent functions directly (Bug 1)
+   - [x] 29-03-PLAN.md — Voice narration R2 upload in narrate_content() + Sentry capture in media except blocks (Bug 2, Bug 5)
+   - [x] 29-04-PLAN.md — Wire _call_remotion(ImageCarousel) into generate_carousel() route (Bug 4)
    - [ ] 29-05-PLAN.md — Frontend MediaPanel 202 async polling + R2 CORS verification checkpoint (Bug 3, MDIA-08)
    **UI hint**: yes
 
@@ -615,7 +615,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 26. Backend Endpoint Hardening       | 5/5 | Complete    | 2026-04-11 |
 | 27. Onboarding Reimagination         | 5/5 | Complete    | 2026-04-12 |
 | 28. Content Generation Multi-Format  | 5/5 | Complete    | 2026-04-12 |
-| 29. Media Generation Pipeline        | 0/TBD          | Not started | -         |
+| 29. Media Generation Pipeline        | 4/5 | In Progress|  |
 | 30. Social Publishing End-to-End     | 0/TBD          | Not started | -         |
 | 31. Smart Scheduling                 | 0/TBD          | Not started | -         |
 | 32. Frontend Core Flows Polish       | 0/TBD          | Not started | -         |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Completed 28-05-PLAN.md
-last_updated: "2026-04-12T07:19:34.258Z"
-last_activity: 2026-04-12 -- Phase 29 execution started
+stopped_at: Completed 29-media-generation-pipeline/29-04-PLAN.md
+last_updated: "2026-04-12T07:41:28.830Z"
+last_activity: 2026-04-12
 progress:
   total_phases: 27
   completed_phases: 3
   total_plans: 20
-  completed_plans: 15
-  percent: 75
+  completed_plans: 19
+  percent: 95
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-12)
 ## Current Position
 
 Phase: 29 (Media Generation Pipeline) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 29
-Last activity: 2026-04-12 -- Phase 29 execution started
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-04-12
 
 Progress: [░░░░░░░░░░] 0% (v3.0) — Phases 1-25 shipped across v1.0/v2.0/v2.1/v2.2
 
@@ -61,6 +61,7 @@ _Updated after each plan completion_
 | Phase 28 P02 | 197 | 2 tasks | 4 files |
 | Phase 28 P03 | 15 | 3 tasks | 4 files |
 | Phase 28 P05 | 15 | 3 tasks | 2 files |
+| Phase 29 P04 | 10 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Recent decisions affecting current work:
 - [Phase 28]: Used py-1 uniformly for all format buttons (not conditional) — minimal height diff, simpler code, prevents 375px overflow
 - [Phase 28]: storySlides detection placed outside useEffect so it recomputes on every render without lag
 - [Phase 28]: Fixed test_writer_respects_platform_rules import: test was importing PLATFORM_RULES from agents.writer but the constant was renamed to FORMAT_RULES in Plan 02 — corrected import name matches implementation
+- [Phase 29]: Module-level import pattern for _call_remotion: import module as _x rather than from-import inside function body so unittest.mock.patch is respected at call time
+- [Phase 29]: Removed redundant local credits import inside generate_carousel() that shadowed module-level import and broke test patches
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T06:15:57.978Z
-Stopped at: Completed 28-05-PLAN.md
+Last session: 2026-04-12T07:41:28.826Z
+Stopped at: Completed 29-media-generation-pipeline/29-04-PLAN.md
 Resume file: None

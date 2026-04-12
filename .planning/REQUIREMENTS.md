@@ -47,11 +47,11 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 ### Media Pipeline
 
 - [ ] **MDIA-01**: Auto-generate featured image for every post (DALL-E/FAL.ai)
-- [ ] **MDIA-02**: Generate LinkedIn carousel slides (text + design) via Remotion
+- [x] **MDIA-02**: Generate LinkedIn carousel slides (text + design) via Remotion
 - [ ] **MDIA-03**: Generate short-form video from script (Runway/Luma)
 - [ ] **MDIA-04**: Generate voice narration from post text (ElevenLabs/OpenAI TTS)
-- [ ] **MDIA-05**: Remotion renders compositions into downloadable video files
-- [ ] **MDIA-06**: Generated media attached to content jobs and downloadable
+- [x] **MDIA-05**: Remotion renders compositions into downloadable video files
+- [x] **MDIA-06**: Generated media attached to content jobs and downloadable
 - [ ] **MDIA-07**: Media display works in content preview (images, videos, audio players)
 - [ ] **MDIA-08**: R2 upload flow works end-to-end (presigned URL, browser upload, confirm)
 
@@ -189,11 +189,11 @@ Which phases cover which requirements.
 | CONT-11     | 28    | Complete |
 | CONT-12     | 28    | Complete |
 | MDIA-01     | 29    | Pending  |
-| MDIA-02     | 29    | Pending  |
+| MDIA-02     | 29    | Complete |
 | MDIA-03     | 29    | Pending  |
 | MDIA-04     | 29    | Pending  |
-| MDIA-05     | 29    | Pending  |
-| MDIA-06     | 29    | Pending  |
+| MDIA-05     | 29    | Complete |
+| MDIA-06     | 29    | Complete |
 | MDIA-07     | 29    | Pending  |
 | MDIA-08     | 29    | Pending  |
 | PUBL-01     | 30    | Pending  |
