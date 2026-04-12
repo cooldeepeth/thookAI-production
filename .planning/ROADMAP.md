@@ -72,7 +72,7 @@
 - [x] **Phase 32: Frontend Core Flows Polish** - Polish every core page: auth, dashboard, ContentStudio, settings — all loading/empty/error states, mobile responsive (375px/768px/1440px), keyboard navigation (completed 2026-04-12)
 - [ ] **Phase 33: Design System & Landing Page** - Apply consistent design system across all pages, rebuild the landing page to be conversion-optimized with hero/features/how-it-works/pricing/CTA/footer, SEO meta and OG tags
 - [ ] **Phase 34: Security & GDPR** - Full penetration-readiness: input validation, XSS sanitization, injection prevention, CSRF, rate limits, no secrets in code, no stack traces, dependency audit, GDPR data export/deletion, cookie consent, privacy/terms pages
-- [ ] **Phase 35: Performance, Monitoring & Launch** - Profile all endpoints to <500ms, optimize frontend bundle (code splitting, lazy loading), Lighthouse >90, Sentry clean 48h, PostHog verified, E2E smoke test, 50-user load test, cross-browser, pre-launch checklist
+- [x] **Phase 35: Performance, Monitoring & Launch** - Profile all endpoints to <500ms, optimize frontend bundle (code splitting, lazy loading), Lighthouse >90, Sentry clean 48h, PostHog verified, E2E smoke test, 50-user load test, cross-browser, pre-launch checklist (completed 2026-04-12)
 
 ## Phase Details
 
@@ -559,8 +559,8 @@ Plans:
 - [x] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
 - [x] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
 - [x] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
-- [ ] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
-- [ ] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
+- [x] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
+- [x] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
    **UI hint**: yes
 
 ### Phase 34: Security & GDPR
@@ -608,9 +608,9 @@ Plans:
 - [x] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
 - [x] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
 - [x] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
-- [ ] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
-- [ ] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
-- [ ] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
+- [x] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
+- [x] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
+- [x] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
 
 ## Progress
 
@@ -628,4 +628,4 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 32. Frontend Core Flows Polish       | 7/7            | Complete    | 2026-04-13 |
 | 33. Design System & Landing Page     | 6/6            | Complete    | 2026-04-13 |
 | 34. Security & GDPR                  | 9/9            | Complete    | 2026-04-13 |
-| 35. Performance, Monitoring & Launch | 5/7 | In Progress|  |
+| 35. Performance, Monitoring & Launch | 7/7 | Complete   | 2026-04-12 |
