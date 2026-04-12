@@ -7,7 +7,6 @@ import csv
 import io
 import uuid
 import logging
-import sentry_sdk
 from database import db
 from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
@@ -392,6 +391,7 @@ async def generate_image(
         )
     except Exception as exc:
         if settings.app.sentry_dsn:
+            import sentry_sdk
             sentry_sdk.capture_exception(exc)
         from services.credits import add_credits
         await add_credits(
@@ -468,6 +468,7 @@ async def generate_carousel(
         )
     except Exception as exc:
         if settings.app.sentry_dsn:
+            import sentry_sdk
             sentry_sdk.capture_exception(exc)
         from services.credits import add_credits
         await add_credits(
@@ -560,6 +561,7 @@ async def narrate_content(
         )
     except Exception as exc:
         if settings.app.sentry_dsn:
+            import sentry_sdk
             sentry_sdk.capture_exception(exc)
         from services.credits import add_credits
         await add_credits(
