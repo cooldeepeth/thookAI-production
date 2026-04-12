@@ -512,8 +512,8 @@
 4. Rescheduling a post (changing the scheduled_at time) cancels the existing Celery task and creates a new one at the correct time — verified by rescheduling and confirming the old time is no longer active
    **Plans**: 4 plans
    Plans:
-   - [ ] 31-01-PLAN.md — Test scaffold for SCHD-01 through SCHD-04 (RED state before implementation)
-   - [ ] 31-02-PLAN.md — Fix planner.py: dual-write to scheduled_posts + wire optimal times from persona_engines
+   - [x] 31-01-PLAN.md — Test scaffold for SCHD-01 through SCHD-04 (RED state before implementation)
+   - [x] 31-02-PLAN.md — Fix planner.py: dual-write to scheduled_posts + wire optimal times from persona_engines
    - [ ] 31-03-PLAN.md — Add /schedule/calendar and /schedule/{id}/reschedule endpoints to dashboard.py
    - [ ] 31-04-PLAN.md — Frontend: ContentCalendar.jsx calendar endpoint + reschedule modal
    **UI hint**: yes
@@ -595,7 +595,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 28. Content Generation Multi-Format  | 5/5 | Complete    | 2026-04-12 |
 | 29. Media Generation Pipeline        | 5/5 | Complete    | 2026-04-12 |
 | 30. Social Publishing End-to-End     | 4/4 | Complete    | 2026-04-12 |
-| 31. Smart Scheduling                 | 0/TBD          | Not started | -         |
+| 31. Smart Scheduling                 | 2/4 | In Progress|  |
 | 32. Frontend Core Flows Polish       | 0/TBD          | Not started | -         |
 | 33. Design System & Landing Page     | 0/TBD          | Not started | -         |
 | 34. Security & GDPR                  | 0/TBD          | Not started | -         |

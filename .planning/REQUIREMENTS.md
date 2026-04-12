@@ -67,10 +67,10 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 
 ### Smart Scheduling
 
-- [ ] **SCHD-01**: AI suggests optimal posting times per platform based on engagement patterns
+- [x] **SCHD-01**: AI suggests optimal posting times per platform based on engagement patterns
 - [ ] **SCHD-02**: User can approve/modify suggested schedule
 - [ ] **SCHD-03**: Calendar view shows all scheduled posts across platforms
-- [ ] **SCHD-04**: Scheduled posts publish automatically at scheduled time via Celery Beat
+- [x] **SCHD-04**: Scheduled posts publish automatically at scheduled time via Celery Beat
 
 ### Frontend Polish
 
@@ -203,10 +203,10 @@ Which phases cover which requirements.
 | PUBL-05     | 30    | Complete |
 | PUBL-06     | 30    | Complete |
 | PUBL-07     | 30    | Complete |
-| SCHD-01     | 31    | Pending  |
+| SCHD-01     | 31    | Complete |
 | SCHD-02     | 31    | Pending  |
 | SCHD-03     | 31    | Pending  |
-| SCHD-04     | 31    | Pending  |
+| SCHD-04     | 31    | Complete |
 | FEND-01     | 32    | Pending  |
 | FEND-02     | 32    | Pending  |
 | FEND-03     | 32    | Pending  |

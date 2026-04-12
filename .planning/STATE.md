@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Completed 30-social-publishing-end-to-end/30-04-PLAN.md
-last_updated: "2026-04-12T12:48:58.026Z"
-last_activity: 2026-04-12 -- Phase 31 execution started
+stopped_at: Completed 31-smart-scheduling/31-02-PLAN.md
+last_updated: "2026-04-12T12:58:14.125Z"
+last_activity: 2026-04-12
 progress:
   total_phases: 27
   completed_phases: 5
   total_plans: 28
-  completed_plans: 24
-  percent: 86
+  completed_plans: 26
+  percent: 93
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 31 (Smart Scheduling) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 31
-Last activity: 2026-04-12 -- Phase 31 execution started
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-12
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -69,6 +69,7 @@ _Updated after each plan completion_
 | Phase 30 P02 | 3 | 2 tasks | 2 files |
 | Phase 30 P03 | 5 | 2 tasks | 3 files |
 | Phase 30 P04 | 20 | 2 tasks | 3 files |
+| Phase 31 P02 | 15 | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,7 @@ Recent decisions affecting current work:
 - [Phase 30]: LinkedIn registerUpload fallback: non-200 response falls back to text-only ensuring publishing never fails due to media upload errors
 - [Phase 30]: X media upload uses v1.1 multipart upload; media_id_string attached to first tweet only
 - [Phase 30]: Instagram publish_to_platform dispatcher confirmed to extract image_url from media_assets correctly — no code change needed
+- [Phase 31]: Extract _compute_heuristic_suggestions as standalone helper; use data_driven=True + source='stored' flags on suggestions to distinguish stored-data vs heuristic paths
 
 ### Pending Todos
 
@@ -129,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T09:35:17.657Z
-Stopped at: Completed 30-social-publishing-end-to-end/30-04-PLAN.md
+Last session: 2026-04-12T12:58:14.120Z
+Stopped at: Completed 31-smart-scheduling/31-02-PLAN.md
 Resume file: None
