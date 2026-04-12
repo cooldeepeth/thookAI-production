@@ -199,36 +199,77 @@ async def publish_to_x(
     content: str,
     is_thread: bool = False,
     token: Optional[str] = None,
+    media_assets: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Publish content to X/Twitter.
-    
+
     Args:
         user_id: User ID
         content: Text content (or thread content with 1/ 2/ markers)
         is_thread: Whether to post as a thread
-    
+        token: Pre-fetched access token (skips DB lookup if provided)
+        media_assets: Optional list of media dicts with image_url for the first tweet
+
     Returns:
         {success, tweet_ids, tweet_urls, error}
     """
     access_token = token or await get_platform_token(user_id, "x")
     if not access_token:
         return {"success": False, "error": "X not connected or token expired"}
-    
+
     try:
         async with httpx.AsyncClient() as client:
+            # --- Media upload via X v1.1 media/upload ---
+            x_media_id: Optional[str] = None
+            image_url = (
+                media_assets[0].get("image_url")
+                if media_assets and len(media_assets) > 0
+                else None
+            )
+            if image_url:
+                try:
+                    image_resp = await client.get(image_url, timeout=30.0)
+                    if image_resp.status_code == 200:
+                        image_bytes = image_resp.content
+                        upload_resp = await client.post(
+                            "https://upload.twitter.com/1.1/media/upload.json",
+                            headers={"Authorization": f"Bearer {access_token}"},
+                            files={"media": image_bytes},
+                            timeout=60.0,
+                        )
+                        if upload_resp.status_code == 200:
+                            x_media_id = upload_resp.json().get("media_id_string")
+                        else:
+                            logger.warning(
+                                "X media/upload failed (status=%s), posting text-only",
+                                upload_resp.status_code,
+                            )
+                    else:
+                        logger.warning(
+                            "Failed to fetch image from %s (status=%s), skipping media",
+                            image_url,
+                            image_resp.status_code,
+                        )
+                except Exception as media_err:
+                    logger.warning("X media upload error: %s — posting text-only", media_err)
+
             # Parse thread if needed
             if is_thread or "1/" in content or "1)" in content:
                 tweets = _parse_thread(content)
             else:
                 tweets = [content[:280]]  # Single tweet, truncate to limit
-            
+
             tweet_ids = []
             tweet_urls = []
             reply_to = None
-            
+
             for i, tweet_text in enumerate(tweets):
-                payload = {"text": tweet_text[:280]}
-                
+                payload: Dict[str, Any] = {"text": tweet_text[:280]}
+
+                # Attach media to the first tweet only
+                if i == 0 and x_media_id:
+                    payload["media"] = {"media_ids": [x_media_id]}
+
                 # If this is a reply in a thread
                 if reply_to:
                     payload["reply"] = {"in_reply_to_tweet_id": reply_to}
@@ -454,7 +495,7 @@ async def publish_to_platform(
     if platform == "linkedin":
         return await publish_to_linkedin(user_id or "", content, media_assets, token=access_token)
     elif platform in ("x", "twitter"):
-        return await publish_to_x(user_id or "", content, token=access_token)
+        return await publish_to_x(user_id or "", content, token=access_token, media_assets=media_assets)
     elif platform == "instagram":
         image_url = None
         if media_assets:
@@ -495,7 +536,7 @@ async def publish_content(
         if platform == "linkedin":
             results["linkedin"] = await publish_to_linkedin(user_id, content, media_assets)
         elif platform == "x":
-            results["x"] = await publish_to_x(user_id, content, is_thread)
+            results["x"] = await publish_to_x(user_id, content, is_thread, media_assets=media_assets)
         elif platform == "instagram":
             # Instagram needs an image URL
             image_url = None

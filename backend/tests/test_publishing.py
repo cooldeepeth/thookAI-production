@@ -891,3 +891,171 @@ class TestPublishLinkedInMedia:
         assert result.get("success") is True, (
             f"Expected text-only fallback success, got: {result}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Task 2 (30-04): X media upload via v1.1 media/upload + Instagram wiring
+# ---------------------------------------------------------------------------
+
+class TestPublishXMedia:
+    """publish_to_x() must support image attachment via v1.1 media/upload."""
+
+    @pytest.mark.asyncio
+    async def test_uploads_media_and_attaches_to_tweet(self):
+        """Image must be uploaded to media/upload.json and attached to tweet as media_ids."""
+        captured_calls = []
+        captured_tweet_body = {}
+
+        media_upload_resp = MagicMock()
+        media_upload_resp.status_code = 200
+        media_upload_resp.json.return_value = {"media_id_string": "1234567890"}
+
+        tweet_resp = MagicMock()
+        tweet_resp.status_code = 201
+        tweet_resp.json.return_value = {"data": {"id": "tweet_abc"}}
+
+        image_resp = MagicMock()
+        image_resp.status_code = 200
+        image_resp.content = b"image_bytes_here"
+
+        async def mock_post(url, **kwargs):
+            captured_calls.append(("POST", url))
+            if "media/upload" in url:
+                return media_upload_resp
+            if "2/tweets" in url:
+                captured_tweet_body.update(kwargs.get("json", {}))
+                return tweet_resp
+            return MagicMock(status_code=200, json=lambda: {})
+
+        async def mock_get(url, **kwargs):
+            return image_resp
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+        mock_client.get = AsyncMock(side_effect=mock_get)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_x
+            result = await publish_to_x(
+                user_id="user_test",
+                content="Tweet with image",
+                token="user_oauth_token",
+                media_assets=[{"image_url": "https://r2.example.com/photo.jpg"}],
+            )
+
+        media_upload_calls = [url for m, url in captured_calls if "media/upload" in url]
+        assert len(media_upload_calls) >= 1, (
+            f"media/upload was not called. Calls: {captured_calls}"
+        )
+        tweet_media = captured_tweet_body.get("media", {})
+        assert "1234567890" in tweet_media.get("media_ids", []), (
+            f"media_id not attached to tweet. Tweet body: {captured_tweet_body}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_text_only_when_no_media_assets(self):
+        """Without media_assets, must not call media/upload (text-only path preserved)."""
+        captured_calls = []
+
+        tweet_resp = MagicMock()
+        tweet_resp.status_code = 201
+        tweet_resp.json.return_value = {"data": {"id": "tweet_text_only"}}
+
+        async def mock_post(url, **kwargs):
+            captured_calls.append(("POST", url))
+            return tweet_resp
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_x
+            result = await publish_to_x(
+                user_id="user_test",
+                content="Text-only tweet",
+                token="token",
+                media_assets=None,
+            )
+
+        media_upload_calls = [url for m, url in captured_calls if "media/upload" in url]
+        assert len(media_upload_calls) == 0, (
+            f"media/upload should NOT be called for text-only. Calls: {captured_calls}"
+        )
+        assert result.get("success") is True
+
+
+class TestPublishInstagramMediaWiring:
+    """publish_to_platform() must pass image_url from media_assets to Instagram publisher."""
+
+    @pytest.mark.asyncio
+    async def test_instagram_media_container_receives_image_url(self):
+        """image_url from media_assets must be passed to the Media Container creation call."""
+        captured_container_params = {}
+
+        container_resp = MagicMock()
+        container_resp.status_code = 200
+        container_resp.json.return_value = {"id": "container_id_xyz"}
+
+        status_resp = MagicMock()
+        status_resp.status_code = 200
+        status_resp.json.return_value = {"status_code": "FINISHED"}
+
+        publish_resp = MagicMock()
+        publish_resp.status_code = 200
+        publish_resp.json.return_value = {"id": "ig_post_id_123"}
+
+        permalink_resp = MagicMock()
+        permalink_resp.status_code = 200
+        permalink_resp.json.return_value = {"permalink": "https://www.instagram.com/p/abc/"}
+
+        async def mock_post(url, **kwargs):
+            if "media_publish" in url or "media_publish" in url:
+                return publish_resp
+            if "/media" in url:
+                # Capture the params sent to Media Container creation
+                captured_container_params.update(kwargs.get("params", {}))
+                return container_resp
+            return MagicMock(status_code=200, json=lambda: {})
+
+        get_call_count = [0]
+
+        async def mock_get(url, **kwargs):
+            get_call_count[0] += 1
+            # First GET is status check, second is permalink
+            if "status_code" in str(kwargs.get("params", {})):
+                return status_resp
+            return permalink_resp
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+        mock_client.get = AsyncMock(side_effect=mock_get)
+
+        mock_token_doc = {
+            "user_id": "u3",
+            "platform": "instagram",
+            "instagram_account_id": "ig_account_123",
+            "access_token": "ig_token",
+        }
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            with patch("database.db") as mock_db:
+                mock_db.platform_tokens.find_one = AsyncMock(return_value=mock_token_doc)
+                from agents.publisher import publish_to_platform
+                result = await publish_to_platform(
+                    platform="instagram",
+                    content="Instagram post",
+                    access_token="ig_token",
+                    user_id="u3",
+                    media_assets=[{"type": "image", "image_url": "https://r2.example.com/ig_photo.jpg"}],
+                )
+
+        image_url_passed = captured_container_params.get("image_url")
+        assert image_url_passed == "https://r2.example.com/ig_photo.jpg", (
+            f"Expected image_url in container params, got: {captured_container_params}"
+        )
