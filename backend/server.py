@@ -390,7 +390,7 @@ app.add_middleware(CompressionMiddleware, minimum_size=500, compression_level=6)
 app.add_middleware(CacheMiddleware, max_entries=1000)
 
 # 7. Request timing (first middleware, closest to request)
-app.add_middleware(TimingMiddleware, slow_request_threshold_ms=2000)
+app.add_middleware(TimingMiddleware, slow_request_threshold_ms=500)
 
 # OAuth (Authlib) requires server-side session for authorize state / PKCE
 if settings.app.is_production and not settings.security.jwt_secret_key:
