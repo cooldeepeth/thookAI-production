@@ -409,3 +409,42 @@ async def test_generate_image_failure_does_not_insert_media_asset():
 
     # media_assets.insert_one must NOT have been called on failure
     db_mock.media_assets.insert_one.assert_not_called()
+
+
+# ============ BUG-1 REGRESSION: CreativeProvidersService does not exist ============
+
+def test_celery_tasks_import_without_CreativeProvidersService():
+    """
+    Wave 0 RED test for Bug 1 in 29-RESEARCH.md.
+
+    The four Celery tasks (generate_image, generate_video, generate_voice,
+    generate_carousel) import CreativeProvidersService which does NOT exist in
+    creative_providers.py.  This test imports each task to confirm the import
+    succeeds without ImportError.
+
+    This test will FAIL until Plan 29-02 fixes media_tasks.py to remove the
+    CreativeProvidersService references and call agent functions directly.
+    """
+    # If any of these raise ImportError the test fails immediately
+    from tasks.media_tasks import generate_image
+    from tasks.media_tasks import generate_video
+    from tasks.media_tasks import generate_voice
+    from tasks.media_tasks import generate_carousel
+    from tasks.media_tasks import generate_video_for_job  # already works — baseline
+
+    # Confirm they are all Celery task objects
+    assert hasattr(generate_image, "delay"), "generate_image must be a Celery task"
+    assert hasattr(generate_video, "delay"), "generate_video must be a Celery task"
+    assert hasattr(generate_voice, "delay"), "generate_voice must be a Celery task"
+    assert hasattr(generate_carousel, "delay"), "generate_carousel must be a Celery task"
+    assert hasattr(generate_video_for_job, "delay"), "generate_video_for_job must be a Celery task"
+
+
+def test_creative_providers_has_no_class():
+    """Confirm creative_providers.py exports functions, not a CreativeProvidersService class."""
+    import services.creative_providers as cp
+    assert not hasattr(cp, "CreativeProvidersService"), (
+        "CreativeProvidersService class should NOT exist — use module-level functions instead. "
+        "If this assertion fails, the class was added — ensure media_tasks.py calls "
+        "agent functions directly, not via a service class."
+    )
