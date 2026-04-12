@@ -61,9 +61,9 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 - [x] **PUBL-02**: User can connect X account via OAuth and publish tweets/threads with media
 - [x] **PUBL-03**: User can connect Instagram account via Meta OAuth and publish posts with media
 - [x] **PUBL-04**: OAuth token auto-refresh before expiry for all platforms
-- [ ] **PUBL-05**: Publishing status tracked: pending → publishing → published/failed
-- [ ] **PUBL-06**: Platform token encryption verified working in production (Fernet)
-- [ ] **PUBL-07**: Published content shows real engagement metrics when available
+- [x] **PUBL-05**: Publishing status tracked: pending → publishing → published/failed
+- [x] **PUBL-06**: Platform token encryption verified working in production (Fernet)
+- [x] **PUBL-07**: Published content shows real engagement metrics when available
 
 ### Smart Scheduling
 
@@ -200,9 +200,9 @@ Which phases cover which requirements.
 | PUBL-02     | 30    | Complete |
 | PUBL-03     | 30    | Complete |
 | PUBL-04     | 30    | Complete |
-| PUBL-05     | 30    | Pending  |
-| PUBL-06     | 30    | Pending  |
-| PUBL-07     | 30    | Pending  |
+| PUBL-05     | 30    | Complete |
+| PUBL-06     | 30    | Complete |
+| PUBL-07     | 30    | Complete |
 | SCHD-01     | 31    | Pending  |
 | SCHD-02     | 31    | Pending  |
 | SCHD-03     | 31    | Pending  |

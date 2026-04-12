@@ -295,7 +295,8 @@ class TestGetPlatformToken:
 
         real_token = "real_access_token_abc123"
         encrypted = _encrypt_token(real_token)
-        future = datetime.now(timezone.utc) + timedelta(hours=24)
+        # Far future expiry to avoid triggering proactive refresh (24h window)
+        future = datetime.now(timezone.utc) + timedelta(days=7)
 
         token_doc = {
             "user_id": "user_001",
@@ -505,3 +506,234 @@ class TestFernetEncryptionRoundTrip:
         assert decrypted == plaintext, (
             f"Decryption must recover original token. Got: {decrypted!r}"
         )
+
+
+class TestProactiveTokenRefresh:
+    """get_platform_token proactively refreshes tokens within 24h of expiry (PUBL-04)."""
+
+    @pytest.mark.asyncio
+    async def test_token_within_24h_of_expiry_triggers_refresh(self):
+        """Token that expires in 12 hours triggers a proactive refresh."""
+        from routes.platforms import get_platform_token, _encrypt_token
+
+        encrypted_access = _encrypt_token("old_token_about_to_expire")
+        encrypted_refresh = _encrypt_token("refresh_abc")
+        # Token expires in 12 hours (within the 24h proactive window)
+        soon = datetime.now(timezone.utc) + timedelta(hours=12)
+
+        token_doc = {
+            "user_id": "user_proactive_001",
+            "platform": "linkedin",
+            "access_token": encrypted_access,
+            "refresh_token": encrypted_refresh,
+            "expires_at": soon,
+        }
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "fresh_token_xyz",
+            "refresh_token": "new_refresh",
+            "expires_in": 3600,
+        }
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(return_value=mock_response)
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.find_one = AsyncMock(return_value=token_doc)
+            mock_db.platform_tokens.update_one = AsyncMock()
+            with patch("httpx.AsyncClient", return_value=mock_client):
+                result = await get_platform_token("user_proactive_001", "linkedin")
+
+        assert mock_client.post.called, "Proactive refresh must fire for tokens expiring within 24h"
+        assert result == "fresh_token_xyz", f"Expected refreshed token, got: {result}"
+
+    @pytest.mark.asyncio
+    async def test_token_with_long_expiry_does_not_refresh(self):
+        """Token that expires in 7 days does not trigger refresh."""
+        from routes.platforms import get_platform_token, _encrypt_token
+
+        encrypted_access = _encrypt_token("still_valid_token")
+        encrypted_refresh = _encrypt_token("refresh_abc")
+        # Token expires in 7 days (well outside 24h window)
+        future = datetime.now(timezone.utc) + timedelta(days=7)
+
+        token_doc = {
+            "user_id": "user_proactive_002",
+            "platform": "x",
+            "access_token": encrypted_access,
+            "refresh_token": encrypted_refresh,
+            "expires_at": future,
+        }
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock()
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.find_one = AsyncMock(return_value=token_doc)
+            with patch("httpx.AsyncClient", return_value=mock_client):
+                result = await get_platform_token("user_proactive_002", "x")
+
+        assert not mock_client.post.called, "No refresh should fire for tokens with > 24h remaining"
+        assert result == "still_valid_token", f"Expected current token, got: {result}"
+
+    @pytest.mark.asyncio
+    async def test_proactive_refresh_failure_falls_back_to_current_token(self):
+        """If proactive refresh fails but token is still valid, return current token."""
+        from routes.platforms import get_platform_token, _encrypt_token
+
+        encrypted_access = _encrypt_token("current_valid_token")
+        encrypted_refresh = _encrypt_token("refresh_abc")
+        # Token expires in 6 hours — proactive refresh window
+        soon = datetime.now(timezone.utc) + timedelta(hours=6)
+
+        token_doc = {
+            "user_id": "user_proactive_003",
+            "platform": "linkedin",
+            "access_token": encrypted_access,
+            "refresh_token": encrypted_refresh,
+            "expires_at": soon,
+        }
+
+        # Refresh API returns failure
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.json.return_value = {"error": "server error"}
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(return_value=mock_response)
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.find_one = AsyncMock(return_value=token_doc)
+            mock_db.platform_tokens.update_one = AsyncMock()
+            with patch("httpx.AsyncClient", return_value=mock_client):
+                result = await get_platform_token("user_proactive_003", "linkedin")
+
+        # Should fall back to the current valid token rather than returning None
+        assert result == "current_valid_token", (
+            f"Expected fallback to current token on refresh failure, got: {result}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_token_without_refresh_token_skips_proactive_refresh(self):
+        """A near-expiry token with no refresh_token returns current token without attempting refresh."""
+        from routes.platforms import get_platform_token, _encrypt_token
+
+        encrypted_access = _encrypt_token("near_expiry_no_refresh")
+        soon = datetime.now(timezone.utc) + timedelta(hours=12)
+
+        token_doc = {
+            "user_id": "user_proactive_004",
+            "platform": "linkedin",
+            "access_token": encrypted_access,
+            "expires_at": soon,
+            # No refresh_token field
+        }
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock()
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.find_one = AsyncMock(return_value=token_doc)
+            with patch("httpx.AsyncClient", return_value=mock_client):
+                result = await get_platform_token("user_proactive_004", "linkedin")
+
+        assert not mock_client.post.called, "No refresh attempt without refresh_token"
+        assert result == "near_expiry_no_refresh", "Should return current valid token"
+
+
+class TestInstagramTokenRefresh:
+    """_refresh_token has an Instagram branch using fb_exchange_token (PUBL-04)."""
+
+    @pytest.mark.asyncio
+    async def test_instagram_refresh_calls_fb_exchange_token(self):
+        """Instagram refresh uses GET fb_exchange_token endpoint, not OAuth2 POST."""
+        from routes.platforms import _refresh_token
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "new_long_lived_ig_token",
+            "expires_in": 5184000,  # 60 days
+            "token_type": "bearer",
+        }
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(return_value=mock_response)
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.update_one = AsyncMock()
+            with patch("httpx.AsyncClient", return_value=mock_client):
+                # For Instagram, refresh_token arg is actually the current access token
+                result = await _refresh_token(
+                    user_id="user_ig_001",
+                    platform="instagram",
+                    refresh_token="current_ig_access_token",
+                )
+
+        # Instagram uses GET to fb_exchange_token endpoint
+        assert mock_client.get.called, "Instagram refresh must use GET fb_exchange_token"
+        call_args = mock_client.get.call_args
+        url = call_args[0][0] if call_args[0] else call_args.kwargs.get("url", "")
+        assert "fb_exchange_token" in str(url) or "fb_exchange_token" in str(call_args), (
+            f"Instagram refresh must call fb_exchange_token endpoint, got: {call_args}"
+        )
+        assert result == "new_long_lived_ig_token", f"Expected new IG token, got: {result}"
+
+    @pytest.mark.asyncio
+    async def test_instagram_refresh_works_without_refresh_token(self):
+        """Instagram has no refresh_token field — uses current access_token to renew."""
+        from routes.platforms import _refresh_token
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "renewed_ig_token",
+            "expires_in": 5184000,
+        }
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(return_value=mock_response)
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.update_one = AsyncMock()
+            with patch("httpx.AsyncClient", return_value=mock_client):
+                # For Instagram, refresh_token arg is the current access token
+                result = await _refresh_token(
+                    user_id="user_ig_002",
+                    platform="instagram",
+                    refresh_token="existing_ig_access_token",
+                )
+
+        assert result == "renewed_ig_token", f"Instagram refresh must return new token, got: {result}"
+
+    @pytest.mark.asyncio
+    async def test_instagram_refresh_failure_returns_none(self):
+        """Instagram refresh API failure returns None gracefully."""
+        from routes.platforms import _refresh_token
+
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.json.return_value = {"error": {"message": "Invalid OAuth access token"}}
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await _refresh_token(
+                user_id="user_ig_003",
+                platform="instagram",
+                refresh_token="invalid_current_token",
+            )
+
+        assert result is None, f"Expected None on refresh failure, got: {result}"
