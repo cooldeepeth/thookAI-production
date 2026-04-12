@@ -554,8 +554,8 @@
 5. A first-time visitor to the landing page can clearly understand what ThookAI does, see how it works in 3 steps, and find the pricing — measurable by a 5-second reading test: a person reading the hero + features sections can explain the product
 **Plans**: 7 plans
 Plans:
-- [ ] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
-- [ ] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
+- [x] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
+- [x] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
 - [ ] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
 - [ ] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
 - [ ] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
@@ -604,8 +604,8 @@ Plans:
 6. The pre-launch checklist is signed off: SSL verified, CORS configured, all env vars set in Railway and Vercel, Stripe in production mode, rate limiting active, monitoring active, backup strategy documented
 **Plans**: 7 plans
 Plans:
-- [ ] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
-- [ ] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
+- [x] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
+- [x] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
 - [ ] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
 - [ ] 35-04-PLAN.md — Locust 50-user load test (PERF-07)
 - [ ] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
@@ -628,4 +628,4 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 32. Frontend Core Flows Polish       | 7/7            | Complete    | 2026-04-13 |
 | 33. Design System & Landing Page     | 6/6            | Complete    | 2026-04-13 |
 | 34. Security & GDPR                  | 9/9            | Complete    | 2026-04-13 |
-| 35. Performance, Monitoring & Launch | 0/TBD          | Not started | -          |
+| 35. Performance, Monitoring & Launch | 2/7 | In Progress|  |
