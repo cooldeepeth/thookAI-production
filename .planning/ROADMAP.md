@@ -452,11 +452,11 @@
 5. User can edit the generated content inline, approve it, and schedule it — all from within ContentStudio without navigating away
    **Plans**: 5 plans
    Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   - [ ] 28-01-PLAN.md — Wave 0 test scaffolds for all 12 CONT requirements (RED state)
+   - [ ] 28-02-PLAN.md — writer.py FORMAT_RULES (8 keys) + commander.py WORD_COUNT_DEFAULTS + story_sequence allowlist
+   - [ ] 28-03-PLAN.md — InputPanel 9 formats + InstagramShell story slides + AgentPipeline font-bold
+   - [ ] 28-04-PLAN.md — ContentOutput schedule API fix (JSON body) + data-testids + CONT-11/12 backend tests
+   - [ ] 28-05-PLAN.md — Full suite verification, human checkpoint, VALIDATION.md update
    **UI hint**: yes
 
 ### Phase 29: Media Generation Pipeline
