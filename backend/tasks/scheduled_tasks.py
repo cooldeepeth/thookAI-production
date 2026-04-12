@@ -16,6 +16,24 @@ from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
+# Module-level imports for testability (allows patching in tests).
+# These are optional at import time — if agents.publisher is unavailable
+# (e.g. missing dependency) the task will catch the ImportError at runtime.
+try:
+    from agents.publisher import publish_to_platform as real_publish
+except ImportError:
+    real_publish = None  # type: ignore[assignment]
+
+try:
+    from config import settings
+except ImportError:
+    settings = None  # type: ignore[assignment]
+
+try:
+    from database import db
+except ImportError:
+    db = None  # type: ignore[assignment]
+
 
 def run_async(coro):
     """Run async code in a Celery task (sync context)."""
@@ -237,11 +255,15 @@ def process_scheduled_posts():
 
 
 async def _process_scheduled_posts():
-    from database import db
+    # Use module-level db (patchable in tests); fall back to lazy import for
+    # cases where the module-level import failed (e.g. cold start ordering).
+    _db = db
+    if _db is None:
+        from database import db as _db  # type: ignore[assignment]
 
     now = datetime.now(timezone.utc)
 
-    posts = await db.scheduled_posts.find({
+    posts = await _db.scheduled_posts.find({
         "scheduled_at": {"$lte": now},
         "status": {"$in": ["pending", "scheduled"]},
     }).to_list(length=50)
@@ -252,7 +274,7 @@ async def _process_scheduled_posts():
         schedule_id = post.get("schedule_id", str(post.get("_id")))
 
         # Idempotency: skip if already processing
-        lock = await db.scheduled_posts.find_one_and_update(
+        lock = await _db.scheduled_posts.find_one_and_update(
             {"schedule_id": schedule_id, "status": {"$in": ["pending", "scheduled"]}},
             {"$set": {"status": "publishing", "publish_started_at": now}},
         )
@@ -260,26 +282,46 @@ async def _process_scheduled_posts():
             continue
 
         try:
-            from agents.publisher import publish_to_platform as real_publish
-            result = await real_publish(
+            # Use module-level real_publish so tests can patch it easily.
+            _publish = real_publish
+            if _publish is None:
+                from agents.publisher import publish_to_platform as _publish  # type: ignore[assignment]
+
+            result = await _publish(
                 platform=post["platform"],
                 content=post.get("final_content") or post.get("content", ""),
                 user_id=post["user_id"],
-                media_urls=post.get("media_urls"),
+                # Use media_assets (correct kwarg); fall back to media_urls for
+                # backwards-compat with older scheduled_posts documents.
+                media_assets=post.get("media_assets") or post.get("media_urls"),
             )
 
             if result.get("success"):
-                await db.scheduled_posts.update_one(
+                pub_now = datetime.now(timezone.utc)
+                await _db.scheduled_posts.update_one(
                     {"schedule_id": schedule_id},
                     {"$set": {
                         "status": "published",
-                        "published_at": datetime.now(timezone.utc),
+                        "published_at": pub_now,
                         "publish_result": result,
                     }},
                 )
+                # Also write publish_results to the linked content_job so that
+                # analytics polling (poll_post_metrics_24h/7d) can find post_id/post_url.
+                job_id = post.get("job_id")
+                if job_id:
+                    await _db.content_jobs.update_one(
+                        {"job_id": job_id},
+                        {"$set": {
+                            "status": "published",
+                            "published_at": pub_now,
+                            "publish_results": {post["platform"]: result},
+                            "updated_at": pub_now,
+                        }},
+                    )
                 published += 1
             else:
-                await db.scheduled_posts.update_one(
+                await _db.scheduled_posts.update_one(
                     {"schedule_id": schedule_id},
                     {"$set": {
                         "status": "failed",
@@ -288,14 +330,44 @@ async def _process_scheduled_posts():
                     }},
                 )
                 failed += 1
+                # Alert via Sentry when a scheduled post publish fails.
+                try:
+                    _settings = settings
+                    if _settings is None:
+                        from config import settings as _settings  # type: ignore[assignment]
+                    if _settings and _settings.app.sentry_dsn:
+                        import sentry_sdk
+                        sentry_sdk.capture_message(
+                            f"Scheduled post failed to publish: platform={post['platform']}, "
+                            f"schedule_id={schedule_id}",
+                            level="error",
+                            extras={
+                                "schedule_id": schedule_id,
+                                "platform": post["platform"],
+                                "user_id": post["user_id"],
+                                "error": result.get("error"),
+                            },
+                        )
+                except Exception as sentry_err:
+                    logger.warning("Sentry capture failed: %s", sentry_err)
+
         except Exception as e:
             logger.error("Failed to publish scheduled post %s: %s", schedule_id, e)
-            await db.scheduled_posts.update_one(
+            await _db.scheduled_posts.update_one(
                 {"schedule_id": schedule_id},
                 {"$set": {"status": "failed", "error": str(e),
                           "failed_at": datetime.now(timezone.utc)}},
             )
             failed += 1
+            try:
+                _settings = settings
+                if _settings is None:
+                    from config import settings as _settings  # type: ignore[assignment]
+                if _settings and _settings.app.sentry_dsn:
+                    import sentry_sdk
+                    sentry_sdk.capture_exception(e)
+            except Exception:
+                pass
 
     if published or failed:
         logger.info("Scheduled posts: %d published, %d failed", published, failed)
