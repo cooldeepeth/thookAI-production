@@ -5,6 +5,8 @@ Verifies that:
 - Connect endpoints return correct auth URLs for LinkedIn, X, and Instagram.
 - Disconnect removes stored tokens and returns 404 for already-disconnected platforms.
 - get_platform_token decrypts stored tokens and handles expiry + refresh correctly.
+- GET /platforms/status includes token_expiring_soon field for proactive UI warnings.
+- Fernet encryption round-trip proves encrypt→store→decrypt works correctly (PUBL-06).
 
 All tests run without real OAuth credentials or external HTTP calls.
 """
@@ -382,3 +384,124 @@ class TestGetPlatformToken:
         assert mock_client.post.called, "Expected refresh HTTP call when token is expired + has refresh_token"
         # The new token should be returned
         assert result == "new_access_token_xyz", f"Expected new token after refresh, got: {result}"
+
+
+# ---------------------------------------------------------------------------
+# 7. token_expiring_soon field in status endpoint (Plan 03 — PUBL-06 coverage)
+# ---------------------------------------------------------------------------
+
+class TestTokenExpiringSoon:
+    """GET /api/platforms/status must surface token_expiring_soon field."""
+
+    def _make_test_app_local(self):
+        """Isolated app factory to avoid module-level import caching issues."""
+        import routes.platforms as platforms_module
+        from auth_utils import get_current_user
+
+        test_app = FastAPI()
+        test_app.include_router(platforms_module.router, prefix="/api")
+        return test_app, platforms_module, get_current_user
+
+    def test_status_returns_expiring_soon_true_within_24h(self):
+        """Token expiring within 24h must have token_expiring_soon=True."""
+        test_app, platforms_module, get_current_user = self._make_test_app_local()
+        test_app.dependency_overrides[get_current_user] = lambda: FAKE_USER
+
+        soon = datetime.now(timezone.utc) + timedelta(hours=10)
+        mock_token = {
+            "platform": "linkedin",
+            "account_name": "Test User",
+            "expires_at": soon,
+            "connected_at": datetime.now(timezone.utc),
+            "scope": "openid profile email w_member_social",
+        }
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[mock_token])
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.find.return_value = mock_cursor
+            client = TestClient(test_app, raise_server_exceptions=False)
+            response = client.get("/api/platforms/status")
+
+        test_app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        linkedin = response.json()["platforms"]["linkedin"]
+        assert linkedin.get("token_expiring_soon") is True, (
+            f"Expected token_expiring_soon=True for 10h expiry, got: {linkedin}"
+        )
+
+    def test_status_returns_expiring_soon_false_beyond_24h(self):
+        """Token expiring in 48h must have token_expiring_soon=False."""
+        test_app, platforms_module, get_current_user = self._make_test_app_local()
+        test_app.dependency_overrides[get_current_user] = lambda: FAKE_USER
+
+        far_future = datetime.now(timezone.utc) + timedelta(hours=48)
+        mock_token = {
+            "platform": "x",
+            "account_name": "@testuser",
+            "expires_at": far_future,
+            "connected_at": datetime.now(timezone.utc),
+            "scope": "tweet.read tweet.write",
+        }
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[mock_token])
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.find.return_value = mock_cursor
+            client = TestClient(test_app, raise_server_exceptions=False)
+            response = client.get("/api/platforms/status")
+
+        test_app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        x_status = response.json()["platforms"]["x"]
+        assert x_status.get("token_expiring_soon") is False, (
+            f"Expected token_expiring_soon=False for 48h expiry, got: {x_status}"
+        )
+
+    def test_status_always_has_expiring_soon_field(self):
+        """All platforms in response must have token_expiring_soon field even if not connected."""
+        test_app, platforms_module, get_current_user = self._make_test_app_local()
+        test_app.dependency_overrides[get_current_user] = lambda: FAKE_USER
+
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[])
+
+        with patch("routes.platforms.db") as mock_db:
+            mock_db.platform_tokens.find.return_value = mock_cursor
+            client = TestClient(test_app, raise_server_exceptions=False)
+            response = client.get("/api/platforms/status")
+
+        test_app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        platforms = response.json()["platforms"]
+        for platform_name, status in platforms.items():
+            assert "token_expiring_soon" in status, (
+                f"token_expiring_soon missing from {platform_name}: {status}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# 8. Fernet encryption round-trip (PUBL-06)
+# ---------------------------------------------------------------------------
+
+class TestFernetEncryptionRoundTrip:
+    """Prove _encrypt_token + _decrypt_token round-trip works correctly (PUBL-06)."""
+
+    def test_encrypt_decrypt_round_trip(self, monkeypatch):
+        """encrypt(plaintext) -> decrypt -> original plaintext. No silent key mismatch."""
+        from cryptography.fernet import Fernet
+        valid_key = Fernet.generate_key().decode()  # exactly 44 chars
+        monkeypatch.setattr("routes.platforms.ENCRYPTION_KEY", valid_key)
+
+        from routes.platforms import _encrypt_token, _decrypt_token
+        plaintext = "my_real_oauth_access_token_abc123"
+        encrypted = _encrypt_token(plaintext)
+
+        assert encrypted != plaintext, "Encrypted token must differ from plaintext"
+        decrypted = _decrypt_token(encrypted)
+        assert decrypted == plaintext, (
+            f"Decryption must recover original token. Got: {decrypted!r}"
+        )
