@@ -11,6 +11,13 @@ import {
   Sparkles, RefreshCw, Zap, AlertCircle, CheckCircle2
 } from "lucide-react";
 import { apiFetch } from '@/lib/api';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const PLATFORM_ICONS = {
   linkedin: Linkedin,
@@ -39,6 +46,9 @@ export default function ContentCalendar() {
   const [weeklySchedule, setWeeklySchedule] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [rescheduleModal, setRescheduleModal] = useState(null); // {schedule_id, platform, current_time}
+  const [newScheduledAt, setNewScheduledAt] = useState("");
+  const [rescheduling, setRescheduling] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -112,6 +122,42 @@ export default function ContentCalendar() {
         description: "Failed to cancel scheduled post",
         variant: "destructive"
       });
+    }
+  };
+
+  const reschedulePost = async () => {
+    if (!rescheduleModal || !newScheduledAt) return;
+    setRescheduling(true);
+    try {
+      const res = await apiFetch(
+        `/api/dashboard/schedule/${rescheduleModal.schedule_id}/reschedule`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            new_scheduled_at: new Date(newScheduledAt).toISOString(),
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Reschedule failed");
+
+      toast({
+        title: "Rescheduled",
+        description: `Post rescheduled to ${new Date(data.new_scheduled_at).toLocaleString()}`,
+      });
+      setRescheduleModal(null);
+      setNewScheduledAt("");
+      await fetchCalendarData();
+    } catch (err) {
+      console.error("Reschedule error:", err);
+      toast({
+        title: "Reschedule Failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setRescheduling(false);
     }
   };
 
@@ -476,6 +522,28 @@ export default function ContentCalendar() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="flex-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                              onClick={() => {
+                                // Pre-fill with current scheduled time in datetime-local format
+                                const dt = new Date(item.scheduled_at);
+                                // datetime-local format: "YYYY-MM-DDTHH:mm"
+                                const localDt = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
+                                  .toISOString()
+                                  .slice(0, 16);
+                                setNewScheduledAt(localDt);
+                                setRescheduleModal({
+                                  schedule_id: item.schedule_id,
+                                  platform: item.platform,
+                                  current_time: item.scheduled_at,
+                                });
+                              }}
+                            >
+                              <Clock size={12} className="mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
                               onClick={() => cancelScheduled(item.job_id)}
                             >
@@ -556,6 +624,47 @@ export default function ContentCalendar() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Reschedule Modal */}
+      <Dialog open={!!rescheduleModal} onOpenChange={(open) => !open && setRescheduleModal(null)}>
+        <DialogContent className="bg-surface-2 border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white font-display">Reschedule Post</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-zinc-400 capitalize">
+              Platform: {rescheduleModal?.platform}
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs text-zinc-400 block">New date and time (UTC)</label>
+              <input
+                type="datetime-local"
+                value={newScheduledAt}
+                onChange={(e) => setNewScheduledAt(e.target.value)}
+                className="w-full bg-surface border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-lime/40"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-zinc-400"
+              onClick={() => setRescheduleModal(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="bg-lime text-black hover:bg-lime/90"
+              disabled={!newScheduledAt || rescheduling}
+              onClick={reschedulePost}
+            >
+              {rescheduling ? "Rescheduling..." : "Reschedule"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
