@@ -9,6 +9,12 @@ const RECOMMENDED_HASHTAGS_MAX = 15;
 export default function InstagramShell({ content, onContentChange, isEditing, readOnly = false }) {
   const [caption, setCaption] = useState(content || "");
   const [hashtags, setHashtags] = useState([]);
+
+  // Story sequence detection and parsing
+  const isStoryFormat = content && content.includes("Slide 1:");
+  const storySlides = isStoryFormat
+    ? content.split(/Slide \d+:\s*/i).filter(s => s.trim().length > 0)
+    : null;
   
   useEffect(() => {
     setCaption(content || "");
@@ -84,7 +90,9 @@ export default function InstagramShell({ content, onContentChange, isEditing, re
             <ImageIcon size={28} className="text-gray-500" />
           </div>
           <p className="text-sm text-gray-500">Image/Video Preview</p>
-          <p className="text-xs text-gray-400 mt-1">Your visual content here</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {isStoryFormat ? "Vertical story format (9:16)" : "Your visual content here"}
+          </p>
         </div>
       </div>
 
@@ -126,6 +134,27 @@ export default function InstagramShell({ content, onContentChange, isEditing, re
               />
             </div>
           </div>
+        ) : isStoryFormat && storySlides ? (
+          <div data-testid="story-slides-container" role="list" className="space-y-2 p-3">
+            {storySlides.map((slide, idx) => (
+              <motion.div
+                key={idx}
+                data-testid={`story-slide-${idx}`}
+                role="listitem"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className="rounded-xl border border-white/10 bg-gray-50 p-3 mb-2"
+              >
+                <p className="px-2 py-1 text-xs font-mono text-zinc-400 mb-1">
+                  Slide {idx + 1} of {storySlides.length}
+                </p>
+                <p className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap">
+                  {slide.trim()}
+                </p>
+              </motion.div>
+            ))}
+          </div>
         ) : (
           <div className="text-sm text-gray-900 leading-relaxed">
             <span className="font-semibold mr-1">testcreator</span>
@@ -165,7 +194,7 @@ export default function InstagramShell({ content, onContentChange, isEditing, re
             {hashtags.slice(0, 10).map((tag, i) => (
               <span
                 key={i}
-                className="text-[10px] bg-gray-100 text-[#00376B] px-2 py-0.5 rounded-full"
+                className="text-[10px] bg-gray-100 text-[#00376B] px-2 py-1 rounded-full"
               >
                 {tag}
               </span>

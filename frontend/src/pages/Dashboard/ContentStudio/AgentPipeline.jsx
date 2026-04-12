@@ -71,7 +71,7 @@ export default function AgentPipeline({ job, platform, rawInput }) {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <p className={`text-sm font-semibold ${status === "done" ? "text-white" : status === "running" ? "text-white" : "text-zinc-600"}`}>
+                    <p className={`text-sm font-bold ${status === "done" ? "text-white" : status === "running" ? "text-white" : "text-zinc-600"}`}>
                       {agent.name}
                     </p>
                     <span className={`text-[10px] font-mono rounded-full px-1.5 py-0.5 ${
