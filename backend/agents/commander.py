@@ -16,6 +16,17 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
+WORD_COUNT_DEFAULTS = {
+    "post": 220,
+    "article": 800,
+    "carousel_caption": 120,
+    "tweet": 45,        # ~280 chars = ~40-50 words
+    "thread": 400,      # 8 tweets x 50 words
+    "feed_caption": 180,
+    "reel_caption": 150,
+    "story_sequence": 80,  # 3-5 slides x ~15 words
+}
+
 
 def _clean_json(raw: str) -> str:
     s = raw.strip()
@@ -112,7 +123,12 @@ async def run_commander(
             chat.send_message(UserMessage(text=prompt, images=imgs)),
             timeout=20.0,
         )
-        return json.loads(_clean_json(response))
+        result = json.loads(_clean_json(response))
+        # Override with content_type-aware word count floor
+        min_words = WORD_COUNT_DEFAULTS.get(content_type, 200)
+        if result.get("estimated_word_count", 0) < min_words:
+            result["estimated_word_count"] = min_words
+        return result
     except Exception:
         logger.exception("Commander agent failed, using mock")
         return _mock_commander(raw_input, platform, content_type)

@@ -26,7 +26,7 @@ router = APIRouter(prefix="/content", tags=["content"])
 PLATFORM_CONTENT_TYPES = {
     "linkedin": ["post", "carousel_caption", "article"],
     "x": ["tweet", "thread"],
-    "instagram": ["feed_caption", "reel_caption"],
+    "instagram": ["feed_caption", "reel_caption", "story_sequence"],
 }
 
 

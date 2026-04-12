@@ -1,232 +1,394 @@
+"""Phase 28 — Content Generation Multi-Format tests.
+
+Tests cover CONT-01 through CONT-12. Written in RED state before implementation.
+Tests will pass after Plan 02 (backend changes) and Plan 04 (CONT-11/12 fixes).
+
+Run: cd backend && pytest tests/test_content_phase28.py -v
 """
-Phase 28: Content Generation Multi-Format Tests
-Tests for CONT-01 through CONT-09 — format-specific Writer prompts,
-WORD_COUNT_DEFAULTS in Commander, story_sequence in allowlist.
-"""
+import inspect
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
+# Import guard — FORMAT_RULES does not exist until Plan 02 implements it.
+# Tests relying on FORMAT_RULES will produce clear FAILED (not ERROR) if not present.
+try:
+    from agents.writer import FORMAT_RULES
+    HAS_FORMAT_RULES = True
+except ImportError:
+    FORMAT_RULES = {}
+    HAS_FORMAT_RULES = False
 
-# ===========================================================================
-# CONT-09: FORMAT_RULES dict exists and has correct content
-# ===========================================================================
+# Import guard — WORD_COUNT_DEFAULTS does not exist until Plan 02 implements it.
+try:
+    from agents.commander import WORD_COUNT_DEFAULTS
+    HAS_WORD_COUNT_DEFAULTS = True
+except ImportError:
+    WORD_COUNT_DEFAULTS = {}
+    HAS_WORD_COUNT_DEFAULTS = False
 
-class TestFormatRulesDict:
-    """FORMAT_RULES in writer.py has exactly 8 keys with correct values."""
+# PLATFORM_CONTENT_TYPES — exists now, story_sequence not yet in instagram list
+try:
+    from routes.content import PLATFORM_CONTENT_TYPES
+    HAS_PLATFORM_CONTENT_TYPES = True
+except ImportError:
+    PLATFORM_CONTENT_TYPES = {}
+    HAS_PLATFORM_CONTENT_TYPES = False
 
-    def test_format_rules_exist(self):
-        from agents.writer import FORMAT_RULES
-        assert FORMAT_RULES is not None, "FORMAT_RULES must exist in writer.py"
+# ContentStatusUpdate — already present in routes/content.py
+try:
+    from routes.content import ContentStatusUpdate
+    HAS_STATUS_UPDATE = True
+except ImportError:
+    ContentStatusUpdate = None
+    HAS_STATUS_UPDATE = False
 
-    def test_format_rules_has_8_keys(self):
-        from agents.writer import FORMAT_RULES
-        assert len(FORMAT_RULES) == 8, f"Expected 8 keys, got {len(FORMAT_RULES)}: {list(FORMAT_RULES.keys())}"
-
-    def test_format_rules_has_all_required_keys(self):
-        from agents.writer import FORMAT_RULES
-        required_keys = {"post", "article", "carousel_caption", "tweet", "thread", "feed_caption", "reel_caption", "story_sequence"}
-        missing = required_keys - set(FORMAT_RULES.keys())
-        assert not missing, f"FORMAT_RULES is missing keys: {missing}"
-
-    def test_platform_rules_removed(self):
-        """PLATFORM_RULES (old 3-key dict) must NOT exist in writer.py."""
-        import agents.writer as writer_module
-        assert not hasattr(writer_module, "PLATFORM_RULES"), "PLATFORM_RULES still exists — must be replaced by FORMAT_RULES"
-
-    def test_tweet_rule_has_hard_limit_280(self):
-        from agents.writer import FORMAT_RULES
-        tweet_rule = FORMAT_RULES["tweet"]
-        assert "280" in tweet_rule, "Tweet rule must mention 280 char limit"
-        assert "HARD LIMIT" in tweet_rule, "Tweet rule must say 'HARD LIMIT'"
-
-    def test_article_rule_has_min_600_words(self):
-        from agents.writer import FORMAT_RULES
-        article_rule = FORMAT_RULES["article"]
-        assert "600" in article_rule, "Article rule must mention min 600 words"
-
-    def test_story_sequence_rule_has_slide_format(self):
-        from agents.writer import FORMAT_RULES
-        story_rule = FORMAT_RULES["story_sequence"]
-        assert "Slide 1:" in story_rule, "story_sequence rule must include 'Slide 1:' format instruction"
-
-    def test_thread_rule_has_numbering_format(self):
-        from agents.writer import FORMAT_RULES
-        thread_rule = FORMAT_RULES["thread"]
-        assert "1/" in thread_rule or "numbered" in thread_rule.lower(), "Thread rule must reference numbered tweet format"
+# run_agent_pipeline — already present
+try:
+    from agents.pipeline import run_agent_pipeline
+    HAS_PIPELINE = True
+except ImportError:
+    run_agent_pipeline = None
+    HAS_PIPELINE = False
 
 
-# ===========================================================================
-# CONT-09: FORMAT_RULES content_type lookup in run_writer
-# ===========================================================================
+# ──────────────────────────────────────────────────────────────────────────────
+# FORMAT_RULES structure tests  (CONT-09)
+# ──────────────────────────────────────────────────────────────────────────────
 
-class TestFormatRulesLookup:
-    """The lookup in run_writer uses content_type as primary key."""
+@pytest.mark.unit
+def test_format_rules_dispatch():
+    """CONT-09 — FORMAT_RULES dict must have exactly 8 format-specific keys.
 
-    def test_format_rules_content_type_lookup(self):
-        """FORMAT_RULES.get(content_type, ...) pattern must be used — not PLATFORM_RULES.get(platform)."""
-        from agents.writer import FORMAT_RULES
-        # Simulate lookup behavior: tweet content_type on linkedin platform should get tweet rule
-        content_type = "tweet"
-        platform = "linkedin"
-        result = FORMAT_RULES.get(content_type, FORMAT_RULES.get(platform.lower(), ""))
-        assert result == FORMAT_RULES["tweet"], "Lookup by content_type must take precedence over platform"
+    These 8 keys replace the old 3-key PLATFORM_RULES dict. Each key maps
+    to a non-empty string with format-specific writer instructions.
+    """
+    if not HAS_FORMAT_RULES:
+        pytest.fail(
+            "FORMAT_RULES not found in agents.writer — must be added in Plan 02. "
+            "Expected: from agents.writer import FORMAT_RULES"
+        )
 
-    def test_format_rules_fallback_for_unknown_content_type(self):
-        from agents.writer import FORMAT_RULES
-        content_type = "unknown_type"
-        platform = "linkedin"
-        result = FORMAT_RULES.get(content_type, FORMAT_RULES.get(platform.lower(), "FALLBACK"))
-        # Unknown content_type and no platform key => empty string fallback
-        assert result == "FALLBACK", "Should fallback gracefully for unknown content_type and platform"
-
-    def test_writer_module_uses_content_type_in_lookup(self):
-        """Verify that the writer.py source code uses FORMAT_RULES.get(content_type)."""
-        import inspect
-        from agents import writer
-        source = inspect.getsource(writer)
-        assert "FORMAT_RULES.get(content_type" in source, (
-            "writer.py must use FORMAT_RULES.get(content_type, ...) for the platform_rules lookup"
+    expected_keys = {
+        "post",
+        "article",
+        "carousel_caption",
+        "tweet",
+        "thread",
+        "feed_caption",
+        "reel_caption",
+        "story_sequence",
+    }
+    assert isinstance(FORMAT_RULES, dict), "FORMAT_RULES must be a dict"
+    assert len(FORMAT_RULES) == 8, (
+        f"FORMAT_RULES must have exactly 8 keys. Found {len(FORMAT_RULES)}: {sorted(FORMAT_RULES.keys())}"
+    )
+    assert set(FORMAT_RULES.keys()) == expected_keys, (
+        f"FORMAT_RULES must have exactly these keys: {sorted(expected_keys)}. "
+        f"Found: {sorted(FORMAT_RULES.keys())}"
+    )
+    for key, value in FORMAT_RULES.items():
+        assert isinstance(value, str) and len(value) > 0, (
+            f"FORMAT_RULES['{key}'] must be a non-empty string"
         )
 
 
-# ===========================================================================
-# CONT-04: X tweet under 280 characters
-# ===========================================================================
+@pytest.mark.unit
+def test_format_rules_content_type_lookup():
+    """CONT-09 — FORMAT_RULES values must contain platform-specific markers.
 
-class TestXTweetFormat:
-    """Tweet FORMAT_RULE enforces 280 char limit in prompt."""
-
-    def test_x_tweet_under_280(self):
-        """Tweet rule explicitly states 280 char limit and HARD LIMIT."""
-        from agents.writer import FORMAT_RULES
-        tweet_rule = FORMAT_RULES["tweet"]
-        assert "280" in tweet_rule
-        assert "HARD LIMIT" in tweet_rule
-
-    def test_x_tweet_rule_is_concise(self):
-        """Tweet rule should be present and focused."""
-        from agents.writer import FORMAT_RULES
-        tweet_rule = FORMAT_RULES["tweet"]
-        assert len(tweet_rule) > 50, "Tweet rule should provide meaningful instructions"
-
-
-# ===========================================================================
-# CONT-05: X thread numbered format
-# ===========================================================================
-
-class TestXThreadFormat:
-    """Thread FORMAT_RULE specifies numbered tweet format."""
-
-    def test_x_thread_numbered(self):
-        from agents.writer import FORMAT_RULES
-        thread_rule = FORMAT_RULES["thread"]
-        # Rule must mention the numbered format (1/ through n/ or similar)
-        has_numbering = "1/" in thread_rule or "'1/'" in thread_rule or "numbered" in thread_rule.lower()
-        assert has_numbering, "Thread rule must specify numbered tweet format (1/, 2/, etc.)"
-
-    def test_x_thread_per_tweet_limit(self):
-        from agents.writer import FORMAT_RULES
-        thread_rule = FORMAT_RULES["thread"]
-        assert "280" in thread_rule, "Thread rule must specify 280 char limit per tweet"
-
-
-# ===========================================================================
-# CONT-08: Instagram story_sequence
-# ===========================================================================
-
-class TestInstagramStorySequence:
-    """story_sequence FORMAT_RULE creates slide-based format."""
-
-    def test_instagram_story_sequence(self):
-        from agents.writer import FORMAT_RULES
-        story_rule = FORMAT_RULES["story_sequence"]
-        assert "Slide 1:" in story_rule, "story_sequence rule must include 'Slide 1:' format"
-
-    def test_story_sequence_multi_slide(self):
-        from agents.writer import FORMAT_RULES
-        story_rule = FORMAT_RULES["story_sequence"]
-        # Must mention at least Slide 1 and Slide 3
-        assert "Slide 1:" in story_rule, "Must mention Slide 1"
-        assert "Slide 3:" in story_rule or "Slide 2:" in story_rule, "Must mention multiple slides"
-
-
-# ===========================================================================
-# Task 2: WORD_COUNT_DEFAULTS in commander.py
-# ===========================================================================
-
-class TestWordCountDefaults:
-    """WORD_COUNT_DEFAULTS dict in commander.py."""
-
-    def test_word_count_defaults_exist(self):
-        from agents.commander import WORD_COUNT_DEFAULTS
-        assert WORD_COUNT_DEFAULTS is not None
-
-    def test_word_count_defaults_has_8_keys(self):
-        from agents.commander import WORD_COUNT_DEFAULTS
-        assert len(WORD_COUNT_DEFAULTS) == 8, f"Expected 8 keys, got {len(WORD_COUNT_DEFAULTS)}"
-
-    def test_word_count_article_min_600(self):
-        from agents.commander import WORD_COUNT_DEFAULTS
-        assert WORD_COUNT_DEFAULTS["article"] >= 600, "Article word count must be >= 600"
-
-    def test_word_count_tweet_max_60(self):
-        from agents.commander import WORD_COUNT_DEFAULTS
-        assert WORD_COUNT_DEFAULTS["tweet"] <= 60, "Tweet word count must be <= 60 (approx 280 chars)"
-
-    def test_word_count_has_all_required_keys(self):
-        from agents.commander import WORD_COUNT_DEFAULTS
-        required_keys = {"post", "article", "carousel_caption", "tweet", "thread", "feed_caption", "reel_caption", "story_sequence"}
-        missing = required_keys - set(WORD_COUNT_DEFAULTS.keys())
-        assert not missing, f"WORD_COUNT_DEFAULTS is missing keys: {missing}"
-
-    def test_word_count_floor_override_in_commander_source(self):
-        """run_commander must apply word count floor after JSON parsing."""
-        import inspect
-        from agents import commander
-        source = inspect.getsource(commander)
-        assert "WORD_COUNT_DEFAULTS.get(content_type" in source, (
-            "commander.py must use WORD_COUNT_DEFAULTS.get(content_type, ...) for word count override"
+    Verifies that each format rule string contains verifiable output characteristics:
+    - tweet: '280' char limit
+    - article: '600' or 'words' reference
+    - story_sequence: 'Slide' format marker
+    - thread: '1/' numbering format
+    """
+    if not HAS_FORMAT_RULES:
+        pytest.fail(
+            "FORMAT_RULES not found — will pass after Plan 02 adds it to agents.writer"
         )
 
+    # CONT-04: tweet rule must mention 280-char limit
+    assert "280" in FORMAT_RULES["tweet"], (
+        "FORMAT_RULES['tweet'] must contain '280' (character limit)"
+    )
 
-# ===========================================================================
-# Task 2: story_sequence in backend allowlist
-# ===========================================================================
+    # CONT-02: article rule must mention min word count
+    article_rule = FORMAT_RULES["article"]
+    assert "600" in article_rule or "words" in article_rule.lower(), (
+        "FORMAT_RULES['article'] must reference '600' or 'words' (minimum word count guidance)"
+    )
 
-class TestStorySequenceAllowlist:
-    """story_sequence must be in PLATFORM_CONTENT_TYPES["instagram"]."""
+    # CONT-08: story_sequence rule must contain slide format marker
+    assert "Slide" in FORMAT_RULES["story_sequence"], (
+        "FORMAT_RULES['story_sequence'] must contain 'Slide' (slide format marker)"
+    )
 
-    def test_story_sequence_in_allowlist(self):
-        from routes.content import PLATFORM_CONTENT_TYPES
-        assert "story_sequence" in PLATFORM_CONTENT_TYPES["instagram"], (
-            "story_sequence must be in PLATFORM_CONTENT_TYPES['instagram']"
+    # CONT-05: thread rule must contain numbered tweet marker
+    assert "1/" in FORMAT_RULES["thread"], (
+        "FORMAT_RULES['thread'] must contain '1/' (thread numbering format)"
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# WORD_COUNT_DEFAULTS tests  (CONT-02, CONT-04, CONT-08)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.unit
+def test_word_count_defaults_exist():
+    """CONT-02/04/08 — WORD_COUNT_DEFAULTS dict must guide per-format word count.
+
+    Commander uses these defaults to set estimated_word_count per content_type,
+    preventing articles from being too short and tweets from being too long.
+    """
+    if not HAS_WORD_COUNT_DEFAULTS:
+        pytest.fail(
+            "WORD_COUNT_DEFAULTS not found in agents.commander — must be added in Plan 02."
         )
 
-    def test_instagram_has_3_content_types(self):
-        from routes.content import PLATFORM_CONTENT_TYPES
-        assert len(PLATFORM_CONTENT_TYPES["instagram"]) == 3, (
-            f"instagram should have 3 content types (feed_caption, reel_caption, story_sequence), "
-            f"got {PLATFORM_CONTENT_TYPES['instagram']}"
-        )
+    assert isinstance(WORD_COUNT_DEFAULTS, dict), "WORD_COUNT_DEFAULTS must be a dict"
+    assert len(WORD_COUNT_DEFAULTS) >= 8, (
+        f"WORD_COUNT_DEFAULTS must have at least 8 content_type keys, got {len(WORD_COUNT_DEFAULTS)}"
+    )
 
-    def test_instagram_allowlist_contains_all_types(self):
-        from routes.content import PLATFORM_CONTENT_TYPES
-        expected = {"feed_caption", "reel_caption", "story_sequence"}
-        actual = set(PLATFORM_CONTENT_TYPES["instagram"])
-        assert actual == expected, f"Expected {expected}, got {actual}"
+    # CONT-02: articles must be longer than posts
+    assert WORD_COUNT_DEFAULTS.get("article", 0) >= 600, (
+        "WORD_COUNT_DEFAULTS['article'] must be >= 600 (articles need substantial length)"
+    )
+
+    # CONT-04: tweets must be short — ~280 chars ≈ 40-60 words
+    assert WORD_COUNT_DEFAULTS.get("tweet", 999) <= 60, (
+        "WORD_COUNT_DEFAULTS['tweet'] must be <= 60 (tweets are short, ~280 chars)"
+    )
+
+    # CONT-08: story sequences are brief — 3-5 slides × 15-25 words each
+    assert WORD_COUNT_DEFAULTS.get("story_sequence", 999) <= 120, (
+        "WORD_COUNT_DEFAULTS['story_sequence'] must be <= 120 (3-5 slides, ~15-25 words each)"
+    )
 
 
-# ===========================================================================
-# Integration: run_writer uses FORMAT_RULES (mock LLM)
-# ===========================================================================
+# ──────────────────────────────────────────────────────────────────────────────
+# PLATFORM_CONTENT_TYPES allowlist tests  (CONT-08)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.unit
+def test_story_sequence_in_allowlist():
+    """CONT-08 — Instagram must allow story_sequence content_type.
+
+    Currently PLATFORM_CONTENT_TYPES['instagram'] only has feed_caption and
+    reel_caption. Adding story_sequence is required for CONT-08.
+    """
+    if not HAS_PLATFORM_CONTENT_TYPES:
+        pytest.fail("PLATFORM_CONTENT_TYPES not found in routes.content")
+
+    assert "story_sequence" in PLATFORM_CONTENT_TYPES.get("instagram", []), (
+        "PLATFORM_CONTENT_TYPES['instagram'] must include 'story_sequence'"
+    )
+    assert len(PLATFORM_CONTENT_TYPES.get("instagram", [])) == 3, (
+        "PLATFORM_CONTENT_TYPES['instagram'] must have exactly 3 types: "
+        "feed_caption, reel_caption, story_sequence"
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LinkedIn format tests  (CONT-01, CONT-02, CONT-03)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.unit
+def test_linkedin_post_format():
+    """CONT-01 — LinkedIn post FORMAT_RULE must specify character limit and hashtag guidance."""
+    if not HAS_FORMAT_RULES:
+        pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
+    post_rule = FORMAT_RULES["post"]
+    assert (
+        "3,000" in post_rule or "3000" in post_rule
+    ), "FORMAT_RULES['post'] must reference the 3,000-char LinkedIn post limit"
+    assert "hashtag" in post_rule.lower(), (
+        "FORMAT_RULES['post'] must contain hashtag guidance"
+    )
+
+
+@pytest.mark.unit
+def test_linkedin_article_format():
+    """CONT-02 — LinkedIn article FORMAT_RULE must specify min word count and article structure."""
+    if not HAS_FORMAT_RULES:
+        pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
+    article_rule = FORMAT_RULES["article"]
+    assert "600" in article_rule, (
+        "FORMAT_RULES['article'] must reference '600' (minimum word count)"
+    )
+    assert (
+        "header" in article_rule.lower() or "headline" in article_rule.lower()
+    ), "FORMAT_RULES['article'] must mention header or headline (article structure)"
+
+
+@pytest.mark.unit
+def test_linkedin_carousel_format():
+    """CONT-03 — LinkedIn carousel caption FORMAT_RULE must specify char limit and slide tease."""
+    if not HAS_FORMAT_RULES:
+        pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
+    carousel_rule = FORMAT_RULES["carousel_caption"]
+    assert (
+        "1,500" in carousel_rule or "1500" in carousel_rule
+    ), "FORMAT_RULES['carousel_caption'] must reference the 1,500-char carousel limit"
+    assert (
+        "Swipe" in carousel_rule
+        or "carousel" in carousel_rule.lower()
+        or "slides" in carousel_rule.lower()
+    ), "FORMAT_RULES['carousel_caption'] must reference carousel/slides/swipe behavior"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# X (Twitter) format tests  (CONT-04, CONT-05)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.unit
+def test_x_tweet_under_280():
+    """CONT-04 — X tweet FORMAT_RULE must enforce 280-char HARD LIMIT explicitly."""
+    if not HAS_FORMAT_RULES:
+        pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
+    tweet_rule = FORMAT_RULES["tweet"]
+    assert "280" in tweet_rule, (
+        "FORMAT_RULES['tweet'] must contain '280' (character limit)"
+    )
+    assert (
+        "HARD" in tweet_rule.upper() and "LIMIT" in tweet_rule.upper()
+    ), "FORMAT_RULES['tweet'] must contain 'HARD LIMIT' (case insensitive) to prevent LLM overrun"
+
+
+@pytest.mark.unit
+def test_x_thread_numbered():
+    """CONT-05 — X thread FORMAT_RULE must specify numbered tweet format and per-tweet limit."""
+    if not HAS_FORMAT_RULES:
+        pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
+    thread_rule = FORMAT_RULES["thread"]
+    assert "1/" in thread_rule, (
+        "FORMAT_RULES['thread'] must contain '1/' (numbered tweet format marker)"
+    )
+    assert "280" in thread_rule, (
+        "FORMAT_RULES['thread'] must contain '280' (per-tweet character limit)"
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Instagram format tests  (CONT-06, CONT-07, CONT-08)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.unit
+def test_instagram_feed_hashtags():
+    """CONT-06 — Instagram feed caption FORMAT_RULE must specify hashtag count guidance."""
+    if not HAS_FORMAT_RULES:
+        pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
+    feed_rule = FORMAT_RULES["feed_caption"]
+    assert "10" in feed_rule, (
+        "FORMAT_RULES['feed_caption'] must contain '10' (hashtag count)"
+    )
+    assert "hashtag" in feed_rule.lower(), (
+        "FORMAT_RULES['feed_caption'] must mention hashtags"
+    )
+
+
+@pytest.mark.unit
+def test_instagram_reel_format():
+    """CONT-07 — Instagram reel FORMAT_RULE must be reel/script-specific."""
+    if not HAS_FORMAT_RULES:
+        pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
+    reel_rule = FORMAT_RULES["reel_caption"]
+    assert (
+        "script" in reel_rule.lower()
+        or "talking point" in reel_rule.lower()
+        or "Reel" in reel_rule
+    ), (
+        "FORMAT_RULES['reel_caption'] must contain 'script', 'talking point', or 'Reel' "
+        "(reel-specific content type indicator)"
+    )
+
+
+@pytest.mark.unit
+def test_instagram_story_sequence():
+    """CONT-08 — Instagram story FORMAT_RULE must specify slide format and count."""
+    if not HAS_FORMAT_RULES:
+        pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
+    story_rule = FORMAT_RULES["story_sequence"]
+    assert "Slide 1:" in story_rule, (
+        "FORMAT_RULES['story_sequence'] must contain 'Slide 1:' (slide format marker)"
+    )
+    assert (
+        "3" in story_rule or "5" in story_rule
+    ), "FORMAT_RULES['story_sequence'] must reference slide count (3 or 5)"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Approve + schedule tests  (CONT-11)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.unit
+def test_approve_and_schedule():
+    """CONT-11 — ContentStatusUpdate Pydantic model must accept 'approved' and reject invalid values."""
+    if not HAS_STATUS_UPDATE:
+        pytest.fail("ContentStatusUpdate not found in routes.content")
+
+    # Must accept 'approved'
+    model = ContentStatusUpdate(status="approved")
+    assert model.status == "approved", "ContentStatusUpdate must accept status='approved'"
+
+    # Must accept 'rejected'
+    model2 = ContentStatusUpdate(status="rejected")
+    assert model2.status == "rejected", "ContentStatusUpdate must accept status='rejected'"
+
+    # Must reject invalid status values
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        ContentStatusUpdate(status="invalid_status")
+
+    with pytest.raises(ValidationError):
+        ContentStatusUpdate(status="pending")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Pipeline stage progression tests  (CONT-12)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.unit
+def test_pipeline_stage_progression():
+    """CONT-12 — run_agent_pipeline must accept all required pipeline parameters.
+
+    Verifies the function signature without executing the pipeline (no LLM calls).
+    The signature must include job_id, platform, content_type, raw_input, user_id.
+    """
+    if not HAS_PIPELINE:
+        pytest.fail("run_agent_pipeline not found in agents.pipeline")
+
+    sig = inspect.signature(run_agent_pipeline)
+    params = set(sig.parameters.keys())
+
+    required_params = {"job_id", "user_id", "platform", "content_type", "raw_input"}
+    missing = required_params - params
+    assert not missing, (
+        f"run_agent_pipeline is missing required parameters: {sorted(missing)}. "
+        f"Found parameters: {sorted(params)}"
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Integration: run_writer uses FORMAT_RULES (mock LLM)  (CONT-09)
+# ──────────────────────────────────────────────────────────────────────────────
 
 class TestRunWriterFormatRulesIntegration:
-    """run_writer() correctly passes format-specific rules to the prompt."""
+    """run_writer() correctly passes format-specific rules to the LLM prompt."""
 
     @pytest.mark.asyncio
     async def test_run_writer_uses_format_rules_for_tweet(self):
-        """When content_type='tweet', the Writer prompt should include tweet-specific FORMAT_RULES."""
-        from agents.writer import FORMAT_RULES
+        """CONT-09 — When content_type='tweet', the Writer prompt must include tweet FORMAT_RULES."""
+        if not HAS_FORMAT_RULES:
+            pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
 
         captured_prompt = {}
 
@@ -242,21 +404,42 @@ class TestRunWriterFormatRulesIntegration:
              patch("agents.writer.LlmChat", return_value=mock_chat), \
              patch("agents.writer._fetch_style_examples", new_callable=AsyncMock, return_value=""):
             from agents.writer import run_writer
-            result = await run_writer(
+            await run_writer(
                 platform="x",
                 content_type="tweet",
-                commander_output={"raw_input": "test", "estimated_word_count": 45, "cta_approach": "question"},
+                commander_output={
+                    "raw_input": "test",
+                    "estimated_word_count": 45,
+                    "cta_approach": "question",
+                },
                 scout_output={"findings": ""},
-                thinker_output={"angle": "test angle", "hook_options": ["hook"], "content_structure": [], "key_insight": "insight"},
-                persona_card={"creator_name": "Test User", "writing_voice_descriptor": "direct", "tone": "casual", "hook_style": "bold", "writing_style_notes": ["be concise"]},
+                thinker_output={
+                    "angle": "test angle",
+                    "hook_options": ["hook"],
+                    "content_structure": [],
+                    "key_insight": "insight",
+                },
+                persona_card={
+                    "creator_name": "Test User",
+                    "writing_voice_descriptor": "direct",
+                    "tone": "casual",
+                    "hook_style": "bold",
+                    "writing_style_notes": ["be concise"],
+                },
             )
-        # The prompt should contain the tweet-specific FORMAT_RULES content
-        assert "280" in captured_prompt["text"], "Tweet format rule (280 chars) must appear in Writer prompt"
-        assert "HARD LIMIT" in captured_prompt["text"], "HARD LIMIT must appear in tweet Writer prompt"
+        assert "280" in captured_prompt.get("text", ""), (
+            "Tweet format rule (280 chars) must appear in Writer LLM prompt"
+        )
+        assert "HARD LIMIT" in captured_prompt.get("text", ""), (
+            "HARD LIMIT must appear in tweet Writer LLM prompt"
+        )
 
     @pytest.mark.asyncio
     async def test_run_writer_uses_format_rules_for_article(self):
-        """When content_type='article', the Writer prompt should include article-specific FORMAT_RULES."""
+        """CONT-09 — When content_type='article', the Writer prompt must include article FORMAT_RULES."""
+        if not HAS_FORMAT_RULES:
+            pytest.fail("FORMAT_RULES not yet implemented — will pass after Plan 02")
+
         captured_prompt = {}
 
         async def mock_send_message(message):
@@ -271,12 +454,29 @@ class TestRunWriterFormatRulesIntegration:
              patch("agents.writer.LlmChat", return_value=mock_chat), \
              patch("agents.writer._fetch_style_examples", new_callable=AsyncMock, return_value=""):
             from agents.writer import run_writer
-            result = await run_writer(
+            await run_writer(
                 platform="linkedin",
                 content_type="article",
-                commander_output={"raw_input": "test", "estimated_word_count": 800, "cta_approach": "question"},
+                commander_output={
+                    "raw_input": "test",
+                    "estimated_word_count": 800,
+                    "cta_approach": "question",
+                },
                 scout_output={"findings": ""},
-                thinker_output={"angle": "test", "hook_options": ["hook"], "content_structure": [], "key_insight": "insight"},
-                persona_card={"creator_name": "Test User", "writing_voice_descriptor": "expert", "tone": "professional", "hook_style": "story", "writing_style_notes": ["be thorough"]},
+                thinker_output={
+                    "angle": "test",
+                    "hook_options": ["hook"],
+                    "content_structure": [],
+                    "key_insight": "insight",
+                },
+                persona_card={
+                    "creator_name": "Test User",
+                    "writing_voice_descriptor": "expert",
+                    "tone": "professional",
+                    "hook_style": "story",
+                    "writing_style_notes": ["be thorough"],
+                },
             )
-        assert "600" in captured_prompt["text"], "Article format rule (600 words) must appear in Writer prompt"
+        assert "600" in captured_prompt.get("text", ""), (
+            "Article format rule (600 words) must appear in Writer LLM prompt"
+        )
