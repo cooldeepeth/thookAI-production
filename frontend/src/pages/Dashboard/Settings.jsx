@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PlanBuilder } from "@/components/PlanBuilder";
+import { DataTab } from "@/pages/Dashboard/Settings/DataTab";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -12,7 +13,7 @@ import {
   ChevronRight, Check, RefreshCw, AlertTriangle, Sparkles, TrendingUp,
   Calendar, Shield, Mic, Video, Code, BarChart3, ExternalLink,
   ShoppingCart, Gift, Percent, ArrowRight, Clock, Star, X,
-  User, Link2, Bell
+  User, Link2, Bell, Database
 } from "lucide-react";
 import { apiFetch } from '@/lib/api';
 
@@ -692,6 +693,10 @@ export default function Settings() {
             <Bell size={14} />
             Notifications
           </TabsTrigger>
+          <TabsTrigger value="data" data-testid="tab-data" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <Database size={14} />
+            Data
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="billing">
@@ -705,6 +710,9 @@ export default function Settings() {
         </TabsContent>
         <TabsContent value="notifications">
           <NotificationsTab />
+        </TabsContent>
+        <TabsContent value="data">
+          <DataTab />
         </TabsContent>
       </Tabs>
     </div>
