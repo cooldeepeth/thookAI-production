@@ -454,8 +454,8 @@
    Plans:
    - [x] 28-01-PLAN.md — Wave 0 test scaffolds for all 12 CONT requirements (RED state)
    - [x] 28-02-PLAN.md — writer.py FORMAT_RULES (8 keys) + commander.py WORD_COUNT_DEFAULTS + story_sequence allowlist
-   - [ ] 28-03-PLAN.md — InputPanel 9 formats + InstagramShell story slides + AgentPipeline font-bold
-   - [ ] 28-04-PLAN.md — ContentOutput schedule API fix (JSON body) + data-testids + CONT-11/12 backend tests
+   - [x] 28-03-PLAN.md — InputPanel 9 formats + InstagramShell story slides + AgentPipeline font-bold
+   - [x] 28-04-PLAN.md — ContentOutput schedule API fix (JSON body) + data-testids + CONT-11/12 backend tests
    - [ ] 28-05-PLAN.md — Full suite verification, human checkpoint, VALIDATION.md update
    **UI hint**: yes
 
@@ -614,7 +614,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | ------------------------------------ | -------------- | ----------- | --------- |
 | 26. Backend Endpoint Hardening       | 5/5 | Complete    | 2026-04-11 |
 | 27. Onboarding Reimagination         | 5/5 | Complete    | 2026-04-12 |
-| 28. Content Generation Multi-Format  | 2/5 | In Progress|  |
+| 28. Content Generation Multi-Format  | 4/5 | In Progress|  |
 | 29. Media Generation Pipeline        | 0/TBD          | Not started | -         |
 | 30. Social Publishing End-to-End     | 0/TBD          | Not started | -         |
 | 31. Smart Scheduling                 | 0/TBD          | Not started | -         |

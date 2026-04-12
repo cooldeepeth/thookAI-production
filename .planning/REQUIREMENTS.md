@@ -40,9 +40,9 @@ Requirements for distribution-ready launch. Each maps to roadmap phases 26-35.
 - [x] **CONT-07**: User can generate Instagram reel script
 - [x] **CONT-08**: User can generate Instagram story sequence
 - [x] **CONT-09**: Each format uses platform-specific Writer prompts (not generic)
-- [ ] **CONT-10**: ContentStudio UI has format selection per platform
+- [x] **CONT-10**: ContentStudio UI has format selection per platform
 - [ ] **CONT-11**: User can edit, approve, and schedule generated content
-- [ ] **CONT-12**: Content generation shows real-time pipeline progress (Commander→Scout→Thinker→Writer→QC)
+- [x] **CONT-12**: Content generation shows real-time pipeline progress (Commander→Scout→Thinker→Writer→QC)
 
 ### Media Pipeline
 
@@ -185,9 +185,9 @@ Which phases cover which requirements.
 | CONT-07     | 28    | Complete |
 | CONT-08     | 28    | Complete |
 | CONT-09     | 28    | Complete |
-| CONT-10     | 28    | Pending  |
+| CONT-10     | 28    | Complete |
 | CONT-11     | 28    | Pending  |
-| CONT-12     | 28    | Pending  |
+| CONT-12     | 28    | Complete |
 | MDIA-01     | 29    | Pending  |
 | MDIA-02     | 29    | Pending  |
 | MDIA-03     | 29    | Pending  |
