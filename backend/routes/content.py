@@ -453,7 +453,6 @@ async def generate_carousel(
         key_points = thinker.get("key_insights", []) or ["Key point 1", "Key point 2", "Key point 3"]
     
     # Deduct credits for carousel generation
-    from services.credits import deduct_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CAROUSEL_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for carousel generation")
@@ -482,11 +481,39 @@ async def generate_carousel(
 
     # Store carousel in job
     if result.get("generated"):
+        # Attempt Remotion render for downloadable MP4 carousel (Bug 4 fix — MDIA-02/05)
+        remotion_url = None
+        try:
+            import services.media_orchestrator as _media_orch
+            brand_color = persona_card.get("visual_aesthetic", {}).get("primary_color", "#2563EB")
+            remotion_result = await _media_orch._call_remotion(
+                "ImageCarousel",
+                {
+                    "slides": result.get("slides", []),
+                    "brandColor": brand_color,
+                    "fontFamily": "Plus Jakarta Sans",
+                },
+                "video",
+            )
+            remotion_url = remotion_result.get("url")
+            logger.info(f"Remotion carousel rendered: {remotion_url}")
+        except Exception as remotion_err:
+            # Remotion failure is non-fatal — slides are still returned
+            # This happens in dev environments where the Remotion sidecar is not running
+            logger.warning(
+                f"Remotion carousel render failed for job {data.job_id}: {remotion_err}. "
+                f"Returning per-slide images without Remotion URL."
+            )
+
+        # Merge remotion_url into result (even if None)
+        result["remotion_url"] = remotion_url
+
         await db.content_jobs.update_one(
             {"job_id": data.job_id},
             {
                 "$set": {
                     "carousel": result,
+                    "carousel.remotion_url": remotion_url,
                     "updated_at": datetime.now(timezone.utc)
                 }
             }
