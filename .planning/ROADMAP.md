@@ -569,8 +569,9 @@
 4. A user can delete their account at **POST /api/auth/delete-account** with body {"confirm": "DELETE"} — within 5 seconds, their email is anonymized in the users collection, and their persona/content/scheduled posts are removed — the user can no longer log in (Note: implementation uses POST with confirmation body, not bare DELETE, for safer UX — see SECR-10)
 5. Visiting the site for the first time shows a GDPR cookie consent banner — PostHog tracking only initializes after the user clicks "Accept" — verified by checking PostHog events in an incognito session before and after consent
 6. /privacy and /terms pages exist and are accessible without authentication — both pages contain real content (not Lorem Ipsum)
-**Plans**: 9 plans
-Plans:
+   **Plans**: 9 plans
+   Plans:
+
 - [ ] 34-01-PLAN.md — XSS sanitization layer (SECR-01, SECR-02, SECR-03)
 - [ ] 34-02-PLAN.md — Secret audit + Sentry PII scrubbing (SECR-06, SECR-07)
 - [ ] 34-03-PLAN.md — Rate limiting + CSRF verification (SECR-04, SECR-05)
@@ -612,5 +613,5 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 31. Smart Scheduling                 | 4/4            | Complete    | 2026-04-12 |
 | 32. Frontend Core Flows Polish       | 7/7            | Complete    | 2026-04-13 |
 | 33. Design System & Landing Page     | 6/6            | Complete    | 2026-04-13 |
-| 34. Security & GDPR                  | 0/9            | Not started | -          |
+| 34. Security & GDPR                  | 9/9            | Complete    | 2026-04-13 |
 | 35. Performance, Monitoring & Launch | 0/TBD          | Not started | -          |
