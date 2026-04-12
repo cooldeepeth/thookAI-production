@@ -12,6 +12,7 @@ from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
 from agents.learning import capture_learning_signal
 from services.credits import deduct_credits, CreditOperation
+from services.sanitize import sanitize_text
 from config import settings
 
 # Celery task imports
@@ -131,12 +132,14 @@ async def create_content(
     valid_video_styles = ("cinematic", "talking_head", "slideshow", "abstract")
     video_style = data.video_style if data.video_style in valid_video_styles else "cinematic"
 
+    # SECR-02: sanitize free-text field before storage (html.escape — XSS guard)
+    safe_raw_input = sanitize_text(data.raw_input)
     job = {
         "job_id": job_id,
         "user_id": current_user["user_id"],
         "platform": data.platform.lower(),
         "content_type": data.content_type,
-        "raw_input": data.raw_input,
+        "raw_input": safe_raw_input,
         "upload_ids": data.upload_ids or [],
         "status": "running",
         "current_agent": "commander",

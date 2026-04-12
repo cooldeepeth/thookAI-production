@@ -20,6 +20,7 @@ from services.media_storage import (
     upload_bytes_to_r2,
     get_r2_client,
 )
+from services.sanitize import sanitize_text  # SECR-02: XSS guard for free-text fields
 
 logger = logging.getLogger(__name__)
 

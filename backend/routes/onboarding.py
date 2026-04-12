@@ -11,6 +11,7 @@ from database import db
 from auth_utils import get_current_user
 from services.llm_client import LlmChat, UserMessage
 from services.llm_keys import anthropic_available, chat_constructor_key
+from services.sanitize import sanitize_text
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -231,9 +232,13 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
         },
         "voice_style": persona_card.get("voice_style", ""),
         "visual_preferences": data.visual_preference or "minimal",
-        "writing_samples": data.writing_samples or [],
+        # SECR-02: sanitize free-text fields before storage (html.escape — XSS guard)
+        "writing_samples": [sanitize_text(s) if isinstance(s, str) else s for s in (data.writing_samples or [])],
         "personality_traits": persona_card.get("personality_traits", []),
-        "onboarding_answers": data.answers,
+        "onboarding_answers": [
+            {**a, "answer": sanitize_text(a.get("answer", ""))} if isinstance(a, dict) else a
+            for a in data.answers
+        ],
         "created_at": now,
         "updated_at": now,
     }

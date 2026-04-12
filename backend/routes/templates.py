@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 from database import db
 from auth_utils import get_current_user
+from services.sanitize import sanitize_text
 import uuid
 
 router = APIRouter(prefix="/templates", tags=["templates"])
@@ -281,18 +282,19 @@ async def publish_template(data: CreateTemplateRequest, current_user: dict = Dep
     body_preview = "\n".join(lines[1:4]) if len(lines) > 1 else ""
     
     template_id = str(uuid.uuid4())
+    # SECR-02: sanitize free-text fields before storage (html.escape — XSS guard)
     template = {
         "template_id": template_id,
-        "title": data.title,
-        "description": data.description,
+        "title": sanitize_text(data.title),
+        "description": sanitize_text(data.description),
         "category": data.category,
         "platform": job.get("platform", "linkedin"),
-        "hook_type": hook_type,
+        "hook_type": sanitize_text(hook_type) if isinstance(hook_type, str) else hook_type,
         "tags": data.tags,
-        
+
         # Content structure (anonymized)
-        "hook": hook[:200],  # Truncate for preview
-        "structure_preview": body_preview[:500],
+        "hook": sanitize_text(hook[:200]),  # Truncate for preview
+        "structure_preview": sanitize_text(body_preview[:500]),
         "word_count": job.get("word_count", 0),
         "has_media": bool(job.get("media_assets")),
         

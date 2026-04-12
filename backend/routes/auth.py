@@ -12,6 +12,7 @@ from database import db
 from pymongo.errors import DuplicateKeyError
 from auth_utils import hash_password, verify_password, get_current_user, validate_password_strength
 from config import settings
+from services.sanitize import sanitize_text
 
 logger = logging.getLogger(__name__)
 
@@ -92,8 +93,10 @@ async def register(data: RegisterRequest, response: Response):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user_id = f"user_{uuid.uuid4().hex[:12]}"
+    # SECR-02: sanitize free-text field before storage (html.escape — XSS guard)
+    safe_name = sanitize_text(data.name)
     user = {
-        "user_id": user_id, "email": data.email, "name": data.name,
+        "user_id": user_id, "email": data.email, "name": safe_name,
         "picture": None, "auth_method": "email",
         "hashed_password": hash_password(data.password),
         "plan": "starter", "subscription_tier": "starter",
