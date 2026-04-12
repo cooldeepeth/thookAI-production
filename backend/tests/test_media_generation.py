@@ -705,9 +705,10 @@ async def test_voice_narration_uploads_to_r2_not_data_uri():
         stored_audio_url["url"] = update.get("$set", {}).get("audio_url", "")
 
     with patch("database.db") as mock_db, \
+         patch("routes.content.db", mock_db), \
          patch("agents.voice.generate_voice_narration", new_callable=AsyncMock, return_value=mock_voice_result), \
-         patch("services.credits.deduct_credits", new_callable=AsyncMock, return_value={"success": True, "remaining": 100}), \
-         patch("tasks.is_redis_configured", return_value=False), \
+         patch("routes.content.deduct_credits", new_callable=AsyncMock, return_value={"success": True, "remaining": 100}), \
+         patch("routes.content.is_redis_configured", return_value=False), \
          patch("services.media_storage.upload_bytes_to_r2", return_value=fake_r2_url) as mock_r2_upload:
 
         mock_db.content_jobs.find_one = AsyncMock(return_value=fake_job)

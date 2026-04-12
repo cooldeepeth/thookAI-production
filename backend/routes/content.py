@@ -375,7 +375,7 @@ async def generate_image(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
     
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    # (deduct_credits and CreditOperation imported at module level — see line 14)
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.IMAGE_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for image generation")
@@ -572,7 +572,7 @@ async def narrate_content(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
 
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    # (deduct_credits and CreditOperation imported at module level — see line 14)
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VOICE_NARRATION)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for voice narration")
@@ -761,18 +761,34 @@ async def generate_video(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
 
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    # (deduct_credits and CreditOperation imported at module level — see line 14)
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VIDEO_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for video generation")
 
-    result = await video_generate(
-        prompt=prompt,
-        duration=data.duration,
-        provider=data.provider,
-        model=data.model
-    )
-    
+    try:
+        result = await video_generate(
+            prompt=prompt,
+            duration=data.duration,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as e:
+        # Refund credits on failure (BACK-06 + Phase 29 gap fix)
+        from services.credits import add_credits
+        await add_credits(
+            current_user["user_id"],
+            50,
+            source="video_generation_failure_refund",
+        )
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_exception(e)
+        except ImportError:
+            pass
+        logger.error(f"Video generation failed: {e}")
+        raise HTTPException(status_code=500, detail="Video generation failed. Credits refunded.")
+
     # Store in job
     if result.get("generated"):
         await db.content_jobs.update_one(

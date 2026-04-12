@@ -189,6 +189,126 @@ async def upload_media(
     return {"upload_id": upload_id, "url": url, "content_type": content_type}
 
 
+class PresignedUploadRequest(BaseModel):
+    filename: str = Field(..., min_length=1, max_length=255)
+    content_type: str = Field(..., min_length=1, max_length=100)
+    context_type: str = Field(default="reference_image", min_length=1, max_length=50)
+
+
+class ConfirmUploadRequest(BaseModel):
+    upload_id: str = Field(..., min_length=1, max_length=64)
+
+
+def generate_presigned_upload_url(user_id: str, filename: str, content_type: str) -> dict:
+    """Generate a presigned PUT URL for direct browser upload to R2 (MDIA-08).
+
+    Returns dict with upload_url, storage_key, public_url.
+    Patchable by tests via routes.uploads.generate_presigned_upload_url.
+    """
+    client = _r2_client()
+    if not client:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "media_storage_unavailable",
+                "message": "R2 storage is not configured.",
+            },
+        )
+
+    safe_name = "".join(c for c in filename if c.isalnum() or c in "._-")[:120] or "file"
+    storage_key = f"{user_id}/uploads/{uuid.uuid4().hex[:16]}_{safe_name}"
+
+    upload_url = client.generate_presigned_url(
+        ClientMethod="put_object",
+        Params={
+            "Bucket": settings.r2.r2_bucket_name,
+            "Key": storage_key,
+            "ContentType": content_type,
+        },
+        ExpiresIn=3600,
+    )
+
+    public_base = settings.r2.r2_public_url.rstrip("/")
+    public_url = f"{public_base}/{storage_key}"
+
+    return {
+        "upload_url": upload_url,
+        "storage_key": storage_key,
+        "public_url": public_url,
+    }
+
+
+@router.post("/upload-url")
+async def request_upload_url(
+    data: PresignedUploadRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """MDIA-08: Generate a presigned R2 PUT URL for direct browser upload.
+
+    The browser will PUT the file directly to the returned upload_url.
+    After the browser PUT succeeds, client calls POST /uploads/confirm to
+    finalize the upload record.
+    """
+    user_id = current_user["user_id"]
+
+    presigned = generate_presigned_upload_url(
+        user_id=user_id,
+        filename=data.filename,
+        content_type=data.content_type,
+    )
+
+    upload_id = f"upl_{uuid.uuid4().hex[:16]}"
+    now = datetime.now(timezone.utc)
+
+    doc = {
+        "upload_id": upload_id,
+        "user_id": user_id,
+        "filename": data.filename,
+        "content_type": data.content_type,
+        "context_type": data.context_type,
+        "storage_key": presigned["storage_key"],
+        "url": presigned["public_url"],
+        "status": "pending",
+        "created_at": now,
+    }
+    await db.uploads.insert_one(doc)
+
+    return {
+        "upload_id": upload_id,
+        "upload_url": presigned["upload_url"],
+        "storage_key": presigned["storage_key"],
+        "public_url": presigned["public_url"],
+    }
+
+
+@router.post("/confirm")
+async def confirm_upload(
+    data: ConfirmUploadRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """MDIA-08: Confirm a presigned upload after the browser PUT completes.
+
+    Marks the upload record as confirmed and returns its public URL.
+    """
+    upload = await db.uploads.find_one({
+        "upload_id": data.upload_id,
+        "user_id": current_user["user_id"],
+    })
+    if not upload:
+        raise HTTPException(status_code=404, detail="Upload not found")
+
+    await db.uploads.update_one(
+        {"upload_id": data.upload_id},
+        {"$set": {"status": "confirmed", "confirmed_at": datetime.now(timezone.utc)}},
+    )
+
+    return {
+        "upload_id": data.upload_id,
+        "url": upload["url"],
+        "status": "confirmed",
+    }
+
+
 @router.post("/url")
 async def upload_url(data: UrlUploadRequest, current_user: dict = Depends(get_current_user)):
     if data.context_type != "link":

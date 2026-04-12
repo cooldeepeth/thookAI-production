@@ -39,7 +39,7 @@ async def test_image_generation_failure_refunds_credits():
     with (
         patch("routes.content.is_redis_configured", return_value=False),
         patch("routes.content.db") as mock_db,
-        patch("services.credits.deduct_credits", new_callable=AsyncMock) as mock_deduct,
+        patch("routes.content.deduct_credits", new_callable=AsyncMock) as mock_deduct,
         patch("services.credits.add_credits", new_callable=AsyncMock) as mock_refund,
         patch("agents.designer.generate_image", new_callable=AsyncMock) as mock_gen,
     ):
@@ -74,7 +74,7 @@ async def test_carousel_generation_failure_refunds_credits():
 
     with (
         patch("routes.content.db") as mock_db,
-        patch("services.credits.deduct_credits", new_callable=AsyncMock) as mock_deduct,
+        patch("routes.content.deduct_credits", new_callable=AsyncMock) as mock_deduct,
         patch("services.credits.add_credits", new_callable=AsyncMock) as mock_refund,
         patch("agents.designer.generate_carousel", new_callable=AsyncMock) as mock_gen,
     ):
@@ -110,7 +110,7 @@ async def test_narrate_failure_refunds_credits():
     with (
         patch("routes.content.is_redis_configured", return_value=False),
         patch("routes.content.db") as mock_db,
-        patch("services.credits.deduct_credits", new_callable=AsyncMock) as mock_deduct,
+        patch("routes.content.deduct_credits", new_callable=AsyncMock) as mock_deduct,
         patch("services.credits.add_credits", new_callable=AsyncMock) as mock_refund,
         patch("agents.voice.generate_voice_narration", new_callable=AsyncMock) as mock_gen,
     ):
@@ -145,7 +145,7 @@ async def test_video_generation_failure_refunds_credits():
     with (
         patch("routes.content.is_redis_configured", return_value=False),
         patch("routes.content.db") as mock_db,
-        patch("services.credits.deduct_credits", new_callable=AsyncMock) as mock_deduct,
+        patch("routes.content.deduct_credits", new_callable=AsyncMock) as mock_deduct,
         patch("services.credits.add_credits", new_callable=AsyncMock) as mock_refund,
         patch("agents.video.generate_video", new_callable=AsyncMock) as mock_gen,
     ):
