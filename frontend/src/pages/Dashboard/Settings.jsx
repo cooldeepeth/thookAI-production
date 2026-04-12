@@ -3,12 +3,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import {
   Settings as SettingsIcon, CreditCard, Zap, Crown, Building2, Users,
   ChevronRight, Check, RefreshCw, AlertTriangle, Sparkles, TrendingUp,
   Calendar, Shield, Mic, Video, Code, BarChart3, ExternalLink,
-  ShoppingCart, Gift, Percent, ArrowRight, Clock, Star, X
+  ShoppingCart, Gift, Percent, ArrowRight, Clock, Star, X,
+  User, Link2, Bell
 } from "lucide-react";
 import { apiFetch } from '@/lib/api';
 
@@ -73,7 +76,7 @@ const CREDIT_COSTS = {
   viral_predict: { credits: 1, name: "Viral Predict" }
 };
 
-export default function Settings() {
+function BillingTab() {
   const [subscription, setSubscription] = useState(null);
   const [credits, setCredits] = useState(null);
   const [tiers, setTiers] = useState([]);
@@ -81,6 +84,7 @@ export default function Settings() {
   const [billingConfig, setBillingConfig] = useState(null);
   const [creditCosts, setCreditCosts] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [billingError, setBillingError] = useState(null);
   const [upgrading, setUpgrading] = useState(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState("monthly");
@@ -95,6 +99,7 @@ export default function Settings() {
 
   const fetchData = async () => {
     setLoading(true);
+    setBillingError(null);
     try {
       const [subRes, creditsRes, tiersRes, limitsRes, configRes, costsRes] = await Promise.all([
         apiFetch('/api/billing/subscription'),
@@ -115,11 +120,16 @@ export default function Settings() {
       if (configRes.ok) setBillingConfig(await configRes.json());
       if (costsRes.ok) setCreditCosts(await costsRes.json());
     } catch (err) {
-      console.error("Fetch error:", err);
+      setBillingError(err.message || "Failed to load billing info");
       toast({ title: "Error", description: "Failed to load settings", variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRetryBilling = () => {
+    setBillingError(null);
+    fetchData();
   };
 
   const fetchPlanPreview = async (usage) => {
@@ -276,15 +286,33 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <main className="p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-surface-2 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        </div>
-      </main>
+      <div className="space-y-4" data-testid="billing-skeleton">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-48 bg-surface-2 rounded-2xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (billingError) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center py-16 px-6"
+        role="alert"
+        data-testid="billing-error"
+      >
+        <AlertTriangle className="text-red-400 mb-3" size={28} />
+        <p className="text-red-400 text-sm text-center mb-4">{billingError}</p>
+        <button
+          type="button"
+          onClick={handleRetryBilling}
+          className="btn-ghost text-sm flex items-center gap-2 focus-ring"
+          data-testid="retry-billing-btn"
+        >
+          <RefreshCw size={14} />
+          Try Again
+        </button>
+      </div>
     );
   }
 
@@ -740,5 +768,114 @@ export default function Settings() {
         )}
       </AnimatePresence>
     </main>
+  );
+}
+
+function ConnectionsTab() {
+  return (
+    <div className="space-y-4" data-testid="connections-tab">
+      <p className="text-sm text-zinc-400">Manage your connected social accounts.</p>
+      {["LinkedIn", "X (Twitter)", "Instagram"].map((platform) => (
+        <div key={platform} className="card-thook p-4 flex items-center justify-between">
+          <span className="text-sm text-white">{platform}</span>
+          <span className="text-xs text-zinc-500">Not connected</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProfileTab({ user }) {
+  return (
+    <div className="space-y-4" data-testid="profile-tab">
+      <div className="card-thook p-4 space-y-3">
+        <div>
+          <p className="text-xs text-zinc-500 mb-1">Email</p>
+          <p className="text-sm text-white">{user?.email || "—"}</p>
+        </div>
+        <div>
+          <p className="text-xs text-zinc-500 mb-1">Name</p>
+          <p className="text-sm text-white">{user?.name || "—"}</p>
+        </div>
+        <div>
+          <p className="text-xs text-zinc-500 mb-1">Plan</p>
+          <p className="text-sm text-white capitalize">{user?.subscription_tier || "free"}</p>
+        </div>
+      </div>
+      <p className="text-xs text-zinc-600">To update your profile, contact support.</p>
+    </div>
+  );
+}
+
+function NotificationsTab() {
+  const items = [
+    { label: "Job completion alerts", defaultChecked: true },
+    { label: "Scheduled post published", defaultChecked: true },
+    { label: "Weekly performance digest", defaultChecked: false },
+  ];
+  return (
+    <div className="space-y-4" data-testid="notifications-tab">
+      <div className="card-thook p-4 space-y-3">
+        {items.map(({ label, defaultChecked }) => (
+          <label key={label} className="flex items-center justify-between cursor-pointer">
+            <span className="text-sm text-white">{label}</span>
+            <input
+              type="checkbox"
+              defaultChecked={defaultChecked}
+              className="accent-lime focus-ring"
+            />
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-zinc-600">
+        Notification preferences (UI only — backend wiring in a later phase).
+      </p>
+    </div>
+  );
+}
+
+const SETTINGS_TAB_TRIGGER_CLASS =
+  "capitalize text-sm text-zinc-500 rounded-lg px-4 py-2 data-[state=active]:bg-white/10 data-[state=active]:text-white focus-ring flex items-center gap-2";
+
+export default function Settings() {
+  const { user } = useAuth();
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto space-y-6" data-testid="settings-page">
+      <h1 className="text-2xl font-display font-bold text-white">Settings</h1>
+      <Tabs defaultValue="billing" className="space-y-6">
+        <TabsList className="bg-surface-2 border border-white/5 rounded-xl p-1 w-full justify-start h-auto flex-wrap gap-1">
+          <TabsTrigger value="billing" data-testid="tab-billing" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <CreditCard size={14} />
+            Billing
+          </TabsTrigger>
+          <TabsTrigger value="connections" data-testid="tab-connections" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <Link2 size={14} />
+            Connections
+          </TabsTrigger>
+          <TabsTrigger value="profile" data-testid="tab-profile" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <User size={14} />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="notifications" data-testid="tab-notifications" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <Bell size={14} />
+            Notifications
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="billing">
+          <BillingTab />
+        </TabsContent>
+        <TabsContent value="connections">
+          <ConnectionsTab />
+        </TabsContent>
+        <TabsContent value="profile">
+          <ProfileTab user={user} />
+        </TabsContent>
+        <TabsContent value="notifications">
+          <NotificationsTab />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
