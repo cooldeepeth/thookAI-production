@@ -164,13 +164,13 @@ async def _run_scheduled_posts_inner(db_handle=None) -> dict:
                     )
                 continue
 
-            success = await _publish_to_platform(
+            publish_result = await _publish_to_platform(
                 platform=platform,
                 content=post.get("content"),
                 token=token
             )
 
-            if success:
+            if publish_result.get("success"):
                 await db_handle.scheduled_posts.update_one(
                     {"schedule_id": post["schedule_id"]},
                     {"$set": {
@@ -268,19 +268,28 @@ async def _run_scheduled_posts_inner(db_handle=None) -> dict:
     return {"published": published, "failed": failed}
 
 
+def _decrypt_token(encrypted_token: str) -> str:
+    """Decrypt stored OAuth token. Lazy import to avoid circular dependency."""
+    # NOTE: Deferred import to avoid circular dependency (content_tasks → platforms).
+    # If _decrypt_token is ever extracted to backend/services/encryption.py, move
+    # this import to the module level.
+    from routes.platforms import _decrypt_token as _plat_decrypt
+    return _plat_decrypt(encrypted_token)
+
+
 async def _publish_to_platform(
     platform: str,
     content: str,
     token: dict,
     media_assets: Optional[List[Dict[str, Any]]] = None,
-) -> bool:
+) -> dict:
     """
     Publish content to a social platform.
 
     In production: delegates to the real publisher agent.  Never simulates.
     In dev/test: tries real publisher, falls back to simulation only if
     the publisher module is not importable (i.e. missing dep).
-    Returns False on any error (never raises).
+    Always returns a dict with at least {"success": bool}. Never raises.
     """
     from config import settings
 
@@ -292,9 +301,25 @@ async def _publish_to_platform(
                 expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
             if expires < datetime.now(timezone.utc):
                 logger.warning("Token expired for platform %s", platform)
-                return False
+                return {"success": False, "error": "Token expired"}
 
-        access_token = token.get("access_token", "")
+        # Decrypt the stored Fernet-encrypted token before passing to the publisher.
+        # Stored tokens are Fernet-encrypted at rest; the platform APIs need plaintext.
+        # Fall back to the raw value if decryption fails (e.g. token is already
+        # plaintext in dev/test or FERNET_KEY is not configured).
+        raw_access_token = token.get("access_token", "")
+        if raw_access_token:
+            try:
+                access_token = _decrypt_token(raw_access_token)
+            except Exception as dec_err:
+                logger.warning(
+                    "Token decryption failed for platform %s (%s); using raw token value",
+                    platform,
+                    dec_err,
+                )
+                access_token = raw_access_token
+        else:
+            access_token = ""
         user_id = token.get("user_id", "")
 
         # --- Production: always call the real publisher, no simulation ---
@@ -316,7 +341,7 @@ async def _publish_to_platform(
                     pub_exc,
                     exc_info=True,
                 )
-                return False
+                return {"success": False, "error": str(pub_exc)}
 
             if isinstance(result, dict):
                 if not result.get("success"):
@@ -325,8 +350,8 @@ async def _publish_to_platform(
                         platform,
                         result.get("error", "unknown error"),
                     )
-                return result.get("success", False)
-            return bool(result)
+                return result
+            return {"success": bool(result)}
 
         # --- Dev / test: try real publisher, fall back to simulation ---
         try:
@@ -346,22 +371,22 @@ async def _publish_to_platform(
                         platform,
                         result.get("error", "unknown error"),
                     )
-                return result.get("success", False)
-            return bool(result)
+                return result
+            return {"success": bool(result)}
         except ImportError:
             logger.warning(
                 "[SIMULATED] Publishing to %s (publisher agent not available, dev mode): %s...",
                 platform,
                 (content or "")[:50],
             )
-            return True
+            return {"success": True, "simulated": True}
         except Exception as pub_exc:
             logger.warning("[DEV] publish_to_platform raised for %s: %s", platform, pub_exc)
-            return False  # Don't hide real errors
+            return {"success": False, "error": str(pub_exc)}
 
     except Exception as exc:
         logger.error("_publish_to_platform failed for %s: %s", platform, exc, exc_info=True)
-        return False
+        return {"success": False, "error": str(exc)}
 
 
 # ============ DAILY LIMITS ============
