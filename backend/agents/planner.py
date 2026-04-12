@@ -362,11 +362,45 @@ async def schedule_content(
     
     if result.modified_count == 0:
         return {"scheduled": False, "error": "Job not found"}
-    
+
+    # SCHD-04: Insert one scheduled_posts document per platform so Celery Beat
+    # (_process_scheduled_posts in scheduled_tasks.py) can find and publish the post.
+    # Beat reads exclusively from scheduled_posts, not content_jobs.
+    job = await db.content_jobs.find_one(
+        {"job_id": job_id, "user_id": user_id},
+        {"final_content": 1, "media_assets": 1, "_id": 0},
+    )
+    final_content = (job or {}).get("final_content", "")
+    media_assets = (job or {}).get("media_assets", [])
+
+    now = datetime.now(timezone.utc)
+    scheduled_posts_docs = []
+    for platform in platforms:
+        scheduled_posts_docs.append({
+            "schedule_id": f"sch_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id,
+            "job_id": job_id,
+            "platform": platform,
+            "final_content": final_content,
+            "media_assets": media_assets or [],
+            "scheduled_at": scheduled_at,
+            "status": "scheduled",
+            "created_at": now,
+        })
+
+    if scheduled_posts_docs:
+        await db.scheduled_posts.insert_many(scheduled_posts_docs)
+        logger.info(
+            "Scheduled %d post(s) for job %s across platforms: %s",
+            len(scheduled_posts_docs),
+            job_id,
+            platforms,
+        )
+
     return {
         "scheduled": True,
         "job_id": job_id,
         "scheduled_at": scheduled_at.isoformat(),
         "platforms": platforms,
-        "message": f"Content scheduled for {scheduled_at.strftime('%A, %b %d at %I:%M %p UTC')}"
+        "message": f"Content scheduled for {scheduled_at.strftime('%A, %b %d at %I:%M %p UTC')}",
     }
