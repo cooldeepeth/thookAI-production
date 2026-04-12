@@ -34,6 +34,24 @@ def validate_stripe_config():
         logger.warning("STRIPE: Secret key not configured. Payment features will use simulated mode.")
         return
 
+    # PERF-09 launch guard: detect test keys (sk_test_*) in production.
+    # A sk_test_ key in production means every real checkout silently fails —
+    # the worst possible billing failure mode. Logs CRITICAL so the server
+    # boot log shouts it. READ-ONLY check — does not modify any payment flow
+    # or disable Stripe. See backend/config.py:180 StripeConfig.is_live_mode().
+    if settings.app.is_production and not settings.stripe.is_live_mode():
+        is_test_key = bool(
+            settings.stripe.secret_key
+            and settings.stripe.secret_key.startswith("sk_test_")
+        )
+        detected = "sk_test_ (test mode)" if is_test_key else "unknown / missing live key"
+        logger.critical(
+            "LAUNCH-BLOCKER: STRIPE_SECRET_KEY is not a live key in production "
+            "environment (detected: %s). Live payments will NOT be processed. "
+            "Set STRIPE_SECRET_KEY to a 'sk_live_*' key in Railway before launch.",
+            detected,
+        )
+
     missing_prices = []
     credit_prices = [
         ("STRIPE_PRICE_CREDITS_100", settings.stripe.price_credits_100),

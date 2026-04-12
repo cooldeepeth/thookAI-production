@@ -177,6 +177,15 @@ class StripeConfig:
             return False
         return bool(self.webhook_secret)
 
+    def is_live_mode(self) -> bool:
+        """Return True if the Stripe secret key is a live key (sk_live_*).
+
+        Used by stripe_service.py startup validation to detect the v3.0
+        launch-blocker scenario: test keys accidentally left in production.
+        Returns False for test keys, placeholder values, or unset config.
+        """
+        return bool(self.secret_key and self.secret_key.startswith("sk_live_"))
+
 
 @dataclass
 class VideoProviderConfig:
