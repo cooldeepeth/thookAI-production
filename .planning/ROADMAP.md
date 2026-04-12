@@ -492,11 +492,12 @@
 3. Publishing a thread to X (3+ tweets) creates a real thread visible at x.com — all tweets are linked as a thread, not as separate posts
 4. An OAuth token that expires within 24 hours is automatically refreshed before the next scheduled publish — the user never sees an "expired token" error on a scheduled post
 5. A failed publish attempt (e.g., API rate limit) shows the error message in the content job detail view with a "Retry" button — the post status changes to "failed" (not "published") and Sentry receives the error event
-   **Plans**: 3 plans
+   **Plans**: 4 plans
    Plans:
    - [ ] 30-01-PLAN.md — Fix _publish_to_platform (decrypt token, return dict) + store publish_results on content_jobs
    - [ ] 30-02-PLAN.md — Proactive 24h token refresh in get_platform_token + Instagram _refresh_token branch
    - [ ] 30-03-PLAN.md — token_expiring_soon in /api/platforms/status + Connections.jsx warning + Fernet round-trip test
+   - [ ] 30-04-PLAN.md — LinkedIn registerUpload + X media/upload image attachment + Instagram media wiring verification + VALIDATION.md
 
 ### Phase 31: Smart Scheduling
 
