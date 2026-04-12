@@ -1040,3 +1040,94 @@ class TestTextOnVideoHandler:
 
         with pytest.raises(ValueError, match="video_url required"):
             await orchestrate(brief)
+
+
+# ============================================================
+# BUG-4 REGRESSION: Carousel route must call Remotion
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_carousel_route_calls_remotion():
+    """
+    Wave 0 RED test for Bug 4 in 29-RESEARCH.md.
+
+    POST /api/content/generate-carousel calls designer.generate_carousel() which
+    returns per-slide images.  It must ALSO call _call_remotion("ImageCarousel", ...)
+    to produce a rendered video/download URL.
+
+    This test will FAIL until Plan 29-04 wires _call_remotion into generate_carousel()
+    in backend/routes/content.py.
+    """
+    fake_job = {
+        "job_id": "job_carousel_001",
+        "user_id": "user_abc",
+        "final_content": "Carousel content here",
+        "platform": "linkedin",
+        "status": "reviewing",
+        "agent_outputs": {
+            "commander": {"primary_angle": "5 tips for founders"},
+            "thinker": {"key_insights": ["Tip 1", "Tip 2", "Tip 3"]},
+        },
+    }
+
+    fake_carousel_result = {
+        "generated": True,
+        "slides": [
+            {"slide_number": 1, "image_url": "https://pub.r2.dev/slide1.png", "text": "Tip 1"},
+            {"slide_number": 2, "image_url": "https://pub.r2.dev/slide2.png", "text": "Tip 2"},
+            {"slide_number": 3, "image_url": "https://pub.r2.dev/slide3.png", "text": "Tip 3"},
+        ],
+        "topic": "5 tips for founders",
+        "slide_count": 3,
+        "total_slides": 3,
+    }
+
+    fake_remotion_result = {
+        "url": "https://pub.r2.dev/carousel_video.mp4",
+        "render_id": "remotion_render_001",
+    }
+
+    mock_db = MagicMock()
+    mock_db.content_jobs.find_one = AsyncMock(return_value=fake_job)
+    mock_db.content_jobs.update_one = AsyncMock(return_value=None)
+    mock_db.persona_engines.find_one = AsyncMock(return_value=None)
+
+    with patch("routes.content.db", mock_db), \
+         patch("agents.designer.generate_carousel", new_callable=AsyncMock, return_value=fake_carousel_result) as mock_carousel, \
+         patch("routes.content.deduct_credits", new_callable=AsyncMock, return_value={"success": True, "remaining": 100}), \
+         patch("services.media_orchestrator._call_remotion", new_callable=AsyncMock, return_value=fake_remotion_result) as mock_remotion:
+
+        from fastapi.testclient import TestClient
+        from auth_utils import get_current_user
+        from server import app
+
+        # Override auth dependency to return a known user
+        app.dependency_overrides[get_current_user] = lambda: {"user_id": "user_abc", "email": "test@example.com"}
+
+        try:
+            client = TestClient(app)
+            response = client.post(
+                "/api/content/generate-carousel",
+                json={"job_id": "job_carousel_001"},
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        # The test assertion: _call_remotion must have been called
+        assert mock_remotion.called, (
+            "_call_remotion was NOT called from generate_carousel() route. "
+            "Plan 29-04 must wire the Remotion ImageCarousel call into "
+            "backend/routes/content.py generate_carousel() after per-slide images are generated."
+        )
+
+        # If called, verify correct composition ID
+        if mock_remotion.called:
+            call_args = mock_remotion.call_args
+            composition_used = (
+                call_args[0][0] if call_args[0]
+                else call_args[1].get("composition_id", "")
+            )
+            assert composition_used == "ImageCarousel", (
+                f"_call_remotion must be called with composition_id='ImageCarousel'. "
+                f"Got: {call_args}"
+            )
