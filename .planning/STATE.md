@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Completed 31-smart-scheduling/31-02-PLAN.md
-last_updated: "2026-04-12T12:58:14.125Z"
+stopped_at: Completed 31-smart-scheduling/31-03-PLAN.md
+last_updated: "2026-04-12T13:05:03.367Z"
 last_activity: 2026-04-12
 progress:
   total_phases: 27
   completed_phases: 5
   total_plans: 28
-  completed_plans: 26
-  percent: 93
+  completed_plans: 27
+  percent: 96
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 31 (Smart Scheduling) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-12
 
@@ -70,6 +70,7 @@ _Updated after each plan completion_
 | Phase 30 P03 | 5 | 2 tasks | 3 files |
 | Phase 30 P04 | 20 | 2 tasks | 3 files |
 | Phase 31 P02 | 15 | 3 tasks | 1 files |
+| Phase 31 P03 | 25 | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,8 @@ Recent decisions affecting current work:
 - [Phase 30]: X media upload uses v1.1 multipart upload; media_id_string attached to first tweet only
 - [Phase 30]: Instagram publish_to_platform dispatcher confirmed to extract image_url from media_assets correctly — no code change needed
 - [Phase 31]: Extract _compute_heuristic_suggestions as standalone helper; use data_driven=True + source='stored' flags on suggestions to distinguish stored-data vs heuristic paths
+- [Phase 31]: Lazy database module import (import database as _db_module) inside endpoint functions so patch('database.db', mock) works correctly in tests regardless of module import ordering
+- [Phase 31]: Motor find() sort keyword arg instead of .sort() chaining — preserves mock cursor's to_list AsyncMock in tests
 
 ### Pending Todos
 
@@ -131,6 +134,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12T12:58:14.120Z
-Stopped at: Completed 31-smart-scheduling/31-02-PLAN.md
+Last session: 2026-04-12T13:05:03.363Z
+Stopped at: Completed 31-smart-scheduling/31-03-PLAN.md
 Resume file: None
