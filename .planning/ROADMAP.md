@@ -68,7 +68,7 @@
 - [x] **Phase 28: Content Generation Multi-Format** - Implement platform-specific content generation for all 9 formats (LinkedIn post/article/carousel, X tweet/thread, Instagram feed/reel/story) with persona-aware Writer prompts and real-time pipeline progress (completed 2026-04-12)
 - [x] **Phase 29: Media Generation Pipeline** - Wire and verify the full media pipeline: auto-images via DALL-E/FAL.ai, carousel slides via Remotion, video via Runway/Luma, voice narration via ElevenLabs, R2 upload flow end-to-end, media display in UI (completed 2026-04-12)
 - [x] **Phase 30: Social Publishing End-to-End** - Fix and verify LinkedIn UGC, X v2, and Instagram Meta Graph publishing with OAuth connect/refresh, token encryption, publish status tracking, and real engagement metrics display (completed 2026-04-12)
-- [ ] **Phase 31: Smart Scheduling** - Implement AI-suggested optimal posting times, user approval/modification of schedule, calendar view of all scheduled posts, and Celery Beat automatic publishing at scheduled times
+- [x] **Phase 31: Smart Scheduling** - Implement AI-suggested optimal posting times, user approval/modification of schedule, calendar view of all scheduled posts, and Celery Beat automatic publishing at scheduled times (completed 2026-04-12)
 - [ ] **Phase 32: Frontend Core Flows Polish** - Polish every core page: auth, dashboard, ContentStudio, settings — all loading/empty/error states, mobile responsive (375px/768px/1440px), keyboard navigation
 - [ ] **Phase 33: Design System & Landing Page** - Apply consistent design system across all pages, rebuild the landing page to be conversion-optimized with hero/features/how-it-works/pricing/CTA/footer, SEO meta and OG tags
 - [ ] **Phase 34: Security & GDPR** - Full penetration-readiness: input validation, XSS sanitization, injection prevention, CSRF, rate limits, no secrets in code, no stack traces, dependency audit, GDPR data export/deletion, cookie consent, privacy/terms pages
@@ -515,7 +515,7 @@
    - [x] 31-01-PLAN.md — Test scaffold for SCHD-01 through SCHD-04 (RED state before implementation)
    - [x] 31-02-PLAN.md — Fix planner.py: dual-write to scheduled_posts + wire optimal times from persona_engines
    - [x] 31-03-PLAN.md — Add /schedule/calendar and /schedule/{id}/reschedule endpoints to dashboard.py
-   - [ ] 31-04-PLAN.md — Frontend: ContentCalendar.jsx calendar endpoint + reschedule modal
+   - [x] 31-04-PLAN.md — Frontend: ContentCalendar.jsx calendar endpoint + reschedule modal
    **UI hint**: yes
 
 ### Phase 32: Frontend Core Flows Polish
@@ -595,7 +595,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 28. Content Generation Multi-Format  | 5/5 | Complete    | 2026-04-12 |
 | 29. Media Generation Pipeline        | 5/5 | Complete    | 2026-04-12 |
 | 30. Social Publishing End-to-End     | 4/4 | Complete    | 2026-04-12 |
-| 31. Smart Scheduling                 | 3/4 | In Progress|  |
+| 31. Smart Scheduling                 | 4/4 | Complete    | 2026-04-12 |
 | 32. Frontend Core Flows Polish       | 0/TBD          | Not started | -         |
 | 33. Design System & Landing Page     | 0/TBD          | Not started | -         |
 | 34. Security & GDPR                  | 0/TBD          | Not started | -         |
