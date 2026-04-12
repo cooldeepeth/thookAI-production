@@ -492,13 +492,11 @@
 3. Publishing a thread to X (3+ tweets) creates a real thread visible at x.com — all tweets are linked as a thread, not as separate posts
 4. An OAuth token that expires within 24 hours is automatically refreshed before the next scheduled publish — the user never sees an "expired token" error on a scheduled post
 5. A failed publish attempt (e.g., API rate limit) shows the error message in the content job detail view with a "Retry" button — the post status changes to "failed" (not "published") and Sentry receives the error event
-   **Plans**: 5 plans
+   **Plans**: 3 plans
    Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   - [ ] 30-01-PLAN.md — Fix _publish_to_platform (decrypt token, return dict) + store publish_results on content_jobs
+   - [ ] 30-02-PLAN.md — Proactive 24h token refresh in get_platform_token + Instagram _refresh_token branch
+   - [ ] 30-03-PLAN.md — token_expiring_soon in /api/platforms/status + Connections.jsx warning + Fernet round-trip test
 
 ### Phase 31: Smart Scheduling
 
@@ -511,13 +509,8 @@
 2. User can view a calendar showing all scheduled posts across LinkedIn, X, and Instagram on a monthly grid — clicking a post in the calendar opens the content detail view
 3. A post scheduled for a specific time publishes within 2 minutes of that time — verified by checking the published_at timestamp on the content job after the Celery Beat task fires
 4. Rescheduling a post (changing the scheduled_at time) cancels the existing Celery task and creates a new one at the correct time — verified by rescheduling and confirming the old time is no longer active
-   **Plans**: 5 plans
-   Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   **Plans**: TBD
+   Plans: [To be planned]
    **UI hint**: yes
 
 ### Phase 32: Frontend Core Flows Polish
@@ -532,13 +525,8 @@
 3. Resizing the browser from 375px to 1440px on any core page (auth, dashboard, ContentStudio, settings) shows a properly laid-out page at every width — no horizontal scroll, no overlapping elements, no truncated text
 4. A user can complete the full ContentStudio workflow (select platform → select format → type topic → generate → edit → approve → schedule) using only the keyboard — Tab, Enter, Space, and arrow keys are sufficient
 5. Every page shows a skeleton loader during data fetching, a user-friendly error message with retry option on API failure, and an appropriate empty state on first use — no page ever shows a blank white screen or a raw JavaScript error
-   **Plans**: 5 plans
-   Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   **Plans**: TBD
+   Plans: [To be planned]
    **UI hint**: yes
 
 ### Phase 33: Design System & Landing Page
@@ -553,13 +541,8 @@
 3. On a 375px mobile screen, the landing page renders without horizontal scroll, the hero CTA button is easily tappable, and the navigation collapses into a mobile menu — verified in browser at 375px width
 4. The landing page /meta title includes "ThookAI", the meta description is under 160 characters and describes the product, and the Open Graph og:image is set — verified with a curl of the page HTML or browser DevTools
 5. A first-time visitor to the landing page can clearly understand what ThookAI does, see how it works in 3 steps, and find the pricing — measurable by a 5-second reading test: a person reading the hero + features sections can explain the product
-   **Plans**: 5 plans
-   Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   **Plans**: TBD
+   Plans: [To be planned]
    **UI hint**: yes
 
 ### Phase 34: Security & GDPR
@@ -575,13 +558,8 @@
 4. A user can delete their account at DELETE /api/auth/account — within 5 seconds, their email is anonymized in the users collection, and their persona/content/scheduled posts are removed — the user can no longer log in
 5. Visiting the site for the first time shows a GDPR cookie consent banner — PostHog tracking only initializes after the user clicks "Accept" — verified by checking PostHog events in an incognito session before and after consent
 6. /privacy and /terms pages exist and are accessible without authentication — both pages contain real content (not Lorem Ipsum)
-   **Plans**: 5 plans
-   Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   **Plans**: TBD
+   Plans: [To be planned]
    **UI hint**: yes
 
 ### Phase 35: Performance, Monitoring & Launch
@@ -597,13 +575,8 @@
 4. A Locust load test of 50 concurrent users running the standard content generation flow for 5 minutes shows p95 response time under 2 seconds and zero 5xx errors in the results
 5. Sentry shows zero unresolved errors for 48 consecutive hours after the final deployment — all existing error events are reviewed and resolved before the clock starts
 6. The pre-launch checklist is signed off: SSL verified, CORS configured, all env vars set in Railway and Vercel, Stripe in production mode, rate limiting active, monitoring active, backup strategy documented
-   **Plans**: 5 plans
-   Plans:
-   - [ ] 26-01-PLAN.md — Wave 0 test scaffolds (test_error_format.py, test_credit_refund_media.py)
-   - [ ] 26-02-PLAN.md — Error format standardization: server.py exception handlers + middleware
-   - [ ] 26-03-PLAN.md — Pydantic field constraints: auth.py, content.py, onboarding.py, persona.py, uploads.py
-   - [ ] 26-04-PLAN.md — Credit refund: sync media paths in content.py + Celery task paths in media_tasks.py
-   - [ ] 26-05-PLAN.md — Auth guard audit + BACKEND-API-AUDIT.md endpoint registry
+   **Plans**: TBD
+   Plans: [To be planned]
 
 ## Progress
 
@@ -616,7 +589,7 @@ v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 3
 | 27. Onboarding Reimagination         | 5/5 | Complete    | 2026-04-12 |
 | 28. Content Generation Multi-Format  | 5/5 | Complete    | 2026-04-12 |
 | 29. Media Generation Pipeline        | 5/5 | Complete    | 2026-04-12 |
-| 30. Social Publishing End-to-End     | 0/TBD          | Not started | -         |
+| 30. Social Publishing End-to-End     | 0/3            | In progress | -         |
 | 31. Smart Scheduling                 | 0/TBD          | Not started | -         |
 | 32. Frontend Core Flows Polish       | 0/TBD          | Not started | -         |
 | 33. Design System & Landing Page     | 0/TBD          | Not started | -         |
