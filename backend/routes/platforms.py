@@ -596,7 +596,12 @@ async def get_platform_token(user_id: str, platform: str) -> Optional[str]:
 
 
 async def _refresh_token(user_id: str, platform: str, refresh_token: str) -> Optional[str]:
-    """Refresh an expired token."""
+    """Refresh an expired or soon-to-expire token.
+
+    For LinkedIn and X, uses a standard OAuth refresh_token grant.
+    For Instagram, long-lived tokens are renewed by calling fb_exchange_token
+    with the CURRENT access token (no separate refresh_token exists).
+    """
     try:
         async with httpx.AsyncClient() as client:
             if platform == "linkedin":
@@ -622,29 +627,47 @@ async def _refresh_token(user_id: str, platform: str, refresh_token: str) -> Opt
                     headers={"Authorization": f"Basic {credentials}"},
                     timeout=30.0
                 )
+            elif platform == "instagram":
+                # Instagram long-lived tokens don't have a refresh_token.
+                # Renewal is done by calling fb_exchange_token with the CURRENT access token.
+                # refresh_token arg here is actually the current access token (passed by get_platform_token).
+                response = await client.get(
+                    "https://graph.facebook.com/v18.0/oauth/access_token",
+                    params={
+                        "grant_type": "fb_exchange_token",
+                        "client_id": META_APP_ID,
+                        "client_secret": META_APP_SECRET,
+                        "fb_exchange_token": refresh_token,
+                    },
+                    timeout=30.0
+                )
             else:
                 return None
-            
+
             if response.status_code == 200:
                 data = response.json()
                 new_access_token = data.get("access_token")
+                if not new_access_token:
+                    return None
                 new_refresh_token = data.get("refresh_token", refresh_token)
                 expires_in = data.get("expires_in", 3600)
-                
+
                 now = datetime.now(timezone.utc)
+                update_fields = {
+                    "access_token": _encrypt_token(new_access_token),
+                    "expires_at": now + timedelta(seconds=expires_in),
+                    "updated_at": now,
+                }
+                # Instagram: no refresh_token to store (long-lived token renewal)
+                if platform != "instagram" and new_refresh_token != refresh_token:
+                    update_fields["refresh_token"] = _encrypt_token(new_refresh_token)
+
                 await db.platform_tokens.update_one(
                     {"user_id": user_id, "platform": platform},
-                    {
-                        "$set": {
-                            "access_token": _encrypt_token(new_access_token),
-                            "refresh_token": _encrypt_token(new_refresh_token),
-                            "expires_at": now + timedelta(seconds=expires_in),
-                            "updated_at": now
-                        }
-                    }
+                    {"$set": update_fields}
                 )
                 return new_access_token
     except Exception as e:
         logger.error(f"Token refresh failed for {platform}: {e}")
-    
+
     return None
