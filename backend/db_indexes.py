@@ -10,7 +10,12 @@ import asyncio
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import IndexModel, ASCENDING, DESCENDING, TEXT
+from pymongo.errors import OperationFailure
 from config import settings
+
+# MongoDB error codes for index conflicts — same key indexed under a different name.
+# Treated as "already exists" rather than fatal, so rename migrations are idempotent.
+_INDEX_CONFLICT_CODES = {85, 86}  # IndexOptionsConflict, IndexKeySpecsConflict
 
 logger = logging.getLogger(__name__)
 
@@ -273,30 +278,47 @@ async def create_indexes(db):
     
     for collection_name, indexes in INDEXES.items():
         collection = db[collection_name]
-        
+
         try:
-            # Get existing index names
-            existing_indexes = set()
+            # Snapshot existing indexes by name AND key signature, so a rename
+            # of an index name (same columns) is treated as already-present.
+            existing_names: set[str] = set()
+            existing_keys: set[tuple] = set()
             async for idx in collection.list_indexes():
-                existing_indexes.add(idx['name'])
-            
+                existing_names.add(idx['name'])
+                key_doc = idx.get('key', {})
+                existing_keys.add(tuple(sorted(key_doc.items())))
+
             for index_model in indexes:
                 index_name = index_model.document.get('name', 'unnamed')
-                
-                if index_name in existing_indexes:
+                key_doc = index_model.document.get('key', {})
+                key_sig = tuple(sorted(key_doc.items()))
+
+                if index_name in existing_names or key_sig in existing_keys:
                     logger.debug(f"Index {collection_name}.{index_name} already exists, skipping")
                     skipped += 1
                     continue
-                
+
                 try:
                     await collection.create_indexes([index_model])
                     logger.info(f"Created index: {collection_name}.{index_name}")
                     created += 1
+                except OperationFailure as e:
+                    if getattr(e, 'code', None) in _INDEX_CONFLICT_CODES:
+                        logger.info(
+                            f"Index {collection_name}.{index_name} already present under a different name "
+                            f"(code {e.code}) — skipping"
+                        )
+                        skipped += 1
+                        continue
+                    error_msg = f"Failed to create {collection_name}.{index_name}: {str(e)}"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
                 except Exception as e:
                     error_msg = f"Failed to create {collection_name}.{index_name}: {str(e)}"
                     logger.error(error_msg)
                     errors.append(error_msg)
-        
+
         except Exception as e:
             error_msg = f"Error processing collection {collection_name}: {str(e)}"
             logger.error(error_msg)

@@ -30,6 +30,16 @@ def _clean_json(raw: str) -> str:
     return s.strip()
 
 
+def _aware_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    # Legacy rows stored `datetime.utcnow()` (naive). Normalize so comparisons
+    # with `datetime.now(timezone.utc)` don't raise TypeError.
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 # Engagement simulation configs (used when real metrics unavailable)
 PLATFORM_ENGAGEMENT_PROFILES = {
     "linkedin": {
@@ -373,7 +383,10 @@ async def get_performance_trends(
     
     while current_period_start < now:
         period_end = current_period_start + timedelta(days=period_days)
-        period_jobs = [j for j in jobs if current_period_start <= j.get("created_at", now) < period_end]
+        period_jobs = [
+            j for j in jobs
+            if current_period_start <= (_aware_utc(j.get("created_at")) or now) < period_end
+        ]
         
         if period_jobs:
             scores = []
