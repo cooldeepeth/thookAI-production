@@ -3,12 +3,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PlanBuilder } from "@/components/PlanBuilder";
+import { DataTab } from "@/pages/Dashboard/Settings/DataTab";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import {
   Settings as SettingsIcon, CreditCard, Zap, Crown, Building2, Users,
   ChevronRight, Check, RefreshCw, AlertTriangle, Sparkles, TrendingUp,
   Calendar, Shield, Mic, Video, Code, BarChart3, ExternalLink,
-  ShoppingCart, Gift, Percent, ArrowRight, Clock, Star, X
+  ShoppingCart, Gift, Percent, ArrowRight, Clock, Star, X,
+  User, Link2, Bell, Database
 } from "lucide-react";
 import { apiFetch } from '@/lib/api';
 
@@ -33,30 +38,10 @@ const TIER_COLORS = {
 const TIER_GRADIENTS = {
   starter: "from-zinc-500/20 to-zinc-600/20",
   free: "from-zinc-500/20 to-zinc-600/20",
-  custom: "from-lime/20 to-green-500/20",
+  custom: "from-lime/20 to-violet/20",
   pro: "from-violet/20 to-purple-600/20",
-  studio: "from-lime/20 to-green-500/20",
+  studio: "from-lime/20 to-violet/20",
   agency: "from-orange-500/20 to-red-500/20"
-};
-
-const PLAN_BUILDER_DEFAULTS = {
-  text_posts: 20,
-  images: 5,
-  videos: 0,
-  carousels: 2,
-  repurposes: 5,
-  voice_narrations: 0,
-  series_plans: 0
-};
-
-const PLAN_BUILDER_LABELS = {
-  text_posts: { name: "Text Posts", credits: 10, max: 200, icon: "pencil" },
-  images: { name: "Images", credits: 8, max: 100, icon: "image" },
-  videos: { name: "Videos", credits: 50, max: 20, icon: "video" },
-  carousels: { name: "Carousels", credits: 15, max: 50, icon: "layers" },
-  repurposes: { name: "Repurposes", credits: 3, max: 100, icon: "repeat" },
-  voice_narrations: { name: "Voice Narrations", credits: 12, max: 50, icon: "mic" },
-  series_plans: { name: "Series Plans", credits: 6, max: 20, icon: "calendar" }
 };
 
 // Credit costs for reference
@@ -73,7 +58,7 @@ const CREDIT_COSTS = {
   viral_predict: { credits: 1, name: "Viral Predict" }
 };
 
-export default function Settings() {
+function BillingTab() {
   const [subscription, setSubscription] = useState(null);
   const [credits, setCredits] = useState(null);
   const [tiers, setTiers] = useState([]);
@@ -81,12 +66,10 @@ export default function Settings() {
   const [billingConfig, setBillingConfig] = useState(null);
   const [creditCosts, setCreditCosts] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [billingError, setBillingError] = useState(null);
   const [upgrading, setUpgrading] = useState(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState("monthly");
-  const [planUsage, setPlanUsage] = useState({ ...PLAN_BUILDER_DEFAULTS });
-  const [planPreview, setPlanPreview] = useState(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -95,6 +78,7 @@ export default function Settings() {
 
   const fetchData = async () => {
     setLoading(true);
+    setBillingError(null);
     try {
       const [subRes, creditsRes, tiersRes, limitsRes, configRes, costsRes] = await Promise.all([
         apiFetch('/api/billing/subscription'),
@@ -115,43 +99,19 @@ export default function Settings() {
       if (configRes.ok) setBillingConfig(await configRes.json());
       if (costsRes.ok) setCreditCosts(await costsRes.json());
     } catch (err) {
-      console.error("Fetch error:", err);
+      setBillingError(err.message || "Failed to load billing info");
       toast({ title: "Error", description: "Failed to load settings", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchPlanPreview = async (usage) => {
-    setPreviewLoading(true);
-    try {
-      const res = await apiFetch('/api/billing/plan/preview', {
-        method: "POST",
-        body: JSON.stringify(usage)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPlanPreview(data);
-      }
-    } catch {
-      // Silent — preview is non-critical
-    } finally {
-      setPreviewLoading(false);
-    }
+  const handleRetryBilling = () => {
+    setBillingError(null);
+    fetchData();
   };
 
-  // Debounced plan preview
-  useEffect(() => {
-    const totalUsage = Object.values(planUsage).reduce((a, b) => a + b, 0);
-    if (totalUsage > 0) {
-      const timer = setTimeout(() => fetchPlanPreview(planUsage), 400);
-      return () => clearTimeout(timer);
-    } else {
-      setPlanPreview(null);
-    }
-  }, [planUsage]);
-
-  const handlePlanCheckout = async () => {
+  const handlePlanCheckout = async (planUsage) => {
     setUpgrading("custom");
     try {
       const isModify = subscription?.tier === "custom" && subscription?.stripe_subscription_id;
@@ -276,15 +236,33 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <main className="p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-surface-2 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        </div>
-      </main>
+      <div className="space-y-4" data-testid="billing-skeleton">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-48 bg-surface-2 rounded-2xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (billingError) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center py-16 px-6"
+        role="alert"
+        data-testid="billing-error"
+      >
+        <AlertTriangle className="text-red-400 mb-3" size={28} />
+        <p className="text-red-400 text-sm text-center mb-4">{billingError}</p>
+        <button
+          type="button"
+          onClick={handleRetryBilling}
+          className="btn-ghost text-sm flex items-center gap-2 focus-ring"
+          data-testid="retry-billing-btn"
+        >
+          <RefreshCw size={14} />
+          Try Again
+        </button>
+      </div>
     );
   }
 
@@ -540,130 +518,12 @@ export default function Settings() {
           <p className="text-sm text-zinc-400 mb-6">
             Pick how much you use each month — we calculate your price with volume discounts.
           </p>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Sliders */}
-            <Card className="lg:col-span-2 bg-surface-2 border-white/5">
-              <CardContent className="py-6 space-y-5">
-                {Object.entries(PLAN_BUILDER_LABELS).map(([key, meta]) => (
-                  <div key={key}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-sm text-zinc-300">{meta.name}</label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-500">{meta.credits} credits each</span>
-                        <span className="text-sm font-mono text-white w-10 text-right">
-                          {planUsage[key]}
-                        </span>
-                      </div>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={meta.max}
-                      step={key === "text_posts" ? 5 : key === "videos" ? 1 : 1}
-                      value={planUsage[key]}
-                      onChange={(e) =>
-                        setPlanUsage((prev) => ({ ...prev, [key]: Number(e.target.value) }))
-                      }
-                      className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer
-                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-lime [&::-webkit-slider-thumb]:cursor-pointer"
-                    />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Price Summary */}
-            <Card className="bg-surface-2 border-white/5 sticky top-6">
-              <CardContent className="py-6">
-                <h3 className="text-sm font-medium text-zinc-400 mb-4">Your Plan</h3>
-
-                {planPreview ? (
-                  <div className="space-y-4">
-                    <div className="text-center py-2">
-                      <p className="text-4xl font-bold text-white">
-                        ${planPreview.monthly_price_usd || 0}
-                      </p>
-                      <p className="text-sm text-zinc-500">/month</p>
-                    </div>
-
-                    <div className="p-3 bg-white/5 rounded-lg text-center">
-                      <p className="text-lg font-semibold text-lime">
-                        {planPreview.total_credits?.toLocaleString()} credits
-                      </p>
-                      <p className="text-xs text-zinc-500">per month</p>
-                    </div>
-
-                    {/* Features unlocked */}
-                    {planPreview.features && (
-                      <div className="space-y-1.5 pt-2 border-t border-white/5">
-                        <p className="text-xs text-zinc-500 mb-2">Included features</p>
-                        {planPreview.features.voice_enabled && (
-                          <div className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check size={12} className="text-lime" /> Voice narration
-                          </div>
-                        )}
-                        {planPreview.features.video_enabled && (
-                          <div className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check size={12} className="text-lime" /> Video generation
-                          </div>
-                        )}
-                        {planPreview.features.api_access && (
-                          <div className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check size={12} className="text-lime" /> API access
-                          </div>
-                        )}
-                        {planPreview.features.priority_support && (
-                          <div className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check size={12} className="text-lime" /> Priority support
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-xs text-zinc-300">
-                          <Check size={12} className="text-lime" />
-                          {planPreview.features.max_personas || 3} personas
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-zinc-300">
-                          <Check size={12} className="text-lime" />
-                          {planPreview.features.content_per_day || 50} posts/day
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-zinc-300">
-                          <Check size={12} className="text-lime" />
-                          {planPreview.features.team_members || 1} team member{(planPreview.features.team_members || 1) > 1 ? "s" : ""}
-                        </div>
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={handlePlanCheckout}
-                      disabled={upgrading === "custom" || !planPreview.total_credits}
-                      className="w-full bg-lime text-black hover:bg-lime/90 gap-2 mt-2"
-                    >
-                      {upgrading === "custom" ? (
-                        <RefreshCw size={14} className="animate-spin" />
-                      ) : subscription?.tier === "custom" ? (
-                        <>Update Plan <ArrowRight size={14} /></>
-                      ) : (
-                        <>Subscribe <ArrowRight size={14} /></>
-                      )}
-                    </Button>
-                  </div>
-                ) : previewLoading ? (
-                  <div className="text-center py-8">
-                    <RefreshCw size={20} className="animate-spin text-zinc-500 mx-auto" />
-                    <p className="text-xs text-zinc-500 mt-2">Calculating...</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Zap size={24} className="text-zinc-600 mx-auto" />
-                    <p className="text-sm text-zinc-500 mt-2">
-                      Adjust the sliders to see your price
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <PlanBuilder
+            mode="settings"
+            onCheckout={handlePlanCheckout}
+            subscription={subscription}
+            upgrading={upgrading}
+          />
         </div>
 
         {/* Stripe Status Notice */}
@@ -740,5 +600,121 @@ export default function Settings() {
         )}
       </AnimatePresence>
     </main>
+  );
+}
+
+function ConnectionsTab() {
+  return (
+    <div className="space-y-4" data-testid="connections-tab">
+      <p className="text-sm text-zinc-400">Manage your connected social accounts.</p>
+      {["LinkedIn", "X (Twitter)", "Instagram"].map((platform) => (
+        <div key={platform} className="card-thook p-4 flex items-center justify-between">
+          <span className="text-sm text-white">{platform}</span>
+          <span className="text-xs text-zinc-500">Not connected</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProfileTab({ user }) {
+  return (
+    <div className="space-y-4" data-testid="profile-tab">
+      <div className="card-thook p-4 space-y-3">
+        <div>
+          <p className="text-xs text-zinc-500 mb-1">Email</p>
+          <p className="text-sm text-white">{user?.email || "—"}</p>
+        </div>
+        <div>
+          <p className="text-xs text-zinc-500 mb-1">Name</p>
+          <p className="text-sm text-white">{user?.name || "—"}</p>
+        </div>
+        <div>
+          <p className="text-xs text-zinc-500 mb-1">Plan</p>
+          <p className="text-sm text-white capitalize">{user?.subscription_tier || "free"}</p>
+        </div>
+      </div>
+      <p className="text-xs text-zinc-600">To update your profile, contact support.</p>
+    </div>
+  );
+}
+
+function NotificationsTab() {
+  const items = [
+    { label: "Job completion alerts", defaultChecked: true },
+    { label: "Scheduled post published", defaultChecked: true },
+    { label: "Weekly performance digest", defaultChecked: false },
+  ];
+  return (
+    <div className="space-y-4" data-testid="notifications-tab">
+      <div className="card-thook p-4 space-y-3">
+        {items.map(({ label, defaultChecked }) => (
+          <label key={label} className="flex items-center justify-between cursor-pointer">
+            <span className="text-sm text-white">{label}</span>
+            <input
+              type="checkbox"
+              defaultChecked={defaultChecked}
+              className="accent-lime focus-ring"
+            />
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-zinc-600">
+        Notification preferences (UI only — backend wiring in a later phase).
+      </p>
+    </div>
+  );
+}
+
+const SETTINGS_TAB_TRIGGER_CLASS =
+  "capitalize text-sm text-zinc-500 rounded-lg px-4 py-2 data-[state=active]:bg-white/10 data-[state=active]:text-white focus-ring flex items-center gap-2";
+
+export default function Settings() {
+  const { user } = useAuth();
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto space-y-6" data-testid="settings-page">
+      <h1 className="text-2xl font-display font-bold text-white">Settings</h1>
+      <Tabs defaultValue="billing" className="space-y-6">
+        <TabsList className="bg-surface-2 border border-white/5 rounded-xl p-1 w-full justify-start h-auto flex-wrap gap-1">
+          <TabsTrigger value="billing" data-testid="tab-billing" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <CreditCard size={14} />
+            Billing
+          </TabsTrigger>
+          <TabsTrigger value="connections" data-testid="tab-connections" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <Link2 size={14} />
+            Connections
+          </TabsTrigger>
+          <TabsTrigger value="profile" data-testid="tab-profile" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <User size={14} />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="notifications" data-testid="tab-notifications" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <Bell size={14} />
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="data" data-testid="tab-data" className={SETTINGS_TAB_TRIGGER_CLASS}>
+            <Database size={14} />
+            Data
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="billing">
+          <BillingTab />
+        </TabsContent>
+        <TabsContent value="connections">
+          <ConnectionsTab />
+        </TabsContent>
+        <TabsContent value="profile">
+          <ProfileTab user={user} />
+        </TabsContent>
+        <TabsContent value="notifications">
+          <NotificationsTab />
+        </TabsContent>
+        <TabsContent value="data">
+          <DataTab />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

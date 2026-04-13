@@ -8,8 +8,10 @@ Production-ready FastAPI application with:
 - Comprehensive logging
 """
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -93,11 +95,28 @@ async def lifespan(app: FastAPI):
     # Initialize Sentry error tracking (early, before DB, so it catches startup errors)
     if settings.app.sentry_dsn:
         import sentry_sdk
+
+        def _scrub_pii(event, hint):
+            """Remove PII fields from Sentry error events (GDPR + SECR-07 compliance)."""
+            pii_keys = frozenset({
+                "email", "password", "hashed_password", "access_token",
+                "refresh_token", "session_token", "csrf_token", "name",
+                "google_id", "stripe_customer_id",
+            })
+            if "request" in event and isinstance(event["request"].get("data"), dict):
+                for key in pii_keys:
+                    event["request"]["data"].pop(key, None)
+            if isinstance(event.get("extra"), dict):
+                for key in pii_keys:
+                    event["extra"].pop(key, None)
+            return event
+
         sentry_sdk.init(
             dsn=settings.app.sentry_dsn,
             environment=settings.app.environment,
             traces_sample_rate=0.1 if settings.app.is_production else 1.0,
             profiles_sample_rate=0.1 if settings.app.is_production else 1.0,
+            before_send=_scrub_pii,
         )
         logger.info("Sentry error tracking initialized")
 
@@ -371,7 +390,7 @@ app.add_middleware(CompressionMiddleware, minimum_size=500, compression_level=6)
 app.add_middleware(CacheMiddleware, max_entries=1000)
 
 # 7. Request timing (first middleware, closest to request)
-app.add_middleware(TimingMiddleware, slow_request_threshold_ms=2000)
+app.add_middleware(TimingMiddleware, slow_request_threshold_ms=500)
 
 # OAuth (Authlib) requires server-side session for authorize state / PKCE
 if settings.app.is_production and not settings.security.jwt_secret_key:
@@ -387,19 +406,76 @@ app.add_middleware(
 
 # ==================== ERROR HANDLERS ====================
 
+STATUS_TO_ERROR_CODE = {
+    400: "BAD_REQUEST",
+    401: "UNAUTHORIZED",
+    402: "PAYMENT_REQUIRED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    409: "CONFLICT",
+    413: "PAYLOAD_TOO_LARGE",
+    422: "VALIDATION_ERROR",
+    429: "RATE_LIMITED",
+    500: "INTERNAL_ERROR",
+    503: "SERVICE_UNAVAILABLE",
+}
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Standardize all HTTPException responses to include error_code field (BACK-03, BACK-04)."""
+    error_code = STATUS_TO_ERROR_CODE.get(exc.status_code, "ERROR")
+    if isinstance(exc.detail, dict):
+        # detail is already a structured dict (e.g., from validate_password_strength)
+        # Merge error_code in without wrapping
+        content = {**exc.detail, "error_code": error_code}
+    else:
+        content = {"detail": exc.detail, "error_code": error_code}
+    return JSONResponse(status_code=exc.status_code, content=content)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def starlette_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Standardize Starlette HTTP exceptions (e.g., route-not-found 404) to include error_code."""
+    error_code = STATUS_TO_ERROR_CODE.get(exc.status_code, "ERROR")
+    if isinstance(exc.detail, dict):
+        content = {**exc.detail, "error_code": error_code}
+    else:
+        content = {"detail": exc.detail, "error_code": error_code}
+    return JSONResponse(status_code=exc.status_code, content=content)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Standardize Pydantic validation errors to include error_code and field-level errors (BACK-02, BACK-05)."""
+    errors = [
+        {
+            "field": ".".join(str(loc) for loc in e["loc"] if loc != "body"),
+            "message": e["msg"],
+        }
+        for e in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Validation failed",
+            "error_code": "VALIDATION_ERROR",
+            "errors": errors,
+        },
+    )
+
+
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled errors"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    
+
     # In production, don't expose internal error details
     if settings.app.is_production:
-        return JSONResponse(status_code=500, content={"detail": "An internal error occurred"})
-    
-    return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__})
+        return JSONResponse(status_code=500, content={"detail": "An internal error occurred", "error_code": "INTERNAL_ERROR"})
+
+    return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__, "error_code": "INTERNAL_ERROR"})
 
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("server:app", host="0.0.0.0", port=port)
+# Server is started via Procfile: uvicorn server:app --host 0.0.0.0 --port $PORT
+# No __main__ block needed — see backend/Procfile

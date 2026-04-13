@@ -4,11 +4,19 @@ import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
+import { Check } from "lucide-react";
+
+const PASSWORD_RULES = [
+  { test: (p) => p.length >= 8, label: "At least 8 characters" },
+  { test: (p) => /[A-Z]/.test(p), label: "One uppercase letter" },
+  { test: (p) => /[0-9]/.test(p), label: "One number" },
+];
 
 export default function AuthPage() {
   const [tab, setTab] = useState("login");
   const [form, setForm] = useState({ email: "", password: "", name: "" });
   const [error, setError] = useState("");
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -114,6 +122,17 @@ export default function AuthPage() {
       // Success — session_token and csrf_token cookies are set by the backend.
       // Browser stores cookies automatically via credentials: 'include'.
       login(data);
+
+      // PERF-05: Track registration funnel. Fires only on register tab, not login.
+      // Guarded on window.posthog because PostHog is consent-gated.
+      if (
+        tab === "register" &&
+        window.posthog &&
+        typeof window.posthog.capture === "function"
+      ) {
+        window.posthog.capture("user_registered", { source: "email" });
+      }
+
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(err.message);
@@ -178,7 +197,7 @@ export default function AuthPage() {
                       setForgotSent(false);
                       setForgotEmail("");
                     }}
-                    className="w-full text-center text-xs text-zinc-500 hover:text-lime transition-colors"
+                    className="w-full text-center text-xs text-zinc-500 hover:text-lime transition-colors focus-ring"
                   >
                     Back to sign in
                   </button>
@@ -191,12 +210,12 @@ export default function AuthPage() {
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     required
-                    className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
+                    className="w-full bg-surface-2 border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                   />
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="w-full btn-primary py-3 text-sm disabled:opacity-60"
+                    className="w-full btn-primary py-3 text-sm disabled:opacity-60 focus-ring"
                   >
                     {forgotLoading ? "Sending…" : "Send reset link"}
                   </button>
@@ -207,7 +226,7 @@ export default function AuthPage() {
                       setForgotEmail("");
                       setError("");
                     }}
-                    className="w-full text-center text-xs text-zinc-500 hover:text-lime transition-colors"
+                    className="w-full text-center text-xs text-zinc-500 hover:text-lime transition-colors focus-ring"
                   >
                     Back to sign in
                   </button>
@@ -218,21 +237,22 @@ export default function AuthPage() {
             <>
               {/* Tabs */}
               <div
-                className="flex gap-1 bg-[#18181B] rounded-lg p-1 mb-6"
+                className="flex gap-1 bg-surface-2 rounded-lg p-1 mb-6"
                 data-testid="auth-tabs"
               >
                 {["login", "register"].map((t) => (
                   <button
                     key={t}
+                    type="button"
                     onClick={() => {
                       setTab(t);
                       setError("");
                       setShowForgot(false);
                     }}
                     data-testid={`tab-${t}`}
-                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus-ring ${
                       tab === t
-                        ? "bg-[#27272A] text-white"
+                        ? "bg-border-subtle text-white"
                         : "text-zinc-500 hover:text-zinc-300"
                     }`}
                   >
@@ -243,9 +263,10 @@ export default function AuthPage() {
 
               {/* Google OAuth */}
               <button
+                type="button"
                 onClick={handleGoogleAuth}
                 data-testid="google-auth-btn"
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white text-black rounded-xl font-medium text-sm hover:bg-zinc-100 transition-colors mb-4"
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white text-black rounded-xl font-medium text-sm hover:bg-zinc-100 transition-colors mb-4 focus-ring"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24">
                   <path
@@ -297,7 +318,7 @@ export default function AuthPage() {
                         }
                         data-testid="input-name"
                         required={tab === "register"}
-                        className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
+                        className="w-full bg-surface-2 border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                       />
                     </motion.div>
                   )}
@@ -310,7 +331,7 @@ export default function AuthPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   data-testid="input-email"
                   required
-                  className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
+                  className="w-full bg-surface-2 border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                 />
                 <input
                   type="password"
@@ -319,17 +340,42 @@ export default function AuthPage() {
                   onChange={(e) =>
                     setForm({ ...form, password: e.target.value })
                   }
+                  onFocus={() => setPasswordTouched(true)}
                   data-testid="input-password"
                   required
-                  className="w-full bg-[#18181B] border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
+                  className="w-full bg-surface-2 border border-white/10 focus:border-lime/50 focus:ring-1 focus:ring-lime/30 text-white rounded-xl h-12 px-4 text-sm placeholder:text-zinc-600 outline-none transition-colors"
                 />
+                {tab === "register" && passwordTouched && (
+                  <ul
+                    className="space-y-1 mt-2"
+                    role="list"
+                    aria-label="Password requirements"
+                  >
+                    {PASSWORD_RULES.map((rule) => (
+                      <li
+                        key={rule.label}
+                        className={`text-xs flex items-center gap-1.5 ${rule.test(form.password) ? "text-lime" : "text-zinc-500"}`}
+                      >
+                        <Check
+                          size={10}
+                          className={
+                            rule.test(form.password)
+                              ? "opacity-100"
+                              : "opacity-0"
+                          }
+                        />
+                        {rule.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 {tab === "login" && (
                   <div className="text-right">
                     <button
                       type="button"
                       onClick={() => setShowForgot(true)}
-                      className="text-xs text-zinc-500 hover:text-lime transition-colors"
+                      className="text-xs text-zinc-500 hover:text-lime transition-colors focus-ring"
                     >
                       Forgot password?
                     </button>
@@ -338,6 +384,8 @@ export default function AuthPage() {
 
                 {error && (
                   <p
+                    role="alert"
+                    aria-live="assertive"
                     data-testid="auth-error"
                     className="text-red-400 text-sm text-center"
                   >
@@ -349,7 +397,7 @@ export default function AuthPage() {
                   type="submit"
                   disabled={loading}
                   data-testid="auth-submit-btn"
-                  className="w-full btn-primary py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full btn-primary py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed focus-ring"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">

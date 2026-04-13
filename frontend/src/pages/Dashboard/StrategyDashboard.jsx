@@ -171,7 +171,7 @@ function HistoryItem({ card }) {
             variant="outline"
             className={`text-[10px] shrink-0 ${
               isApproved
-                ? "border-green-500/30 text-green-400"
+                ? "border-lime/30 text-lime"
                 : "border-zinc-700 text-zinc-500"
             }`}
           >

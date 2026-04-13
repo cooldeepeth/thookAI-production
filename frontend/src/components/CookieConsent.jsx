@@ -20,7 +20,13 @@ export default function CookieConsent() {
   const accept = () => {
     localStorage.setItem(CONSENT_KEY, "accepted");
     setVisible(false);
-    // Re-enable PostHog if previously opted out
+    // SECR-11: initialize PostHog only now that the user has consented.
+    // The real init is in frontend/public/index.html and is gated on the
+    // same localStorage key — we call the global helper it exposes so the
+    // init runs immediately on this same page load.
+    if (typeof window.__thookai_init_posthog === "function") {
+      window.__thookai_init_posthog();
+    }
     if (window.posthog && window.posthog.has_opted_out_capturing?.()) {
       window.posthog.opt_in_capturing();
     }

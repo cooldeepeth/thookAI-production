@@ -47,6 +47,46 @@ def _clean_json(raw: str) -> str:
     return s.strip()
 
 
+def _compute_heuristic_suggestions(
+    platform: str,
+    num_suggestions: int,
+    now: datetime
+) -> List[Dict]:
+    """Compute suggestion list from PLATFORM_PEAKS static heuristics.
+
+    Used as primary source for new users (no published post history) and as a
+    padding fallback when stored engagement data does not yield enough slots.
+    """
+    peaks = PLATFORM_PEAKS.get(platform, PLATFORM_PEAKS["linkedin"])
+    suggestions = []
+    for day_offset in range(7):
+        check_date = now + timedelta(days=day_offset)
+        day_name = check_date.strftime("%A")
+        is_weekend = day_name in ["Saturday", "Sunday"]
+        peak_hours = peaks["weekend"] if is_weekend else peaks["weekday"]
+        is_best_day = day_name in peaks["best_days"]
+        for hour in peak_hours:
+            slot_time = check_date.replace(hour=hour, minute=0, second=0, microsecond=0)
+            if slot_time <= now:
+                continue
+            score = 50
+            if is_best_day:
+                score += 30
+            if hour in [9, 12, 17]:
+                score += 20
+            if is_weekend and platform == "instagram":
+                score += 10
+            suggestions.append({
+                "datetime": slot_time.isoformat(),
+                "display_time": slot_time.strftime("%A, %b %d at %I:%M %p UTC"),
+                "score": score,
+                "is_best_day": is_best_day,
+                "reason": _generate_reason(platform, day_name, hour, is_best_day),
+            })
+    suggestions.sort(key=lambda x: x["score"], reverse=True)
+    return suggestions[:num_suggestions]
+
+
 async def get_optimal_posting_times(
     user_id: str,
     platform: str,
@@ -54,83 +94,109 @@ async def get_optimal_posting_times(
     num_suggestions: int = 3
 ) -> Dict[str, Any]:
     """Get optimal posting times for a platform.
-    
+
     Args:
         user_id: User ID
         platform: Target platform (linkedin, x, instagram)
         content_type: Type of content (post, thread, etc.)
         num_suggestions: Number of time slots to suggest
-    
+
     Returns:
         {best_times: [{datetime, reason}], reasoning, platform}
     """
     from database import db
-    
+
     now = datetime.now(timezone.utc)
-    
+
     # Get user's UOM for burnout check
     persona = await db.persona_engines.find_one({"user_id": user_id})
     uom = persona.get("uom", {}) if persona else {}
     burnout_risk = uom.get("burnout_risk", "low")
-    
+
     # Adjust suggestions based on burnout
     if burnout_risk == "high":
         num_suggestions = min(num_suggestions, 1)
     elif burnout_risk == "medium":
         num_suggestions = min(num_suggestions, 2)
-    
-    # Get platform peak times
-    peaks = PLATFORM_PEAKS.get(platform, PLATFORM_PEAKS["linkedin"])
-    
-    # Generate time suggestions for next 7 days
-    suggestions = []
-    
-    for day_offset in range(7):
-        check_date = now + timedelta(days=day_offset)
-        day_name = check_date.strftime("%A")
-        is_weekend = day_name in ["Saturday", "Sunday"]
-        
-        # Get peak hours for this day type
-        peak_hours = peaks["weekend"] if is_weekend else peaks["weekday"]
-        is_best_day = day_name in peaks["best_days"]
-        
-        for hour in peak_hours:
-            slot_time = check_date.replace(hour=hour, minute=0, second=0, microsecond=0)
-            
-            # Skip past times
-            if slot_time <= now:
-                continue
-            
-            # Calculate score
-            score = 50  # Base score
-            if is_best_day:
-                score += 30
-            if hour in [9, 12, 17]:  # Prime hours
-                score += 20
-            if is_weekend and platform == "instagram":
-                score += 10  # Instagram does well on weekends
-            
-            suggestions.append({
-                "datetime": slot_time.isoformat(),
-                "display_time": slot_time.strftime("%A, %b %d at %I:%M %p UTC"),
-                "score": score,
-                "is_best_day": is_best_day,
-                "reason": _generate_reason(platform, day_name, hour, is_best_day)
-            })
-    
-    # Sort by score and take top suggestions
-    suggestions.sort(key=lambda x: x["score"], reverse=True)
-    best_times = suggestions[:num_suggestions]
-    
+
+    # SCHD-01: Prefer engagement-evidence-based times from persona_engines.
+    # calculate_optimal_posting_times (persona_refinement.py) stores:
+    # persona_engines.optimal_posting_times = {
+    #   "linkedin": [{"day_of_week": 0, "hour": 9, "avg_engagement_rate": 0.045, "post_count": 5}, ...]
+    # }  day_of_week: 0=Monday, 6=Sunday (matches datetime.weekday() convention)
+    stored_times = (persona or {}).get("optimal_posting_times", {})
+    platform_slots = stored_times.get(platform, [])
+
+    if platform_slots:
+        # Sort by avg_engagement_rate descending — best-performing times first
+        sorted_slots = sorted(
+            platform_slots,
+            key=lambda s: s.get("avg_engagement_rate", 0),
+            reverse=True,
+        )
+
+        suggestions: List[Dict] = []
+        # Iterate up to 3× num_suggestions to account for slots already in the past
+        for slot in sorted_slots[: num_suggestions * 3]:
+            slot_day = slot.get("day_of_week", 0)   # 0=Monday
+            slot_hour = slot.get("hour", 9)
+            eng_rate = slot.get("avg_engagement_rate", 0)
+            post_count = slot.get("post_count", 1)
+
+            # Find the next occurrence of this weekday within 7 days
+            for day_offset in range(7):
+                check_date = now + timedelta(days=day_offset)
+                if check_date.weekday() == slot_day:
+                    slot_time = check_date.replace(
+                        hour=slot_hour, minute=0, second=0, microsecond=0
+                    )
+                    if slot_time > now:
+                        day_name = check_date.strftime("%A")
+                        suggestions.append({
+                            "datetime": slot_time.isoformat(),
+                            "display_time": slot_time.strftime(
+                                "%A, %b %d at %I:%M %p UTC"
+                            ),
+                            "score": int(eng_rate * 1000),
+                            "is_best_day": True,
+                            "source": "stored",
+                            "data_driven": True,
+                            "reason": (
+                                f"{day_name} at {slot_hour:02d}:00 UTC — your best performing time "
+                                f"based on your data: {post_count} post"
+                                f"{'s' if post_count != 1 else ''} "
+                                f"({eng_rate:.1%} avg engagement rate)"
+                            ),
+                        })
+                    break
+
+            if len(suggestions) >= num_suggestions:
+                break
+
+        # Pad with heuristics if stored slots are insufficient
+        if len(suggestions) < num_suggestions:
+            extra = _compute_heuristic_suggestions(
+                platform, num_suggestions - len(suggestions), now
+            )
+            suggestions.extend(extra)
+
+        best_times = suggestions[:num_suggestions]
+        data_driven = True
+    else:
+        # Heuristic fallback for new users (no published post history)
+        best_times = _compute_heuristic_suggestions(platform, num_suggestions, now)
+        data_driven = False
+
     # Use AI to provide more nuanced reasoning if key available
     ai_reasoning = await _get_ai_reasoning(platform, best_times, content_type, burnout_risk)
-    
+
     return {
         "best_times": best_times,
         "reasoning": ai_reasoning,
         "platform": platform,
         "burnout_adjusted": burnout_risk != "low",
-        "burnout_risk": burnout_risk
+        "burnout_risk": burnout_risk,
+        "data_driven": data_driven,
     }
 
 
@@ -296,11 +362,45 @@ async def schedule_content(
     
     if result.modified_count == 0:
         return {"scheduled": False, "error": "Job not found"}
-    
+
+    # SCHD-04: Insert one scheduled_posts document per platform so Celery Beat
+    # (_process_scheduled_posts in scheduled_tasks.py) can find and publish the post.
+    # Beat reads exclusively from scheduled_posts, not content_jobs.
+    job = await db.content_jobs.find_one(
+        {"job_id": job_id, "user_id": user_id},
+        {"final_content": 1, "media_assets": 1, "_id": 0},
+    )
+    final_content = (job or {}).get("final_content", "")
+    media_assets = (job or {}).get("media_assets", [])
+
+    now = datetime.now(timezone.utc)
+    scheduled_posts_docs = []
+    for platform in platforms:
+        scheduled_posts_docs.append({
+            "schedule_id": f"sch_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id,
+            "job_id": job_id,
+            "platform": platform,
+            "final_content": final_content,
+            "media_assets": media_assets or [],
+            "scheduled_at": scheduled_at,
+            "status": "scheduled",
+            "created_at": now,
+        })
+
+    if scheduled_posts_docs:
+        await db.scheduled_posts.insert_many(scheduled_posts_docs)
+        logger.info(
+            "Scheduled %d post(s) for job %s across platforms: %s",
+            len(scheduled_posts_docs),
+            job_id,
+            platforms,
+        )
+
     return {
         "scheduled": True,
         "job_id": job_id,
         "scheduled_at": scheduled_at.isoformat(),
         "platforms": platforms,
-        "message": f"Content scheduled for {scheduled_at.strftime('%A, %b %d at %I:%M %p UTC')}"
+        "message": f"Content scheduled for {scheduled_at.strftime('%A, %b %d at %I:%M %p UTC')}",
     }

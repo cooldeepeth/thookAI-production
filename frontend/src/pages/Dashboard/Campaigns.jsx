@@ -257,7 +257,7 @@ function CampaignDetail({ campaignId, onBack }) {
     running: "bg-blue-500/15 text-blue-400",
     reviewing: "bg-yellow-500/15 text-yellow-400",
     approved: "bg-lime/15 text-lime",
-    published: "bg-emerald-500/15 text-emerald-400",
+    published: "bg-lime/15 text-lime",
     rejected: "bg-red-500/15 text-red-400",
     failed: "bg-red-500/15 text-red-400",
   };
@@ -300,7 +300,7 @@ function CampaignDetail({ campaignId, onBack }) {
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <p className="text-xs text-zinc-500 mb-1">Published</p>
-            <p className="text-2xl font-bold text-emerald-400">{stats.by_status?.published || 0}</p>
+            <p className="text-2xl font-bold text-lime">{stats.by_status?.published || 0}</p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <p className="text-xs text-zinc-500 mb-1">Avg QC Score</p>

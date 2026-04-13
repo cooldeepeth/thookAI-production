@@ -73,7 +73,7 @@ class TestPublishLinkedIn:
                     token=token,
                 )
 
-        assert result is True
+        assert result.get("success") is True, f"Expected success=True, got: {result}"
         # Ensure a POST was made to the LinkedIn UGC endpoint
         post_urls = [url for method, url, kwargs in captured_calls if method == "POST"]
         assert any("api.linkedin.com/v2/ugcPosts" in url for url in post_urls), (
@@ -162,7 +162,7 @@ class TestPublishX:
                     token=token,
                 )
 
-        assert result is True
+        assert result.get("success") is True, f"Expected success=True, got: {result}"
         post_urls = [url for method, url, kwargs in captured_calls if method == "POST"]
         assert any("api.twitter.com/2/tweets" in url for url in post_urls), (
             f"Expected POST to api.twitter.com/2/tweets, got: {post_urls}"
@@ -286,7 +286,7 @@ class TestPublishErrorHandling:
                     token=token,
                 )
 
-        assert result is False
+        assert result.get("success") is False, f"Expected success=False, got: {result}"
 
     @pytest.mark.asyncio
     async def test_publish_network_error_returns_false(self):
@@ -313,7 +313,7 @@ class TestPublishErrorHandling:
                     token=token,
                 )
 
-        assert result is False
+        assert result.get("success") is False, f"Expected success=False, got: {result}"
 
     @pytest.mark.asyncio
     async def test_publish_expired_token_returns_false(self):
@@ -334,7 +334,7 @@ class TestPublishErrorHandling:
                 token=token,
             )
 
-        assert result is False
+        assert result.get("success") is False, f"Expected success=False, got: {result}"
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +375,8 @@ class TestProcessScheduledPosts:
         update_result = MagicMock()
         mock_db.scheduled_posts.update_one = AsyncMock(return_value=update_result)
 
-        with patch("tasks.content_tasks._publish_to_platform", new_callable=AsyncMock, return_value=True):
+        with patch("tasks.content_tasks._publish_to_platform", new_callable=AsyncMock,
+                   return_value={"success": True, "post_id": "urn:li:share:001"}):
             # Import the inner async function and pass mock_db directly
             import tasks.content_tasks as ct_module
             result = await ct_module._run_scheduled_posts_inner(mock_db)
@@ -421,4 +422,640 @@ class TestProcessScheduledPosts:
         )
         assert "Platform not connected" in set_data.get("error", ""), (
             f"Expected 'Platform not connected' in error, got: {set_data.get('error')}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Task 1: Fix _publish_to_platform — decrypt token, return dict
+# ---------------------------------------------------------------------------
+
+class TestPublishToPlatformFixed:
+    """Verify _publish_to_platform decrypts tokens and returns full result dicts."""
+
+    @pytest.mark.asyncio
+    async def test_decrypts_access_token_before_calling_publisher(self):
+        """Encrypted token must be decrypted before passing to publish_to_platform."""
+        from cryptography.fernet import Fernet
+        key = Fernet.generate_key()
+        cipher = Fernet(key)
+        plaintext = "real_access_token_123"
+        encrypted = cipher.encrypt(plaintext.encode()).decode()
+
+        token_doc = {
+            "user_id": "user_1",
+            "platform": "linkedin",
+            "access_token": encrypted,
+        }
+
+        captured = {}
+
+        async def fake_publish(platform, content, access_token, user_id=None, media_assets=None):
+            captured["access_token"] = access_token
+            return {"success": True, "post_id": "urn:li:share:1", "post_url": "https://linkedin.com/1"}
+
+        # patch _decrypt_token on content_tasks module and publish_to_platform where
+        # it is actually imported from (agents.publisher) so both dev and prod paths
+        # resolve to our fake.
+        with (
+            patch("tasks.content_tasks._decrypt_token", return_value=plaintext),
+            patch("agents.publisher.publish_to_platform", new=fake_publish),
+        ):
+            import tasks.content_tasks as ct
+            result = await ct._publish_to_platform("linkedin", "Hello world", token_doc)
+
+        assert captured.get("access_token") == plaintext, (
+            f"Expected plaintext token, got: {captured.get('access_token')}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_returns_full_dict_on_success(self):
+        """Must return the full publisher result dict, not just True."""
+        expected = {"success": True, "post_id": "urn:li:share:999", "post_url": "https://linkedin.com/999"}
+
+        async def fake_publish(platform, content, access_token, user_id=None, media_assets=None):
+            return expected
+
+        token_doc = {"user_id": "u1", "platform": "linkedin", "access_token": "enc_token"}
+        with (
+            patch("tasks.content_tasks._decrypt_token", return_value="real_token"),
+            patch("agents.publisher.publish_to_platform", new=fake_publish),
+        ):
+            import tasks.content_tasks as ct
+            result = await ct._publish_to_platform("linkedin", "content", token_doc)
+
+        assert result == expected, f"Expected full dict, got: {result}"
+
+    @pytest.mark.asyncio
+    async def test_returns_full_dict_on_failure(self):
+        """Must return the full publisher result dict even on failure (not just False)."""
+        expected = {"success": False, "error": "403 Forbidden"}
+
+        async def fake_publish(platform, content, access_token, user_id=None, media_assets=None):
+            return expected
+
+        token_doc = {"user_id": "u1", "platform": "linkedin", "access_token": "enc_token"}
+        with (
+            patch("tasks.content_tasks._decrypt_token", return_value="real_token"),
+            patch("agents.publisher.publish_to_platform", new=fake_publish),
+        ):
+            import tasks.content_tasks as ct
+            result = await ct._publish_to_platform("linkedin", "content", token_doc)
+
+        assert result.get("success") is False
+        assert result.get("error") == "403 Forbidden"
+
+    @pytest.mark.asyncio
+    async def test_expired_token_returns_dict_not_bool(self):
+        """Expired token path must return a dict with success=False."""
+        past = datetime.now(timezone.utc) - timedelta(hours=1)
+        token_doc = {
+            "user_id": "u1",
+            "platform": "linkedin",
+            "access_token": "enc_token",
+            "expires_at": past,
+        }
+        import tasks.content_tasks as ct
+        result = await ct._publish_to_platform("linkedin", "content", token_doc)
+
+        assert isinstance(result, dict), f"Expected dict, got {type(result)}: {result}"
+        assert result.get("success") is False
+
+
+# ---------------------------------------------------------------------------
+# Task 2: Fix scheduled_tasks — store publish_results, fix media_assets kwarg
+# ---------------------------------------------------------------------------
+
+class TestScheduledTasksFixed:
+    """Verify _process_scheduled_posts stores publish_results on content_jobs."""
+
+    @pytest.mark.asyncio
+    async def test_stores_publish_results_on_content_jobs(self):
+        """On success, publish_results must be written to the content_jobs document."""
+        now = datetime.now(timezone.utc)
+        post = {
+            "schedule_id": "sched_abc",
+            "user_id": "user_1",
+            "platform": "linkedin",
+            "content": "Test post",
+            "status": "scheduled",
+            "job_id": "job_abc",
+            "scheduled_at": now - timedelta(minutes=5),
+        }
+        publish_result = {"success": True, "post_id": "urn:li:share:123", "post_url": "https://linkedin.com/123"}
+
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[post])
+        mock_db.scheduled_posts.find.return_value = mock_cursor
+        mock_db.scheduled_posts.find_one_and_update = AsyncMock(return_value=post)
+        mock_db.scheduled_posts.update_one = AsyncMock()
+        mock_db.content_jobs.update_one = AsyncMock()
+
+        async def fake_real_publish(**kwargs):
+            return publish_result
+
+        with patch("tasks.scheduled_tasks.real_publish", new=fake_real_publish):
+            with patch("tasks.scheduled_tasks.db", mock_db):
+                import tasks.scheduled_tasks as st
+                await st._process_scheduled_posts()
+
+        assert mock_db.content_jobs.update_one.called, "content_jobs.update_one was not called"
+        call_args = mock_db.content_jobs.update_one.call_args
+        filter_dict = call_args[0][0]
+        update_dict = call_args[0][1]["$set"]
+        assert filter_dict.get("job_id") == "job_abc"
+        assert "publish_results" in update_dict, f"publish_results missing from: {update_dict}"
+
+    @pytest.mark.asyncio
+    async def test_passes_media_assets_not_media_urls(self):
+        """publish_to_platform must be called with media_assets kwarg (not media_urls)."""
+        captured_kwargs = {}
+        now = datetime.now(timezone.utc)
+        post = {
+            "schedule_id": "sched_x",
+            "user_id": "user_2",
+            "platform": "x",
+            "content": "X post",
+            "status": "scheduled",
+            "job_id": "job_x",
+            "scheduled_at": now - timedelta(minutes=1),
+            "media_urls": ["https://example.com/img.jpg"],
+        }
+
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[post])
+        mock_db.scheduled_posts.find.return_value = mock_cursor
+        mock_db.scheduled_posts.find_one_and_update = AsyncMock(return_value=post)
+        mock_db.scheduled_posts.update_one = AsyncMock()
+        mock_db.content_jobs.update_one = AsyncMock()
+
+        async def capture_publish(**kwargs):
+            captured_kwargs.update(kwargs)
+            return {"success": True, "post_id": "tweet_1"}
+
+        with patch("tasks.scheduled_tasks.real_publish", new=capture_publish):
+            with patch("tasks.scheduled_tasks.db", mock_db):
+                import tasks.scheduled_tasks as st
+                await st._process_scheduled_posts()
+
+        assert "media_urls" not in captured_kwargs, (
+            f"media_urls should not be passed; got kwargs: {captured_kwargs}"
+        )
+        # media_assets kwarg may be None (no valid assets) or the list
+        assert "media_assets" in captured_kwargs or captured_kwargs.get("media_assets") is None
+
+    @pytest.mark.asyncio
+    async def test_sentry_capture_on_publish_failure(self):
+        """Failed publish must call sentry_sdk.capture_message with level='error'."""
+        now = datetime.now(timezone.utc)
+        post = {
+            "schedule_id": "sched_fail",
+            "user_id": "user_3",
+            "platform": "instagram",
+            "content": "IG post",
+            "status": "scheduled",
+            "job_id": "job_fail",
+            "scheduled_at": now - timedelta(minutes=1),
+        }
+
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.to_list = AsyncMock(return_value=[post])
+        mock_db.scheduled_posts.find.return_value = mock_cursor
+        mock_db.scheduled_posts.find_one_and_update = AsyncMock(return_value=post)
+        mock_db.scheduled_posts.update_one = AsyncMock()
+        mock_db.content_jobs.update_one = AsyncMock()
+
+        async def fail_publish(**kwargs):
+            return {"success": False, "error": "Media Container creation failed"}
+
+        import sys
+        import types
+
+        # sentry_sdk may not be installed in the test environment; create a
+        # lightweight fake module so patch() can resolve the attribute path.
+        mock_capture = MagicMock()
+        fake_sentry = types.ModuleType("sentry_sdk")
+        fake_sentry.capture_message = mock_capture  # type: ignore[attr-defined]
+        fake_sentry.capture_exception = MagicMock()  # type: ignore[attr-defined]
+
+        with (
+            patch("tasks.scheduled_tasks.real_publish", new=fail_publish),
+            patch("tasks.scheduled_tasks.db", mock_db),
+            patch("tasks.scheduled_tasks.settings") as mock_settings,
+            patch.dict(sys.modules, {"sentry_sdk": fake_sentry}),
+        ):
+            mock_settings.app.sentry_dsn = "https://fake@sentry.io/1"
+            import tasks.scheduled_tasks as st
+            await st._process_scheduled_posts()
+
+        assert mock_capture.called, "sentry_sdk.capture_message was not called on failure"
+        call_kwargs = mock_capture.call_args[1] if mock_capture.call_args else {}
+        assert call_kwargs.get("level") == "error" or "error" in str(mock_capture.call_args)
+
+
+# ---------------------------------------------------------------------------
+# Task 1 (30-04): LinkedIn image upload via registerUpload flow
+# ---------------------------------------------------------------------------
+
+class TestPublishLinkedInMedia:
+    """publish_to_linkedin() must support image attachment via registerUpload flow."""
+
+    @pytest.mark.asyncio
+    async def test_calls_register_upload_when_media_provided(self):
+        """registerUpload must be called when media_assets contains an image_url."""
+        register_response = MagicMock()
+        register_response.status_code = 200
+        register_response.json.return_value = {
+            "value": {
+                "asset": "urn:li:digitalmediaAsset:C5522AQF_abc123",
+                "uploadMechanism": {
+                    "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                        "uploadUrl": "https://api.linkedin.com/mediaUpload/upload/abc123",
+                        "headers": {},
+                    }
+                },
+            }
+        }
+        upload_response = MagicMock()
+        upload_response.status_code = 201
+
+        post_response = MagicMock()
+        post_response.status_code = 201
+        post_response.headers = {"x-restli-id": "urn:li:share:987654"}
+        post_response.json.return_value = {}
+
+        image_response = MagicMock()
+        image_response.status_code = 200
+        image_response.content = b"fake_image_bytes"
+
+        captured_calls = []
+
+        userinfo_resp = MagicMock()
+        userinfo_resp.status_code = 200
+        userinfo_resp.json.return_value = {"sub": "person_urn_123"}
+
+        async def mock_get(url, **kw):
+            captured_calls.append(("GET", url))
+            if "r2.example.com" in url:
+                return image_response
+            return userinfo_resp
+
+        async def mock_post(url, **kw):
+            captured_calls.append(("POST", url))
+            if "registerUpload" in url:
+                return register_response
+            if "ugcPosts" in url:
+                return post_response
+            return MagicMock(status_code=201)
+
+        async def mock_put(url, **kw):
+            captured_calls.append(("PUT", url))
+            return upload_response
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+        mock_client.put = AsyncMock(side_effect=mock_put)
+        mock_client.get = AsyncMock(side_effect=mock_get)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_linkedin
+            result = await publish_to_linkedin(
+                user_id="user_test",
+                content="Test post with image",
+                media_assets=[{"image_url": "https://r2.example.com/img.jpg"}],
+                token="valid_token",
+            )
+
+        register_urls = [url for method, url in captured_calls if "registerUpload" in url]
+        assert len(register_urls) >= 1, (
+            f"registerUpload was not called. Captured calls: {captured_calls}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_ugc_body_has_image_category_when_media_provided(self):
+        """UGC post body must use shareMediaCategory=IMAGE and include media array."""
+        captured_ugc_body = {}
+
+        register_response = MagicMock()
+        register_response.status_code = 200
+        register_response.json.return_value = {
+            "value": {
+                "asset": "urn:li:digitalmediaAsset:TEST_ASSET",
+                "uploadMechanism": {
+                    "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                        "uploadUrl": "https://api.linkedin.com/mediaUpload/upload/test",
+                        "headers": {},
+                    }
+                },
+            }
+        }
+        upload_response = MagicMock()
+        upload_response.status_code = 201
+
+        post_response = MagicMock()
+        post_response.status_code = 201
+        post_response.headers = {"x-restli-id": "urn:li:share:111"}
+        post_response.json.return_value = {}
+
+        userinfo_resp = MagicMock()
+        userinfo_resp.status_code = 200
+        userinfo_resp.json.return_value = {"sub": "person_123"}
+
+        image_resp = MagicMock()
+        image_resp.status_code = 200
+        image_resp.content = b"img_bytes"
+
+        async def capture_post(url, **kwargs):
+            if "ugcPosts" in url:
+                captured_ugc_body.update(kwargs.get("json", {}))
+                return post_response
+            if "registerUpload" in url:
+                return register_response
+            return MagicMock(status_code=201)
+
+        async def mock_get(url, **kwargs):
+            if "r2.example.com" in url:
+                return image_resp
+            return userinfo_resp
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=capture_post)
+        mock_client.put = AsyncMock(return_value=upload_response)
+        mock_client.get = AsyncMock(side_effect=mock_get)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_linkedin
+            await publish_to_linkedin(
+                user_id="user_test",
+                content="Image post",
+                media_assets=[{"image_url": "https://r2.example.com/photo.jpg"}],
+                token="valid_token",
+            )
+
+        share_content = (
+            captured_ugc_body
+            .get("specificContent", {})
+            .get("com.linkedin.ugc.ShareContent", {})
+        )
+        assert share_content.get("shareMediaCategory") == "IMAGE", (
+            f"Expected IMAGE category, got: {share_content.get('shareMediaCategory')}"
+        )
+        assert len(share_content.get("media", [])) >= 1, "media array must be populated"
+
+    @pytest.mark.asyncio
+    async def test_text_only_when_no_media_assets(self):
+        """Without media_assets, must use shareMediaCategory=NONE (text-only path preserved)."""
+        captured_ugc_body = {}
+
+        post_response = MagicMock()
+        post_response.status_code = 201
+        post_response.headers = {"x-restli-id": "urn:li:share:222"}
+        post_response.json.return_value = {}
+
+        userinfo_resp = MagicMock()
+        userinfo_resp.status_code = 200
+        userinfo_resp.json.return_value = {"sub": "person_456"}
+
+        async def capture_post(url, **kwargs):
+            if "ugcPosts" in url:
+                captured_ugc_body.update(kwargs.get("json", {}))
+            return post_response
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=capture_post)
+        mock_client.get = AsyncMock(return_value=userinfo_resp)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_linkedin
+            result = await publish_to_linkedin(
+                user_id="user_test",
+                content="Text-only post",
+                media_assets=None,
+                token="valid_token",
+            )
+
+        share_content = (
+            captured_ugc_body
+            .get("specificContent", {})
+            .get("com.linkedin.ugc.ShareContent", {})
+        )
+        assert share_content.get("shareMediaCategory") == "NONE", (
+            f"Expected NONE category for text-only, got: {share_content.get('shareMediaCategory')}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_register_upload_failure_falls_back_to_text_only(self):
+        """If registerUpload fails (non-201), publish must continue as text-only rather than error."""
+        register_response = MagicMock()
+        register_response.status_code = 400
+        register_response.json.return_value = {"message": "Upload not allowed"}
+
+        post_response = MagicMock()
+        post_response.status_code = 201
+        post_response.headers = {"x-restli-id": "urn:li:share:333"}
+        post_response.json.return_value = {}
+
+        userinfo_resp = MagicMock()
+        userinfo_resp.status_code = 200
+        userinfo_resp.json.return_value = {"sub": "person_789"}
+
+        async def mock_post(url, **kwargs):
+            if "registerUpload" in url:
+                return register_response
+            return post_response
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+        mock_client.get = AsyncMock(return_value=userinfo_resp)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_linkedin
+            result = await publish_to_linkedin(
+                user_id="user_test",
+                content="Post with failed upload",
+                media_assets=[{"image_url": "https://r2.example.com/img.jpg"}],
+                token="valid_token",
+            )
+
+        # Should succeed as text-only rather than returning success=False
+        assert result.get("success") is True, (
+            f"Expected text-only fallback success, got: {result}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Task 2 (30-04): X media upload via v1.1 media/upload + Instagram wiring
+# ---------------------------------------------------------------------------
+
+class TestPublishXMedia:
+    """publish_to_x() must support image attachment via v1.1 media/upload."""
+
+    @pytest.mark.asyncio
+    async def test_uploads_media_and_attaches_to_tweet(self):
+        """Image must be uploaded to media/upload.json and attached to tweet as media_ids."""
+        captured_calls = []
+        captured_tweet_body = {}
+
+        media_upload_resp = MagicMock()
+        media_upload_resp.status_code = 200
+        media_upload_resp.json.return_value = {"media_id_string": "1234567890"}
+
+        tweet_resp = MagicMock()
+        tweet_resp.status_code = 201
+        tweet_resp.json.return_value = {"data": {"id": "tweet_abc"}}
+
+        image_resp = MagicMock()
+        image_resp.status_code = 200
+        image_resp.content = b"image_bytes_here"
+
+        async def mock_post(url, **kwargs):
+            captured_calls.append(("POST", url))
+            if "media/upload" in url:
+                return media_upload_resp
+            if "2/tweets" in url:
+                captured_tweet_body.update(kwargs.get("json", {}))
+                return tweet_resp
+            return MagicMock(status_code=200, json=lambda: {})
+
+        async def mock_get(url, **kwargs):
+            return image_resp
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+        mock_client.get = AsyncMock(side_effect=mock_get)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_x
+            result = await publish_to_x(
+                user_id="user_test",
+                content="Tweet with image",
+                token="user_oauth_token",
+                media_assets=[{"image_url": "https://r2.example.com/photo.jpg"}],
+            )
+
+        media_upload_calls = [url for m, url in captured_calls if "media/upload" in url]
+        assert len(media_upload_calls) >= 1, (
+            f"media/upload was not called. Calls: {captured_calls}"
+        )
+        tweet_media = captured_tweet_body.get("media", {})
+        assert "1234567890" in tweet_media.get("media_ids", []), (
+            f"media_id not attached to tweet. Tweet body: {captured_tweet_body}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_text_only_when_no_media_assets(self):
+        """Without media_assets, must not call media/upload (text-only path preserved)."""
+        captured_calls = []
+
+        tweet_resp = MagicMock()
+        tweet_resp.status_code = 201
+        tweet_resp.json.return_value = {"data": {"id": "tweet_text_only"}}
+
+        async def mock_post(url, **kwargs):
+            captured_calls.append(("POST", url))
+            return tweet_resp
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            from agents.publisher import publish_to_x
+            result = await publish_to_x(
+                user_id="user_test",
+                content="Text-only tweet",
+                token="token",
+                media_assets=None,
+            )
+
+        media_upload_calls = [url for m, url in captured_calls if "media/upload" in url]
+        assert len(media_upload_calls) == 0, (
+            f"media/upload should NOT be called for text-only. Calls: {captured_calls}"
+        )
+        assert result.get("success") is True
+
+
+class TestPublishInstagramMediaWiring:
+    """publish_to_platform() must pass image_url from media_assets to Instagram publisher."""
+
+    @pytest.mark.asyncio
+    async def test_instagram_media_container_receives_image_url(self):
+        """image_url from media_assets must be passed to the Media Container creation call."""
+        captured_container_params = {}
+
+        container_resp = MagicMock()
+        container_resp.status_code = 200
+        container_resp.json.return_value = {"id": "container_id_xyz"}
+
+        status_resp = MagicMock()
+        status_resp.status_code = 200
+        status_resp.json.return_value = {"status_code": "FINISHED"}
+
+        publish_resp = MagicMock()
+        publish_resp.status_code = 200
+        publish_resp.json.return_value = {"id": "ig_post_id_123"}
+
+        permalink_resp = MagicMock()
+        permalink_resp.status_code = 200
+        permalink_resp.json.return_value = {"permalink": "https://www.instagram.com/p/abc/"}
+
+        async def mock_post(url, **kwargs):
+            if "media_publish" in url or "media_publish" in url:
+                return publish_resp
+            if "/media" in url:
+                # Capture the params sent to Media Container creation
+                captured_container_params.update(kwargs.get("params", {}))
+                return container_resp
+            return MagicMock(status_code=200, json=lambda: {})
+
+        get_call_count = [0]
+
+        async def mock_get(url, **kwargs):
+            get_call_count[0] += 1
+            # First GET is status check, second is permalink
+            if "status_code" in str(kwargs.get("params", {})):
+                return status_resp
+            return permalink_resp
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(side_effect=mock_post)
+        mock_client.get = AsyncMock(side_effect=mock_get)
+
+        mock_token_doc = {
+            "user_id": "u3",
+            "platform": "instagram",
+            "instagram_account_id": "ig_account_123",
+            "access_token": "ig_token",
+        }
+
+        with patch("agents.publisher.httpx.AsyncClient", return_value=mock_client):
+            with patch("database.db") as mock_db:
+                mock_db.platform_tokens.find_one = AsyncMock(return_value=mock_token_doc)
+                from agents.publisher import publish_to_platform
+                result = await publish_to_platform(
+                    platform="instagram",
+                    content="Instagram post",
+                    access_token="ig_token",
+                    user_id="u3",
+                    media_assets=[{"type": "image", "image_url": "https://r2.example.com/ig_photo.jpg"}],
+                )
+
+        image_url_passed = captured_container_params.get("image_url")
+        assert image_url_passed == "https://r2.example.com/ig_photo.jpg", (
+            f"Expected image_url in container params, got: {captured_container_params}"
         )

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-ThookAI is an AI-powered content operating system for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an onboarding interview, then generate platform-specific content (LinkedIn, X, Instagram) via a 5-agent AI pipeline with proactive strategy recommendations. The platform handles scheduling, repurposing, analytics, billing, multi-model media orchestration (8 formats via Remotion), knowledge graph intelligence (LightRAG), and multi-user workspaces. Deployed to Render (backend) and Vercel (frontend). v2.0 shipped — n8n orchestration, Strategist Agent, Strategy Dashboard, Obsidian vault integration, 370+ new tests.
+ThookAI is an AI-powered content operating system for creators, founders, and agencies. Users build a "Persona Engine" (voice fingerprint) through an interactive onboarding experience, then generate platform-specific multi-format content (LinkedIn, X, Instagram) via a 5-agent AI pipeline with proactive strategy recommendations. The platform handles scheduling, repurposing, analytics, billing, multi-model media orchestration (8 formats via Remotion), knowledge graph intelligence (LightRAG), and multi-user workspaces. Deployed to Railway (backend) and Vercel (frontend) at thook.ai. v2.2 shipped — httpOnly auth, centralized apiFetch, CI strictness, 16 production fixes.
 
 ## Core Value
 
@@ -68,40 +68,66 @@ Proactive, personalized content creation at scale — the platform recommends wh
 - ✓ 95%+ billing coverage, 85%+ core coverage achieved — v2.1 Phase 17-19
 - ✓ 4 P0 bugs fixed via TDD (JWT fallback, atomic credits, webhook dedup, LightRAG lambda) — v2.1
 
+- ✓ CI strictness — removed all continue-on-error from ci.yml and e2e.yml — v2.2 Phase 21
+- ✓ httpOnly cookie auth migration (replaced localStorage JWT) + CSRF protection — v2.2 Phase 21
+- ✓ Centralized apiFetch replacing raw fetch() calls with timeout, retry, error handling — v2.2 Phase 22
+- ✓ Content download (text/images/zip) + redirect-to-platform compose URLs — v2.2 Phase 24
+- ✓ Playwright E2E verification (critical path, billing, agency, download/redirect) — v2.2 Phase 25
+- ✓ 16 production fixes shipped (compression auth fix, bcrypt, CORS, OAuth, Celery Beat, security) — v2.2 deployment
+
 ### Active
 
-<!-- v2.2: Frontend Hardening & Production Ship -->
+<!-- v3.0: Distribution-Ready Platform Rebuild -->
 
-- [ ] CI strictness — remove all continue-on-error from ci.yml and e2e.yml
-- [ ] httpOnly cookie auth migration (replace localStorage JWT)
-- [ ] Centralized apiFetch replacing 41 raw fetch() calls with timeout, retry, error handling
-- [ ] Frontend unit test suite (45+ tests across 10 files) with CI job
-- [ ] Content download (text/images/zip) + redirect-to-platform compose URLs
-- [ ] Full Playwright E2E verification + dependency audit + security sweep
-- [ ] Production ship checklist complete
+- [ ] Backend endpoint hardening — every route tested, validated, error-handled against production
+- [ ] Interactive onboarding reimagination — voice samples, writing analysis, visual identity
+- [ ] Multi-format content generation — LinkedIn (post/article/carousel), X (tweet/thread), Instagram (feed/reel/story)
+- [ ] Media generation pipeline — auto-images, carousels, video, voice narration via Remotion
+- [ ] Real social publishing end-to-end — LinkedIn UGC, X v2, Instagram Meta Graph with media
+- [ ] Smart scheduling — AI-optimized posting times, calendar view
+- [ ] Frontend core flows polish — auth, dashboard, content studio, settings
+- [ ] Design system & landing page — consistent design, conversion-optimized landing
+- [ ] Security & GDPR — penetration-ready, data export/deletion, cookie consent, privacy/terms
+- [ ] Performance, monitoring & launch checklist — API profiling, bundle optimization, E2E smoke test
 
 ### Out of Scope
 
-- M4: Interactive Onboarding redesign — deferred to future milestone
 - M5: Content DNA Fingerprinting — subsumed by Strategist Agent + LightRAG
-- M8: Multi-Language Engine (Sarvam AI, regional languages) — deferred to v3.0
-- M10: Platform-Native UX Shells (mobile apps) — deferred to v3.0
+- M8: Multi-Language Engine (Sarvam AI, regional languages) — deferred to v4.0
+- M10: Platform-Native UX Shells (mobile apps) — deferred to v4.0
 - M11: Extraordinary Features — deferred to future milestone
-- Full UI/UX redesign — incremental improvements only (Strategy Dashboard is new, rest evolves)
 - Real-time collaboration — not needed for solo creators / small agencies yet
+- A-roll / B-roll video editing — no codebase support, deferred to v4.0
+- Meme generation — no codebase support, deferred to v4.0
+- Platform-specific workspaces — agency workspaces exist but platform-specific deferred
 
-## Current Milestone: v2.2 Frontend Hardening & Production Ship
+## Current Milestone: v3.0 Distribution-Ready Platform Rebuild
 
-**Goal:** Harden the React frontend for production launch — CI strictness, httpOnly cookie auth, centralized API client, frontend unit tests, content download/redirect feature, final E2E verification and ship.
+**Goal:** Transform ThookAI from "code exists" to "every feature works perfectly end-to-end" — a new user can register, onboard interactively, generate multi-format content, schedule, and publish to real social accounts with zero errors. Ready for real users at scale.
+
+**Target features:**
+
+- Backend endpoint hardening (every route tested against production)
+- Interactive onboarding reimagination (voice, writing samples, visual identity)
+- Multi-format content generation (text, image, carousel, video, voice per platform)
+- Media generation pipeline (auto-images, Remotion compositions, voice narration)
+- Real social publishing (LinkedIn, X, Instagram with media)
+- Smart scheduling (AI-optimized times, calendar view)
+- Frontend core flows polish (auth, dashboard, content studio, settings)
+- Design system & conversion-optimized landing page
+- Security & GDPR compliance
+- Performance optimization & launch readiness
 
 ## Context
 
-- **v1.0 Stabilization shipped** — 8 phases, 22 plans, 57 requirements, all verified, 319+ tests
-- **Stable foundation**: Auth, onboarding, content pipeline, publishing, billing, media, analytics, workspaces all working E2E
-- **Tech stack evolving**: FastAPI + Motor + n8n (replacing Celery) + Redis + React + TailwindCSS + shadcn/ui
-- **New integrations for v2.0**: n8n (self-hosted), LightRAG, Obsidian CLI, Remotion (compositor), multi-model routing
-- **Deployed** to Render (backend) and Vercel (frontend)
-- **Existing media providers**: fal.ai, Luma, Runway, HeyGen, ElevenLabs, DALL-E — all to be orchestrated
+- **v1.0-v2.2 shipped** — 25 phases, 81+ plans, 1000+ tests, platform deployed and live
+- **Platform live** at thook.ai (Vercel) + Railway backend with MongoDB Atlas, Redis, R2, Stripe sandbox
+- **16 production fixes shipped** April 10 — auth, CORS, compression, bcrypt, OAuth, Celery Beat, security
+- **Tech stack**: FastAPI + Motor + Celery Beat + Redis + React + TailwindCSS + shadcn/ui + Remotion
+- **Working E2E**: register, login, onboarding, content generation, billing, templates, R2 uploads
+- **Needs verification/fixing**: frontend auth flow, persona generation, content quality, media generation, social publishing, many frontend pages
+- **Existing media providers**: fal.ai, Luma, Runway, HeyGen, ElevenLabs, DALL-E — all to be tested and wired
+- **Existing Remotion compositions**: ImageCarousel, Infographic, ShortFormVideo, StaticImageCard, TalkingHeadOverlay
 
 ## Constraints
 
@@ -115,24 +141,28 @@ Proactive, personalized content creation at scale — the platform recommends wh
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Stabilize before building new features | Previous rapid development created unreliable foundation | ✓ Good — all 57 requirements verified |
-| Include custom plan builder (PR #30) in stabilization | Pricing pivot is final direction, not experimental | ✓ Good — atomic credits + custom tiers working |
-| Start from dev branch | Has all 28 merged PRs — better to audit and fix than reapply from main | ✓ Good — avoided rebase complexity |
-| GSD workflow for granular task decomposition | Previous approach shipped fast but without per-fix verification | ✓ Good — 22 plans with verification loops caught real bugs |
-| TDD-first approach for phases 3-8 | Write failing tests → fix code → verify | ✓ Good — 319+ tests, 0 failures, caught JWT bug and race condition |
-| Parallel agent execution per wave | Independent plans run simultaneously | ✓ Good — significant time savings, merge conflicts minimal |
-| Replace Celery with n8n | Celery was fragile, n8n provides visual workflow orchestration + webhook triggers | — Pending |
-| Multi-model orchestration over single-model generation | Professional production approach — intelligence in planning/assembly | — Pending |
-| LightRAG complements Pinecone | Vector store for similarity, knowledge graph for relationships | — Pending |
-| Strategist Agent as breakthrough differentiator | No competitor has proactive content intelligence from user's own vault | — Pending |
+| Decision                                               | Rationale                                                                         | Outcome                                                                  |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Stabilize before building new features                 | Previous rapid development created unreliable foundation                          | ✓ Good — all 57 requirements verified                                    |
+| Include custom plan builder (PR #30) in stabilization  | Pricing pivot is final direction, not experimental                                | ✓ Good — atomic credits + custom tiers working                           |
+| Start from dev branch                                  | Has all 28 merged PRs — better to audit and fix than reapply from main            | ✓ Good — avoided rebase complexity                                       |
+| GSD workflow for granular task decomposition           | Previous approach shipped fast but without per-fix verification                   | ✓ Good — 22 plans with verification loops caught real bugs               |
+| TDD-first approach for phases 3-8                      | Write failing tests → fix code → verify                                           | ✓ Good — 319+ tests, 0 failures, caught JWT bug and race condition       |
+| Parallel agent execution per wave                      | Independent plans run simultaneously                                              | ✓ Good — significant time savings, merge conflicts minimal               |
+| Replace Celery with n8n                                | Celery was fragile, n8n provides visual workflow orchestration + webhook triggers | ⚠️ Revisit — Celery Beat restored in production (10 tasks), n8n deferred |
+| Multi-model orchestration over single-model generation | Professional production approach — intelligence in planning/assembly              | — Pending                                                                |
+| LightRAG complements Pinecone                          | Vector store for similarity, knowledge graph for relationships                    | — Pending                                                                |
+| Strategist Agent as breakthrough differentiator        | No competitor has proactive content intelligence from user's own vault            | — Pending                                                                |
+| Celery Beat restored over n8n                          | n8n deployment complexity; Celery Beat simpler for 10 scheduled tasks             | ✓ Good — running in production with 10 tasks                             |
+| Deploy to Railway (not Render)                         | Railway handles Python + worker processes better, $PORT auto-binding              | ✓ Good — backend stable on Railway                                       |
+| httpOnly cookies over localStorage JWT                 | Security best practice, prevents XSS token theft                                  | ✓ Good — cookie auth + CSRF working in production                        |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 **After each phase transition** (via `/gsd:transition`):
+
 1. Requirements invalidated? → Move to Out of Scope with reason
 2. Requirements validated? → Move to Validated with phase reference
 3. New requirements emerged? → Add to Active
@@ -140,10 +170,12 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? → Update if drifted
 
 **After each milestone** (via `/gsd:complete-milestone`):
+
 1. Full review of all sections
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after v2.1 milestone — Production Hardening shipped. 4 phases, 19 plans, 764+ new tests, 4 P0 TDD fixes, 95%+ billing coverage, Playwright E2E.*
+
+_Last updated: 2026-04-12 after v3.0 milestone start — Distribution-Ready Platform Rebuild. 10 phases (26-35), transforming existing code into production-quality MVP._

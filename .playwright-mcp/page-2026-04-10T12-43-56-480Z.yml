@@ -1,0 +1,21 @@
+- generic [ref=e405]:
+  - generic [ref=e406]:
+    - link "Thook" [ref=e407] [cursor=pointer]:
+      - /url: /
+      - img [ref=e409]
+      - generic [ref=e411]: Thook
+    - paragraph [ref=e412]: Your AI Creative Agency
+  - generic [ref=e413]:
+    - generic [ref=e414]:
+      - button "Sign In" [ref=e415] [cursor=pointer]
+      - button "Create Account" [ref=e416] [cursor=pointer]
+    - button "Continue with Google" [ref=e417] [cursor=pointer]:
+      - img [ref=e418]
+      - text: Continue with Google
+    - generic [ref=e425]: or
+    - generic [ref=e427]:
+      - textbox "Email address" [ref=e428]
+      - textbox "Password" [ref=e429]
+      - button "Forgot password?" [ref=e431] [cursor=pointer]
+      - button "Sign In" [ref=e432] [cursor=pointer]
+  - paragraph [ref=e433]: By continuing, you agree to ThookAI's Terms & Privacy Policy

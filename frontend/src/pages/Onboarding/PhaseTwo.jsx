@@ -12,7 +12,7 @@ const QUESTIONS = [
   { id: 6, type: "multi_choice", question: "How much time can you realistically give to content each week?", options: ["Under 1 hour", "1–3 hours", "3–5 hours", "5+ hours"], hint: "Be honest — Thook adjusts your output volume to match your capacity." },
 ];
 
-export default function PhaseTwo({ onComplete }) {
+export default function PhaseTwo({ onComplete, postsAnalysis, onBack }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [inputVal, setInputVal] = useState("");
@@ -37,12 +37,15 @@ export default function PhaseTwo({ onComplete }) {
   };
 
   const handleBack = () => {
-    if (currentQ === 0) return;
-    setDirection(-1);
-    setCurrentQ(currentQ - 1);
-    const prevAnswer = answers[currentQ - 1];
-    setInputVal(prevAnswer?.answer || "");
-    setAnswers(answers.slice(0, -1));
+    if (currentQ > 0) {
+      setDirection(-1);
+      setCurrentQ(currentQ - 1);
+      const prevAnswer = answers[currentQ - 1];
+      setInputVal(prevAnswer?.answer || "");
+      setAnswers(answers.slice(0, -1));
+    } else if (onBack) {
+      onBack(); // return to VisualPaletteStep (step 3)
+    }
   };
 
   return (
@@ -101,12 +104,10 @@ export default function PhaseTwo({ onComplete }) {
           <div className="max-w-lg w-full">
             {/* Question counter */}
             <div className="flex items-center justify-between mb-8">
-              <span className="text-xs font-mono text-zinc-600">{currentQ + 1} / {QUESTIONS.length}</span>
-              {currentQ > 0 && (
-                <button onClick={handleBack} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition-colors">
-                  <ChevronLeft size={14} /> Back
-                </button>
-              )}
+              <span className="font-mono text-xs text-zinc-600">Interview • {currentQ + 1} of {QUESTIONS.length}</span>
+              <button onClick={handleBack} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition-colors">
+                <ChevronLeft size={14} /> Back
+              </button>
             </div>
 
             {/* Question text */}

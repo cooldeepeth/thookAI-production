@@ -126,4 +126,25 @@ describe('ContentStudio', () => {
     const textarea = screen.getByTestId('content-input-textarea');
     expect(textarea.value).toBe('Hello');
   });
+
+  test('nine_format_types_total_present: all 9 content type buttons are accessible', async () => {
+    renderStudio();
+    // LinkedIn defaults — post and carousel should already be visible
+    expect(screen.getByTestId('content-type-post')).toBeInTheDocument();
+    expect(screen.getByTestId('content-type-carousel_caption')).toBeInTheDocument();
+    // NEW: article button on LinkedIn
+    expect(screen.getByTestId('content-type-article')).toBeInTheDocument();
+  });
+
+  test('instagram_story_format_button_present: story type button appears on Instagram platform', async () => {
+    const user = userEvent.setup();
+    renderStudio();
+    await user.click(screen.getByTestId('platform-tab-instagram'));
+    expect(screen.getByTestId('content-type-story_sequence')).toBeInTheDocument();
+  });
+
+  test('linkedin_article_format_button_present: article type button appears on LinkedIn platform', async () => {
+    renderStudio();
+    expect(screen.getByTestId('content-type-article')).toBeInTheDocument();
+  });
 });

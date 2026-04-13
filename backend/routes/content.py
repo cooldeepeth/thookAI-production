@@ -12,6 +12,8 @@ from auth_utils import get_current_user
 from agents.pipeline import run_agent_pipeline
 from agents.learning import capture_learning_signal
 from services.credits import deduct_credits, CreditOperation
+from services.sanitize import sanitize_text
+from config import settings
 
 # Celery task imports
 from tasks import is_redis_configured, get_task_status as celery_get_task_status
@@ -130,12 +132,14 @@ async def create_content(
     valid_video_styles = ("cinematic", "talking_head", "slideshow", "abstract")
     video_style = data.video_style if data.video_style in valid_video_styles else "cinematic"
 
+    # SECR-02: sanitize free-text field before storage (html.escape — XSS guard)
+    safe_raw_input = sanitize_text(data.raw_input)
     job = {
         "job_id": job_id,
         "user_id": current_user["user_id"],
         "platform": data.platform.lower(),
         "content_type": data.content_type,
-        "raw_input": data.raw_input,
+        "raw_input": safe_raw_input,
         "upload_ids": data.upload_ids or [],
         "status": "running",
         "current_agent": "commander",
@@ -374,20 +378,34 @@ async def generate_image(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
     
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    # (deduct_credits and CreditOperation imported at module level — see line 14)
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.IMAGE_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for image generation")
 
-    result = await designer_generate(
-        prompt=prompt,
-        style=data.style,
-        platform=job.get("platform", "linkedin"),
-        persona_card=persona_card,
-        provider=data.provider,
-        model=data.model
-    )
-    
+    try:
+        result = await designer_generate(
+            prompt=prompt,
+            style=data.style,
+            platform=job.get("platform", "linkedin"),
+            persona_card=persona_card,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as exc:
+        if settings.app.sentry_dsn:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.IMAGE_GENERATE.value,
+            source="image_generate_failure_refund",
+            description=f"Auto-refund for failed image generation on job {data.job_id}",
+        )
+        logger.error("Image generation failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Image generation failed. Credits refunded.")
+
     # Store in job's media_assets
     if result.get("generated"):
         await db.content_jobs.update_one(
@@ -403,7 +421,7 @@ async def generate_image(
                 "$set": {"updated_at": datetime.now(timezone.utc)}
             }
         )
-    
+
     return result
 
 
@@ -438,31 +456,72 @@ async def generate_carousel(
         key_points = thinker.get("key_insights", []) or ["Key point 1", "Key point 2", "Key point 3"]
     
     # Deduct credits for carousel generation
-    from services.credits import deduct_credits, CreditOperation
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.CAROUSEL_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for carousel generation")
 
-    result = await designer_carousel(
-        topic=topic,
-        key_points=key_points,
-        style=data.style,
-        platform=job.get("platform", "linkedin"),
-        persona_card=persona_card
-    )
-    
+    try:
+        result = await designer_carousel(
+            topic=topic,
+            key_points=key_points,
+            style=data.style,
+            platform=job.get("platform", "linkedin"),
+            persona_card=persona_card
+        )
+    except Exception as exc:
+        if settings.app.sentry_dsn:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.CAROUSEL_GENERATE.value,
+            source="carousel_generate_failure_refund",
+            description=f"Auto-refund for failed carousel generation on job {data.job_id}",
+        )
+        logger.error("Carousel generation failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Carousel generation failed. Credits refunded.")
+
     # Store carousel in job
     if result.get("generated"):
+        # Attempt Remotion render for downloadable MP4 carousel (Bug 4 fix — MDIA-02/05)
+        remotion_url = None
+        try:
+            import services.media_orchestrator as _media_orch
+            brand_color = persona_card.get("visual_aesthetic", {}).get("primary_color", "#2563EB")
+            remotion_result = await _media_orch._call_remotion(
+                "ImageCarousel",
+                {
+                    "slides": result.get("slides", []),
+                    "brandColor": brand_color,
+                    "fontFamily": "Plus Jakarta Sans",
+                },
+                "video",
+            )
+            remotion_url = remotion_result.get("url")
+            logger.info(f"Remotion carousel rendered: {remotion_url}")
+        except Exception as remotion_err:
+            # Remotion failure is non-fatal — slides are still returned
+            # This happens in dev environments where the Remotion sidecar is not running
+            logger.warning(
+                f"Remotion carousel render failed for job {data.job_id}: {remotion_err}. "
+                f"Returning per-slide images without Remotion URL."
+            )
+
+        # Merge remotion_url into result (even if None)
+        result["remotion_url"] = remotion_url
+
         await db.content_jobs.update_one(
             {"job_id": data.job_id},
             {
                 "$set": {
                     "carousel": result,
+                    "carousel.remotion_url": remotion_url,
                     "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
-    
+
     return result
 
 
@@ -516,33 +575,72 @@ async def narrate_content(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
 
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    # (deduct_credits and CreditOperation imported at module level — see line 14)
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VOICE_NARRATION)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for voice narration")
 
-    result = await generate_voice_narration(
-        text=content,
-        voice_id=data.voice_id,
-        stability=data.stability,
-        similarity_boost=data.similarity_boost,
-        provider=data.provider,
-        model=data.model
-    )
+    try:
+        result = await generate_voice_narration(
+            text=content,
+            voice_id=data.voice_id,
+            stability=data.stability,
+            similarity_boost=data.similarity_boost,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as exc:
+        if settings.app.sentry_dsn:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        from services.credits import add_credits
+        await add_credits(
+            current_user["user_id"],
+            CreditOperation.VOICE_NARRATION.value,
+            source="voice_narration_failure_refund",
+            description=f"Auto-refund for failed voice narration on job {data.job_id}",
+        )
+        logger.error("Voice narration failed for job %s: %s", data.job_id, exc)
+        raise HTTPException(status_code=500, detail="Voice narration failed. Credits refunded.")
 
-    # Store audio in job
+    # Store audio in job — upload bytes to R2 for stable URL (Bug 2 fix)
     if result.get("generated"):
+        import base64
+        from services.media_storage import upload_bytes_to_r2
+
+        audio_url = result.get("audio_url", "")
+        audio_base64 = result.get("audio_base64", "")
+
+        if audio_base64 and not audio_url.startswith("https://"):
+            try:
+                audio_bytes = base64.b64decode(audio_base64)
+                storage_key = f"{current_user['user_id']}/audio/{uuid.uuid4()}.mp3"
+                audio_url = upload_bytes_to_r2(storage_key, audio_bytes, "audio/mpeg")
+                logger.info(f"Voice audio uploaded to R2: {storage_key}")
+            except Exception as r2_err:
+                logger.warning(
+                    f"R2 upload failed for voice narration on job {data.job_id}: {r2_err}. "
+                    "Storing data URI as fallback."
+                )
+                # Keep audio_url as data: URI only as fallback when R2 is not configured
+                audio_url = result.get("audio_url", "")
+
         await db.content_jobs.update_one(
             {"job_id": data.job_id},
             {
                 "$set": {
-                    "audio_url": result.get("audio_url"),
+                    "audio_url": audio_url,
                     "voice_used": result.get("voice_used"),
                     "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
-    
+
+        # Return modified result with stable URL (not data: URI)
+        result_to_return = {k: v for k, v in result.items() if k != "audio_base64"}
+        result_to_return["audio_url"] = audio_url
+        return result_to_return
+
     return result
 
 
@@ -666,18 +764,34 @@ async def generate_video(
             logger.warning(f"Celery dispatch failed, falling back to sync: {e}")
 
     # Fallback: synchronous direct agent call — deduct credits first
-    from services.credits import deduct_credits, CreditOperation
+    # (deduct_credits and CreditOperation imported at module level — see line 14)
     deduct_result = await deduct_credits(current_user["user_id"], CreditOperation.VIDEO_GENERATE)
     if not deduct_result.get("success"):
         raise HTTPException(status_code=402, detail="Insufficient credits for video generation")
 
-    result = await video_generate(
-        prompt=prompt,
-        duration=data.duration,
-        provider=data.provider,
-        model=data.model
-    )
-    
+    try:
+        result = await video_generate(
+            prompt=prompt,
+            duration=data.duration,
+            provider=data.provider,
+            model=data.model
+        )
+    except Exception as e:
+        # Refund credits on failure (BACK-06 + Phase 29 gap fix)
+        from services.credits import add_credits
+        await add_credits(
+            current_user["user_id"],
+            50,
+            source="video_generation_failure_refund",
+        )
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_exception(e)
+        except ImportError:
+            pass
+        logger.error(f"Video generation failed: {e}")
+        raise HTTPException(status_code=500, detail="Video generation failed. Credits refunded.")
+
     # Store in job
     if result.get("generated"):
         await db.content_jobs.update_one(

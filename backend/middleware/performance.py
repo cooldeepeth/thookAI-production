@@ -255,7 +255,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
     Adds request timing headers and logs slow requests.
     """
     
-    def __init__(self, app, slow_request_threshold_ms: int = 1000):
+    def __init__(self, app, slow_request_threshold_ms: int = 500):
         super().__init__(app)
         self.slow_threshold = slow_request_threshold_ms
     

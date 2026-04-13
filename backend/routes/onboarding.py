@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import json
@@ -11,6 +11,7 @@ from database import db
 from auth_utils import get_current_user
 from services.llm_client import LlmChat, UserMessage
 from services.llm_keys import anthropic_available, chat_constructor_key
+from services.sanitize import sanitize_text
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -82,25 +83,30 @@ Return ONLY valid JSON — no markdown, no explanation, no code blocks. Use this
   "burnout_risk": "low OR medium OR high",
   "risk_tolerance": "conservative OR balanced OR bold",
   "strategy_maturity": 2,
-  "writing_style_notes": ["Specific note about their writing style", "Note about their voice patterns", "Note about their content structure"]
+  "writing_style_notes": ["Specific note about their writing style", "Note about their voice patterns", "Note about their content structure"],
+  "personality_traits": ["trait1", "trait2", "trait3"],
+  "voice_style": "Description of inferred voice style from writing patterns"
 }}
 
 Be specific and authentic based on their actual answers. No generic templates."""
 
 
 class ImportHistoryRequest(BaseModel):
-    posts: List[Dict[str, Any]]  # [{content, platform, date}, ...]
+    posts: List[Dict[str, Any]] = Field(min_length=1, max_length=50)  # [{content, platform, date}, ...]
     source: str = "manual_paste"  # manual_paste | linkedin_export | twitter_archive
 
 
 class AnalyzePostsRequest(BaseModel):
-    posts_text: str
+    posts_text: str = Field(min_length=1, description="At least one character required")
     platform: Optional[str] = "general"
 
 
 class GeneratePersonaRequest(BaseModel):
-    answers: List[Dict[str, Any]]
+    answers: List[Dict[str, Any]] = Field(min_length=1, description="At least one answer required")
     posts_analysis: Optional[str] = None
+    voice_sample_url: Optional[str] = None        # R2 URL or None if not recorded/uploaded
+    visual_preference: Optional[str] = None        # palette key: bold|minimal|corporate|creative|warm|dark
+    writing_samples: Optional[List[str]] = None    # raw post texts used for style analysis
 
 
 @router.get("/questions")
@@ -224,7 +230,15 @@ async def generate_persona(data: GeneratePersonaRequest, current_user: dict = De
             "strategy_maturity": persona_card.get("strategy_maturity", 2),
             "trust_in_thook": 0.5,
         },
-        "onboarding_answers": data.answers,
+        "voice_style": persona_card.get("voice_style", ""),
+        "visual_preferences": data.visual_preference or "minimal",
+        # SECR-02: sanitize free-text fields before storage (html.escape — XSS guard)
+        "writing_samples": [sanitize_text(s) if isinstance(s, str) else s for s in (data.writing_samples or [])],
+        "personality_traits": persona_card.get("personality_traits", []),
+        "onboarding_answers": [
+            {**a, "answer": sanitize_text(a.get("answer", ""))} if isinstance(a, dict) else a
+            for a in data.answers
+        ],
         "created_at": now,
         "updated_at": now,
     }
@@ -334,5 +348,7 @@ def _generate_smart_persona(answers: list) -> dict:
             f"Signature style: {style_words}",
             "Values authenticity and depth over surface-level takes",
             "Strong personal POV woven into every piece of content"
-        ]
+        ],
+        "personality_traits": ["Analytical", "Strategic", "Authentic"],
+        "voice_style": f"Professional {style_words} voice with structured insights",
     }

@@ -3,7 +3,7 @@ import secrets
 
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from jose import jwt
 from datetime import datetime, timezone, timedelta
 from pymongo import WriteConcern
@@ -12,6 +12,7 @@ from database import db
 from pymongo.errors import DuplicateKeyError
 from auth_utils import hash_password, verify_password, get_current_user, validate_password_strength
 from config import settings
+from services.sanitize import sanitize_text
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,8 @@ def _jwt_secret() -> str:
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str
-    name: str
+    password: str = Field(min_length=1, max_length=200)
+    name: str = Field(min_length=1, max_length=100)
 
 
 class LoginRequest(BaseModel):
@@ -92,8 +93,10 @@ async def register(data: RegisterRequest, response: Response):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user_id = f"user_{uuid.uuid4().hex[:12]}"
+    # SECR-02: sanitize free-text field before storage (html.escape — XSS guard)
+    safe_name = sanitize_text(data.name)
     user = {
-        "user_id": user_id, "email": data.email, "name": data.name,
+        "user_id": user_id, "email": data.email, "name": safe_name,
         "picture": None, "auth_method": "email",
         "hashed_password": hash_password(data.password),
         "plan": "starter", "subscription_tier": "starter",
@@ -258,6 +261,23 @@ async def export_user_data(current_user: dict = Depends(get_current_user)):
         {"user_id": user_id}, {"_id": 0}
     ).sort("created_at", -1).limit(200).to_list(200)
 
+    # SECR-09: additional GDPR collections — Plan 34-05
+    scheduled_posts = await db.scheduled_posts.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("scheduled_at", -1).limit(500).to_list(500)
+
+    media_assets = await db.media_assets.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(500).to_list(500)
+
+    workspace_memberships = await db.workspace_members.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).to_list(100)
+
+    authored_templates = await db.templates.find(
+        {"author_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(200).to_list(200)
+
     # Serialize datetimes to ISO strings
     def _serialize(obj):
         if isinstance(obj, datetime):
@@ -268,6 +288,7 @@ async def export_user_data(current_user: dict = Depends(get_current_user)):
 
     export = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
+        "note": "Export contains up to the 500 most recent records per collection. Contact support for full archives.",
         "user": user,
         "persona": persona,
         "content_jobs": jobs,
@@ -275,6 +296,10 @@ async def export_user_data(current_user: dict = Depends(get_current_user)):
         "connected_platforms": platforms,
         "feedback": feedback,
         "uploads": uploads,
+        "scheduled_posts": scheduled_posts,
+        "media_assets": media_assets,
+        "workspace_memberships": workspace_memberships,
+        "authored_templates": authored_templates,
     }
 
     return JSONResponse(
@@ -284,7 +309,7 @@ async def export_user_data(current_user: dict = Depends(get_current_user)):
 
 
 class DeleteAccountRequest(BaseModel):
-    confirm: str  # Must be "DELETE" to confirm
+    confirm: str = Field(min_length=1)  # Must be "DELETE" to confirm
 
 
 @router.post("/delete-account")

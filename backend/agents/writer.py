@@ -6,10 +6,15 @@ from services.llm_keys import anthropic_available, chat_constructor_key
 
 logger = logging.getLogger(__name__)
 
-PLATFORM_RULES = {
-    "linkedin": "LinkedIn post (max 3000 chars). Use line breaks generously. No hashtag spam — max 3-5 relevant hashtags at the end.",
-    "x": "X (Twitter) post or thread. Single tweet = max 280 chars. Thread: number each tweet '1/ 2/ 3/' etc. Be punchy and direct.",
-    "instagram": "Instagram caption (max 2200 chars). Can use more hashtags (10-15). Emoji use is acceptable. End with call-to-action.",
+FORMAT_RULES = {
+    "post": "LinkedIn text post (max 3,000 chars). Line breaks are essential — every 2-3 sentences. Hook in first line. Max 3-5 hashtags at the end. No salesy language.",
+    "article": "LinkedIn long-form article (min 600 words, max 3,000). Start with a compelling headline (H1-style bold first line). Use ## section headers. End with a strong conclusion and question CTA. No hashtags in articles.",
+    "carousel_caption": "LinkedIn carousel intro post (max 1,500 chars). This is the text that appears with a multi-slide carousel. Tease the slides: '5 lessons inside. Swipe →'. Emoji sparingly. Max 3 hashtags.",
+    "tweet": "X/Twitter single tweet. HARD LIMIT: 280 characters total including spaces. DO NOT exceed this. Write shorter if needed. Punchy. No fluff. One idea only. No hashtags unless essential (max 1).",
+    "thread": "X/Twitter thread (3-8 tweets). Number each tweet: '1/' through 'n/'. Each tweet MUST be under 280 chars. First tweet = hook or bold claim. Last tweet = summary + CTA. Each tweet stands alone.",
+    "feed_caption": "Instagram feed caption (max 2,200 chars). Conversational opener. 10-15 relevant hashtags at the end after two blank lines. Include a call-to-action. Emojis welcome but not excessive.",
+    "reel_caption": "Instagram Reel. Caption: 1-2 sentence hook (under 125 chars visible before 'more'). Script: bullet-point talking points for the reel video (on-screen text suggestions). End with 8-12 hashtags.",
+    "story_sequence": "Instagram Story sequence (3-5 slides). Each slide: 1-3 short lines max (stories are read in 2-3 seconds). Format output EXACTLY as:\nSlide 1: [hook or question]\nSlide 2: [key point]\nSlide 3: [CTA or reveal]\nAdd Slide 4 and Slide 5 if the topic needs it. Use poll or question suggestions where natural.",
 }
 
 # Regional English configuration for Writer agent
@@ -201,7 +206,7 @@ async def run_writer(
             key_insight=thinker_output.get("key_insight", ""),
             cta_approach=commander_output.get("cta_approach", "question"),
             research=scout_output.get("findings", "")[:800],
-            platform_rules=PLATFORM_RULES.get(platform.lower(), PLATFORM_RULES["linkedin"]),
+            platform_rules=FORMAT_RULES.get(content_type, FORMAT_RULES.get(platform.lower(), "")),
             word_count=commander_output.get("estimated_word_count", 200)
         )
 

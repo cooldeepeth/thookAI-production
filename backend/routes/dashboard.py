@@ -493,6 +493,10 @@ class ScheduleContentRequest(BaseModel):
     platforms: List[str]
 
 
+class RescheduleRequest(BaseModel):
+    new_scheduled_at: datetime
+
+
 # ============ PLANNER ENDPOINTS ============
 
 @router.get("/schedule/optimal-times")
@@ -592,6 +596,179 @@ async def get_upcoming_scheduled(
     return {
         "scheduled": scheduled,
         "total": len(scheduled)
+    }
+
+
+@router.get("/schedule/calendar")
+async def get_calendar_data(
+    year: int = Query(..., ge=2024, le=2030, description="Year (e.g. 2026)"),
+    month: int = Query(..., ge=1, le=12, description="Month 1-12"),
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Get all scheduled + published posts for a given calendar month.
+
+    Reads from scheduled_posts collection (authoritative publishing state).
+    Enriches with content preview from content_jobs.
+    Used by ContentCalendar.jsx grid rendering.
+    """
+    # NOTE: Lazy import of database module so patch("database.db", mock) works in tests
+    import database as _db_module
+    _db = _db_module.db
+
+    user_id = current_user["user_id"]
+    from calendar import monthrange
+    _, last_day = monthrange(year, month)
+    start = datetime(year, month, 1, tzinfo=timezone.utc)
+    end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+
+    cursor = _db.scheduled_posts.find(
+        {
+            "user_id": user_id,
+            "scheduled_at": {"$gte": start, "$lte": end},
+            "status": {"$in": ["scheduled", "pending", "publishing", "published", "failed"]},
+        },
+        {
+            "_id": 0,
+            "schedule_id": 1,
+            "job_id": 1,
+            "platform": 1,
+            "scheduled_at": 1,
+            "status": 1,
+            "published_at": 1,
+        },
+        sort=[("scheduled_at", 1)],
+    )
+
+    posts = await cursor.to_list(length=200)
+
+    # Batch-enrich with content preview from content_jobs (one lookup per unique job_id)
+    job_ids = list({p["job_id"] for p in posts if p.get("job_id")})
+    jobs_map: Dict[str, Any] = {}
+    if job_ids:
+        async for job in _db.content_jobs.find(
+            {"job_id": {"$in": job_ids}},
+            {"_id": 0, "job_id": 1, "final_content": 1, "content_type": 1},
+        ):
+            jobs_map[job["job_id"]] = job
+
+    enriched = []
+    for p in posts:
+        job = jobs_map.get(p.get("job_id"), {})
+        content = job.get("final_content", "")
+        enriched.append({
+            "schedule_id": p.get("schedule_id"),
+            "job_id": p.get("job_id"),
+            "platform": p.get("platform"),
+            "status": p.get("status"),
+            "scheduled_at": p["scheduled_at"].isoformat() if p.get("scheduled_at") else None,
+            "published_at": (
+                p["published_at"].isoformat()
+                if p.get("published_at") and hasattr(p["published_at"], "isoformat")
+                else p.get("published_at")
+            ),
+            "preview": content[:100] + "..." if len(content) > 100 else content,
+            "content_type": job.get("content_type"),
+        })
+
+    return {"posts": enriched, "year": year, "month": month}
+
+
+@router.patch("/schedule/{schedule_id}/reschedule")
+async def reschedule_post(
+    schedule_id: str,
+    body: RescheduleRequest,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Reschedule a post to a new time.
+
+    Atomically:
+    1. Cancels the existing scheduled_posts record (sets status=cancelled)
+    2. Inserts a new scheduled_posts record with a new schedule_id + new scheduled_at
+    3. Updates content_jobs.scheduled_at to reflect the new time
+
+    Only posts with status in [scheduled, pending] can be rescheduled.
+    """
+    from fastapi import HTTPException
+    # NOTE: Lazy import of database module so patch("database.db", mock) works in tests
+    import database as _db_module
+    _db = _db_module.db
+
+    user_id = current_user["user_id"]
+    now = datetime.now(timezone.utc)
+
+    # Validate new time is in the future
+    if body.new_scheduled_at.tzinfo is None:
+        body_time = body.new_scheduled_at.replace(tzinfo=timezone.utc)
+    else:
+        body_time = body.new_scheduled_at
+
+    if body_time <= now:
+        raise HTTPException(status_code=400, detail="New scheduled time must be in the future")
+
+    # Find existing record and verify ownership
+    post = await _db.scheduled_posts.find_one({
+        "schedule_id": schedule_id,
+        "user_id": user_id,
+    })
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Scheduled post not found")
+
+    if post["status"] not in ["scheduled", "pending"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot reschedule a post with status '{post['status']}'. "
+                   "Only 'scheduled' or 'pending' posts can be rescheduled."
+        )
+
+    # Step 1: Cancel the old record atomically
+    cancel_result = await _db.scheduled_posts.update_one(
+        {"schedule_id": schedule_id, "status": {"$in": ["scheduled", "pending"]}},
+        {"$set": {"status": "cancelled", "cancelled_at": now, "updated_at": now}},
+    )
+
+    if cancel_result.modified_count == 0:
+        # Race condition: another worker already processed it
+        raise HTTPException(
+            status_code=409,
+            detail="Post was already processed. Please refresh and try again."
+        )
+
+    # Step 2: Insert new record with new schedule_id + new time
+    new_schedule_id = f"sch_{uuid.uuid4().hex[:12]}"
+    new_doc = {
+        "schedule_id": new_schedule_id,
+        "user_id": user_id,
+        "job_id": post.get("job_id"),
+        "platform": post.get("platform"),
+        "final_content": post.get("final_content", ""),
+        "media_assets": post.get("media_assets", []),
+        "scheduled_at": body_time,
+        "status": "scheduled",
+        "created_at": now,
+    }
+    await _db.scheduled_posts.insert_one(new_doc)
+
+    # Step 3: Update content_jobs.scheduled_at so /schedule/upcoming stays consistent
+    job_id = post.get("job_id")
+    if job_id:
+        await _db.content_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"scheduled_at": body_time, "updated_at": now}},
+        )
+
+    logger.info(
+        "Rescheduled post %s -> new schedule_id=%s new_time=%s",
+        schedule_id, new_schedule_id, body_time.isoformat()
+    )
+
+    return {
+        "rescheduled": True,
+        "old_schedule_id": schedule_id,
+        "new_schedule_id": new_schedule_id,
+        "new_scheduled_at": body_time.isoformat(),
+        "platform": post.get("platform"),
+        "job_id": job_id,
     }
 
 

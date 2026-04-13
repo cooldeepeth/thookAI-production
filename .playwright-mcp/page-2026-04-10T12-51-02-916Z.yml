@@ -1,0 +1,36 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e9]: Thook
+    - generic [ref=e10]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: "1"
+        - generic [ref=e14]: Profile Analysis
+      - generic [ref=e17]:
+        - generic [ref=e18]: "2"
+        - generic [ref=e19]: Interview
+      - generic [ref=e22]:
+        - generic [ref=e23]: "3"
+        - generic [ref=e24]: Persona Reveal
+    - button "Skip for now" [ref=e25] [cursor=pointer]
+  - generic [ref=e29]:
+    - generic [ref=e30]:
+      - paragraph [ref=e31]: Phase 1 of 3
+      - heading "Do you have existing content?" [level=2] [ref=e32]
+      - paragraph [ref=e33]: Sharing your past posts gives Thook a head start on learning your voice. You can skip this if you're just starting out.
+    - generic [ref=e34]:
+      - button "I'm an existing creator Paste some posts and we'll analyze your writing style. Gives your Persona Engine a stronger start. Recommended" [ref=e35] [cursor=pointer]:
+        - img [ref=e37]
+        - heading "I'm an existing creator" [level=3] [ref=e40]
+        - paragraph [ref=e41]: Paste some posts and we'll analyze your writing style. Gives your Persona Engine a stronger start.
+        - generic [ref=e42]:
+          - text: Recommended
+          - img [ref=e43]
+      - button "I'm just starting out No posts yet? No problem. We'll build your Persona through a short interview instead. Skip to interview" [ref=e45] [cursor=pointer]:
+        - img [ref=e47]
+        - heading "I'm just starting out" [level=3] [ref=e50]
+        - paragraph [ref=e51]: No posts yet? No problem. We'll build your Persona through a short interview instead.
+        - generic [ref=e52]:
+          - text: Skip to interview
+          - img [ref=e53]

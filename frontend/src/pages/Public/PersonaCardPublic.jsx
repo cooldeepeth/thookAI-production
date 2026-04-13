@@ -11,7 +11,7 @@ const ARCHETYPE_GRADIENTS = {
   Educator: 'from-cyan-500/20 via-cyan-400/10 to-transparent',
   Storyteller: 'from-violet-500/20 via-violet-400/10 to-transparent',
   Provocateur: 'from-pink-500/20 via-pink-400/10 to-transparent',
-  Builder: 'from-lime-500/20 via-lime-400/10 to-transparent',
+  Builder: 'from-lime/20 via-lime/10 to-transparent',
 };
 
 const ARCHETYPE_COLORS = {

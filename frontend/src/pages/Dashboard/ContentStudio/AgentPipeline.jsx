@@ -39,7 +39,7 @@ export default function AgentPipeline({ job, platform, rawInput }) {
       </div>
 
       {/* Agent cards */}
-      <div className="space-y-3">
+      <div className="space-y-3" aria-live="polite" aria-label="Generation progress">
         {AGENTS.map((agent, i) => {
           const status = getAgentStatus(agent.key, currentAgent, jobStatus);
           const summary = summaries[agent.key];
@@ -71,7 +71,7 @@ export default function AgentPipeline({ job, platform, rawInput }) {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <p className={`text-sm font-semibold ${status === "done" ? "text-white" : status === "running" ? "text-white" : "text-zinc-600"}`}>
+                    <p className={`text-sm font-bold ${status === "done" ? "text-white" : status === "running" ? "text-white" : "text-zinc-600"}`}>
                       {agent.name}
                     </p>
                     <span className={`text-[10px] font-mono rounded-full px-1.5 py-0.5 ${

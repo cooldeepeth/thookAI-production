@@ -49,7 +49,7 @@ const ARCHETYPE_CONFIG = {
     bar: "bg-pink-400",
   },
   Builder: {
-    gradient: "from-lime-500/20 via-lime-400/10 to-transparent",
+    gradient: "from-lime/20 via-lime/10 to-transparent",
     text: "text-lime",
     bg: "bg-lime/10",
     border: "border-lime/30",
@@ -143,9 +143,7 @@ function AnalysisLoader() {
             <div
               key={i}
               className={`h-1 rounded-full transition-all duration-500 ${
-                i <= step
-                  ? "w-6 bg-lime"
-                  : "w-2 bg-white/10"
+                i <= step ? "w-6 bg-lime" : "w-2 bg-white/10"
               }`}
             />
           ))}
@@ -185,7 +183,7 @@ function PersonaCardResult({ card, name, cardId }) {
   };
 
   const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-    `I just discovered my Creator DNA: "${card.writing_voice_descriptor}" ${card.personality_archetype}.\n\nFind yours for free:`
+    `I just discovered my Creator DNA: "${card.writing_voice_descriptor}" ${card.personality_archetype}.\n\nFind yours for free:`,
   )}&url=${encodeURIComponent(shareUrl)}`;
 
   const linkedinShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
@@ -203,7 +201,9 @@ function PersonaCardResult({ card, name, cardId }) {
         className={`bg-[#0A0A0A] border border-white/10 rounded-3xl overflow-hidden ${cfg.glow}`}
       >
         {/* Header with gradient */}
-        <div className={`p-8 pb-6 bg-gradient-to-br ${cfg.gradient} border-b border-white/5`}>
+        <div
+          className={`p-8 pb-6 bg-gradient-to-br ${cfg.gradient} border-b border-white/5`}
+        >
           <div className="flex items-center gap-4">
             <div
               className={`w-16 h-16 rounded-2xl ${cfg.bg} flex items-center justify-center ring-2 ${cfg.ring}`}
@@ -249,7 +249,9 @@ function PersonaCardResult({ card, name, cardId }) {
                     Niche
                   </span>
                 </div>
-                <p className="text-white text-sm">{card.content_niche_signature}</p>
+                <p className="text-white text-sm">
+                  {card.content_niche_signature}
+                </p>
               </div>
             )}
             {card.audience_vibe && (
@@ -518,7 +520,7 @@ export default function ViralCard() {
     setError(null);
     setAnalyzing(true);
     try {
-      const res = await apiFetch('/api/viral-card/analyze', {
+      const res = await apiFetch("/api/viral-card/analyze", {
         method: "POST",
         body: JSON.stringify({
           posts_text: postsText,
@@ -551,10 +553,10 @@ export default function ViralCard() {
     charCount === 0
       ? "text-zinc-600"
       : charCount < 100
-      ? "text-red-400"
-      : charCount < 500
-      ? "text-amber-400"
-      : "text-lime";
+        ? "text-red-400"
+        : charCount < 500
+          ? "text-amber-400"
+          : "text-lime";
 
   // ── Loading existing card ──────────────────────────
   if (loadingCard) {
@@ -594,10 +596,7 @@ export default function ViralCard() {
           >
             Sign in
           </Link>
-          <Link
-            to="/auth"
-            className="btn-primary text-sm py-2 px-5"
-          >
+          <Link to="/auth" className="btn-primary text-sm py-2 px-5">
             Get started
           </Link>
         </div>
@@ -649,7 +648,9 @@ export default function ViralCard() {
                 className="inline-flex items-center gap-2 bg-lime/10 border border-lime/20 rounded-full px-4 py-1.5 text-sm"
               >
                 <Sparkles size={14} className="text-lime" />
-                <span className="text-lime font-medium">Free - No signup required</span>
+                <span className="text-lime font-medium">
+                  Free - No signup required
+                </span>
               </motion.div>
               <motion.h1
                 initial={{ opacity: 0, y: 16 }}
@@ -657,8 +658,7 @@ export default function ViralCard() {
                 transition={{ delay: 0.15 }}
                 className="font-display font-bold text-4xl md:text-5xl text-white leading-tight"
               >
-                Discover Your{" "}
-                <span className="gradient-text">Creator DNA</span>
+                Discover Your <span className="gradient-text">Creator DNA</span>
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 12 }}
@@ -741,7 +741,9 @@ export default function ViralCard() {
                 />
                 <div className="flex items-center justify-between mt-2">
                   <p className={`text-xs ${charCountColor} transition-colors`}>
-                    {charCount > 0 ? `${charCount.toLocaleString()} characters` : "Min 100 characters"}
+                    {charCount > 0
+                      ? `${charCount.toLocaleString()} characters`
+                      : "Min 100 characters"}
                     {charCount > 0 && charCount < 100 && (
                       <span className="text-zinc-600 ml-1">
                         ({100 - charCount} more needed)
@@ -814,9 +816,7 @@ export default function ViralCard() {
               Thook AI
             </span>
           </div>
-          <p className="text-zinc-700 text-xs">
-            Your AI Creative Agency.
-          </p>
+          <p className="text-zinc-700 text-xs">Your AI Creative Agency.</p>
           <div className="flex gap-5 text-xs text-zinc-600">
             <Link to="/" className="hover:text-white transition-colors">
               Home

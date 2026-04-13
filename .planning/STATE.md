@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Frontend Hardening & Production Ship
+milestone: v3.0
+milestone_name: Distribution-Ready Platform Rebuild
 status: executing
-stopped_at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
-last_updated: "2026-04-04T01:59:37.283Z"
-last_activity: 2026-04-04
+stopped_at: "Checkpoint 31-04: awaiting human-verify of ContentCalendar smart scheduling"
+last_updated: "2026-04-12T20:54:01.552Z"
+last_activity: 2026-04-12 -- Phase 35 execution started
 progress:
-  total_phases: 17
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
-  percent: 0
+  total_phases: 27
+  completed_phases: 8
+  total_plans: 57
+  completed_plans: 41
+  percent: 72
 ---
 
 # Project State
@@ -21,37 +21,37 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Every feature that exists in the codebase must actually work end-to-end — a user can sign up, onboard, generate content, schedule, publish, pay, and manage their account without hitting broken flows.
-**Current focus:** Phase 25 — e2e-verification-production-ship
+**Current focus:** Phase 35 — performance-monitoring-launch
 
 ## Current Position
 
-Phase: 25
-Plan: Not started
-Status: Executing Phase 25
-Last activity: 2026-04-04
+Phase: 35 (performance-monitoring-launch) — EXECUTING
+Plan: 1 of 7
+Status: Executing Phase 35
+Last activity: 2026-04-12 -- Phase 35 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 4
 - Average duration: -
 - Total execution time: 0 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
+| ----- | ----- | ----- | -------- |
+| 31    | 4     | -     | -        |
 
 **Recent Trend:**
 
 - Last 5 plans: none yet
 - Trend: -
 
-*Updated after each plan completion*
+_Updated after each plan completion_
 | Phase 18-security-auth P04 | 2 | 1 tasks | 2 files |
 | Phase 19-core-features P02 | 3 | 1 tasks | 2 files |
 | Phase 19-core-features P03 | 5 | 2 tasks | 4 files |
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 23 P01 | 3 | 2 tasks | 6 files |
 | Phase 23 P03 | 17 | 2 tasks | 7 files |
 | Phase 23 P02 | 92 | 2 tasks | 5 files |
+| Phase 31 P04 | 2 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,7 @@ Recent decisions affecting current work:
 - [Phase 23-03]: react-router-dom v7.13.2 main field (dist/main.js) missing — Jest 27 needs explicit moduleNameMapper to dist/index.js; same for react-router/dom subpath
 - [Phase 23]: AbortError timeout test: stub global.fetch (not MSW never-resolving handler) because MSW v2 Node mode does not propagate AbortError from intercepted handlers
 - [Phase 23]: EventSource mock: re-assign in beforeEach (not module level) to survive resetMocks: true auto-reset between tests
+- [Phase 31]: fetchCalendarData depends on currentMonth so month navigation auto-triggers re-fetch
 
 ### Pending Todos
 
@@ -112,11 +114,11 @@ None yet.
 - CONCERNS.md documents race condition in credit deduction (credits.py) — fix required in Phase 5
 - Celery files exist (celery_app.py, celeryconfig.py) but Procfile missing worker/beat entries — confirm in Phase 2
 - Publishing placeholder in content_tasks.py fallback path — must be replaced in Phase 5
-- 20+ worktree-agent-* branches must be deleted before any new branches are created — Phase 1 prerequisite
+- 20+ worktree-agent-\* branches must be deleted before any new branches are created — Phase 1 prerequisite
 - Stripe Price IDs are blank in .env.example — owner must create Stripe products; flag in Phase 5
 
 ## Session Continuity
 
-Last session: 2026-04-04T00:06:39.863Z
-Stopped at: Completed 23-frontend-unit-test-suite/23-02-PLAN.md
+Last session: 2026-04-12T13:08:40.121Z
+Stopped at: Checkpoint 31-04: awaiting human-verify of ContentCalendar smart scheduling
 Resume file: None

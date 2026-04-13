@@ -269,12 +269,15 @@ class TestXSSPrevention:
     """
 
     @pytest.mark.asyncio
-    async def test_register_name_xss_stored_as_literal_string(self):
+    async def test_register_name_xss_is_html_escaped_before_storage(self):
         """
-        Register with name=<script>alert(1)</script>.
-        The name is stored as-is; the API returns the literal string in JSON.
+        SECR-02: Register with name=<script>alert(1)</script>.
+        Plan 34-01 added sanitize_text() via services.sanitize. The name must
+        be HTML-escaped (html.escape) BEFORE it is stored in MongoDB, so the
+        stored and returned value is the escaped form, never the raw tag.
         """
         xss_payload = "<script>alert(1)</script>"
+        expected_escaped = "&lt;script&gt;alert(1)&lt;/script&gt;"
         captured_doc: dict = {}
 
         async def capture_insert(doc):
@@ -301,16 +304,21 @@ class TestXSSPrevention:
                     },
                 )
 
-        # Registration succeeds with XSS string
         assert resp.status_code in (200, 201), (
             f"Expected success, got {resp.status_code}: {resp.text}"
         )
-        # Verify the name in the JSON response is the literal XSS string
-        body = resp.json()
-        assert body.get("name") == xss_payload, (
-            f"Name in response should be literal XSS string, got: {body.get('name')}"
+        # The stored name must be the HTML-escaped form — not the raw tag.
+        assert captured_doc.get("name") == expected_escaped, (
+            f"Stored name must be HTML-escaped, got: {captured_doc.get('name')!r}"
         )
-        # Verify content-type is JSON (not HTML that would execute the script)
+        assert "<script>" not in captured_doc.get("name", ""), (
+            "Raw <script> tag must never be present in the stored name"
+        )
+        # The API response reflects the stored (escaped) form.
+        body = resp.json()
+        assert body.get("name") == expected_escaped, (
+            f"Response name must be escaped, got: {body.get('name')!r}"
+        )
         assert "application/json" in resp.headers.get("content-type", ""), (
             f"Response must be application/json, got: {resp.headers.get('content-type')}"
         )
@@ -607,3 +615,46 @@ class TestRequestSizeLimits:
             f"MAX_BODY_SIZE must be {expected} (10MB), "
             f"got {InputValidationMiddleware.MAX_BODY_SIZE}"
         )
+
+
+# ---------------------------------------------------------------------------
+# SECR-02 / ROADMAP success criterion 1: OWASP 10-payload parametrized audit
+# ---------------------------------------------------------------------------
+
+OWASP_XSS_PAYLOADS = [
+    "<script>alert(1)</script>",
+    "<ScRiPt>alert(1)</ScRiPt>",
+    "<img src=x onerror=alert(1)>",
+    "<svg onload=alert(1)>",
+    "javascript:alert(1)",
+    "&#60;script&#62;alert(1)&#60;/script&#62;",
+    "<iframe src='javascript:alert(1)'></iframe>",
+    '<a href="javascript:alert(1)">click</a>',
+    "<body onload=alert(1)>",
+    "<math><mtext></form><form><mglyph><svg><mtext><textarea><a title=\"</textarea><img src onerror=alert(1)>\"",
+]
+
+
+@pytest.mark.parametrize("payload", OWASP_XSS_PAYLOADS)
+def test_owasp_xss_payloads_are_html_escaped_by_sanitize_text(payload: str):
+    """
+    SECR-02 + ROADMAP Success Criterion 1: ThookAI must reject or HTML-escape
+    at least 10 distinct OWASP XSS payloads. The sanitize_text() helper is the
+    single enforcement point — every route that accepts free-text user input
+    routes through it before writing to MongoDB.
+
+    This is a unit test of the sanitizer itself (no HTTP round-trip). The
+    integration tests above exercise the same code path through the actual
+    register endpoint.
+    """
+    from services.sanitize import sanitize_text
+
+    result = sanitize_text(payload)
+    # The raw opening `<script>` tag must NEVER survive sanitization.
+    assert "<script>" not in result, f"Raw <script> survived: {result!r}"
+    assert "<ScRiPt>" not in result, f"Raw <ScRiPt> survived: {result!r}"
+    # Angle brackets must all be escaped.
+    assert "<" not in result, f"Unescaped < survived: {result!r}"
+    assert ">" not in result, f"Unescaped > survived: {result!r}"
+    # And quotes (html.escape with quote=True).
+    assert '"' not in result, f"Unescaped double-quote survived: {result!r}"

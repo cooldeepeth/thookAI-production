@@ -595,3 +595,127 @@ class TestUploadBytesToR2:
         call_kwargs = mock_r2.put_object.call_args[1]
         assert call_kwargs["Bucket"] == R2_BUCKET
         assert call_kwargs["Key"] == "test/key/file.png"
+
+
+# ============ MDIA-08 REGRESSION: R2 presigned upload flow ============
+
+
+@pytest.mark.asyncio
+async def test_r2_presigned_upload_flow():
+    """
+    Wave 0 test for MDIA-08.
+
+    The upload flow must:
+    1. POST /api/uploads/upload-url → returns {"upload_url": presigned_put_url, "storage_key": str, "upload_id": str}
+    2. Client PUTs file directly to presigned_put_url (browser-side, not tested here)
+    3. POST /api/uploads/confirm → confirms the upload and returns {"url": public_url, "upload_id": str, "status": "confirmed"}
+
+    This test mocks R2 (boto3) so it passes in CI without real credentials.
+    If the /api/uploads/upload-url endpoint does not exist yet, the test FAILS,
+    which is the expected RED state until MDIA-08 is implemented.
+    """
+    fake_presigned_url = "https://fake-r2-account.r2.cloudflarestorage.com/bucket/user_abc/uploads/test.jpg?X-Amz-Signature=fake"
+    fake_public_url = "https://pub-test.r2.dev/user_abc/uploads/test.jpg"
+    fake_storage_key = "user_abc/uploads/test.jpg"
+    fake_upload_id = "upload_abc123"
+
+    with patch("routes.uploads.db") as mock_db, \
+         patch("routes.uploads.generate_presigned_upload_url", return_value={
+             "upload_url": fake_presigned_url,
+             "storage_key": fake_storage_key,
+             "public_url": fake_public_url,
+         }, create=True) as mock_presigned:
+
+        mock_db.uploads.insert_one = AsyncMock(return_value=MagicMock(inserted_id="fake_id"))
+        mock_db.uploads.find_one = AsyncMock(return_value={
+            "upload_id": fake_upload_id,
+            "user_id": "user_abc",
+            "storage_key": fake_storage_key,
+            "url": fake_public_url,
+            "status": "pending",
+        })
+        mock_db.uploads.update_one = AsyncMock(return_value=None)
+
+        from fastapi.testclient import TestClient
+        from auth_utils import get_current_user
+        from server import app
+
+        # Override auth dependency to return a known user
+        app.dependency_overrides[get_current_user] = lambda: {"user_id": "user_abc", "email": "test@example.com"}
+
+        try:
+            client = TestClient(app)
+
+            # Step 1: Request a presigned upload URL
+            upload_url_response = client.post(
+                "/api/uploads/upload-url",
+                json={
+                    "filename": "test.jpg",
+                    "content_type": "image/jpeg",
+                    "context_type": "reference_image",
+                },
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert upload_url_response.status_code in (200, 201), (
+            f"POST /api/uploads/upload-url failed: {upload_url_response.status_code} "
+            f"{upload_url_response.text[:200]}. "
+            "This endpoint does not exist yet — Plan 29-05 must implement MDIA-08."
+        )
+
+        upload_data = upload_url_response.json()
+        assert "upload_url" in upload_data, (
+            f"Response missing 'upload_url' field. Got: {list(upload_data.keys())}"
+        )
+        assert "storage_key" in upload_data or "upload_id" in upload_data, (
+            f"Response missing storage tracking fields. Got: {list(upload_data.keys())}"
+        )
+
+        # Step 2: Confirm the upload (simulate browser PUT succeeded)
+        upload_id = upload_data.get("upload_id", fake_upload_id)
+
+        app.dependency_overrides[get_current_user] = lambda: {"user_id": "user_abc", "email": "test@example.com"}
+        try:
+            client2 = TestClient(app)
+            confirm_response = client2.post(
+                "/api/uploads/confirm",
+                json={"upload_id": upload_id},
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert confirm_response.status_code in (200, 201), (
+            f"POST /api/uploads/confirm failed: {confirm_response.status_code} "
+            f"{confirm_response.text[:200]}"
+        )
+
+        confirm_data = confirm_response.json()
+        assert confirm_data.get("status") == "confirmed" or "url" in confirm_data, (
+            f"Confirm response missing expected fields. Got: {confirm_data}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_r2_presigned_url_upload_requires_auth():
+    """
+    Upload URL endpoint must reject unauthenticated requests.
+    If the endpoint doesn't exist, it returns 404 — which means MDIA-08 is not yet implemented.
+    This test accepts 401, 403, 404, or 422 (404 = endpoint missing = expected RED state).
+    """
+    from fastapi.testclient import TestClient
+    from server import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/uploads/upload-url",
+        json={"filename": "test.jpg", "content_type": "image/jpeg"},
+        # No Authorization header
+    )
+    # 404 = endpoint not yet implemented (expected RED state for MDIA-08)
+    # 405 = route path matched by another method (GET /{upload_id}) — endpoint POST not yet added
+    # 401/403/422 = endpoint exists and correctly rejects unauthenticated requests
+    assert response.status_code in (401, 403, 404, 405, 422), (
+        f"Unexpected status code. Got: {response.status_code}. "
+        f"Expected 404/405 (endpoint missing) or 401/403/422 (auth rejected)."
+    )

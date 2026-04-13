@@ -2,12 +2,38 @@ import { Linkedin, Twitter, Instagram, Zap, Video, Lock, Info } from "lucide-rea
 import { useState } from "react";
 
 const PLATFORMS = [
-  { id: "linkedin", label: "LinkedIn", icon: Linkedin, color: "#0A66C2",
-    types: [{ id: "post", label: "Post" }, { id: "carousel_caption", label: "Carousel" }] },
-  { id: "x", label: "X", icon: Twitter, color: "#1D9BF0",
-    types: [{ id: "tweet", label: "Tweet" }, { id: "thread", label: "Thread" }] },
-  { id: "instagram", label: "Instagram", icon: Instagram, color: "#E1306C",
-    types: [{ id: "feed_caption", label: "Feed Post" }, { id: "reel_caption", label: "Reel" }] },
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    icon: Linkedin,
+    color: "#0A66C2",
+    types: [
+      { id: "post", label: "Post" },
+      { id: "article", label: "Article" },
+      { id: "carousel_caption", label: "Carousel" },
+    ],
+  },
+  {
+    id: "x",
+    label: "X",
+    icon: Twitter,
+    color: "#1D9BF0",
+    types: [
+      { id: "tweet", label: "Tweet" },
+      { id: "thread", label: "Thread" },
+    ],
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    icon: Instagram,
+    color: "#E1306C",
+    types: [
+      { id: "feed_caption", label: "Feed" },
+      { id: "reel_caption", label: "Reel" },
+      { id: "story_sequence", label: "Story" },
+    ],
+  },
 ];
 
 const PLACEHOLDERS = {
@@ -79,13 +105,13 @@ export default function InputPanel({
       {/* Content type */}
       <div className="mb-5">
         <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2 font-mono">Format</p>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-wrap">
           {cfg.types.map(t => (
             <button
               key={t.id}
               onClick={() => onContentTypeChange(t.id)}
               data-testid={`content-type-${t.id}`}
-              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors border ${
+              className={`flex-1 py-1 rounded-lg text-xs font-medium transition-colors border ${
                 contentType === t.id
                   ? "border-white/20 bg-white/8 text-white"
                   : "border-white/5 text-zinc-500 hover:text-zinc-300"
@@ -156,14 +182,24 @@ export default function InputPanel({
               )}
             </div>
             <button
+              type="button"
+              role="switch"
+              aria-checked={generateVideo}
+              aria-label="Generate video with content"
               onClick={() => videoEnabled && onGenerateVideoChange?.(!generateVideo)}
+              onKeyDown={(e) => {
+                if ((e.key === "Enter" || e.key === " ") && videoEnabled) {
+                  e.preventDefault();
+                  onGenerateVideoChange?.(!generateVideo);
+                }
+              }}
               disabled={!videoEnabled}
               data-testid="video-toggle"
               className={`relative w-10 h-5 rounded-full transition-colors ${
                 generateVideo && videoEnabled
                   ? "bg-violet"
                   : "bg-white/10"
-              } ${!videoEnabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+              } ${!videoEnabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer focus-ring"}`}
             >
               <span
                 className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${

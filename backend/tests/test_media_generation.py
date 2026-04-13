@@ -653,3 +653,94 @@ class TestCeleryMediaTasks:
             "/Users/kuldeepsinhparmar/thookAI-production/backend/tasks/media_tasks.py"
         ).read_text()
         assert "CreditOperation" in source, "media_tasks.py must import/use CreditOperation"
+
+
+# ============ BUG-2 REGRESSION: Voice narration must store R2 URL, not data: URI ============
+
+@pytest.mark.asyncio
+async def test_voice_narration_uploads_to_r2_not_data_uri():
+    """
+    Wave 0 RED test for Bug 2 in 29-RESEARCH.md.
+
+    When ElevenLabs/OpenAI TTS returns audio bytes as base64, the narrate_content
+    route must upload the audio to R2 and store the R2 public URL in
+    content_jobs.audio_url — NOT the raw data: URI.
+
+    This test will FAIL until Plan 29-03 adds the R2 upload step to:
+    - routes/content.py narrate_content() sync path
+    - The audio_url stored in the DB must NOT start with "data:"
+
+    Key assertion: upload_bytes_to_r2 must be called during narration.
+    """
+    import base64
+
+    # Fake audio bytes (tiny valid MP3 header)
+    fake_audio_bytes = b"\xff\xfb\x90\x00" * 100
+    fake_base64 = base64.b64encode(fake_audio_bytes).decode()
+    fake_r2_url = "https://pub-test.r2.dev/user_abc/audio/test-uuid.mp3"
+
+    fake_job = {
+        "job_id": "job_test_voice_001",
+        "user_id": "user_abc",
+        "final_content": "This is test content to narrate.",
+        "platform": "linkedin",
+        "status": "reviewing",
+    }
+
+    mock_voice_result = {
+        "generated": True,
+        "audio_base64": fake_base64,
+        "audio_url": f"data:audio/mpeg;base64,{fake_base64}",  # BUG: this is what it currently returns
+        "provider": "elevenlabs",
+        "voice_used": {"id": "21m00Tcm4TlvDq8ikWAM", "provider": "elevenlabs"},
+        "duration_estimate": 5.0,
+        "char_count": 32,
+        "truncated": False,
+    }
+
+    # Track what audio_url was actually stored in the DB
+    stored_audio_url = {}
+
+    async def fake_db_update(query, update):
+        stored_audio_url["url"] = update.get("$set", {}).get("audio_url", "")
+
+    with patch("database.db") as mock_db, \
+         patch("routes.content.db", mock_db), \
+         patch("agents.voice.generate_voice_narration", new_callable=AsyncMock, return_value=mock_voice_result), \
+         patch("routes.content.deduct_credits", new_callable=AsyncMock, return_value={"success": True, "remaining": 100}), \
+         patch("routes.content.is_redis_configured", return_value=False), \
+         patch("services.media_storage.upload_bytes_to_r2", return_value=fake_r2_url) as mock_r2_upload:
+
+        mock_db.content_jobs.find_one = AsyncMock(return_value=fake_job)
+        mock_db.content_jobs.update_one = AsyncMock(side_effect=fake_db_update)
+
+        from fastapi.testclient import TestClient
+        from auth_utils import get_current_user
+        from server import app
+
+        # Override auth dependency to return a known user
+        app.dependency_overrides[get_current_user] = lambda: {"user_id": "user_abc", "email": "test@example.com"}
+
+        try:
+            client = TestClient(app)
+            response = client.post(
+                "/api/content/narrate",
+                json={"job_id": "job_test_voice_001"},
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        # The key assertion: upload_bytes_to_r2 must have been called
+        assert mock_r2_upload.called, (
+            "upload_bytes_to_r2 was NOT called during narration sync path. "
+            "Plan 29-03 must add the R2 upload step to narrate_content() in routes/content.py. "
+            "The narrate route must call upload_bytes_to_r2 with the audio bytes from audio_base64."
+        )
+
+        # And the stored URL must not be a data: URI
+        result_url = stored_audio_url.get("url", "")
+        if result_url:
+            assert not result_url.startswith("data:"), (
+                f"audio_url stored in DB starts with 'data:' — it must be the R2 URL. "
+                f"Got: {result_url[:80]}"
+            )

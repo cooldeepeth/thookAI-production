@@ -14,7 +14,7 @@ const platformIcons = {
 };
 
 const energyIcons = {
-  energized: { icon: Battery, color: "text-green-400", bg: "bg-green-400/10" },
+  energized: { icon: Battery, color: "text-lime", bg: "bg-lime/10" },
   balanced: { icon: BatteryMedium, color: "text-yellow-400", bg: "bg-yellow-400/10" },
   rest: { icon: BatteryLow, color: "text-red-400", bg: "bg-red-400/10" }
 };

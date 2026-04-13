@@ -3,25 +3,32 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#000000" />
-        <meta name="description" content="ThookAI — Your AI Creative Agency" />
+        <meta name="theme-color" content="#050505" />
+        <meta name="description" content="Build your AI persona, generate platform-native content with 15 specialist agents, and publish to LinkedIn, X, and Instagram. Free to start." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
-        <!--
-        manifest.json provides metadata used when your web app is installed on a
-        user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-        -->
-        <!--
-        Notice the use of %PUBLIC_URL% in the tags above.
-        It will be replaced with the URL of the `public` folder during the build.
-        Only files inside the `public` folder can be referenced from the HTML.
 
-        Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-        work correctly both with client-side routing and a non-root public URL.
-        Learn how to configure a non-root public URL by running `npm run build`.
-        -->
-        <title>ThookAI</title>
+        <title>ThookAI — Your AI Creative Agency for LinkedIn, X & Instagram</title>
+
+        <!-- Open Graph -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://thook.ai/" />
+        <meta property="og:title" content="ThookAI — Your AI Creative Agency" />
+        <meta property="og:description" content="Build your AI persona, generate platform-native content with 15 specialist agents, and publish to LinkedIn, X, and Instagram." />
+        <meta property="og:image" content="https://thook.ai/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="ThookAI" />
+
+        <!-- Twitter / X Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="ThookAI — Your AI Creative Agency" />
+        <meta name="twitter:description" content="Build your AI persona, generate platform-native content with 15 specialist agents, and publish to LinkedIn, X, and Instagram." />
+        <meta name="twitter:image" content="https://thook.ai/og-image.png" />
+
+        <!-- Canonical -->
+        <link rel="canonical" href="https://thook.ai/" />
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
     </head>
     <body>
@@ -99,14 +106,36 @@
                     }),
                     (e.__SV = 1));
             })(document, window.posthog || []);
-            posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
-                api_host: "https://us.i.posthog.com",
-                person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well,
-                session_recording: {
-                    recordCrossOriginIframes: true,
-                    capturePerformance: false,
-                },
-            });
+
+            // SECR-11 / GDPR: gate posthog.init() behind explicit cookie consent.
+            // The stub above (window.posthog) is safe — it just queues calls.
+            // Real initialization (the actual analytics script) only fires after
+            // the user clicks Accept in the CookieConsent banner, which stores
+            // localStorage["thookai_cookie_consent"] = "accepted" and then
+            // calls window.__thookai_init_posthog() to run the init below.
+            window.__thookai_init_posthog = function () {
+                if (window.posthog && window.posthog.__loaded) return;
+                posthog.init(
+                    "phc_qRfW8FoHgKvhvCBeR3XsRbapx9woHkegVNbWPKyrUSt7",
+                    {
+                        api_host: "https://us.i.posthog.com",
+                        person_profiles: "identified_only",
+                        session_recording: {
+                            recordCrossOriginIframes: true,
+                            capturePerformance: false,
+                        },
+                    },
+                );
+            };
+            try {
+                if (
+                    localStorage.getItem("thookai_cookie_consent") === "accepted"
+                ) {
+                    window.__thookai_init_posthog();
+                }
+            } catch (_) {
+                // localStorage blocked — do not init until user consents
+            }
         </script>
     </body>
 </html>

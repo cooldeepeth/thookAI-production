@@ -25,7 +25,7 @@ const STATUS_CONFIG = {
   completed: { label: "Ready for Review", color: "bg-blue-500/20 text-blue-400" },
   approved: { label: "Approved", color: "bg-lime/20 text-lime" },
   scheduled: { label: "Scheduled", color: "bg-violet/20 text-violet" },
-  published: { label: "Published", color: "bg-green-500/20 text-green-400" },
+  published: { label: "Published", color: "bg-lime/20 text-lime" },
   rejected: { label: "Rejected", color: "bg-red-500/20 text-red-400" }
 };
 
@@ -434,7 +434,7 @@ export default function ContentLibrary() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="text-white font-medium">{item.title}</h3>
-                              <Badge className={item.status === "completed" ? "bg-green-500/20 text-green-400" : "bg-lime/20 text-lime"}>
+                              <Badge className={item.status === "completed" ? "bg-lime/20 text-lime" : "bg-lime/20 text-lime"}>
                                 {item.status}
                               </Badge>
                             </div>

@@ -608,8 +608,12 @@ class TestWriterAgent:
 
     @pytest.mark.asyncio
     async def test_writer_respects_platform_rules(self, make_persona_card):
-        """Writer prompt contains X/Twitter 280-char rule when platform=x."""
-        from agents.writer import run_writer, PLATFORM_RULES
+        """Writer prompt contains X/Twitter 280-char rule when platform=x.
+
+        PLATFORM_RULES was renamed to FORMAT_RULES in Phase 28 — rules are
+        now keyed by content_type (e.g. 'tweet', 'post') not platform.
+        """
+        from agents.writer import run_writer, FORMAT_RULES
 
         captured = {}
         mock_chat = _make_capturing_llm_chat(captured, "Short punchy X content.")
@@ -619,7 +623,7 @@ class TestWriterAgent:
              patch("agents.writer.anthropic_available", return_value=True):
             await run_writer(
                 platform="x",
-                content_type="post",
+                content_type="tweet",
                 commander_output=self._make_commander_output(),
                 scout_output={},
                 thinker_output=self._make_thinker_output(),
@@ -627,9 +631,9 @@ class TestWriterAgent:
             )
 
         prompt_text = captured.get("text", "")
-        x_rules = PLATFORM_RULES["x"]
-        assert "280" in prompt_text or "X (Twitter)" in prompt_text or x_rules[:30] in prompt_text, (
-            "Writer prompt should include platform-specific rules for X"
+        tweet_rules = FORMAT_RULES.get("tweet", "")
+        assert "280" in prompt_text or "X (Twitter)" in prompt_text or tweet_rules[:30] in prompt_text, (
+            "Writer prompt should include format-specific rules for tweet (280-char limit)"
         )
 
 

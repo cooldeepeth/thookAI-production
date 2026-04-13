@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Edit2, RefreshCw, X, ChevronDown, ChevronUp, AlertTriangle,
@@ -40,7 +40,7 @@ function RepetitionBadge({ score, level }) {
   if (!level || level === "none" || level === "unknown") return null;
   
   const colors = {
-    low: "text-green-400 bg-green-400/10",
+    low: "text-lime bg-lime/10",
     medium: "text-yellow-400 bg-yellow-400/10",
     high: "text-red-400 bg-red-400/10"
   };
@@ -192,6 +192,26 @@ function MediaPanel({ job, onMediaUpdate }) {
   const [audioUrl, setAudioUrl] = useState(job.audio_url || null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState(null);
+  const [pollingImage, setPollingImage] = useState(false);
+  const [pollingVoice, setPollingVoice] = useState(false);
+  const [pollingCarousel, setPollingCarousel] = useState(false);
+  const [pollingVideo, setPollingVideo] = useState(false);
+  const [carouselUrl, setCarouselUrl] = useState(job.carousel?.remotion_url || null);
+  const [videoUrl, setVideoUrl] = useState(job.video_url || null);
+  const imageIntervalRef = useRef(null);
+  const voiceIntervalRef = useRef(null);
+  const carouselIntervalRef = useRef(null);
+  const videoIntervalRef = useRef(null);
+
+  // Cleanup all polling intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (imageIntervalRef.current) clearInterval(imageIntervalRef.current);
+      if (voiceIntervalRef.current) clearInterval(voiceIntervalRef.current);
+      if (carouselIntervalRef.current) clearInterval(carouselIntervalRef.current);
+      if (videoIntervalRef.current) clearInterval(videoIntervalRef.current);
+    };
+  }, []);
 
   const handleGenerateImage = async () => {
     setGenerating(true);
@@ -200,23 +220,55 @@ function MediaPanel({ job, onMediaUpdate }) {
     try {
       const response = await apiFetch('/api/content/generate-image', {
         method: "POST",
-        body: JSON.stringify({
-          job_id: job.job_id,
-          style: selectedStyle
-        })
+        body: JSON.stringify({ job_id: job.job_id, style: selectedStyle })
       });
-      
-      const data = await response.json();
-      
-      if (data.generated && data.image_url) {
-        setGeneratedImage(data.image_url);
-        onMediaUpdate?.({ type: "image", data });
+
+      if (response.status === 202) {
+        const { job_id } = await response.json();
+        setPollingImage(true);
+        setGenerating(false);
+        let pollCount = 0;
+        const MAX_POLLS = 60;
+
+        imageIntervalRef.current = setInterval(async () => {
+          pollCount++;
+          try {
+            const jobResp = await apiFetch(`/api/content/job/${job_id}`);
+            if (!jobResp.ok) {
+              clearInterval(imageIntervalRef.current);
+              setPollingImage(false);
+              setError("Failed to check image status");
+              return;
+            }
+            const updatedJob = await jobResp.json();
+            const newImage = updatedJob.media_assets?.find(a => a.type === "image");
+            if (newImage?.image_url) {
+              setGeneratedImage(newImage.image_url);
+              onMediaUpdate?.({ type: "image", data: { image_url: newImage.image_url } });
+              clearInterval(imageIntervalRef.current);
+              setPollingImage(false);
+              return;
+            }
+            if (updatedJob.image_status === "failed" || pollCount >= MAX_POLLS) {
+              clearInterval(imageIntervalRef.current);
+              setPollingImage(false);
+              setError(pollCount >= MAX_POLLS ? "Image generation timed out. Please try again." : "Image generation failed. Credits refunded.");
+            }
+          } catch { /* keep polling on network error */ }
+        }, 3000);
+
       } else {
-        setError(data.message || "Failed to generate image");
+        const data = await response.json();
+        if (data.generated && data.image_url) {
+          setGeneratedImage(data.image_url);
+          onMediaUpdate?.({ type: "image", data });
+        } else {
+          setError(data.message || data.detail || "Failed to generate image");
+        }
+        setGenerating(false);
       }
     } catch (err) {
       setError("Failed to generate image. Please try again.");
-    } finally {
       setGenerating(false);
     }
   };
@@ -228,23 +280,175 @@ function MediaPanel({ job, onMediaUpdate }) {
     try {
       const response = await apiFetch('/api/content/narrate', {
         method: "POST",
-        body: JSON.stringify({
-          job_id: job.job_id
-        })
+        body: JSON.stringify({ job_id: job.job_id })
       });
-      
-      const data = await response.json();
-      
-      if (data.generated && data.audio_url) {
-        setAudioUrl(data.audio_url);
-        onMediaUpdate?.({ type: "voice", data });
+
+      if (response.status === 202) {
+        const { job_id } = await response.json();
+        setPollingVoice(true);
+        setGeneratingVoice(false);
+        let pollCount = 0;
+        const MAX_POLLS = 40;
+
+        voiceIntervalRef.current = setInterval(async () => {
+          pollCount++;
+          try {
+            const jobResp = await apiFetch(`/api/content/job/${job_id}`);
+            if (!jobResp.ok) {
+              clearInterval(voiceIntervalRef.current);
+              setPollingVoice(false);
+              setError("Failed to check voice status");
+              return;
+            }
+            const updatedJob = await jobResp.json();
+            if (updatedJob.audio_url && !updatedJob.audio_url.startsWith("data:")) {
+              setAudioUrl(updatedJob.audio_url);
+              onMediaUpdate?.({ type: "voice", data: { audio_url: updatedJob.audio_url } });
+              clearInterval(voiceIntervalRef.current);
+              setPollingVoice(false);
+              return;
+            }
+            if (updatedJob.voice_status === "failed" || pollCount >= MAX_POLLS) {
+              clearInterval(voiceIntervalRef.current);
+              setPollingVoice(false);
+              setError(pollCount >= MAX_POLLS ? "Voice narration timed out. Please try again." : "Voice generation failed. Credits refunded.");
+            }
+          } catch { /* keep polling on network error */ }
+        }, 3000);
+
       } else {
-        setError(data.message || "Failed to generate voice");
+        const data = await response.json();
+        if (data.generated && data.audio_url) {
+          setAudioUrl(data.audio_url);
+          onMediaUpdate?.({ type: "voice", data });
+        } else {
+          setError(data.message || data.detail || "Failed to generate voice");
+        }
+        setGeneratingVoice(false);
       }
     } catch (err) {
       setError("Failed to generate voice. Please try again.");
-    } finally {
       setGeneratingVoice(false);
+    }
+  };
+
+  const handleGenerateCarousel = async () => {
+    setPollingCarousel(true);
+    setError(null);
+
+    try {
+      const response = await apiFetch('/api/content/generate-carousel', {
+        method: "POST",
+        body: JSON.stringify({ job_id: job.job_id })
+      });
+
+      if (response.status === 202) {
+        const { job_id } = await response.json();
+        let pollCount = 0;
+        const MAX_POLLS = 80; // 4 minutes — Remotion render takes longer
+
+        carouselIntervalRef.current = setInterval(async () => {
+          pollCount++;
+          try {
+            const jobResp = await apiFetch(`/api/content/job/${job_id}`);
+            if (!jobResp.ok) {
+              clearInterval(carouselIntervalRef.current);
+              setPollingCarousel(false);
+              setError("Failed to check carousel status");
+              return;
+            }
+            const updatedJob = await jobResp.json();
+            const remotionUrl = updatedJob.carousel?.remotion_url;
+            if (remotionUrl) {
+              setCarouselUrl(remotionUrl);
+              onMediaUpdate?.({ type: "carousel", data: { remotion_url: remotionUrl } });
+              clearInterval(carouselIntervalRef.current);
+              setPollingCarousel(false);
+              return;
+            }
+            if (pollCount >= MAX_POLLS) {
+              clearInterval(carouselIntervalRef.current);
+              setPollingCarousel(false);
+              setError("Carousel generation timed out. Please try again.");
+            }
+          } catch { /* keep polling on network error */ }
+        }, 3000);
+
+      } else {
+        const data = await response.json();
+        if (data.generated && data.remotion_url) {
+          setCarouselUrl(data.remotion_url);
+          onMediaUpdate?.({ type: "carousel", data });
+        } else if (data.generated) {
+          // Slides generated but Remotion not available — partial success
+          onMediaUpdate?.({ type: "carousel", data });
+        } else {
+          setError(data.message || data.detail || "Failed to generate carousel");
+        }
+        setPollingCarousel(false);
+      }
+    } catch (err) {
+      setError("Failed to generate carousel. Please try again.");
+      setPollingCarousel(false);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    setPollingVideo(true);
+    setError(null);
+
+    try {
+      const response = await apiFetch('/api/content/generate-video', {
+        method: "POST",
+        body: JSON.stringify({ job_id: job.job_id })
+      });
+
+      if (response.status === 202) {
+        const { job_id } = await response.json();
+        let pollCount = 0;
+        const MAX_POLLS = 60;
+
+        videoIntervalRef.current = setInterval(async () => {
+          pollCount++;
+          try {
+            const jobResp = await apiFetch(`/api/content/job/${job_id}`);
+            if (!jobResp.ok) {
+              clearInterval(videoIntervalRef.current);
+              setPollingVideo(false);
+              setError("Failed to check video status");
+              return;
+            }
+            const updatedJob = await jobResp.json();
+            const videoAsset = updatedJob.media_assets?.find(a => a.type === "video");
+            const foundUrl = videoAsset?.video_url || updatedJob.video_url;
+            if (foundUrl) {
+              setVideoUrl(foundUrl);
+              onMediaUpdate?.({ type: "video", data: { video_url: foundUrl } });
+              clearInterval(videoIntervalRef.current);
+              setPollingVideo(false);
+              return;
+            }
+            if (pollCount >= MAX_POLLS) {
+              clearInterval(videoIntervalRef.current);
+              setPollingVideo(false);
+              setError("Video generation timed out. Please try again.");
+            }
+          } catch { /* keep polling on network error */ }
+        }, 3000);
+
+      } else {
+        const data = await response.json();
+        if (data.generated && data.video_url) {
+          setVideoUrl(data.video_url);
+          onMediaUpdate?.({ type: "video", data });
+        } else {
+          setError(data.message || data.detail || "Failed to generate video");
+        }
+        setPollingVideo(false);
+      }
+    } catch (err) {
+      setError("Failed to generate video. Please try again.");
+      setPollingVideo(false);
     }
   };
 
@@ -276,12 +480,12 @@ function MediaPanel({ job, onMediaUpdate }) {
       {/* Image Generation */}
       <div className="mb-4">
         <p className="text-xs text-zinc-500 mb-2">Generate Image</p>
-        
+
         {generatedImage ? (
           <div className="relative rounded-xl overflow-hidden mb-2">
-            <img 
-              src={generatedImage} 
-              alt="Generated content" 
+            <img
+              src={generatedImage}
+              alt="Generated content"
               className="w-full h-48 object-cover"
             />
             <button
@@ -308,16 +512,21 @@ function MediaPanel({ job, onMediaUpdate }) {
                 </button>
               ))}
             </div>
-            
+
             <button
               onClick={handleGenerateImage}
-              disabled={generating}
+              disabled={generating || pollingImage}
               className="w-full py-2.5 bg-violet/10 hover:bg-violet/20 text-violet rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {generating ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
                   Generating... (up to 60s)
+                </>
+              ) : pollingImage ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Processing... (checking every 3s)
                 </>
               ) : (
                 <>
@@ -331,9 +540,9 @@ function MediaPanel({ job, onMediaUpdate }) {
       </div>
 
       {/* Voice Generation */}
-      <div>
+      <div className="mb-4">
         <p className="text-xs text-zinc-500 mb-2">Add Voice Narration</p>
-        
+
         {audioUrl ? (
           <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
             <button
@@ -354,9 +563,9 @@ function MediaPanel({ job, onMediaUpdate }) {
                   ))}
                 </div>
               </div>
-              <audio 
-                id="voice-audio" 
-                src={audioUrl} 
+              <audio
+                id="voice-audio"
+                src={audioUrl}
                 onEnded={() => setIsPlaying(false)}
                 className="hidden"
               />
@@ -372,13 +581,18 @@ function MediaPanel({ job, onMediaUpdate }) {
         ) : (
           <button
             onClick={handleGenerateVoice}
-            disabled={generatingVoice}
+            disabled={generatingVoice || pollingVoice}
             className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {generatingVoice ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
                 Generating voice...
+              </>
+            ) : pollingVoice ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Processing...
               </>
             ) : (
               <>
@@ -388,6 +602,86 @@ function MediaPanel({ job, onMediaUpdate }) {
             )}
           </button>
         )}
+      </div>
+
+      {/* Carousel Generation */}
+      <div className="mb-4">
+        <p className="text-xs text-zinc-500 mb-2">Generate Carousel</p>
+
+        {carouselUrl && (
+          <div className="mt-2 mb-2">
+            <a
+              href={carouselUrl}
+              download
+              className="inline-flex items-center gap-2 text-sm text-lime hover:underline"
+            >
+              <Download size={14} />
+              Download carousel
+            </a>
+          </div>
+        )}
+
+        {pollingCarousel && (
+          <div className="mt-2 mb-2 flex items-center gap-2 text-sm text-zinc-400">
+            <Loader2 size={14} className="animate-spin" />
+            Rendering carousel... (checking every 3s)
+          </div>
+        )}
+
+        <button
+          onClick={handleGenerateCarousel}
+          disabled={pollingCarousel}
+          className="btn-ghost text-xs px-3 py-1.5 w-full flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {pollingCarousel ? (
+            <>
+              <Loader2 size={12} className="animate-spin" />
+              Rendering...
+            </>
+          ) : (
+            "Generate Carousel"
+          )}
+        </button>
+      </div>
+
+      {/* Video Generation */}
+      <div>
+        <p className="text-xs text-zinc-500 mb-2">Generate Video</p>
+
+        {videoUrl && (
+          <div className="mt-2 mb-3">
+            <video
+              src={videoUrl}
+              controls
+              className="w-full rounded-lg border border-white/10 bg-black"
+              style={{ maxHeight: "240px" }}
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        )}
+
+        {pollingVideo && (
+          <div className="mt-2 mb-2 flex items-center gap-2 text-sm text-zinc-400">
+            <Loader2 size={14} className="animate-spin" />
+            Generating video... (checking every 3s)
+          </div>
+        )}
+
+        <button
+          onClick={handleGenerateVideo}
+          disabled={pollingVideo}
+          className="btn-ghost text-xs px-3 py-1.5 w-full flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {pollingVideo ? (
+            <>
+              <Loader2 size={12} className="animate-spin" />
+              Generating...
+            </>
+          ) : (
+            "Generate Video"
+          )}
+        </button>
       </div>
     </div>
   );
@@ -436,6 +730,24 @@ function RejectionModal({ isOpen, onClose, onSubmit }) {
     </div>
   );
 }
+
+const FORMAT_LABEL_MAP = {
+  post: "Post",
+  article: "Article",
+  carousel_caption: "Carousel",
+  tweet: "Tweet",
+  thread: "Thread",
+  feed_caption: "Feed",
+  reel_caption: "Reel",
+  story_sequence: "Story",
+};
+
+const PLATFORM_LABEL_MAP = {
+  linkedin: "LinkedIn",
+  x: "X",
+  twitter: "X",
+  instagram: "Instagram",
+};
 
 function finalContentToText(fc) {
   if (fc == null) return "";
@@ -492,12 +804,32 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
     }
   };
 
+  const contentType = job.content_type || "post";
+  const formatLabel = FORMAT_LABEL_MAP[contentType] || "Post";
+  const platformLabel = PLATFORM_LABEL_MAP[platform] || platform;
+
   return (
     <div className="max-w-2xl mx-auto" data-testid="content-output">
+      {/* Output header */}
+      <div className="flex items-center justify-between mb-3">
+        <h2
+          data-testid="content-output-header"
+          className="font-display font-bold text-3xl text-white"
+        >
+          Your {formatLabel} is ready
+        </h2>
+        <span
+          data-testid="content-format-badge"
+          className="text-xs font-mono text-zinc-400 bg-white/5 px-2 py-1 rounded"
+        >
+          {platformLabel} · {formatLabel}
+        </span>
+      </div>
+
       {/* Version indicator */}
       {version > 1 && (
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded">
+          <span className="text-xs font-mono text-zinc-600 bg-white/5 px-2 py-1 rounded">
             Version {version}
           </span>
         </div>
@@ -599,12 +931,12 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className={`mt-4 p-4 rounded-xl flex items-center gap-3 ${
-            job.status === "published" ? "bg-green-500/10 border border-green-500/20" : "bg-violet/10 border border-violet/20"
+            job.status === "published" ? "bg-lime/10 border border-lime/20" : "bg-violet/10 border border-violet/20"
           }`}
         >
           {job.status === "published" ? (
             <>
-              <Check size={18} className="text-green-400" />
+              <Check size={18} className="text-lime" />
               <div>
                 <p className="text-sm text-white font-medium">Published</p>
                 <p className="text-xs text-zinc-500">
@@ -655,10 +987,11 @@ function ContentOutput({ job, onApprove, onRegenerate, onDiscard }) {
         <div className="flex gap-2 mt-2">
           <button
             onClick={handleApprove}
-            data-testid="approve-btn"
+            data-testid="approve-content-btn"
+            aria-label="Approve content"
             className="flex-1 btn-primary flex items-center justify-center gap-2 text-sm"
           >
-            <Check size={14} /> {editing ? "Save & Approve" : "Looks great"}
+            <Check size={14} /> {editing ? "Save & Approve" : "Approve Content"}
           </button>
           <button
             onClick={() => setEditing(!editing)}
@@ -761,8 +1094,13 @@ function PublishPanel({ job, onPublished }) {
     try {
       const scheduledAt = new Date(`${selectedDate}T${selectedTime}:00`).toISOString();
 
-      const res = await apiFetch(`/api/dashboard/schedule/content?job_id=${job.job_id}&scheduled_at=${scheduledAt}&platforms=${platform}`, {
-        method: "POST"
+      const res = await apiFetch(`/api/dashboard/schedule/content`, {
+        method: "POST",
+        body: JSON.stringify({
+          job_id: job.job_id,
+          scheduled_at: scheduledAt,
+          platforms: [platform],
+        }),
       });
       
       const data = await res.json();
@@ -844,6 +1182,8 @@ function PublishPanel({ job, onPublished }) {
               setShowSchedule(!showSchedule);
               if (!showSchedule && !optimalTimes) fetchOptimalTimes();
             }}
+            data-testid="schedule-content-btn"
+            aria-label="Open schedule options"
             className="w-full mt-3 py-2 text-xs text-zinc-400 hover:text-white transition-colors flex items-center justify-center gap-2"
           >
             <Calendar size={12} />
@@ -892,6 +1232,7 @@ function PublishPanel({ job, onPublished }) {
                       <label className="text-xs text-zinc-500 block mb-1">Date</label>
                       <input
                         type="date"
+                        data-testid="schedule-datetime-input"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         min={minDate}
@@ -911,6 +1252,7 @@ function PublishPanel({ job, onPublished }) {
 
                   <button
                     onClick={handleSchedule}
+                    data-testid="schedule-submit-btn"
                     disabled={scheduling || !selectedDate || !selectedTime}
                     className="w-full mt-4 py-2.5 bg-violet/20 text-violet rounded-lg text-sm font-medium hover:bg-violet/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                   >
