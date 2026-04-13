@@ -61,6 +61,16 @@ def _valid_key(key: str) -> bool:
     return not any(key.lower().startswith(p) for p in placeholders)
 
 
+def _aware_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    # Legacy rows stored `datetime.utcnow()` (naive). Normalize so comparisons
+    # with `datetime.now(timezone.utc)` don't raise TypeError.
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def _get_cipher():
     """Get Fernet cipher for token encryption."""
     key = ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY
@@ -114,7 +124,7 @@ async def get_platforms_status(current_user: dict = Depends(get_current_user)) -
     for token in tokens:
         platform = token.get("platform")
         if platform in platforms:
-            expires_at = token.get("expires_at")
+            expires_at = _aware_utc(token.get("expires_at"))
             is_valid = expires_at is None or expires_at > datetime.now(timezone.utc)
             
             platforms[platform] = {
@@ -561,9 +571,8 @@ async def get_platform_token(user_id: str, platform: str) -> Optional[str]:
     
     if not token_doc:
         return None
-    
-    # Check expiry
-    expires_at = token_doc.get("expires_at")
+
+    expires_at = _aware_utc(token_doc.get("expires_at"))
     if expires_at and expires_at < datetime.now(timezone.utc):
         # Try refresh if available
         refresh_token = token_doc.get("refresh_token")
@@ -572,7 +581,7 @@ async def get_platform_token(user_id: str, platform: str) -> Optional[str]:
             if new_token:
                 return new_token
         return None
-    
+
     return _decrypt_token(token_doc["access_token"])
 
 
