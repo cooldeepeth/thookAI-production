@@ -80,13 +80,19 @@ function BillingTab() {
     setLoading(true);
     setBillingError(null);
     try {
+      // Cache-busting version suffix: Fastly / browser HTTP cache had a
+      // poisoned gzip response for the clean URLs during the 2026-04-14
+      // Railway deploy window (ERR_CONTENT_DECODING_FAILED on `tiers` +
+      // `credits/costs` with 1h TTL). Forcing a new cache key here is the
+      // simplest, non-invasive fix. Bump `v` to invalidate again if needed.
+      const v = '?v=2026-04-14';
       const [subRes, creditsRes, tiersRes, limitsRes, configRes, costsRes] = await Promise.all([
         apiFetch('/api/billing/subscription'),
         apiFetch('/api/billing/credits'),
-        apiFetch('/api/billing/subscription/tiers'),
+        apiFetch('/api/billing/subscription/tiers' + v),
         apiFetch('/api/billing/subscription/limits'),
         apiFetch('/api/billing/config'),
-        apiFetch('/api/billing/credits/costs')
+        apiFetch('/api/billing/credits/costs' + v)
       ]);
 
       if (subRes.ok) setSubscription(await subRes.json());
