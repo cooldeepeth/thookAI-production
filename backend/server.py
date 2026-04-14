@@ -102,11 +102,13 @@ _boot("all route imports done")
 
 
 # Setup logging
+_boot("configuring logging")
 logging.basicConfig(
     level=getattr(logging, settings.app.log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+_boot("logging configured")
 
 
 @asynccontextmanager
@@ -116,10 +118,13 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown events.
     """
     # ==================== STARTUP ====================
+    _boot("[lifespan] entered")
     logger.info("Starting ThookAI API...")
-    
+    _boot("[lifespan] before log_startup_info")
+
     # Validate configuration
     config_report = settings.log_startup_info()
+    _boot("[lifespan] after log_startup_info")
 
     # Validate required environment variables and log any that are missing
     from config import validate_required_env_vars
@@ -262,6 +267,7 @@ async def lifespan(app: FastAPI):
 
 # ==================== APPLICATION SETUP ====================
 
+_boot("constructing FastAPI app")
 app = FastAPI(
     title="ThookAI API",
     version="1.0.0",
@@ -271,6 +277,7 @@ app = FastAPI(
     docs_url="/api/docs" if not settings.app.is_production else None,
     redoc_url="/api/redoc" if not settings.app.is_production else None,
 )
+_boot("FastAPI app constructed")
 
 
 @app.get("/health")
@@ -329,6 +336,7 @@ async def health_check():
     return JSONResponse(content=checks, status_code=status_code)
 
 
+_boot("about to mount routers")
 api_router = APIRouter(prefix="/api")
 
 # ==================== ROUTES ====================
@@ -383,6 +391,7 @@ async def config_status():
 
 
 app.include_router(api_router)
+_boot("routers mounted, wiring middleware")
 
 # ==================== MIDDLEWARE STACK ====================
 # Order matters! Middleware is executed in reverse order (bottom to top)
@@ -446,6 +455,7 @@ app.add_middleware(
     same_site="none" if settings.app.is_production else "lax",
     https_only=settings.app.is_production,
 )
+_boot("all middleware wired — app fully constructed")
 
 
 # ==================== ERROR HANDLERS ====================
