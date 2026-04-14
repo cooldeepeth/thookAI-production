@@ -32,7 +32,12 @@ export function PlanBuilder({ mode = "landing", onCheckout, subscription, upgrad
   const fetchPlanPreview = async (usage) => {
     setPreviewLoading(true);
     try {
-      const res = await apiFetch("/api/billing/plan/preview", {
+      // Cache-busting version suffix — Fastly edge cached a stale OPTIONS
+      // preflight (no CORS headers) for the clean URL during the 2026-04-14
+      // Railway deploy window, breaking the landing PlanBuilder's live pricing.
+      // Same incident as commit 6caf0f7 (which only covered Settings.jsx).
+      // Bump `v` to invalidate again if the symptom recurs.
+      const res = await apiFetch("/api/billing/plan/preview?v=2026-04-14", {
         method: "POST",
         body: JSON.stringify(usage),
       });
