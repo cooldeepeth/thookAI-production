@@ -132,6 +132,87 @@ class TestBillingConfig:
 
 
 # ===========================================================================
+# GET /api/billing/health (M4 — runtime Stripe health check)
+# ===========================================================================
+
+@pytest.mark.asyncio
+class TestBillingHealth:
+
+    async def test_billing_health_reports_mode_test(self, anon_client):
+        """sk_test_ keys report mode=test."""
+        with patch("config.settings.stripe.secret_key", "sk_test_dummy"), \
+             patch("config.settings.stripe.webhook_secret", "whsec_dummy"), \
+             patch("config.settings.stripe.publishable_key", "pk_test_dummy"):
+            fake_account = {
+                "id": "acct_test_123",
+                "country": "US",
+                "charges_enabled": True,
+                "payouts_enabled": True,
+            }
+            with patch("stripe.Account.retrieve", return_value=fake_account):
+                resp = await anon_client.get("/api/billing/health")
+                assert resp.status_code == 200
+                data = resp.json()
+                assert data["status"] == "ok"
+                assert data["configured"] is True
+                assert data["mode"] == "test"
+                assert data["webhook_secret_configured"] is True
+                assert data["publishable_key_configured"] is True
+                assert data["account_reachable"] is True
+                assert data["account_id"] == "acct_test_123"
+                assert data["charges_enabled"] is True
+
+    async def test_billing_health_reports_mode_live(self, anon_client):
+        """sk_live_ keys report mode=live."""
+        with patch("config.settings.stripe.secret_key", "sk_live_dummy"), \
+             patch("config.settings.stripe.webhook_secret", "whsec_dummy"), \
+             patch("config.settings.stripe.publishable_key", "pk_live_dummy"):
+            with patch("stripe.Account.retrieve", return_value={"id": "acct_live_123"}):
+                resp = await anon_client.get("/api/billing/health")
+                assert resp.status_code == 200
+                data = resp.json()
+                assert data["mode"] == "live"
+
+    async def test_billing_health_unconfigured_reports_degraded(self, anon_client):
+        """Missing secret key → status=degraded, account_reachable=False."""
+        with patch("config.settings.stripe.secret_key", ""), \
+             patch("config.settings.stripe.webhook_secret", ""), \
+             patch("config.settings.stripe.publishable_key", ""):
+            resp = await anon_client.get("/api/billing/health")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "degraded"
+            assert data["configured"] is False
+            assert data["mode"] == "unknown"
+            assert data["account_reachable"] is False
+            assert "reason" in data
+
+    async def test_billing_health_stripe_failure_reports_degraded(self, anon_client):
+        """stripe.Account.retrieve raises → status=degraded, reason surfaces error type (no secrets leaked)."""
+        with patch("config.settings.stripe.secret_key", "sk_test_dummy"), \
+             patch("config.settings.stripe.webhook_secret", "whsec_dummy"), \
+             patch("config.settings.stripe.publishable_key", "pk_test_dummy"):
+            with patch("stripe.Account.retrieve", side_effect=Exception("boom")):
+                resp = await anon_client.get("/api/billing/health")
+                assert resp.status_code == 200
+                data = resp.json()
+                assert data["status"] == "degraded"
+                assert data["account_reachable"] is False
+                assert "reason" in data
+                # Must surface exception type but NOT leak secret_key into payload
+                assert "sk_test_" not in str(data)
+                assert "sk_live_" not in str(data)
+
+    async def test_billing_health_no_auth_required(self, anon_client):
+        """Health endpoint must work without authentication (monitoring/smoke script use case)."""
+        with patch("config.settings.stripe.secret_key", "sk_test_x"), \
+             patch("stripe.Account.retrieve", return_value={"id": "acct_x"}):
+            resp = await anon_client.get("/api/billing/health")
+            assert resp.status_code == 200
+            # No 401/403 — endpoint is intentionally anonymous
+
+
+# ===========================================================================
 # POST /api/billing/plan/preview
 # ===========================================================================
 

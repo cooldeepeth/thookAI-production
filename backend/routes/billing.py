@@ -61,6 +61,64 @@ async def get_billing_config() -> Dict[str, Any]:
     return get_stripe_config()
 
 
+@router.get("/health")
+async def billing_health() -> Dict[str, Any]:
+    """Runtime health check for Stripe configuration and connectivity.
+
+    Reports (no secrets in payload):
+    - configured: secret key present
+    - mode: live | test | unknown (based on sk_ prefix)
+    - webhook_secret_configured: webhook secret present
+    - publishable_key_configured: publishable key present
+    - account_reachable: whether stripe.Account.retrieve() succeeds
+    - account_id / account_country / charges_enabled / payouts_enabled:
+      diagnostics populated only on successful retrieval
+
+    Returns HTTP 200 regardless — callers inspect the payload. This
+    endpoint is intentionally unauthenticated so it can be used by
+    uptime monitors and the LAUNCH-CHECKLIST smoke script.
+    """
+    from config import settings
+
+    secret_key = settings.stripe.secret_key or ""
+    mode = "unknown"
+    if secret_key.startswith("sk_live_"):
+        mode = "live"
+    elif secret_key.startswith("sk_test_"):
+        mode = "test"
+
+    payload: Dict[str, Any] = {
+        "status": "ok",
+        "configured": bool(secret_key),
+        "mode": mode,
+        "webhook_secret_configured": bool(settings.stripe.webhook_secret),
+        "publishable_key_configured": bool(settings.stripe.publishable_key),
+        "account_reachable": False,
+    }
+
+    if not secret_key:
+        payload["status"] = "degraded"
+        payload["reason"] = "STRIPE_SECRET_KEY not configured"
+        return payload
+
+    try:
+        import stripe as stripe_lib
+        stripe_lib.api_key = secret_key
+        account = stripe_lib.Account.retrieve()
+        payload["account_reachable"] = True
+        payload["account_id"] = account.get("id")
+        payload["account_country"] = account.get("country")
+        payload["charges_enabled"] = account.get("charges_enabled", False)
+        payload["payouts_enabled"] = account.get("payouts_enabled", False)
+    except Exception as e:
+        payload["status"] = "degraded"
+        payload["account_reachable"] = False
+        payload["reason"] = f"stripe.Account.retrieve failed: {type(e).__name__}"
+        logger.warning(f"Billing health check: Stripe account retrieve failed: {e}")
+
+    return payload
+
+
 # ============ PLAN BUILDER ============
 
 @router.post("/plan/preview")
