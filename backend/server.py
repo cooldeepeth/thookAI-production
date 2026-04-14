@@ -27,41 +27,78 @@ import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 
+def _boot(msg: str) -> None:
+    _boot_sys.stderr.write(f"[boot] {msg}\n")
+    _boot_sys.stderr.flush()
+
 # Import configuration first
+_boot("importing config")
 from config import settings, get_settings
+_boot("config imported")
 
 # Import middleware
+_boot("importing middleware.security")
 from middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware, InputValidationMiddleware
+_boot("importing middleware.performance")
 from middleware.performance import CompressionMiddleware, CacheMiddleware, TimingMiddleware
+_boot("importing middleware.csrf")
 from middleware.csrf import CSRFMiddleware
+_boot("middleware imports done")
 
 # Import routes
+_boot("importing routes.auth")
 from routes.auth import router as auth_router
+_boot("importing routes.password_reset")
 from routes.password_reset import router as password_reset_router
+_boot("importing routes.auth_google")
 from routes.auth_google import router as google_auth_router
+_boot("importing routes.auth_social")
 from routes.auth_social import router as social_auth_router
+_boot("importing routes.onboarding")
 from routes.onboarding import router as onboarding_router
+_boot("importing routes.persona")
 from routes.persona import router as persona_router
+_boot("importing routes.content")
 from routes.content import router as content_router
+_boot("importing routes.dashboard")
 from routes.dashboard import router as dashboard_router
+_boot("importing routes.platforms")
 from routes.platforms import router as platforms_router
+_boot("importing routes.repurpose")
 from routes.repurpose import router as repurpose_router
+_boot("importing routes.analytics")
 from routes.analytics import router as analytics_router
+_boot("importing routes.billing")
 from routes.billing import router as billing_router
+_boot("importing routes.viral")
 from routes.viral import router as viral_router
+_boot("importing routes.agency")
 from routes.agency import router as agency_router
+_boot("importing routes.templates")
 from routes.templates import router as templates_router
+_boot("importing routes.media")
 from routes.media import router as media_router
+_boot("importing routes.uploads")
 from routes.uploads import router as uploads_router
+_boot("importing routes.notifications")
 from routes.notifications import router as notifications_router
+_boot("importing routes.webhooks")
 from routes.webhooks import router as webhooks_router
+_boot("importing routes.campaigns")
 from routes.campaigns import router as campaigns_router
+_boot("importing routes.admin")
 from routes.admin import router as admin_router
+_boot("importing routes.uom")
 from routes.uom import router as uom_router
+_boot("importing routes.viral_card")
 from routes.viral_card import router as viral_card_router
+_boot("importing routes.n8n_bridge")
 from routes.n8n_bridge import router as n8n_bridge_router
+_boot("importing routes.strategy")
 from routes.strategy import router as strategy_router
+_boot("importing routes.obsidian")
 from routes.obsidian import router as obsidian_router
+_boot("all route imports done")
 
 
 # Setup logging
