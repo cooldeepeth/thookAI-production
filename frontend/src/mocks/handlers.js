@@ -33,6 +33,32 @@ export const handlers = [
       is_low_balance: false,
     }),
   ),
+  // Billing — BillingTab mount in Settings calls these on first render.
+  // Without handlers here MSW falls through to a real XHR which is intercepted
+  // but never cleanly closed. On Jest worker shutdown libuv panics:
+  //   "Assertion failed: (!uv__io_active(...)), function uv__stream_destroy"
+  // which hangs CI (Frontend Tests) and makes exit=1. See PR #67 checkpoint.
+  // Query-string cache-busters like `?v=2026-04-14` are matched by the `*`
+  // prefix — MSW v2 ignores query string in path matching by default.
+  http.get("*/api/billing/subscription/tiers", () =>
+    HttpResponse.json({ tiers: [] }),
+  ),
+  http.get("*/api/billing/subscription/limits", () =>
+    HttpResponse.json({ limits: {} }),
+  ),
+  http.get("*/api/billing/config", () =>
+    HttpResponse.json({ publishable_key: "pk_test_mock", mode: "test" }),
+  ),
+  http.get("*/api/billing/credits/costs", () =>
+    HttpResponse.json({ costs: {} }),
+  ),
+  http.post("*/api/billing/plan/preview", () =>
+    HttpResponse.json({
+      monthly_price: 0,
+      credits_total: 0,
+      breakdown: {},
+    }),
+  ),
   // Notifications
   http.get("*/api/notifications", () =>
     HttpResponse.json({ notifications: [] }),

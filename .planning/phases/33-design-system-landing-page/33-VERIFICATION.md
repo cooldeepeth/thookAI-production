@@ -1,12 +1,16 @@
 ---
 phase: 33-design-system-landing-page
 type: verification
-verdict: PASS-pending-checkpoint
+verdict: PASS
+checkpoint_completed: 2026-04-14
+checkpoint_report: .planning/phases/33-design-system-landing-page/33-CHECKPOINT.md
 ---
 
 # Phase 33: design-system-landing-page — VERIFICATION
 
-**Overall verdict: PASS (pending human-verify checkpoint)**
+**Overall verdict: PASS**
+
+Visual checkpoint completed 2026-04-14 on https://www.thook.ai/ at 1440 px and 375 px — all 5 DSGN requirements verified live. Full report and screenshots: `33-CHECKPOINT.md` + `checkpoint/` directory. Two non-Phase-33 production bugs were surfaced during the checkpoint (Fastly cache miss on `/api/billing/plan/preview`; Radix DialogContent a11y) — documented in the checkpoint report and routed separately.
 
 All 6 plans complete (33-01 through 33-06). All 5 DSGN requirements verified directly against the live codebase via grep + file inspection + 18 passing automated tests.
 

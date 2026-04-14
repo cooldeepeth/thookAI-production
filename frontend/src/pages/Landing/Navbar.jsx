@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap, Sparkles, Menu } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 export function Navbar() {
   const navigate = useNavigate();
@@ -87,6 +87,13 @@ export function Navbar() {
           className="bg-surface w-[260px] border-l border-white/5"
           data-testid="mobile-nav-drawer"
         >
+          {/* Radix DialogContent requires a Title + Description for screen readers.
+              Visually hidden via Tailwind `sr-only` — keeps WCAG 2.1 SC 1.3.1 / 4.1.2
+              compliant without affecting the visible drawer layout. */}
+          <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+          <SheetDescription className="sr-only">
+            Main site navigation: product, agents, pricing, sign in, and get started.
+          </SheetDescription>
           <div className="flex flex-col gap-6 pt-8">
             {links.map((l) => (
               <a
