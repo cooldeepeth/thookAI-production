@@ -531,5 +531,8 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__, "error_code": "INTERNAL_ERROR"})
 
 
-# Server is started via Procfile: uvicorn server:app --host 0.0.0.0 --port $PORT
-# No __main__ block needed — see backend/Procfile
+# Procfile: `web: python server.py` — the __main__ block below starts uvicorn.
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("server:app", host="0.0.0.0", port=port)
