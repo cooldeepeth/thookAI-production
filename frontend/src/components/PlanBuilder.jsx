@@ -121,7 +121,7 @@ export function PlanBuilder({ mode = "landing", onCheckout, subscription, upgrad
             <div>
               <p className="text-xs text-zinc-500 mb-1">Estimated price</p>
               <p className="font-display font-bold text-3xl text-lime">
-                ${planPreview.total_price ?? 0}
+                ${planPreview.monthly_price_usd ?? planPreview.total_price ?? 0}
                 <span className="text-sm text-zinc-500 font-normal">/mo</span>
               </p>
             </div>

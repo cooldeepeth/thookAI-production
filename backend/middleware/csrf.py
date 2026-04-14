@@ -45,6 +45,7 @@ _EXEMPT_EXACT: frozenset[str] = frozenset({
     "/api/auth/linkedin/callback",
     "/api/auth/x",
     "/api/auth/x/callback",
+    "/api/auth/logout",
     "/api/auth/forgot-password",
     "/api/billing/webhook/stripe",
     "/health",
