@@ -17,6 +17,7 @@ const PersonaCardPublic = lazy(
 const ViralCard = lazy(() => import("@/pages/ViralCard"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
+const SupportPage = lazy(() => import("@/pages/SupportPage"));
 
 function ProtectedRoute({ children, requireOnboarding = false }) {
   const { user, loading } = useAuth();
@@ -56,6 +57,7 @@ function AppRouter() {
         <Route path="/discover/:cardId" element={<ViralCard />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/support" element={<SupportPage />} />
         <Route
           path="/onboarding"
           element={
