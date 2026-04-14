@@ -47,15 +47,28 @@ MONGO_OPTIONS = {
 
 # ==================== CLIENT INITIALIZATION ====================
 
+# Raw unbuffered prints so we can diagnose Railway startup hangs even if
+# logging config fails or stderr is buffered. Remove these once DB startup
+# is known-good in all deployment environments.
+import sys as _diag_sys
+def _diag(msg: str) -> None:
+    _diag_sys.stderr.write(f"[db-init] {msg}\n")
+    _diag_sys.stderr.flush()
+
+_diag(f"About to create AsyncIOMotorClient (MONGO_URL scheme={MONGO_URL.split('://')[0] if '://' in MONGO_URL else 'MISSING'}, db_name={settings.database.db_name})")
+
 try:
     client = AsyncIOMotorClient(
         MONGO_URL,
         **MONGO_OPTIONS
     )
+    _diag("AsyncIOMotorClient constructor returned")
     db = client[settings.database.db_name]
+    _diag(f"client[{settings.database.db_name}] access succeeded")
     logger.info(f"MongoDB client initialized for database: {settings.database.db_name}")
     logger.info(f"Connection pool: min={settings.database.min_pool_size}, max={settings.database.max_pool_size}")
 except Exception as e:
+    _diag(f"AsyncIOMotorClient FAILED: {type(e).__name__}: {e}")
     logger.error(f"Failed to initialize MongoDB client: {e}")
     raise
 

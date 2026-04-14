@@ -8,6 +8,13 @@ Production-ready FastAPI application with:
 - Comprehensive logging
 """
 
+# Startup diagnostics — print to stderr before ANY other import so we can
+# distinguish "server.py never loaded" from "something in imports hung".
+# Remove these once Railway boot is stable.
+import sys as _boot_sys
+_boot_sys.stderr.write("[boot] server.py: starting import chain\n")
+_boot_sys.stderr.flush()
+
 from fastapi import FastAPI, APIRouter, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
