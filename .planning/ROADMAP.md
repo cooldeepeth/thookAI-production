@@ -70,8 +70,8 @@
 - [x] **Phase 30: Social Publishing End-to-End** - Fix and verify LinkedIn UGC, X v2, and Instagram Meta Graph publishing with OAuth connect/refresh, token encryption, publish status tracking, and real engagement metrics display (completed 2026-04-12)
 - [x] **Phase 31: Smart Scheduling** - Implement AI-suggested optimal posting times, user approval/modification of schedule, calendar view of all scheduled posts, and Celery Beat automatic publishing at scheduled times (completed 2026-04-12)
 - [x] **Phase 32: Frontend Core Flows Polish** - Polish every core page: auth, dashboard, ContentStudio, settings — all loading/empty/error states, mobile responsive (375px/768px/1440px), keyboard navigation (completed 2026-04-12)
-- [ ] **Phase 33: Design System & Landing Page** - Apply consistent design system across all pages, rebuild the landing page to be conversion-optimized with hero/features/how-it-works/pricing/CTA/footer, SEO meta and OG tags
-- [ ] **Phase 34: Security & GDPR** - Full penetration-readiness: input validation, XSS sanitization, injection prevention, CSRF, rate limits, no secrets in code, no stack traces, dependency audit, GDPR data export/deletion, cookie consent, privacy/terms pages
+- [x] **Phase 33: Design System & Landing Page** - Apply consistent design system across all pages, rebuild the landing page to be conversion-optimized with hero/features/how-it-works/pricing/CTA/footer, SEO meta and OG tags (completed 2026-04-12 — verdict: PASS-pending-checkpoint, 6/6 plans, 5/5 DSGN, 18/18 tests)
+- [x] **Phase 34: Security & GDPR** - Full penetration-readiness: input validation, XSS sanitization, injection prevention, CSRF, rate limits, no secrets in code, no stack traces, dependency audit, GDPR data export/deletion, cookie consent, privacy/terms pages (completed 2026-04-12 — verdict: PASS, 9/9 plans, 13/13 SECR)
 - [x] **Phase 35: Performance, Monitoring & Launch** - Profile all endpoints to <500ms, optimize frontend bundle (code splitting, lazy loading), Lighthouse >90, Sentry clean 48h, PostHog verified, E2E smoke test, 50-user load test, cross-browser, pre-launch checklist (completed 2026-04-12)
 
 ## Phase Details
@@ -552,8 +552,9 @@
 3. On a 375px mobile screen, the landing page renders without horizontal scroll, the hero CTA button is easily tappable, and the navigation collapses into a mobile menu — verified in browser at 375px width
 4. The landing page /meta title includes "ThookAI", the meta description is under 160 characters and describes the product, and the Open Graph og:image is set — verified with a curl of the page HTML or browser DevTools
 5. A first-time visitor to the landing page can clearly understand what ThookAI does, see how it works in 3 steps, and find the pricing — measurable by a 5-second reading test: a person reading the hero + features sections can explain the product
-**Plans**: 7 plans
-Plans:
+   **Plans**: 7 plans
+   Plans:
+
 - [x] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
 - [x] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
 - [x] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
@@ -561,7 +562,7 @@ Plans:
 - [x] 35-05-PLAN.md — Multi-browser E2E + production smoke test (PERF-06, PERF-08)
 - [x] 35-06-PLAN.md — Sentry grooming + PostHog event audit (PERF-04, PERF-05)
 - [x] 35-07-PLAN.md — Pre-launch checklist + final sign-off (PERF-09)
-   **UI hint**: yes
+      **UI hint**: yes
 
 ### Phase 34: Security & GDPR
 
@@ -602,8 +603,9 @@ Plans:
 4. A Locust load test of 50 concurrent users running the standard content generation flow for 5 minutes shows p95 response time under 2 seconds and zero 5xx errors in the results
 5. Sentry shows zero unresolved errors for 48 consecutive hours after the final deployment — all existing error events are reviewed and resolved before the clock starts
 6. The pre-launch checklist is signed off: SSL verified, CORS configured, all env vars set in Railway and Vercel, Stripe in production mode, rate limiting active, monitoring active, backup strategy documented
-**Plans**: 7 plans
-Plans:
+   **Plans**: 7 plans
+   Plans:
+
 - [x] 35-01-PLAN.md — Backend p95 latency measurement + index audit (PERF-01)
 - [x] 35-02-PLAN.md — Frontend bundle optimization — React.lazy() code splitting (PERF-02)
 - [x] 35-03-PLAN.md — Lighthouse CI scoring on 3 key pages (PERF-03)
@@ -617,15 +619,15 @@ Plans:
 **Execution Order:**
 v3.0 phases execute in order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35
 
-| Phase                                | Plans Complete | Status      | Completed  |
-| ------------------------------------ | -------------- | ----------- | ---------- |
-| 26. Backend Endpoint Hardening       | 5/5            | Complete    | 2026-04-11 |
-| 27. Onboarding Reimagination         | 5/5            | Complete    | 2026-04-12 |
-| 28. Content Generation Multi-Format  | 5/5            | Complete    | 2026-04-12 |
-| 29. Media Generation Pipeline        | 5/5            | Complete    | 2026-04-12 |
-| 30. Social Publishing End-to-End     | 4/4            | Complete    | 2026-04-12 |
-| 31. Smart Scheduling                 | 4/4            | Complete    | 2026-04-12 |
-| 32. Frontend Core Flows Polish       | 7/7            | Complete    | 2026-04-13 |
-| 33. Design System & Landing Page     | 6/6            | Complete    | 2026-04-13 |
-| 34. Security & GDPR                  | 9/9            | Complete    | 2026-04-13 |
-| 35. Performance, Monitoring & Launch | 7/7 | Complete   | 2026-04-12 |
+| Phase                                | Plans Complete | Status   | Completed  |
+| ------------------------------------ | -------------- | -------- | ---------- |
+| 26. Backend Endpoint Hardening       | 5/5            | Complete | 2026-04-11 |
+| 27. Onboarding Reimagination         | 5/5            | Complete | 2026-04-12 |
+| 28. Content Generation Multi-Format  | 5/5            | Complete | 2026-04-12 |
+| 29. Media Generation Pipeline        | 5/5            | Complete | 2026-04-12 |
+| 30. Social Publishing End-to-End     | 4/4            | Complete | 2026-04-12 |
+| 31. Smart Scheduling                 | 4/4            | Complete | 2026-04-12 |
+| 32. Frontend Core Flows Polish       | 7/7            | Complete | 2026-04-13 |
+| 33. Design System & Landing Page     | 6/6            | Complete | 2026-04-13 |
+| 34. Security & GDPR                  | 9/9            | Complete | 2026-04-13 |
+| 35. Performance, Monitoring & Launch | 7/7            | Complete | 2026-04-12 |
