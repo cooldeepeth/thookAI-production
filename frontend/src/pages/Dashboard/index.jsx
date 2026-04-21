@@ -7,19 +7,8 @@ const DashboardHome = lazy(() => import("./DashboardHome"));
 const PersonaEngine = lazy(() => import("./PersonaEngine"));
 const ContentStudio = lazy(() => import("./ContentStudio"));
 const Connections = lazy(() => import("./Connections"));
-const ContentCalendar = lazy(() => import("./ContentCalendar"));
-const RepurposeAgent = lazy(() => import("./RepurposeAgent"));
 const ContentLibrary = lazy(() => import("./ContentLibrary"));
-const Analytics = lazy(() => import("./Analytics"));
 const Settings = lazy(() => import("./Settings"));
-const AgencyWorkspace = lazy(() => import("./AgencyWorkspace"));
-const Templates = lazy(() => import("./Templates"));
-const TemplateDetail = lazy(() => import("./TemplateDetail"));
-const Campaigns = lazy(() => import("./Campaigns"));
-const ComingSoon = lazy(() => import("./ComingSoon"));
-const Admin = lazy(() => import("./Admin"));
-const AdminUsers = lazy(() => import("./AdminUsers"));
-const StrategyDashboard = lazy(() => import("./StrategyDashboard"));
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,21 +24,11 @@ export default function Dashboard() {
         }>
           <Routes>
             <Route path="/" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Dashboard" /><DashboardHome /></>} />
-            <Route path="/strategy" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Strategy" /><StrategyDashboard /></>} />
             <Route path="/studio" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Content Studio" /><ContentStudio /></>} />
             <Route path="/persona" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Persona Engine" /><PersonaEngine /></>} />
-            <Route path="/repurpose" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Repurpose Agent" /><RepurposeAgent /></>} />
-            <Route path="/calendar" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Content Calendar" /><ContentCalendar /></>} />
-            <Route path="/analytics" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Analytics" /><Analytics /></>} />
             <Route path="/library" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Content Library" /><ContentLibrary /></>} />
             <Route path="/connections" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Platform Connections" /><Connections /></>} />
-            <Route path="/agency" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Agency Workspace" /><AgencyWorkspace /></>} />
-            <Route path="/templates" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Templates Marketplace" /><Templates /></>} />
-            <Route path="/templates/:templateId" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Template Detail" /><TemplateDetail /></>} />
-            <Route path="/campaigns" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Campaigns" /><Campaigns /></>} />
             <Route path="/settings" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Settings" /><Settings /></>} />
-            <Route path="/admin" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="Admin Dashboard" /><Admin /></>} />
-            <Route path="/admin/users" element={<><TopBar onMenuClick={() => setSidebarOpen(true)} title="User Management" /><AdminUsers /></>} />
           </Routes>
         </Suspense>
       </div>

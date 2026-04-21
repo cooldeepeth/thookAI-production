@@ -1,0 +1,26 @@
+export const FLAGS = {
+  platform_linkedin: true,
+  platform_x: false,
+  platform_instagram: false,
+  gen_text: true,
+  gen_image: false,
+  gen_video: false,
+  gen_voice: false,
+  gen_carousel: false,
+  feature_onboarding: true,
+  feature_content_studio: true,
+  feature_schedule: true,
+  feature_publish: true,
+  feature_templates: false,
+  feature_campaigns: false,
+  feature_calendar: false,
+  feature_strategy_dashboard: false,
+  feature_repurpose: false,
+  feature_series_planner: false,
+  feature_agency_workspace: false,
+  feature_admin_panel: false,
+  feature_viral_card: false,
+  feature_public_persona_card: false,
+};
+
+export const isEnabled = (flag) => FLAGS[flag] === true;

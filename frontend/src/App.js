@@ -11,10 +11,6 @@ const AuthPage = lazy(() => import("@/pages/AuthPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const OnboardingWizard = lazy(() => import("@/pages/Onboarding"));
-const PersonaCardPublic = lazy(
-  () => import("@/pages/Public/PersonaCardPublic"),
-);
-const ViralCard = lazy(() => import("@/pages/ViralCard"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const SupportPage = lazy(() => import("@/pages/SupportPage"));
@@ -51,10 +47,6 @@ function AppRouter() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/creator/:shareToken" element={<PersonaCardPublic />} />
-        <Route path="/p/:shareToken" element={<PersonaCardPublic />} />
-        <Route path="/discover" element={<ViralCard />} />
-        <Route path="/discover/:cardId" element={<ViralCard />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/support" element={<SupportPage />} />
