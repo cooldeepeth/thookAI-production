@@ -2,22 +2,31 @@
 from __future__ import annotations
 
 import logging
+import secrets
 import uuid
-from datetime import datetime, timezone
-from urllib.parse import quote
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from authlib.integrations.starlette_client import OAuth
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 
 from config import settings
 from database import db
-from routes.auth import create_jwt_token, set_auth_cookie
+from routes.auth import create_jwt_token, set_auth_cookie, set_csrf_cookie
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth-google"])
+
+# One-time OAuth exchange code TTL. Short on purpose — the frontend redeems
+# it immediately after landing on the post-auth redirect URL.
+_OAUTH_CODE_TTL_SECONDS = 60
+
+
+class ExchangeCodeRequest(BaseModel):
+    code: str
 
 _oauth = OAuth()
 _google_registered = False
@@ -165,8 +174,50 @@ async def google_callback(request: Request):
             }
         )
 
+    # Mint a short-lived one-time exchange code rather than embedding the
+    # JWT in the redirect URL. The frontend calls POST /api/auth/exchange-code
+    # with this code to receive the JWT (body + httpOnly cookie). Keeps the
+    # token out of browser history, referer headers, and reverse-proxy logs.
+    exchange_code = uuid.uuid4().hex
+    now = datetime.now(timezone.utc)
+    await db.oauth_exchange_codes.insert_one({
+        "code": exchange_code,
+        "user_id": user_id,
+        "email": email,
+        "created_at": now,
+        "expires_at": now + timedelta(seconds=_OAUTH_CODE_TTL_SECONDS),
+        "used": False,
+    })
+    dest = f"{frontend}/dashboard?code={exchange_code}"
+    return RedirectResponse(url=dest, status_code=302)
+
+
+@router.post("/exchange-code")
+async def exchange_code(data: ExchangeCodeRequest, response: Response):
+    """Exchange a one-time OAuth code (from Google redirect) for a JWT.
+
+    Atomically flips `used=False` → `used=True` so a replay of the same code
+    returns 400. Sets the session and CSRF cookies and also returns the JWT
+    in the body for API clients that can't rely on cookie-based sessions.
+    """
+    now = datetime.now(timezone.utc)
+    doc = await db.oauth_exchange_codes.find_one_and_update(
+        {"code": data.code, "used": False, "expires_at": {"$gt": now}},
+        {"$set": {"used": True, "used_at": now}},
+    )
+    if not doc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_code",
+                "message": "Exchange code is invalid, expired, or already used.",
+            },
+        )
+
+    user_id = doc["user_id"]
+    email = doc["email"]
     jwt_token = create_jwt_token(user_id, email)
-    dest = f"{frontend}/dashboard?token={quote(jwt_token, safe='')}"
-    response = RedirectResponse(url=dest, status_code=302)
+    csrf_value = secrets.token_urlsafe(32)
     set_auth_cookie(response, jwt_token)
-    return response
+    set_csrf_cookie(response, csrf_value)
+    return {"token": jwt_token, "csrf_token": csrf_value}
