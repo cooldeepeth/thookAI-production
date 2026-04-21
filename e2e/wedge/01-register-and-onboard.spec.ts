@@ -30,17 +30,27 @@ const ONBOARDING_ANSWERS = [
 
 test.describe('Register and onboard', () => {
   test('new user can register, onboard with 10 posts, and land on Content Studio', async ({ page, request }) => {
-    // 1. Register via API (backend requires name — see auth.py RegisterRequest)
+    // 1. Register via API (backend requires name — see auth.py RegisterRequest).
+    //    Register sets session_token + csrf_token cookies and returns csrf_token
+    //    in the body. Since Playwright's APIRequestContext replays cookies, every
+    //    subsequent mutating request must also send X-CSRF-Token (double-submit
+    //    cookie pattern enforced by middleware/csrf.py).
     const registerRes = await request.post('/api/auth/register', {
       data: { email: TEST_EMAIL, password: TEST_PASSWORD, name: 'Wedge Test User' }
     });
     expect(registerRes.status(), 'registration should return 200').toBe(200);
-    const { token } = await registerRes.json();
+    const { token, csrf_token: csrfToken } = await registerRes.json();
     expect(token, 'registration should return a JWT').toBeTruthy();
+    expect(csrfToken, 'registration should return a csrf_token').toBeTruthy();
+
+    const authHeaders = {
+      Authorization: `Bearer ${token}`,
+      'X-CSRF-Token': csrfToken,
+    };
 
     // 2a. Analyze writing samples — prerequisite that seeds posts_analysis for step 2b
     const analyzeRes = await request.post('/api/onboarding/analyze-posts', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeaders,
       data: { posts_text: SAMPLE_POSTS.join('\n\n'), platform: 'linkedin' }
     });
     expect(analyzeRes.status(), 'analyze-posts should return 200').toBe(200);
@@ -48,7 +58,7 @@ test.describe('Register and onboard', () => {
 
     // 2b. Generate persona — this is the call that creates the persona_engines document
     const personaGenRes = await request.post('/api/onboarding/generate-persona', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeaders,
       data: {
         answers: ONBOARDING_ANSWERS,
         posts_analysis: analysis,

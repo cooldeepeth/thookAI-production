@@ -14,18 +14,28 @@ const ONBOARDING_ANSWERS = [
 
 test.describe('Schedule and publish', () => {
   let token: string;
+  let csrfToken: string;
   let postId: string;
 
   test.beforeAll(async ({ request }) => {
-    // Register (name required per RegisterRequest schema in auth.py)
+    // Register (name required per RegisterRequest schema in auth.py).
+    // Capture csrf_token so subsequent mutating requests satisfy the
+    // double-submit check in middleware/csrf.py.
     const reg = await request.post('/api/auth/register', {
       data: { email: TEST_EMAIL, password: TEST_PASSWORD, name: 'Wedge Pub Test User' }
     });
-    token = (await reg.json()).token;
+    const regBody = await reg.json();
+    token = regBody.token;
+    csrfToken = regBody.csrf_token;
+
+    const mutatingHeaders = {
+      Authorization: `Bearer ${token}`,
+      'X-CSRF-Token': csrfToken,
+    };
 
     // Create persona_engines doc so pipeline/scheduling paths are reachable
     await request.post('/api/onboarding/generate-persona', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: mutatingHeaders,
       data: {
         answers: ONBOARDING_ANSWERS,
         writing_samples: Array(10).fill('Building in public every day. Sharing what I learn.'),
@@ -37,7 +47,7 @@ test.describe('Schedule and publish', () => {
     //       and postId will be undefined. Tracked as a Day 3 failure — not fixed
     //       here per "do NOT touch the app" rule.
     const draft = await request.post('/api/content/draft', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: mutatingHeaders,
       data: { content: 'Test post from wedge Playwright suite.', platform: 'linkedin' }
     });
     postId = (await draft.json()).post_id ?? (await draft.json()).id;
@@ -50,7 +60,10 @@ test.describe('Schedule and publish', () => {
     // { job_id, scheduled_at, platforms } (ScheduleContentRequest in dashboard.py).
     // The user's spec said `content_id` but the backend field is `job_id`.
     const scheduleRes = await request.post('/api/dashboard/schedule/content', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-CSRF-Token': csrfToken,
+      },
       data: { job_id: postId, scheduled_at: futureTime, platforms: ['linkedin'] }
     });
     expect(scheduleRes.status(), 'schedule should return 200').toBe(200);
@@ -71,7 +84,10 @@ test.describe('Schedule and publish', () => {
     // NOTE: /api/content/publish-now does NOT exist in backend. Tracked as a Day 3
     //       failure — user's spec did not provide a replacement path.
     const publishRes = await request.post('/api/content/publish-now', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-CSRF-Token': csrfToken,
+      },
       data: { post_id: postId }
     });
     expect(publishRes.status(), 'publish-now should return 200').toBe(200);

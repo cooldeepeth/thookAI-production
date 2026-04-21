@@ -17,20 +17,27 @@ const ONBOARDING_ANSWERS = [
 
 test.describe('Generate and edit post', () => {
   let token: string;
+  let csrfToken: string;
 
   test.beforeAll(async ({ request }) => {
-    // Register (name required per RegisterRequest schema in auth.py)
+    // Register (name required per RegisterRequest schema in auth.py).
+    // Capture csrf_token so subsequent mutating requests satisfy the
+    // double-submit check in middleware/csrf.py.
     const reg = await request.post('/api/auth/register', {
       data: { email: TEST_EMAIL, password: TEST_PASSWORD, name: 'Wedge Gen Test User' }
     });
     const body = await reg.json();
     token = body.token;
+    csrfToken = body.csrf_token;
 
     // Create the persona_engine doc so the user can generate content
     // (the pipeline expects a persona to exist). onboarding.py exposes
     // generate-persona — this is the call that creates the doc.
     await request.post('/api/onboarding/generate-persona', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-CSRF-Token': csrfToken,
+      },
       data: {
         answers: ONBOARDING_ANSWERS,
         writing_samples: Array(10).fill('Building in public every day. Sharing what I learn.'),
@@ -45,10 +52,19 @@ test.describe('Generate and edit post', () => {
     });
     const { credits: creditsBefore } = await balanceBefore.json();
 
-    // 2. Create content via API
+    // 2. Create content via API — payload must match ContentCreateRequest in
+    //    backend/routes/content.py: { platform, content_type, raw_input, ... }.
+    //    Valid LinkedIn content_types: "post", "carousel_caption", "article".
     const createRes = await request.post('/api/content/create', {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { topic: 'I just got my first paying customer', platform: 'linkedin' }
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-CSRF-Token': csrfToken,
+      },
+      data: {
+        platform: 'linkedin',
+        content_type: 'post',
+        raw_input: 'I just got my first paying customer',
+      }
     });
     expect(createRes.status(), 'content create should return 200').toBe(200);
     const { job_id } = await createRes.json();
