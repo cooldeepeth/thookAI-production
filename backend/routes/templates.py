@@ -4,10 +4,15 @@ from typing import Optional, List
 from datetime import datetime, timezone
 from database import db
 from auth_utils import get_current_user
+from middleware.feature_flags import require_feature
 from services.sanitize import sanitize_text
 import uuid
 
-router = APIRouter(prefix="/templates", tags=["templates"])
+router = APIRouter(
+    prefix="/templates",
+    tags=["templates"],
+    dependencies=[Depends(require_feature("feature_templates"))],
+)
 
 # Template categories
 CATEGORIES = [

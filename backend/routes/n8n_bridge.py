@@ -37,10 +37,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from agents.publisher import publish_to_platform as real_publish_to_platform
 from auth_utils import get_current_user
 from config import settings
+from middleware.feature_flags import require_feature
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/n8n", tags=["n8n"])
+router = APIRouter(
+    prefix="/n8n",
+    tags=["n8n"],
+    dependencies=[Depends(require_feature("feature_repurpose"))],
+)
 
 # ---------------------------------------------------------------------------
 # Signature verification

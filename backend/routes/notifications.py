@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import StreamingResponse
 
 from auth_utils import get_current_user
+from middleware.feature_flags import require_feature
 from services.notification_service import (
     get_notifications,
     get_unread_count,
@@ -27,7 +28,11 @@ from services.notification_service import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/notifications", tags=["notifications"])
+router = APIRouter(
+    prefix="/notifications",
+    tags=["notifications"],
+    dependencies=[Depends(require_feature("feature_admin_panel"))],
+)
 
 
 async def _sse_event_generator(user_id: str, request: Request):

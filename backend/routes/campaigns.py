@@ -14,10 +14,15 @@ import logging
 
 from database import db
 from auth_utils import get_current_user
+from middleware.feature_flags import require_feature
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/campaigns", tags=["campaigns"])
+router = APIRouter(
+    prefix="/campaigns",
+    tags=["campaigns"],
+    dependencies=[Depends(require_feature("feature_campaigns"))],
+)
 
 
 # ==================== REQUEST / RESPONSE MODELS ====================

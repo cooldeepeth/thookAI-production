@@ -17,11 +17,12 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from config import settings
 from database import db
+from middleware.feature_flags import require_feature
 from routes.auth import create_jwt_token, set_auth_cookie, set_csrf_cookie
 
 logger = logging.getLogger(__name__)
@@ -268,7 +269,7 @@ def _generate_pkce():
     return verifier, challenge
 
 
-@router.get("/x")
+@router.get("/x", dependencies=[Depends(require_feature("platform_x"))])
 async def x_login(request: Request):
     """Initiate X (Twitter) OAuth 2.0 login with PKCE."""
     if not _is_configured(TWITTER_API_KEY, TWITTER_API_SECRET):
@@ -301,7 +302,7 @@ async def x_login(request: Request):
     )
 
 
-@router.get("/x/callback")
+@router.get("/x/callback", dependencies=[Depends(require_feature("platform_x"))])
 async def x_callback(code: str = "", state: str = "", error: str = ""):
     """Handle X (Twitter) OAuth callback — login or register user."""
     err_redirect = f"{FRONTEND_URL}/auth?error=x_failed"

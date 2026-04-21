@@ -9,9 +9,14 @@ from pydantic import BaseModel
 
 from database import db
 from auth_utils import get_current_user
+from middleware.feature_flags import require_feature
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/viral", tags=["viral"])
+router = APIRouter(
+    prefix="/viral",
+    tags=["viral"],
+    dependencies=[Depends(require_feature("feature_viral_card"))],
+)
 
 
 # ============ PYDANTIC MODELS ============

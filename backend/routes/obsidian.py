@@ -22,11 +22,16 @@ from pydantic import BaseModel, field_validator
 from auth_utils import get_current_user
 from config import settings
 from database import db
+from middleware.feature_flags import require_feature
 from services.obsidian_service import _validate_vault_path, search_vault
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/obsidian", tags=["obsidian"])
+router = APIRouter(
+    prefix="/obsidian",
+    tags=["obsidian"],
+    dependencies=[Depends(require_feature("feature_repurpose"))],
+)
 
 
 # ---------------------------------------------------------------------------

@@ -17,10 +17,15 @@ from pydantic import BaseModel
 from auth_utils import get_current_user
 from database import db
 from agents.strategist import handle_approval, handle_dismissal
+from middleware.feature_flags import require_feature
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/strategy", tags=["strategy"])
+router = APIRouter(
+    prefix="/strategy",
+    tags=["strategy"],
+    dependencies=[Depends(require_feature("feature_strategy_dashboard"))],
+)
 
 
 class DismissRequest(BaseModel):

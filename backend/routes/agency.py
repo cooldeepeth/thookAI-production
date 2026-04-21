@@ -8,11 +8,16 @@ from pydantic import BaseModel, EmailStr
 
 from auth_utils import get_current_user
 from database import db
+from middleware.feature_flags import require_feature
 from services.email_service import send_workspace_invite_email
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/agency", tags=["agency"])
+router = APIRouter(
+    prefix="/agency",
+    tags=["agency"],
+    dependencies=[Depends(require_feature("feature_agency_workspace"))],
+)
 
 # Tiers that can create/manage workspaces
 AGENCY_TIERS = ["studio", "agency", "custom"]

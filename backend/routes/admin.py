@@ -14,11 +14,15 @@ from pydantic import BaseModel
 
 from auth_utils import require_admin
 from database import db
+from middleware.feature_flags import require_feature
 from services.credits import TIER_CONFIGS
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["admin"])
+router = APIRouter(
+    tags=["admin"],
+    dependencies=[Depends(require_feature("feature_admin_panel"))],
+)
 
 
 # ==================== PYDANTIC MODELS ====================

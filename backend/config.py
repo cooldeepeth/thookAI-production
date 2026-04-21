@@ -375,6 +375,34 @@ class Settings:
     remotion: RemotionConfig = field(default_factory=RemotionConfig)
     strategist: StrategistConfig = field(default_factory=StrategistConfig)
     obsidian: ObsidianConfig = field(default_factory=ObsidianConfig)
+    FEATURES_ENABLED: dict = field(default_factory=lambda: {
+        "platform_linkedin": True,
+        "platform_x": False,
+        "platform_instagram": False,
+        "gen_text": True,
+        "gen_image": False,
+        "gen_video": False,
+        "gen_voice": False,
+        "gen_carousel": False,
+        "feature_onboarding": True,
+        "feature_content_studio": True,
+        "feature_schedule": True,
+        "feature_publish": True,
+        "feature_templates": False,
+        "feature_campaigns": False,
+        "feature_calendar": False,
+        "feature_strategy_dashboard": False,
+        "feature_repurpose": False,
+        "feature_series_planner": False,
+        "feature_agency_workspace": False,
+        "feature_admin_panel": False,
+        "feature_viral_card": False,
+        "feature_public_persona_card": False,
+        "tier_single_19": True,
+        "tier_free": False,
+        "tier_studio": False,
+        "tier_agency": False,
+    })
 
     def validate(self) -> dict:
         """

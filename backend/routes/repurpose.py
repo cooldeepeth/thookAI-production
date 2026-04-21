@@ -11,9 +11,14 @@ from pydantic import BaseModel
 
 from database import db
 from auth_utils import get_current_user
+from middleware.feature_flags import require_feature
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/content", tags=["content-repurpose"])
+router = APIRouter(
+    prefix="/content",
+    tags=["content-repurpose"],
+    dependencies=[Depends(require_feature("feature_repurpose"))],
+)
 
 
 # ============ PYDANTIC MODELS ============
