@@ -18,14 +18,24 @@ const WEDGE_BASE_URL =
   process.env.REACT_APP_API_URL ||
   "http://localhost:8001";
 
+/* Playwright does not support per-project `workers`. When the wedge project
+ * is the one being run (detected via `--project=wedge` or any arg mentioning
+ * the `e2e/wedge/` dir), force workers=1 so the three specs run sequentially
+ * and don't trip the backend rate limiter on register → onboarding calls.
+ */
+const WEDGE_ONLY = process.argv.some(
+  (a) => a === "--project=wedge" || a.includes("e2e/wedge"),
+);
+
 export default defineConfig({
   testDir: "./e2e",
   /* 60 seconds per test — content generation can be slow */
   timeout: 60000,
   /* Retry on CI to handle transient flakiness */
   retries: process.env.CI ? 2 : 0,
-  /* Serial in CI for stability; parallel locally */
-  workers: process.env.CI ? 1 : undefined,
+  /* Serial in CI for stability; parallel locally — except for wedge, which
+   * must run sequentially to stay under RATE_LIMIT_PER_MINUTE. */
+  workers: WEDGE_ONLY || process.env.CI ? 1 : undefined,
 
   use: {
     baseURL: "http://localhost:3000",
