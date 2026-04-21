@@ -135,6 +135,20 @@ async def upgrade_subscription(
         # toggled between tiers to farm free credits would otherwise receive 200
         # credits on every downgrade. We preserve whatever credits they have (or
         # zero them out if they are already negative/zero).
+        #
+        # Cancel the Stripe subscription FIRST so we never diverge: Mongo sees
+        # "starter, 0 credits" while Stripe still bills $19/mo and the next
+        # `invoice.payment_succeeded` refreshes credits back up. If Stripe
+        # rejects the cancellation we abort without any Mongo mutation.
+        if user.get("stripe_subscription_id"):
+            from services.stripe_service import cancel_stripe_subscription
+            cancel_result = await cancel_stripe_subscription(user_id, at_period_end=False)
+            if not cancel_result.get("success"):
+                return {
+                    "success": False,
+                    "error": f"Failed to cancel Stripe subscription before downgrade: {cancel_result.get('error', 'unknown')}",
+                }
+
         monthly_credits = 0
         update = {
             "subscription_tier": "starter",
@@ -146,6 +160,8 @@ async def upgrade_subscription(
             "subscription_started": now,
             "subscription_billing_period": None,
             "subscription_expires": None,
+            # Sever the Stripe linkage once cancellation is confirmed above.
+            "stripe_subscription_id": None,
         }
     elif new_tier == "custom" and plan_config:
         monthly_credits = plan_config.get("monthly_credits", 500)
