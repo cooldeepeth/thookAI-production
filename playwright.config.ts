@@ -8,7 +8,16 @@ import { defineConfig, devices } from "@playwright/test";
  *   - CRA React frontend on port 3000
  *
  * Tests live in ./e2e/
+ *
+ * The `wedge` project targets the three critical-path specs in e2e/wedge/.
+ * It uses REACT_APP_API_URL (or WEDGE_BASE_URL) so CI can aim at staging
+ * while local runs fall back to the webServer-started localhost stack.
  */
+const WEDGE_BASE_URL =
+  process.env.WEDGE_BASE_URL ||
+  process.env.REACT_APP_API_URL ||
+  "http://localhost:8001";
+
 export default defineConfig({
   testDir: "./e2e",
   /* 60 seconds per test — content generation can be slow */
@@ -29,23 +38,38 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "firefox",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["Desktop Firefox"] },
     },
     {
       name: "webkit",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["Desktop Safari"] },
     },
     {
       name: "mobile-chrome",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["Pixel 5"] },
     },
     {
       name: "mobile-safari",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["iPhone 13 Pro"] },
+    },
+    {
+      name: "wedge",
+      testMatch: ["**/wedge/**/*.spec.ts"],
+      /* 90s per test — persona extraction polls up to 60s */
+      timeout: 90_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: WEDGE_BASE_URL,
+      },
     },
   ],
 
