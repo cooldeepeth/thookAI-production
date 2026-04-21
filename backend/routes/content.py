@@ -93,6 +93,59 @@ class RegenerateRequest(BaseModel):
     hint: Optional[str] = None  # Additional guidance for regeneration
 
 
+class DraftRequest(BaseModel):
+    """Body for POST /content/draft."""
+    content: str
+    platform: str = "linkedin"
+
+
+@router.post("/draft")
+async def create_draft(
+    data: DraftRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Persist a user-authored post as a draft (no agent pipeline, no credit spend).
+
+    Used for manual posts, paste-from-outside flows, and test scaffolding that
+    needs a concrete `job_id` without running the generation pipeline.
+    """
+    platform = data.platform.lower().strip() or "linkedin"
+    if platform not in PLATFORM_CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
+
+    content = sanitize_text(data.content or "")
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Draft content is empty")
+    if len(content) > 50000:
+        raise HTTPException(status_code=400, detail="Draft content too long (max 50,000 characters)")
+
+    now = datetime.now(timezone.utc)
+    job_id = f"job_{uuid.uuid4().hex[:12]}"
+    # Store final_content as a string (legacy shape). The /content/job/{id}
+    # read path normalises str → {"post": str} so API consumers still see the
+    # canonical dict, while ad-hoc dashboard consumers that slice the raw
+    # stored value (preview generation, exports) don't crash on a dict.
+    await db.content_jobs.insert_one({
+        "job_id": job_id,
+        "user_id": current_user["user_id"],
+        "platform": platform,
+        "content_type": "post",
+        "raw_input": content,
+        "status": "draft",
+        "current_agent": None,
+        "agent_outputs": {},
+        "agent_summaries": {},
+        "final_content": content,
+        "qc_score": None,
+        "error": None,
+        "generate_video": False,
+        "video_style": "cinematic",
+        "created_at": now,
+        "updated_at": now,
+    })
+    return {"job_id": job_id, "post_id": job_id, "status": "draft"}
+
+
 @router.post("/create")
 async def create_content(
     data: ContentCreateRequest,
