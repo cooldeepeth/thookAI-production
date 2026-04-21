@@ -156,6 +156,10 @@ class StripeConfig:
     price_credits_100: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_CREDITS_100'))
     price_credits_500: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_CREDITS_500'))
     price_credits_1000: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRICE_CREDITS_1000'))
+    # Wedge single-tier product identifier. When a webhook event belongs to this
+    # product, credits are hard-coded to `WEDGE_MONTHLY_CREDITS` rather than
+    # trusted from caller-supplied metadata.
+    product_id_wedge: Optional[str] = field(default_factory=lambda: os.environ.get('STRIPE_PRODUCT_ID_WEDGE'))
 
     def all_price_ids_configured(self) -> bool:
         """Check if all required subscription price IDs are set."""

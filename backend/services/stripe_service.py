@@ -22,6 +22,67 @@ STRIPE_SECRET_KEY = settings.stripe.secret_key or ''
 STRIPE_WEBHOOK_SECRET = settings.stripe.webhook_secret or ''
 STRIPE_PUBLISHABLE_KEY = settings.stripe.publishable_key or ''
 
+# Canonical monthly credit allowance for the wedge single-tier product.
+# Used when an event is known to belong to `settings.stripe.product_id_wedge`.
+WEDGE_MONTHLY_CREDITS = 500
+
+
+def _extract_product_id(obj: Dict[str, Any]) -> Optional[str]:
+    """Best-effort pull of the Stripe product id from a webhook object.
+
+    Webhook payloads embed this under slightly different paths depending on
+    whether we're looking at a subscription, invoice, or checkout session.
+    Returns None if we can't find it without an extra API call.
+    """
+    try:
+        items = obj.get("items", {}).get("data") or []
+        if items:
+            product = items[0].get("price", {}).get("product")
+            if product:
+                return product
+    except Exception:
+        pass
+    try:
+        lines = obj.get("lines", {}).get("data") or []
+        if lines:
+            product = lines[0].get("price", {}).get("product")
+            if product:
+                return product
+    except Exception:
+        pass
+    return None
+
+
+def _resolve_monthly_credits(metadata: Dict[str, Any], product_id: Optional[str] = None) -> int:
+    """Resolve monthly credit allowance without the old silent `500` default.
+
+    - If the event is tied to the wedge product id, always return the canonical
+      `WEDGE_MONTHLY_CREDITS` (and warn loudly if the metadata disagrees — the
+      metadata must never grant more than the product is priced for).
+    - Otherwise, require `monthly_credits` to be present in the metadata.
+      Missing metadata raises ValueError; callers log at ERROR so Sentry
+      captures the full payload and skip the credit grant rather than
+      silently minting 500 free credits.
+    """
+    wedge_product = settings.stripe.product_id_wedge
+    raw = metadata.get("monthly_credits") if isinstance(metadata, dict) else None
+
+    if wedge_product and product_id == wedge_product:
+        if raw is not None:
+            try:
+                if int(raw) != WEDGE_MONTHLY_CREDITS:
+                    logger.warning(
+                        "Wedge product webhook metadata monthly_credits=%s differs from canonical %s",
+                        raw, WEDGE_MONTHLY_CREDITS,
+                    )
+            except (TypeError, ValueError):
+                logger.warning("Wedge product webhook metadata monthly_credits is non-numeric: %r", raw)
+        return WEDGE_MONTHLY_CREDITS
+
+    if raw is None:
+        raise ValueError("monthly_credits missing from webhook metadata")
+    return int(raw)
+
 
 def is_stripe_configured() -> bool:
     """Check if Stripe is properly configured."""
@@ -607,7 +668,17 @@ async def handle_checkout_completed(session: Dict[str, Any]):
         # Custom plan subscription — activate from pending config
         user = await db.users.find_one({"user_id": user_id}, {"pending_plan_config": 1})
         if user and user.get("pending_plan_config"):
-            monthly_credits = int(session.get("metadata", {}).get("monthly_credits", 500))
+            try:
+                monthly_credits = _resolve_monthly_credits(
+                    session.get("metadata", {}),
+                    product_id=_extract_product_id(session),
+                )
+            except ValueError:
+                logger.error(
+                    "Refusing custom_plan activation for user %s: monthly_credits missing from metadata. session=%s",
+                    user_id, session,
+                )
+                return
             monthly_price_cents = int(session.get("metadata", {}).get("monthly_price_cents", 0))
             await _activate_custom_plan(user_id, monthly_credits, monthly_price_cents, user["pending_plan_config"])
         logger.info(f"Custom plan checkout completed for user {user_id}")
@@ -629,7 +700,17 @@ async def handle_subscription_created(subscription: Dict[str, Any]):
             return
 
     sub_type = subscription.get("metadata", {}).get("type", "")
-    monthly_credits = int(subscription.get("metadata", {}).get("monthly_credits", 500))
+    try:
+        monthly_credits = _resolve_monthly_credits(
+            subscription.get("metadata", {}),
+            product_id=_extract_product_id(subscription),
+        )
+    except ValueError:
+        logger.error(
+            "Refusing subscription_created credit grant for user %s: monthly_credits missing. subscription=%s",
+            user_id, subscription,
+        )
+        return
 
     now = datetime.now(timezone.utc)
     update = {
@@ -671,8 +752,17 @@ async def handle_subscription_updated(subscription: Dict[str, Any]):
     }
 
     if status == "active":
-        monthly_credits = int(subscription.get("metadata", {}).get("monthly_credits", 500))
-        update_data["credit_allowance"] = monthly_credits
+        try:
+            monthly_credits = _resolve_monthly_credits(
+                subscription.get("metadata", {}),
+                product_id=_extract_product_id(subscription),
+            )
+            update_data["credit_allowance"] = monthly_credits
+        except ValueError:
+            logger.error(
+                "Refusing subscription_updated credit_allowance change for user %s: monthly_credits missing. subscription=%s",
+                user_id, subscription,
+            )
 
     await db.users.update_one({"user_id": user_id}, {"$set": update_data})
     logger.info(f"Subscription updated for user {user_id}: status={status}")
@@ -710,7 +800,20 @@ async def handle_payment_succeeded(invoice: Dict[str, Any]):
     if not user:
         return
 
-    monthly_credits = user.get("credit_allowance", 500)
+    # Refuse to silently mint 500 credits when the user's canonical
+    # `credit_allowance` is missing or zero. Log the event for Sentry and
+    # record the payment timestamp but skip the credit refresh.
+    monthly_credits = user.get("credit_allowance")
+    if not monthly_credits:
+        logger.error(
+            "Refusing credit refresh on invoice.payment_succeeded for user %s: credit_allowance missing or zero. invoice=%s",
+            user.get("user_id"), invoice,
+        )
+        await db.users.update_one(
+            {"user_id": user["user_id"]},
+            {"$set": {"last_payment_at": datetime.now(timezone.utc)}},
+        )
+        return
 
     await db.users.update_one(
         {"user_id": user["user_id"]},
