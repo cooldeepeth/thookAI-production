@@ -101,6 +101,23 @@ def _generate_pkce():
     return code_verifier, code_challenge
 
 
+def _session_fingerprint(request: Request) -> str:
+    """Compute a stable fingerprint for the requesting session.
+
+    Used to bind OAuth state rows to the browser that initiated them. The
+    callback re-derives this and must match the value recorded at init —
+    blocks the classic OAuth state-fixation attack where an attacker leaks
+    another user's state parameter and completes the dance themselves.
+    """
+    forwarded = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (
+        request.client.host if request.client else ""
+    )
+    user_agent = request.headers.get("user-agent", "")
+    raw = f"{client_ip}|{user_agent}".encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
 # ============ PLATFORM STATUS ============
 
 @router.get("/status")
@@ -157,16 +174,19 @@ async def connect_linkedin(request: Request, current_user: dict = Depends(get_cu
     if not _valid_key(LINKEDIN_CLIENT_ID):
         raise HTTPException(status_code=400, detail="LinkedIn OAuth not configured. Add LINKEDIN_CLIENT_ID to .env")
     
-    # Store state for verification
+    # Store state for verification. Fingerprint binds the state to the
+    # initiating browser session so a leaked/stolen state cannot be
+    # completed from a different origin (OAuth state fixation).
     state = secrets.token_urlsafe(32)
     await db.oauth_states.insert_one({
         "state": state,
         "user_id": current_user["user_id"],
         "platform": "linkedin",
+        "session_fingerprint": _session_fingerprint(request),
         "created_at": datetime.now(timezone.utc),
         "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10)
     })
-    
+
     # Build OAuth URL
     callback_url = f"{BACKEND_URL}/api/platforms/callback/linkedin"
     auth_url = (
@@ -177,12 +197,12 @@ async def connect_linkedin(request: Request, current_user: dict = Depends(get_cu
         f"&state={state}"
         f"&scope={LINKEDIN_SCOPES}"
     )
-    
+
     return {"auth_url": auth_url, "state": state}
 
 
 @router.get("/callback/linkedin")
-async def callback_linkedin(code: str, state: str):
+async def callback_linkedin(request: Request, code: str, state: str):
     """Handle LinkedIn OAuth callback."""
     # Verify state
     oauth_state = await db.oauth_states.find_one_and_delete({
@@ -190,10 +210,21 @@ async def callback_linkedin(code: str, state: str):
         "platform": "linkedin",
         "expires_at": {"$gt": datetime.now(timezone.utc)}
     })
-    
+
     if not oauth_state:
         return RedirectResponse(f"{FRONTEND_URL}/dashboard/connections?error=invalid_state")
-    
+
+    # Reject if the callback comes from a different browser than the one that
+    # initiated the flow. Legacy rows without a fingerprint are accepted so
+    # in-flight flows aren't broken by the rollout — new rows always carry one.
+    stored_fingerprint = oauth_state.get("session_fingerprint")
+    if stored_fingerprint and stored_fingerprint != _session_fingerprint(request):
+        logger.warning(
+            "LinkedIn OAuth callback fingerprint mismatch for user %s",
+            oauth_state.get("user_id"),
+        )
+        return RedirectResponse(f"{FRONTEND_URL}/dashboard/connections?error=invalid_session")
+
     user_id = oauth_state["user_id"]
     
     try:
