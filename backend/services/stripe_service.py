@@ -507,20 +507,36 @@ async def handle_webhook_event(payload: bytes, sig_header: str) -> Dict[str, Any
     event_type = event["type"]
     event_data = event["data"]["object"]
 
-    # Webhook idempotency guard — BILL-08
-    # Race-safe: attempt insert first, catch DuplicateKeyError.
-    # The stripe_events collection has a unique index on event_id.
+    # Two-phase webhook idempotency (BILL-08):
+    #   1. If the event has already been processed to completion → skip.
+    #   2. Insert a pending row (race-safe via the unique index on event_id).
+    #   3. Run the handler.
+    #   4. On success → flip status to `complete`.
+    #   5. On failure → leave status as `pending` with a last_error marker so
+    #      Stripe's retry mechanism can re-run the handler.
     from pymongo.errors import DuplicateKeyError
     event_id = event["id"]
+    now = datetime.now(timezone.utc)
+
+    existing = await db.stripe_events.find_one({"event_id": event_id}, {"_id": 0, "status": 1})
+    if existing and existing.get("status") == "complete":
+        logger.info(f"Duplicate Stripe event {event_id} — already completed, skipping")
+        return {"success": True, "event_type": event_type, "duplicate": True}
+
     try:
         await db.stripe_events.insert_one({
             "event_id": event_id,
             "event_type": event_type,
-            "processed_at": datetime.now(timezone.utc)
+            "status": "pending",
+            "created_at": now,
         })
     except DuplicateKeyError:
-        logger.info(f"Duplicate Stripe event {event_id} — skipping (concurrent dedup)")
-        return {"success": True, "event_type": event_type, "duplicate": True}
+        # Row exists but is not `complete` (we re-checked above). Either a
+        # previous attempt failed or a concurrent worker is mid-flight — in
+        # both cases we proceed and rely on handler idempotency. The final
+        # update-to-complete is race-safe (both workers converge on the same
+        # terminal state).
+        logger.info(f"Stripe event {event_id} exists in non-complete state — retrying handler")
 
     logger.info(f"Processing Stripe webhook: {event_type}")
 
@@ -540,9 +556,17 @@ async def handle_webhook_event(payload: bytes, sig_header: str) -> Dict[str, Any
         else:
             logger.info(f"Unhandled webhook event type: {event_type}")
 
+        await db.stripe_events.update_one(
+            {"event_id": event_id},
+            {"$set": {"status": "complete", "processed_at": datetime.now(timezone.utc)}},
+        )
         return {"success": True, "event_type": event_type}
     except Exception as e:
         logger.error(f"Error handling webhook {event_type}: {e}")
+        await db.stripe_events.update_one(
+            {"event_id": event_id},
+            {"$set": {"last_error": str(e), "last_failed_at": datetime.now(timezone.utc)}},
+        )
         return {"success": False, "error": str(e)}
 
 
