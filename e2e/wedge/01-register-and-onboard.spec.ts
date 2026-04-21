@@ -15,25 +15,51 @@ const SAMPLE_POSTS = [
   "Building in public is uncomfortable. You celebrate wins that feel small. You admit failures publicly. Worth it.",
 ];
 
+// Minimal interview answers — satisfies the generate-persona schema
+// (answers: List[Dict] with question_id + answer). Question IDs match
+// backend/routes/onboarding.py:INTERVIEW_QUESTIONS.
+const ONBOARDING_ANSWERS = [
+  { question_id: 0, answer: "I'm a solo founder building ThookAI — helping creators post in their authentic voice." },
+  { question_id: 1, answer: "LinkedIn" },
+  { question_id: 2, answer: "Bold, Clear, Strategic" },
+  { question_id: 3, answer: "Paul Graham for clarity. Lenny Rachitsky for depth." },
+  { question_id: 4, answer: "Hustle culture, crypto speculation, vague motivation." },
+  { question_id: 5, answer: "Build personal brand" },
+  { question_id: 6, answer: "1–3 hours" },
+];
+
 test.describe('Register and onboard', () => {
   test('new user can register, onboard with 10 posts, and land on Content Studio', async ({ page, request }) => {
-    // 1. Register via API
+    // 1. Register via API (backend requires name — see auth.py RegisterRequest)
     const registerRes = await request.post('/api/auth/register', {
-      data: { email: TEST_EMAIL, password: TEST_PASSWORD }
+      data: { email: TEST_EMAIL, password: TEST_PASSWORD, name: 'Wedge Test User' }
     });
     expect(registerRes.status(), 'registration should return 200').toBe(200);
     const { token } = await registerRes.json();
     expect(token, 'registration should return a JWT').toBeTruthy();
 
-    // 2. Submit onboarding posts via API
-    const onboardRes = await request.post('/api/onboarding/posts', {
+    // 2a. Analyze writing samples — prerequisite that seeds posts_analysis for step 2b
+    const analyzeRes = await request.post('/api/onboarding/analyze-posts', {
       headers: { Authorization: `Bearer ${token}` },
-      data: { posts: SAMPLE_POSTS }
+      data: { posts_text: SAMPLE_POSTS.join('\n\n'), platform: 'linkedin' }
     });
-    expect(onboardRes.status(), 'onboarding post submission should return 200').toBe(200);
+    expect(analyzeRes.status(), 'analyze-posts should return 200').toBe(200);
+    const { analysis } = await analyzeRes.json();
 
-    // 3. Poll persona extraction (max 60 seconds)
-    let voiceProfile = null;
+    // 2b. Generate persona — this is the call that creates the persona_engines document
+    const personaGenRes = await request.post('/api/onboarding/generate-persona', {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        answers: ONBOARDING_ANSWERS,
+        posts_analysis: analysis,
+        writing_samples: SAMPLE_POSTS,
+      }
+    });
+    expect(personaGenRes.status(), 'generate-persona should return 200').toBe(200);
+
+    // 3. Poll persona document — the stored doc has `voice_fingerprint`
+    //    (not `voice_profile`; see onboarding.py persona_doc shape).
+    let voiceFingerprint = null;
     const deadline = Date.now() + 60_000;
     while (Date.now() < deadline) {
       const personaRes = await request.get('/api/persona/me', {
@@ -41,18 +67,18 @@ test.describe('Register and onboard', () => {
       });
       if (personaRes.ok()) {
         const body = await personaRes.json();
-        if (body?.voice_profile) { voiceProfile = body.voice_profile; break; }
+        if (body?.voice_fingerprint) { voiceFingerprint = body.voice_fingerprint; break; }
       }
       await page.waitForTimeout(3000);
     }
-    expect(voiceProfile, 'persona voice_profile should be non-null within 60s').toBeTruthy();
+    expect(voiceFingerprint, 'persona voice_fingerprint should be non-null within 60s').toBeTruthy();
 
-    // 4. UI: log in and verify redirect to content studio
+    // 4. UI: log in and verify redirect to content studio (wedge route is /dashboard/studio)
     await page.goto('/auth');
     await page.getByLabel(/email/i).fill(TEST_EMAIL);
     await page.getByLabel(/password/i).fill(TEST_PASSWORD);
     await page.getByRole('button', { name: /sign in|log in|continue/i }).click();
-    await page.waitForURL('**/dashboard/content-studio', { timeout: 15_000 });
-    await expect(page).toHaveURL(/dashboard\/content-studio/);
+    await page.waitForURL('**/dashboard/studio', { timeout: 15_000 });
+    await expect(page).toHaveURL(/dashboard\/studio/);
   });
 });

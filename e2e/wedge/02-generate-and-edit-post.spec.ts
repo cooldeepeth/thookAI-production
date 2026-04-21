@@ -6,19 +6,35 @@ import { test, expect } from '@playwright/test';
 const TEST_EMAIL = `wedge-gen-${Date.now()}@thookai-test.com`;
 const TEST_PASSWORD = 'TestWedge2026!';
 
+// Minimal interview answers to satisfy generate-persona schema.
+const ONBOARDING_ANSWERS = [
+  { question_id: 0, answer: "Testing persona creation for the wedge suite." },
+  { question_id: 1, answer: "LinkedIn" },
+  { question_id: 2, answer: "Bold, Clear, Strategic" },
+  { question_id: 5, answer: "Build personal brand" },
+  { question_id: 6, answer: "1–3 hours" },
+];
+
 test.describe('Generate and edit post', () => {
   let token: string;
 
   test.beforeAll(async ({ request }) => {
+    // Register (name required per RegisterRequest schema in auth.py)
     const reg = await request.post('/api/auth/register', {
-      data: { email: TEST_EMAIL, password: TEST_PASSWORD }
+      data: { email: TEST_EMAIL, password: TEST_PASSWORD, name: 'Wedge Gen Test User' }
     });
     const body = await reg.json();
     token = body.token;
-    // Submit minimal onboarding so content studio is accessible
-    await request.post('/api/onboarding/posts', {
+
+    // Create the persona_engine doc so the user can generate content
+    // (the pipeline expects a persona to exist). onboarding.py exposes
+    // generate-persona — this is the call that creates the doc.
+    await request.post('/api/onboarding/generate-persona', {
       headers: { Authorization: `Bearer ${token}` },
-      data: { posts: Array(10).fill('Building in public every day. Sharing what I learn.') }
+      data: {
+        answers: ONBOARDING_ANSWERS,
+        writing_samples: Array(10).fill('Building in public every day. Sharing what I learn.'),
+      }
     });
   });
 
@@ -39,14 +55,17 @@ test.describe('Generate and edit post', () => {
     expect(job_id, 'content create should return a job_id').toBeTruthy();
 
     // 3. Poll for completion (max 30 seconds)
+    //    Actual endpoint is /api/content/job/{id} which returns the full job doc.
+    //    Terminal shape: { status: "reviewing" | "approved", final_content: { post: "..." } }
     let postContent = null;
     const deadline = Date.now() + 30_000;
     while (Date.now() < deadline) {
-      const statusRes = await request.get(`/api/content/status/${job_id}`, {
+      const statusRes = await request.get(`/api/content/job/${job_id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const body = await statusRes.json();
-      if (body?.status === 'done' && body?.content) { postContent = body.content; break; }
+      const terminal = body?.status === 'reviewing' || body?.status === 'approved';
+      if (terminal && body?.final_content) { postContent = body.final_content; break; }
       await page.waitForTimeout(2000);
     }
     expect(postContent, 'generated post content should be non-null within 30s').toBeTruthy();
@@ -64,7 +83,7 @@ test.describe('Generate and edit post', () => {
     await page.getByLabel(/password/i).fill(TEST_PASSWORD);
     await page.getByRole('button', { name: /sign in|log in|continue/i }).click();
     await page.waitForURL('**/dashboard/**', { timeout: 15_000 });
-    await page.goto('/dashboard/content-studio');
+    await page.goto('/dashboard/studio');
 
     // Verify an editable text area / post editor is present
     const editor = page.locator('[contenteditable], textarea').first();
