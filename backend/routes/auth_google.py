@@ -131,7 +131,17 @@ async def google_callback(request: Request):
         user_id = existing["user_id"]
         update_fields = {"name": name, "picture": picture}
         if existing_method == "email":
-            # Link Google to existing email account (safe — Google verified the email)
+            # Link Google to existing email account only if Google has verified
+            # the email. Without this check, a mis-typed or spoofed email claim
+            # from an attacker's Google account could take over the original.
+            if user_info.get("email_verified") is not True:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "google_email_unverified",
+                        "message": "Please verify your Google email before linking.",
+                    },
+                )
             update_fields["auth_method"] = "google"
         await db.users.update_one({"user_id": user_id}, {"$set": update_fields})
     else:
