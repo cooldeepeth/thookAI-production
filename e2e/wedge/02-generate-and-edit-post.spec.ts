@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 // Use storageState for auth — assumes 01 test created a user and saved session,
 // or use a seeded test account. Check if playwright.config.ts has storageState setup.
 // If not, register fresh here and proceed.
+const FRONTEND_URL = process.env.WEDGE_FRONTEND_URL || 'http://localhost:3000';
 const TEST_EMAIL = `wedge-gen-${Date.now()}@thookai-test.com`;
 const TEST_PASSWORD = 'TestWedge2026!';
 
@@ -70,18 +71,23 @@ test.describe('Generate and edit post', () => {
     const { job_id } = await createRes.json();
     expect(job_id, 'content create should return a job_id').toBeTruthy();
 
-    // 3. Poll for completion (max 30 seconds)
-    //    Actual endpoint is /api/content/job/{id} which returns the full job doc.
-    //    Terminal shape: { status: "reviewing" | "approved", final_content: { post: "..." } }
+    // 3. Poll for completion (max 250 seconds).
+    //    Endpoint is /api/content/job/{id}; backend pipeline terminal state is
+    //    `status: "completed"` with `final_content` populated. We also accept
+    //    "reviewing"/"approved" to be forward-compatible with upcoming status
+    //    transitions. Real Claude pipeline takes ~60–180s.
+    const TERMINAL_STATUSES = new Set(['completed', 'reviewing', 'approved', 'done']);
     let postContent = null;
-    const deadline = Date.now() + 30_000;
+    const deadline = Date.now() + 250_000;
     while (Date.now() < deadline) {
       const statusRes = await request.get(`/api/content/job/${job_id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const body = await statusRes.json();
-      const terminal = body?.status === 'reviewing' || body?.status === 'approved';
-      if (terminal && body?.final_content) { postContent = body.final_content; break; }
+      if (TERMINAL_STATUSES.has(body?.status) && body?.final_content) {
+        postContent = body.final_content;
+        break;
+      }
       await page.waitForTimeout(2000);
     }
     expect(postContent, 'generated post content should be non-null within 30s').toBeTruthy();
@@ -94,12 +100,15 @@ test.describe('Generate and edit post', () => {
     expect(creditsAfter, 'credits should decrease after generation').toBeLessThan(creditsBefore);
 
     // 5. UI: navigate to content studio, verify edit is possible
-    await page.goto('/auth');
+    await page.goto(`${FRONTEND_URL}/auth`);
     await page.getByLabel(/email/i).fill(TEST_EMAIL);
     await page.getByLabel(/password/i).fill(TEST_PASSWORD);
-    await page.getByRole('button', { name: /sign in|log in|continue/i }).click();
-    await page.waitForURL('**/dashboard/**', { timeout: 15_000 });
-    await page.goto('/dashboard/studio');
+    // Testid disambiguates from the "Sign In" tab and Google OAuth button.
+    await page.getByTestId('auth-submit-btn').click();
+    // Login lands on /dashboard (no trailing path); use a regex so both
+    // `/dashboard` and `/dashboard/xxx` match.
+    await page.waitForURL(/\/dashboard(\/|$)/, { timeout: 15_000 });
+    await page.goto(`${FRONTEND_URL}/dashboard/studio`);
 
     // Verify an editable text area / post editor is present
     const editor = page.locator('[contenteditable], textarea').first();

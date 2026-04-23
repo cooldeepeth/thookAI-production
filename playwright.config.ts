@@ -74,8 +74,10 @@ export default defineConfig({
     {
       name: "wedge",
       testMatch: ["**/wedge/**/*.spec.ts"],
-      /* 90s per test — persona extraction polls up to 60s */
-      timeout: 90_000,
+      /* 300s per test — real Claude pipeline (Commander→Scout→Thinker→Writer→QC)
+       * makes ~4 sequential Anthropic calls; with occasional slow responses the
+       * end-to-end generation can approach 3 minutes. */
+      timeout: 300_000,
       use: {
         ...devices["Desktop Chrome"],
         baseURL: WEDGE_BASE_URL,
@@ -103,7 +105,10 @@ export default defineConfig({
       env: {
         BROWSER: "none",
         PORT: "3000",
-        REACT_APP_API_URL: "http://localhost:8001/api",
+        // The frontend reads REACT_APP_BACKEND_URL (see lib/constants.js);
+        // earlier REACT_APP_API_URL was a no-op and left `API_BASE_URL`
+        // empty, causing fetches to hit the frontend origin for /api routes.
+        REACT_APP_BACKEND_URL: "http://localhost:8001",
       },
     },
   ],

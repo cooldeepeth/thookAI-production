@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// Project baseURL points at the API origin so `request.*` relative paths resolve
+// to the backend. UI navigation (page.goto) needs the frontend origin instead.
+const FRONTEND_URL = process.env.WEDGE_FRONTEND_URL || 'http://localhost:3000';
+
 const TEST_EMAIL = `wedge-test-${Date.now()}@thookai-test.com`;
 const TEST_PASSWORD = 'TestWedge2026!';
 const SAMPLE_POSTS = [
@@ -83,12 +87,17 @@ test.describe('Register and onboard', () => {
     }
     expect(voiceFingerprint, 'persona voice_fingerprint should be non-null within 60s').toBeTruthy();
 
-    // 4. UI: log in and verify redirect to content studio (wedge route is /dashboard/studio)
-    await page.goto('/auth');
+    // 4. UI: log in and verify the user lands in the dashboard, then
+    //    navigate to Content Studio (login redirects to /dashboard, not
+    //    /dashboard/studio, by design — the studio is a sub-route).
+    await page.goto(`${FRONTEND_URL}/auth`);
     await page.getByLabel(/email/i).fill(TEST_EMAIL);
     await page.getByLabel(/password/i).fill(TEST_PASSWORD);
-    await page.getByRole('button', { name: /sign in|log in|continue/i }).click();
-    await page.waitForURL('**/dashboard/studio', { timeout: 15_000 });
+    // Use data-testid to avoid strict-mode matches against the "Sign In" tab
+    // and Google OAuth button which share the visible label.
+    await page.getByTestId('auth-submit-btn').click();
+    await page.waitForURL('**/dashboard', { timeout: 15_000 });
+    await page.goto(`${FRONTEND_URL}/dashboard/studio`);
     await expect(page).toHaveURL(/dashboard\/studio/);
   });
 });
