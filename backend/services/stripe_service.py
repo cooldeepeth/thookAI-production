@@ -297,6 +297,121 @@ async def create_custom_plan_checkout(
         return {"success": False, "error": str(e)}
 
 
+# ============ WEDGE CHECKOUT (single-tier $19 / 500 credits) ============
+
+# Canonical values for the wedge tier. Defined alongside the checkout helper so
+# there is exactly one place to change them if the offer shifts.
+WEDGE_PLAN_NAME = "ThookAI LinkedIn"
+WEDGE_MONTHLY_PRICE_CENTS = 1900  # $19.00
+# WEDGE_MONTHLY_CREDITS is defined earlier alongside _resolve_monthly_credits.
+
+
+async def create_wedge_checkout(
+    user_id: str,
+    email: str,
+    success_url: Optional[str] = None,
+    cancel_url: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Create a Stripe Checkout session for the single wedge tier.
+
+    Hard-codes $19/mo for 500 credits — deliberately bypasses the plan
+    builder so there is no way for caller-supplied metadata to change the
+    price or credit allowance. Metadata carries `tier=wedge` so the
+    webhook handlers and `_resolve_monthly_credits` helper can pin the
+    credit grant to `WEDGE_MONTHLY_CREDITS` rather than trusting metadata.
+    """
+    # Simulated mode — Stripe SDK not installed / no key. Mirror the
+    # behaviour of create_custom_plan_checkout so dev environments still
+    # flow through checkout-success UX without ever calling Stripe.
+    if not stripe:
+        simulated_session_id = f"cs_wedge_sim_{user_id[:8]}"
+        plan_config = {
+            "monthly_credits": WEDGE_MONTHLY_CREDITS,
+            "monthly_price_usd": WEDGE_MONTHLY_PRICE_CENTS / 100,
+            "plan_name": WEDGE_PLAN_NAME,
+            "tier": "wedge",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await _activate_custom_plan(
+            user_id, WEDGE_MONTHLY_CREDITS, WEDGE_MONTHLY_PRICE_CENTS, plan_config
+        )
+        return {
+            "success": True,
+            "simulated": True,
+            "checkout_url": f"{settings.app.frontend_url}/dashboard?subscription=success",
+            "session_id": simulated_session_id,
+            "monthly_price": WEDGE_MONTHLY_PRICE_CENTS / 100,
+            "monthly_credits": WEDGE_MONTHLY_CREDITS,
+            "message": "Stripe not configured. Wedge plan activated directly (simulated).",
+        }
+
+    try:
+        customer_result = await get_or_create_stripe_customer(user_id, email)
+        if not customer_result.get("success"):
+            return customer_result
+
+        session = stripe.checkout.Session.create(
+            customer=customer_result["customer_id"],
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": WEDGE_PLAN_NAME,
+                        "description": f"{WEDGE_MONTHLY_CREDITS} credits per month — LinkedIn post generation",
+                    },
+                    "unit_amount": WEDGE_MONTHLY_PRICE_CENTS,
+                    "recurring": {"interval": "month"},
+                },
+                "quantity": 1,
+            }],
+            mode="subscription",
+            success_url=success_url or f"{settings.app.frontend_url}/dashboard?subscription=success",
+            cancel_url=cancel_url or f"{settings.app.frontend_url}/dashboard/settings?subscription=cancelled",
+            metadata={
+                "user_id": user_id,
+                "type": "wedge",
+                "tier": "wedge",
+                "plan_name": WEDGE_PLAN_NAME,
+                "monthly_credits": str(WEDGE_MONTHLY_CREDITS),
+                "monthly_price_cents": str(WEDGE_MONTHLY_PRICE_CENTS),
+            },
+            subscription_data={
+                "metadata": {
+                    "user_id": user_id,
+                    "type": "wedge",
+                    "tier": "wedge",
+                    "plan_name": WEDGE_PLAN_NAME,
+                    "monthly_credits": str(WEDGE_MONTHLY_CREDITS),
+                }
+            },
+        )
+
+        # Same pending-config pattern used by custom_plan — webhook activates
+        # on checkout.session.completed via the existing handler path.
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"pending_plan_config": {
+                "monthly_credits": WEDGE_MONTHLY_CREDITS,
+                "monthly_price_usd": WEDGE_MONTHLY_PRICE_CENTS / 100,
+                "plan_name": WEDGE_PLAN_NAME,
+                "tier": "wedge",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }}},
+        )
+
+        return {
+            "success": True,
+            "checkout_url": session.url,
+            "session_id": session.id,
+            "monthly_price": WEDGE_MONTHLY_PRICE_CENTS / 100,
+            "monthly_credits": WEDGE_MONTHLY_CREDITS,
+        }
+    except Exception as e:
+        logger.error(f"Failed to create wedge checkout: {e}")
+        return {"success": False, "error": str(e)}
+
+
 async def _activate_custom_plan(
     user_id: str,
     monthly_credits: int,

@@ -21,6 +21,7 @@ export const FLAGS = {
   feature_admin_panel: false,
   feature_viral_card: false,
   feature_public_persona_card: false,
+  feature_credit_topups: false,
 };
 
 export const isEnabled = (flag) => FLAGS[flag] === true;

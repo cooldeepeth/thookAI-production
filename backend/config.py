@@ -406,6 +406,7 @@ class Settings:
         "tier_free": False,
         "tier_studio": False,
         "tier_agency": False,
+        "feature_credit_topups": False,
     })
 
     def validate(self) -> dict:

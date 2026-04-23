@@ -4,7 +4,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PlanBuilder } from "@/components/PlanBuilder";
 import { DataTab } from "@/pages/Dashboard/Settings/DataTab";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +15,7 @@ import {
   User, Link2, Bell, Database
 } from "lucide-react";
 import { apiFetch } from '@/lib/api';
+import { isEnabled } from '@/lib/features';
 
 const TIER_ICONS = {
   starter: Zap,
@@ -177,6 +177,29 @@ function BillingTab() {
       }
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setUpgrading(null);
+    }
+  };
+
+  const handleWedgeSubscribe = async () => {
+    setUpgrading("wedge");
+    try {
+      const res = await apiFetch("/api/billing/wedge/checkout", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Checkout failed");
+      }
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+        return;
+      }
+      throw new Error("No checkout URL returned");
+    } catch (err) {
+      toast({ title: "Subscribe failed", description: err.message, variant: "destructive" });
     } finally {
       setUpgrading(null);
     }
@@ -408,15 +431,17 @@ function BillingTab() {
             <CardContent className="py-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-medium text-zinc-400">Credits Balance</h3>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => setShowCreditModal(true)}
-                  className="gap-1 text-xs"
-                >
-                  <ShoppingCart size={12} />
-                  Buy More
-                </Button>
+                {isEnabled("feature_credit_topups") && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowCreditModal(true)}
+                    className="gap-1 text-xs"
+                  >
+                    <ShoppingCart size={12} />
+                    Buy More
+                  </Button>
+                )}
               </div>
               
               <div className="text-center py-4">
@@ -518,19 +543,33 @@ function BillingTab() {
           </CardContent>
         </Card>
 
-        {/* Plan Builder */}
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-4">Build Your Plan</h2>
-          <p className="text-sm text-zinc-400 mb-6">
-            Pick how much you use each month — we calculate your price with volume discounts.
-          </p>
-          <PlanBuilder
-            mode="settings"
-            onCheckout={handlePlanCheckout}
-            subscription={subscription}
-            upgrading={upgrading}
-          />
-        </div>
+        {/* Wedge tier — single plan, fixed price */}
+        <Card className="bg-surface-2 border-lime/30">
+          <CardContent className="py-8 text-center">
+            <p className="text-xs uppercase tracking-wider text-lime font-mono mb-2">Wedge tier</p>
+            <h2 className="text-2xl font-semibold text-white mb-1">ThookAI LinkedIn</h2>
+            <p className="text-sm text-zinc-400 mb-6">
+              LinkedIn post generation in your authentic voice.
+            </p>
+            <div className="flex items-baseline justify-center gap-1 mb-1">
+              <span className="text-4xl font-bold text-white">$19</span>
+              <span className="text-sm text-zinc-500">/month</span>
+            </div>
+            <p className="text-sm text-zinc-400 mb-6">500 credits per month</p>
+            <Button
+              onClick={handleWedgeSubscribe}
+              disabled={upgrading === "wedge" || subscription?.tier === "wedge"}
+              className="btn-primary px-8"
+              data-testid="wedge-subscribe-btn"
+            >
+              {upgrading === "wedge"
+                ? "Starting checkout…"
+                : subscription?.tier === "wedge"
+                ? "Current plan"
+                : "Subscribe"}
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Stripe Status Notice */}
         {billingConfig && !billingConfig.configured && (
