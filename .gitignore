@@ -102,3 +102,9 @@ memory/
 # Claude Code
 .claude/worktrees/
 backend/.coverage
+ThookAI — LinkedIn Wedge/
+graphify-out/.graphify_python
+.gstack/
+
+# Eval harness per-run reports (baseline.json is committed; reports are not)
+backend/tests/evals/reports/report-*.json

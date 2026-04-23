@@ -1,0 +1,46 @@
+name: Content Evals
+on:
+  pull_request:
+    branches:
+      - wedge/linkedin-only
+  workflow_dispatch:
+
+jobs:
+  content-evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend deps
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run content evals vs baseline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Writer reads these from services.config — keep PROJECT config minimal
+          # so the harness does not try to connect to Mongo/Redis/etc.
+          MONGO_URL: mongodb://127.0.0.1:27017
+          DB_NAME: thook_evals_stub
+          ENVIRONMENT: test
+        run: python -m tests.evals.runner
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: backend/tests/evals/reports/report-*.json
+          if-no-files-found: warn
+          retention-days: 30
