@@ -108,3 +108,7 @@ graphify-out/.graphify_python
 
 # Eval harness per-run reports (baseline.json is committed; reports are not)
 backend/tests/evals/reports/report-*.json
+
+# Tool artifacts
+.playwright-mcp/
+.claude/scheduled_tasks.lock
