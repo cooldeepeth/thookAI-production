@@ -112,3 +112,7 @@ backend/tests/evals/reports/report-*.json
 # Tool artifacts
 .playwright-mcp/
 .claude/scheduled_tasks.lock
+
+# Tool artifacts
+.playwright-mcp/
+.claude/scheduled_tasks.lock
