@@ -11,9 +11,6 @@ import { apiFetch } from '@/lib/api';
 
 const quickActions = [
   { label: "Write a LinkedIn post", icon: Linkedin, color: "#0A66C2", to: "/dashboard/studio", tag: "Text" },
-  { label: "Write an X thread", icon: Twitter, color: "#1D9BF0", to: "/dashboard/studio", tag: "Thread" },
-  { label: "Instagram caption", icon: Instagram, color: "#E1306C", to: "/dashboard/studio", tag: "Caption" },
-  { label: "Repurpose content", icon: RefreshCw, color: "#D4FF00", to: "/dashboard/repurpose", tag: "Repurpose" },
 ];
 
 const upcomingFeatures = [

@@ -94,7 +94,7 @@ async def analyze_voice_evolution(user_id: str) -> Dict[str, Any]:
     recent_samples = [c.get("final_content", "")[:500] for c in recent_content[-3:]]
     
     if not anthropic_available():
-        return _mock_evolution_analysis(early_samples, recent_samples, len(all_content))
+        raise RuntimeError("Voice evolution analysis failed: ANTHROPIC_API_KEY is missing or invalid.")
     
     try:
         from services.llm_client import LlmChat, UserMessage
@@ -147,52 +147,7 @@ Return JSON:
     
     except Exception as e:
         logger.error(f"Evolution analysis failed: {e}")
-        return _mock_evolution_analysis(early_samples, recent_samples, len(all_content))
-
-
-def _mock_evolution_analysis(early: List[str], recent: List[str], total: int) -> Dict[str, Any]:
-    """Mock voice evolution analysis."""
-    # Simple heuristics
-    early_avg_len = sum(len(s) for s in early) / len(early) if early else 0
-    recent_avg_len = sum(len(s) for s in recent) / len(recent) if recent else 0
-    
-    changes = []
-    if recent_avg_len > early_avg_len * 1.2:
-        changes.append({
-            "aspect": "structure",
-            "from": "Concise posts",
-            "to": "More detailed content",
-            "strength": "moderate"
-        })
-    elif recent_avg_len < early_avg_len * 0.8:
-        changes.append({
-            "aspect": "structure",
-            "from": "Detailed content",
-            "to": "More concise posts",
-            "strength": "moderate"
-        })
-    
-    changes.append({
-        "aspect": "tone",
-        "from": "Finding voice",
-        "to": "More confident expression",
-        "strength": "subtle"
-    })
-    
-    return {
-        "has_data": True,
-        "total_posts_analyzed": total,
-        "evolution_detected": len(changes) > 0,
-        "evolution_summary": "Your voice has become more refined and confident over time",
-        "changes": changes,
-        "consistency_score": 72,
-        "maturity_direction": "growing",
-        "recommendations": [
-            "Continue developing your unique perspective",
-            "Experiment with formats while maintaining core voice"
-        ],
-        "is_mock": True
-    }
+        raise RuntimeError(f"Voice evolution analysis failed: {e}") from e
 
 
 async def suggest_persona_updates(user_id: str) -> Dict[str, Any]:
@@ -228,7 +183,7 @@ async def suggest_persona_updates(user_id: str) -> Dict[str, Any]:
     evolution = await analyze_voice_evolution(user_id)
     
     if not openai_available():
-        return _mock_persona_suggestions(current_card, learning, analytics, evolution)
+        raise RuntimeError("Persona suggestions failed: OPENAI_API_KEY is missing or invalid.")
     
     try:
         from services.llm_client import LlmChat, UserMessage
@@ -288,43 +243,7 @@ Return JSON:
     
     except Exception as e:
         logger.error(f"Persona suggestions failed: {e}")
-        return _mock_persona_suggestions(current_card, learning, analytics, evolution)
-
-
-def _mock_persona_suggestions(card: Dict, learning: Dict, analytics: Dict, evolution: Dict) -> Dict[str, Any]:
-    """Mock persona suggestions."""
-    suggestions = []
-    
-    # Check if patterns suggest updates
-    patterns = learning.get("patterns_to_adopt", [])
-    if patterns:
-        suggestions.append({
-            "field": "content_niche_signature",
-            "current_value": card.get("content_niche_signature", "Not set"),
-            "suggested_value": f"{card.get('content_niche_signature', 'Your niche')} with focus on {patterns[0] if patterns else 'engagement'}",
-            "reason": "Based on your successful content patterns"
-        })
-    
-    # Check voice evolution
-    if evolution.get("evolution_detected"):
-        changes = evolution.get("changes", [])
-        if changes:
-            suggestions.append({
-                "field": "writing_voice_descriptor",
-                "current_value": card.get("writing_voice_descriptor", "Not set"),
-                "suggested_value": f"Evolved to more {changes[0].get('to', 'refined')} style",
-                "reason": f"Your voice has shifted: {evolution.get('evolution_summary', 'natural evolution')}"
-            })
-    
-    return {
-        "success": True,
-        "should_update": len(suggestions) > 0,
-        "confidence": 65,
-        "suggested_updates": suggestions,
-        "new_strengths_identified": ["Consistent posting", "Audience engagement"],
-        "refinement_summary": "Your persona is evolving naturally. Consider updating your card to reflect your growth.",
-        "is_mock": True
-    }
+        raise RuntimeError(f"Persona suggestions failed: {e}") from e
 
 
 async def apply_persona_refinements(

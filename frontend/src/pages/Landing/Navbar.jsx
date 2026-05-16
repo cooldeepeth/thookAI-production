@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Sparkles, Menu } from "lucide-react";
+import { Zap, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 export function Navbar() {
@@ -43,14 +43,6 @@ export function Navbar() {
             {l.label}
           </a>
         ))}
-        <button
-          type="button"
-          onClick={() => navigate("/discover")}
-          className="text-lime hover:text-lime/80 transition-colors flex items-center gap-1.5 font-medium focus-ring"
-        >
-          <Sparkles size={14} />
-          Discover Your Voice
-        </button>
       </div>
 
       <div className="flex items-center gap-3">
@@ -105,16 +97,6 @@ export function Navbar() {
                 {l.label}
               </a>
             ))}
-            <button
-              type="button"
-              onClick={() => {
-                setMobileOpen(false);
-                navigate("/discover");
-              }}
-              className="text-lime text-left font-medium focus-ring"
-            >
-              Discover Your Voice
-            </button>
             <div className="border-t border-white/5 pt-4 flex flex-col gap-3">
               <button
                 type="button"

@@ -76,7 +76,7 @@ async def run_qc(draft: str, persona_card: dict, platform: str, content_type: st
 
     # Start with base QC
     if not openai_available() and not anthropic_available():
-        result = _mock_qc(draft)
+        raise RuntimeError("QC agent failed: No LLM API key configured (OpenAI or Anthropic). Cannot score content.")
     else:
         try:
             provider = "openai" if openai_available() else "anthropic"
@@ -105,7 +105,7 @@ async def run_qc(draft: str, persona_card: dict, platform: str, content_type: st
             )
         except Exception as e:
             logger.error(f"QC agent error: {e}")
-            result = _mock_qc(draft)
+            raise RuntimeError(f"QC agent failed: {e}") from e
     
     # Add repetition risk check if user_id provided
     if user_id:
@@ -125,20 +125,6 @@ async def run_qc(draft: str, persona_card: dict, platform: str, content_type: st
             result["repetition_level"] = "unknown"
     
     return result
-
-
-def _mock_qc(draft: str) -> dict:
-    word_count = len(draft.split())
-    persona_match = min(9.0, 6.5 + (word_count / 100))
-    return {
-        "personaMatch": round(persona_match, 1),
-        "aiRisk": 22,
-        "platformFit": 8.5,
-        "overall_pass": persona_match >= 7,
-        "feedback": ["Consider adding more personal anecdote or specific data point"],
-        "suggestions": ["Open with a stronger hook to stop the scroll faster"],
-        "strengths": ["Good structure", "Clear key insight", "Actionable takeaway in CTA"]
-    }
 
 
 # ============ MEDIA QC VALIDATION ============
@@ -289,18 +275,18 @@ async def validate_media_output(
                 slop_pass = bool(vision_result.get("pass", True))
                 slop_detail = vision_result.get("detail", "Vision analysis complete")
             except Exception:
-                slop_pass = True
-                slop_detail = "Vision response parse error — treating as pass"
+                slop_pass = False
+                slop_detail = "Vision response parse error — treating as fail"
         except asyncio.TimeoutError:
-            slop_pass = True
-            slop_detail = "Vision analysis timed out — treating as pass"
+            slop_pass = False
+            slop_detail = "Vision analysis timed out — treating as fail"
         except Exception as e:
             logger.warning(f"Anti-slop vision check failed: {e}")
-            slop_pass = True
+            slop_pass = False
             slop_detail = f"Vision analysis unavailable: {e}"
     else:
         slop_pass = True
-        slop_detail = "Vision analysis unavailable — Anthropic API key not configured"
+        slop_detail = "Vision analysis skipped — no Anthropic API key (text-only content)"
 
     checks.append({"name": "anti_slop", "pass": slop_pass, "detail": slop_detail})
     if not slop_pass:
