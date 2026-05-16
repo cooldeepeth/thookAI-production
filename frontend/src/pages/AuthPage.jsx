@@ -326,6 +326,7 @@ export default function AuthPage() {
 
                 <input
                   type="email"
+                  aria-label="Email"
                   placeholder="Email address"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -335,6 +336,7 @@ export default function AuthPage() {
                 />
                 <input
                   type="password"
+                  aria-label="Password"
                   placeholder="Password"
                   value={form.password}
                   onChange={(e) =>

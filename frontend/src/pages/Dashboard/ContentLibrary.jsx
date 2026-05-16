@@ -375,16 +375,6 @@ export default function ContentLibrary() {
                               >
                                 <Eye size={14} />
                               </Button>
-                              {item.status === "approved" && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => navigate(`/dashboard/repurpose?job=${item.job_id}`)}
-                                  className="h-7 px-2 text-violet hover:text-violet"
-                                >
-                                  <RefreshCw size={14} />
-                                </Button>
-                              )}
                             </div>
                           </div>
                         </CardContent>

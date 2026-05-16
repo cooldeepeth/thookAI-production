@@ -1,0 +1,19 @@
+name: Wedge E2E Tests
+on:
+  pull_request:
+    branches:
+      - wedge/linkedin-only
+jobs:
+  wedge-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx playwright install chrome --with-deps
+      - run: npx playwright test e2e/wedge/ --project=wedge
+        env:
+          REACT_APP_API_URL: ${{ secrets.STAGING_API_URL }}
+    # This job blocks PR merge on failure — no if: always() here

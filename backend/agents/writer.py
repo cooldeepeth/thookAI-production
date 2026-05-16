@@ -166,7 +166,7 @@ async def run_writer(
             pass
 
     if not anthropic_available():
-        return _mock_writer(platform, content_type, persona_card)
+        raise RuntimeError("Writer agent failed: ANTHROPIC_API_KEY is missing or invalid. Cannot generate content.")
     try:
         style_notes = "\n".join(f"- {n}" for n in (persona_card.get("writing_style_notes") or ["Write with authenticity and directness"]))
         structure_text = "\n".join(
@@ -227,43 +227,5 @@ async def run_writer(
         word_count = len(draft.split())
         return {"draft": draft.strip(), "word_count": word_count, "character_count": len(draft), "platform": platform, "regional_english": regional_english}
     except Exception:
-        logger.exception("Writer agent failed, using mock")
-        return _mock_writer(platform, content_type, persona_card)
-
-
-def _mock_writer(platform: str, content_type: str, persona_card: dict) -> str:
-    niche = persona_card.get("content_niche_signature", "professional growth")
-    regional_english = persona_card.get("regional_english", "US")
-    if platform.lower() == "x":
-        draft = (
-            f"Most people think {niche} is about working harder.\n\n"
-            f"It's not.\n\n"
-            f"After years of experience, I've learned it's about working smarter:\n\n"
-            f"1/ Know your leverage points\n"
-            f"2/ Remove friction before adding features\n"
-            f"3/ Measure what matters, not what's easy to measure\n\n"
-            f"What's your biggest insight about {niche}?"
-        )
-    elif platform.lower() == "instagram":
-        draft = (
-            f"Here's what nobody tells you about {niche}...\n\n"
-            f"The secret isn't in the tactics. It's in the fundamentals.\n\n"
-            f"I've spent years studying what actually works vs what just sounds good.\n\n"
-            f"The answer is always simpler than you think.\n\n"
-            f"What's your experience been?\n\n"
-            f"#thoughtleadership #growthmindset #professionaldevelopment"
-        )
-    else:
-        draft = (
-            f"Most people are thinking about {niche} completely backwards.\n\n"
-            f"I used to think the same way. Then I noticed something:\n\n"
-            f"The most effective professionals don't focus on doing more.\n"
-            f"They focus on removing what doesn't matter.\n\n"
-            f"Here's what changed my perspective:\n\n"
-            f"1. Results come from clarity, not effort\n"
-            f"2. The best work is often the work you decide not to do\n"
-            f"3. Consistency beats intensity every single time\n\n"
-            f"The counterintuitive truth: Less, but better.\n\n"
-            f"What's the one thing you've stopped doing that made everything else easier?"
-        )
-    return {"draft": draft, "word_count": len(draft.split()), "character_count": len(draft), "platform": platform, "regional_english": regional_english}
+        logger.exception("Writer agent failed")
+        raise RuntimeError("Writer agent failed: LLM call returned an error. Please try again.")

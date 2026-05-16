@@ -5,6 +5,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import csv
 import io
+import os
 import uuid
 import logging
 from database import db
@@ -91,6 +92,133 @@ class AvatarVideoRequest(BaseModel):
 
 class RegenerateRequest(BaseModel):
     hint: Optional[str] = None  # Additional guidance for regeneration
+
+
+class DraftRequest(BaseModel):
+    """Body for POST /content/draft."""
+    content: str
+    platform: str = "linkedin"
+
+
+class PublishNowRequest(BaseModel):
+    """Body for POST /content/publish-now."""
+    post_id: str
+
+
+def _linkedin_mock_enabled() -> bool:
+    """Skip the real LinkedIn API when running under test or opt-in flag."""
+    if (settings.app.environment or "").lower() in ("test", "testing"):
+        return True
+    return (os.environ.get("LINKEDIN_MOCK") or "").strip().lower() in ("1", "true", "yes")
+
+
+def _extract_post_text(final_content) -> str:
+    """Return the post text regardless of whether it was stored as str or dict."""
+    if isinstance(final_content, dict):
+        return final_content.get("post") or final_content.get("content") or ""
+    return final_content or ""
+
+
+@router.post("/draft")
+async def create_draft(
+    data: DraftRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Persist a user-authored post as a draft (no agent pipeline, no credit spend).
+
+    Used for manual posts, paste-from-outside flows, and test scaffolding that
+    needs a concrete `job_id` without running the generation pipeline.
+    """
+    platform = data.platform.lower().strip() or "linkedin"
+    if platform not in PLATFORM_CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
+
+    content = sanitize_text(data.content or "")
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Draft content is empty")
+    if len(content) > 50000:
+        raise HTTPException(status_code=400, detail="Draft content too long (max 50,000 characters)")
+
+    now = datetime.now(timezone.utc)
+    job_id = f"job_{uuid.uuid4().hex[:12]}"
+    # Store final_content as a string (legacy shape). The /content/job/{id}
+    # read path normalises str → {"post": str} so API consumers still see the
+    # canonical dict, while ad-hoc dashboard consumers that slice the raw
+    # stored value (preview generation, exports) don't crash on a dict.
+    await db.content_jobs.insert_one({
+        "job_id": job_id,
+        "user_id": current_user["user_id"],
+        "platform": platform,
+        "content_type": "post",
+        "raw_input": content,
+        "status": "draft",
+        "current_agent": None,
+        "agent_outputs": {},
+        "agent_summaries": {},
+        "final_content": content,
+        "qc_score": None,
+        "error": None,
+        "generate_video": False,
+        "video_style": "cinematic",
+        "created_at": now,
+        "updated_at": now,
+    })
+    return {"job_id": job_id, "post_id": job_id, "status": "draft"}
+
+
+@router.post("/publish-now")
+async def publish_now(
+    data: PublishNowRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Publish an owned post immediately. LinkedIn-only for the wedge.
+
+    In test environments, or when `LINKEDIN_MOCK=true` is set, the real
+    LinkedIn API call is short-circuited with a mock published_url so
+    integration tests don't hit the third-party service.
+    """
+    post = await db.content_jobs.find_one(
+        {"job_id": data.post_id, "user_id": current_user["user_id"]},
+        {"_id": 0},
+    )
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    if (post.get("platform") or "linkedin").lower() != "linkedin":
+        # Wedge is LinkedIn-only; refuse until other platforms are re-enabled.
+        raise HTTPException(status_code=400, detail="publish-now currently supports LinkedIn only")
+
+    content_text = _extract_post_text(post.get("final_content"))
+    if not content_text.strip():
+        raise HTTPException(status_code=400, detail="Post has no content to publish")
+
+    now = datetime.now(timezone.utc)
+
+    if _linkedin_mock_enabled():
+        published_url = f"https://linkedin.com/mock/{data.post_id}"
+    else:
+        from agents.publisher import publish_to_linkedin
+        result = await publish_to_linkedin(current_user["user_id"], content_text)
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=502,
+                detail=result.get("error") or "LinkedIn publish failed",
+            )
+        published_url = result.get("post_url") or result.get("published_url") or ""
+        if not published_url:
+            raise HTTPException(status_code=502, detail="LinkedIn publish returned no URL")
+
+    await db.content_jobs.update_one(
+        {"job_id": data.post_id, "user_id": current_user["user_id"]},
+        {"$set": {
+            "status": "published",
+            "published_url": published_url,
+            "published_at": now,
+            "updated_at": now,
+        }},
+    )
+
+    return {"published_url": published_url, "published_at": now.isoformat()}
 
 
 @router.post("/create")

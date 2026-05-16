@@ -5,18 +5,23 @@ shareable persona card.  Cards are stored in ``db.viral_cards`` with a 30-day
 TTL so they auto-expire.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
 from database import db
+from middleware.feature_flags import require_feature
 import json
 import logging
 import uuid
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/viral-card", tags=["viral-card"])
+router = APIRouter(
+    prefix="/viral-card",
+    tags=["viral-card"],
+    dependencies=[Depends(require_feature("feature_viral_card"))],
+)
 
 
 # ─── Request / Response Models ────────────────────────────

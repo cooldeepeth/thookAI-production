@@ -251,26 +251,23 @@ class TestScoutAgent:
         assert len(result["findings"]) > 0
 
     @pytest.mark.asyncio
-    async def test_scout_falls_back_to_mock_with_placeholder_key(self):
-        """Scout uses _mock_research when Perplexity key is a placeholder."""
+    async def test_scout_raises_when_perplexity_key_is_placeholder(self):
+        """Scout raises RuntimeError when Perplexity key is a placeholder."""
         from agents.scout import run_scout
 
         with patch("agents.scout.settings") as mock_settings:
             mock_settings.llm.perplexity_key = "pplx-placeholder"
 
-            result = await run_scout(
-                topic="AI trends",
-                research_query="AI adoption statistics 2025",
-                platform="linkedin",
-            )
-
-        assert "findings" in result
-        # Mock research contains bullet points
-        assert "•" in result["findings"]
+            with pytest.raises(RuntimeError, match="PERPLEXITY_API_KEY is missing"):
+                await run_scout(
+                    topic="AI trends",
+                    research_query="AI adoption statistics 2025",
+                    platform="linkedin",
+                )
 
     @pytest.mark.asyncio
-    async def test_scout_handles_perplexity_timeout(self):
-        """Scout returns mock fallback gracefully when HTTP call raises TimeoutException."""
+    async def test_scout_raises_on_perplexity_timeout(self):
+        """Scout raises RuntimeError when HTTP call raises TimeoutException."""
         import httpx
         from agents.scout import run_scout
 
@@ -284,14 +281,12 @@ class TestScoutAgent:
                 mock_client.post = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
                 mock_client_cls.return_value = mock_client
 
-                result = await run_scout(
-                    topic="AI trends",
-                    research_query="AI adoption statistics 2025",
-                    platform="linkedin",
-                )
-
-        assert "findings" in result
-        assert isinstance(result["findings"], str)
+                with pytest.raises(RuntimeError, match="Perplexity API returned an error"):
+                    await run_scout(
+                        topic="AI trends",
+                        research_query="AI adoption statistics 2025",
+                        platform="linkedin",
+                    )
 
     @pytest.mark.asyncio
     async def test_scout_enriches_with_obsidian_when_configured(self):
@@ -523,23 +518,20 @@ class TestWriterAgent:
         assert len(draft) > 0, "draft should be non-empty"
 
     @pytest.mark.asyncio
-    async def test_writer_fallback_to_mock_when_no_llm(self, make_persona_card):
-        """Writer returns _mock_writer output when Anthropic is unavailable."""
+    async def test_writer_raises_when_no_llm(self, make_persona_card):
+        """Writer raises RuntimeError when Anthropic is unavailable."""
         from agents.writer import run_writer
 
         with patch("agents.writer.anthropic_available", return_value=False):
-            result = await run_writer(
-                platform="linkedin",
-                content_type="post",
-                commander_output=self._make_commander_output(),
-                scout_output={},
-                thinker_output=self._make_thinker_output(),
-                persona_card=make_persona_card(),
-            )
-
-        assert isinstance(result, dict), "Mock fallback should return dict"
-        assert "draft" in result
-        assert len(result["draft"]) > 0
+            with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY is missing"):
+                await run_writer(
+                    platform="linkedin",
+                    content_type="post",
+                    commander_output=self._make_commander_output(),
+                    scout_output={},
+                    thinker_output=self._make_thinker_output(),
+                    persona_card=make_persona_card(),
+                )
 
     @pytest.mark.asyncio
     async def test_writer_applies_regional_english_rules(self, make_persona_card):
@@ -678,29 +670,23 @@ class TestQCAgent:
         assert isinstance(result["strengths"], list)
 
     @pytest.mark.asyncio
-    async def test_qc_fallback_to_mock(self, make_persona_card):
-        """QC returns _mock_qc output when OpenAI is unavailable."""
+    async def test_qc_raises_when_no_llm(self, make_persona_card):
+        """QC raises RuntimeError when no LLM key is available."""
         from agents.qc import run_qc
 
-        with patch("agents.qc.openai_available", return_value=False):
-            result = await run_qc(
-                draft=self._DRAFT,
-                persona_card=make_persona_card(),
-                platform="linkedin",
-                content_type="post",
-            )
-
-        required_keys = {
-            "personaMatch", "aiRisk", "platformFit", "overall_pass",
-            "feedback", "suggestions", "strengths",
-        }
-        assert required_keys.issubset(result.keys())
-        # Long-enough draft should pass mock QC (word count raises persona_match above 7)
-        assert isinstance(result["overall_pass"], bool)
+        with patch("agents.qc.openai_available", return_value=False), \
+             patch("agents.qc.anthropic_available", return_value=False):
+            with pytest.raises(RuntimeError, match="No LLM API key configured"):
+                await run_qc(
+                    draft=self._DRAFT,
+                    persona_card=make_persona_card(),
+                    platform="linkedin",
+                    content_type="post",
+                )
 
     @pytest.mark.asyncio
-    async def test_qc_handles_invalid_json_from_llm(self, make_persona_card):
-        """QC falls back to mock dict when LLM returns garbled text."""
+    async def test_qc_raises_on_invalid_json_from_llm(self, make_persona_card):
+        """QC raises RuntimeError when LLM returns garbled text."""
         from agents.qc import run_qc
 
         mock_chat = _make_mock_llm_chat("garbled not json ::: {broken")
@@ -708,16 +694,13 @@ class TestQCAgent:
         with patch("agents.qc.LlmChat", return_value=mock_chat), \
              patch("agents.qc.chat_constructor_key", return_value="test-key"), \
              patch("agents.qc.openai_available", return_value=True):
-            result = await run_qc(
-                draft=self._DRAFT,
-                persona_card=make_persona_card(),
-                platform="linkedin",
-                content_type="post",
-            )
-
-        # Should not raise — must return a fallback dict
-        assert isinstance(result, dict)
-        assert "personaMatch" in result
+            with pytest.raises(RuntimeError, match="QC agent failed"):
+                await run_qc(
+                    draft=self._DRAFT,
+                    persona_card=make_persona_card(),
+                    platform="linkedin",
+                    content_type="post",
+                )
 
     @pytest.mark.asyncio
     async def test_qc_checks_anti_repetition_when_user_id_provided(self, make_persona_card):

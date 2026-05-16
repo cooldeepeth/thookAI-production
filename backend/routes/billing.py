@@ -47,6 +47,12 @@ class CreditCheckoutRequest(BaseModel):
     cancel_url: Optional[str] = None
 
 
+class WedgeCheckoutRequest(BaseModel):
+    """Optional URL overrides for the wedge-tier checkout session."""
+    success_url: Optional[str] = None
+    cancel_url: Optional[str] = None
+
+
 class PurchaseCreditsRequest(BaseModel):
     amount: int
     payment_method_id: Optional[str] = None
@@ -202,6 +208,29 @@ async def create_plan_checkout(
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
 
+    return result
+
+
+@router.post("/wedge/checkout")
+async def create_wedge_checkout_session(
+    request: WedgeCheckoutRequest = WedgeCheckoutRequest(),
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Create a Stripe Checkout session for the single wedge tier.
+
+    $19/mo, 500 credits/mo, LinkedIn post generation. No plan-builder
+    inputs — the price and credit allowance are fixed server-side.
+    """
+    from services.stripe_service import create_wedge_checkout
+
+    result = await create_wedge_checkout(
+        user_id=current_user["user_id"],
+        email=current_user.get("email", ""),
+        success_url=request.success_url,
+        cancel_url=request.cancel_url,
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error") or "wedge_checkout_failed")
     return result
 
 

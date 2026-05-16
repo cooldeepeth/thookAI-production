@@ -6,7 +6,6 @@ Handles:
 - Managing learning signals in vector DB
 """
 import logging
-import hashlib
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -89,43 +88,24 @@ def generate_embedding(text: str) -> List[float]:
 
     llm_key = openai_api_key_for_rest()
     if not _is_valid_key(llm_key):
-        # Return mock embedding for testing
-        return _mock_embedding(text)
-    
-    try:
-        # Direct OpenAI embeddings API
-        import httpx
-        response = httpx.post(
-            "https://api.openai.com/v1/embeddings",
-            headers={
-                "Authorization": f"Bearer {llm_key}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "input": text[:8000],  # Limit text length
-                "model": "text-embedding-3-small"
-            },
-            timeout=30.0
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data['data'][0]['embedding']
-    except Exception as e:
-        logger.error(f"Embedding generation failed: {e}")
-        return _mock_embedding(text)
+        raise RuntimeError("Embedding generation failed: OPENAI_API_KEY is missing or invalid.")
 
-
-def _mock_embedding(text: str) -> List[float]:
-    """Generate a deterministic mock embedding for testing."""
-    # Create a deterministic but varied embedding based on text hash
-    text_hash = hashlib.sha256(text.encode()).hexdigest()
-    embedding = []
-    for i in range(EMBEDDING_DIMENSION):
-        # Use hash characters to generate float values
-        idx = (i * 2) % len(text_hash)
-        val = int(text_hash[idx:idx+2], 16) / 255.0 - 0.5
-        embedding.append(val)
-    return embedding
+    import httpx
+    response = httpx.post(
+        "https://api.openai.com/v1/embeddings",
+        headers={
+            "Authorization": f"Bearer {llm_key}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "input": text[:8000],
+            "model": "text-embedding-3-small"
+        },
+        timeout=30.0
+    )
+    response.raise_for_status()
+    data = response.json()
+    return data['data'][0]['embedding']
 
 
 async def upsert_approved_embedding(

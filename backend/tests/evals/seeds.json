@@ -1,0 +1,289 @@
+{
+  "version": "1.0",
+  "description": "Seed set for LinkedIn wedge writer eval. 6 cases across 3 personas representative of the ICP: non-native-English solo founders building in public.",
+  "personas": {
+    "in_saas_founder": {
+      "creator_name": "Priya",
+      "writing_voice_descriptor": "Direct, data-backed, first-person. No fluff. Comfortable admitting mistakes. Uses short paragraphs.",
+      "tone": "Candid and practical",
+      "hook_style": "Bold claim or specific metric",
+      "writing_style_notes": [
+        "Opens with a concrete number or a direct statement",
+        "Uses 1-2 sentence paragraphs for punch",
+        "Shares the actual mistake, not a sanitised version",
+        "Ends with a question or a specific takeaway"
+      ],
+      "regional_english": "IN",
+      "content_niche_signature": "bootstrapped SaaS for Indian SMBs"
+    },
+    "us_indie_hacker": {
+      "creator_name": "Marcus",
+      "writing_voice_descriptor": "Casual, self-deprecating, uses parentheticals. Writes like a tweet — short, punchy, a little dry.",
+      "tone": "Informal and self-aware",
+      "hook_style": "Admission of failure or absurd framing",
+      "writing_style_notes": [
+        "Mixes short sentences with tweet-length asides",
+        "Uses parentheticals for dry comments",
+        "Numbers things when listing",
+        "Never uses corporate words like 'leverage' or 'synergy'"
+      ],
+      "regional_english": "US",
+      "content_niche_signature": "solo indie-hacker building dev tools"
+    },
+    "uk_ex_faang_founder": {
+      "creator_name": "Arjun",
+      "writing_voice_descriptor": "Measured, analytical, writes in polished prose. Explains the reasoning chain, not just the conclusion. British spelling.",
+      "tone": "Thoughtful and precise",
+      "hook_style": "Analytical framing or counter-intuitive observation",
+      "writing_style_notes": [
+        "Opens with a framing sentence that sets up a tension",
+        "Walks through the reasoning in 2-3 paragraphs",
+        "Uses 'whilst', 'whereby', British spellings (optimise, analyse)",
+        "Ends with a nuanced takeaway, not a slogan"
+      ],
+      "regional_english": "UK",
+      "content_niche_signature": "ex-FAANG founder building AI developer tools"
+    }
+  },
+  "seeds": [
+    {
+      "id": "in-first-paying-user",
+      "persona_id": "in_saas_founder",
+      "topic": "I got my first paying customer last week",
+      "commander_output": {
+        "raw_input": "Reflect on getting the first paying customer after 8 months of building. The customer was found through a cold LinkedIn DM. They pay ₹1,999/mo.",
+        "primary_angle": "Eight months of building, one cold DM, first ₹1,999",
+        "hook_approach": "specific_metric",
+        "estimated_word_count": 180,
+        "cta_approach": "question"
+      },
+      "scout_output": {
+        "findings": "Founder-led sales remains the highest-conversion channel for early SaaS (First Round 2024). Cold outbound LinkedIn has 2-3x reply rate vs cold email for B2B SaaS in 2025.",
+        "sources_found": 2
+      },
+      "thinker_output": {
+        "angle": "The first paying customer came from the channel everyone told me to stop using",
+        "hook_options": [
+          "Eight months. 400+ cold DMs. First ₹1,999.",
+          "Everyone told me cold DMs were dead. Mine just paid me."
+        ],
+        "content_structure": [
+          { "section": "Hook", "guidance": "Lead with the specific numbers" },
+          {
+            "section": "Body",
+            "guidance": "3 concrete details about the DM that worked"
+          },
+          {
+            "section": "Insight",
+            "guidance": "Why founder-led sales works for first customers"
+          },
+          {
+            "section": "CTA",
+            "guidance": "Ask others what their first-customer channel was"
+          }
+        ],
+        "key_insight": "The channel that works at 0 customers is rarely the channel that scales, but that is not the question you need to answer right now"
+      }
+    },
+    {
+      "id": "in-killed-requested-feature",
+      "persona_id": "in_saas_founder",
+      "topic": "I killed a feature three customers asked for",
+      "commander_output": {
+        "raw_input": "Three paying customers asked for a feature. I spent a weekend prototyping it. Realised it would dilute the core value. Killed it. Lost one customer, two stayed.",
+        "primary_angle": "Requested features are not always right features",
+        "hook_approach": "counter_intuitive",
+        "estimated_word_count": 160,
+        "cta_approach": "question"
+      },
+      "scout_output": {
+        "findings": "Ben Horowitz on product-market fit: customers pull you in a direction that is often orthogonal to your moat. Killing requested features with clear reasoning improves retention of the core ICP.",
+        "sources_found": 1
+      },
+      "thinker_output": {
+        "angle": "The customer is right about the pain, not always right about the cure",
+        "hook_options": [
+          "Three paying customers asked for it. I killed it. Here is why.",
+          "I said no to paying customers last week. MRR went up."
+        ],
+        "content_structure": [
+          { "section": "Hook", "guidance": "Counter-intuitive setup" },
+          {
+            "section": "Body",
+            "guidance": "What they asked for vs what they actually needed"
+          },
+          {
+            "section": "Insight",
+            "guidance": "The difference between feature requests and problem statements"
+          },
+          {
+            "section": "CTA",
+            "guidance": "Ask what requested feature they killed"
+          }
+        ],
+        "key_insight": "Customers describe their pain in the language of a solution they have already imagined; your job is to hear the pain, not build the solution they described"
+      }
+    },
+    {
+      "id": "us-launch-day-flop",
+      "persona_id": "us_indie_hacker",
+      "topic": "Launch day was a flop",
+      "commander_output": {
+        "raw_input": "Launched on Product Hunt. Got 40 upvotes. No signups. Was devastated for a day. Then realised my landing page did not explain what the product did.",
+        "primary_angle": "Launch failure was a landing-page problem, not a product problem",
+        "hook_approach": "admission",
+        "estimated_word_count": 140,
+        "cta_approach": "question"
+      },
+      "scout_output": {
+        "findings": "Median Product Hunt launch gets 80-120 upvotes. Correlation between upvotes and signups is weak (<0.3). Landing page clarity correlates more strongly with signup conversion.",
+        "sources_found": 1
+      },
+      "thinker_output": {
+        "angle": "The launch was not the problem. The landing page was.",
+        "hook_options": [
+          "My Product Hunt launch: 40 upvotes, 0 signups. (Yes, zero.)",
+          "Launched on PH. Cried for a day. Then I read my own landing page."
+        ],
+        "content_structure": [
+          { "section": "Hook", "guidance": "Admission of flop with numbers" },
+          {
+            "section": "Body",
+            "guidance": "What I actually changed on the page"
+          },
+          {
+            "section": "Insight",
+            "guidance": "Traffic without clarity equals no conversions"
+          },
+          {
+            "section": "CTA",
+            "guidance": "Ask when they last read their own landing page out loud"
+          }
+        ],
+        "key_insight": "A failed launch is almost never a product failure; it is usually a positioning failure disguised as a product failure"
+      }
+    },
+    {
+      "id": "us-hiring-first-engineer",
+      "persona_id": "us_indie_hacker",
+      "topic": "I am not hiring a first engineer yet",
+      "commander_output": {
+        "raw_input": "Everyone says solo founders should hire a first engineer at $10K MRR. I am at $18K MRR and still solo. Here is why.",
+        "primary_angle": "Hiring too early destroys solo-founder economics",
+        "hook_approach": "counter_intuitive",
+        "estimated_word_count": 150,
+        "cta_approach": "question"
+      },
+      "scout_output": {
+        "findings": "Indie Hackers community survey 2024: median solo hacker hires first engineer between $15K and $30K MRR. Earlier hires correlate with slower growth in first 6 months post-hire due to management overhead.",
+        "sources_found": 1
+      },
+      "thinker_output": {
+        "angle": "The math on hiring at $10K MRR does not work for a solo hacker",
+        "hook_options": [
+          "I am at $18K MRR and still solo. (Everyone thinks I am crazy.)",
+          "'Hire at $10K MRR' is advice that costs solo hackers their runway."
+        ],
+        "content_structure": [
+          {
+            "section": "Hook",
+            "guidance": "Admission + mild contrarian framing"
+          },
+          {
+            "section": "Body",
+            "guidance": "Actual math on burn, take-home, opportunity cost"
+          },
+          {
+            "section": "Insight",
+            "guidance": "First hire should be bought when the next dollar of revenue is blocked, not when a round number is hit"
+          },
+          { "section": "CTA", "guidance": "Ask at what MRR they hired" }
+        ],
+        "key_insight": "The right time to hire is when the specific next dollar of revenue is blocked by your time, not when you cross a round-number MRR milestone"
+      }
+    },
+    {
+      "id": "uk-fundraising-no",
+      "persona_id": "uk_ex_faang_founder",
+      "topic": "Seven VCs said no. I am relieved.",
+      "commander_output": {
+        "raw_input": "Pitched 11 VCs. 7 said no. 4 ghosted. Initially devastated. After two weeks, relieved. Realised bootstrapping aligns better with the kind of company I want to build.",
+        "primary_angle": "VC rejection reframed as strategic clarity",
+        "hook_approach": "counter_intuitive_reflection",
+        "estimated_word_count": 220,
+        "cta_approach": "question"
+      },
+      "scout_output": {
+        "findings": "Calm Company Fund and Indie.vc data 2024: bootstrapped AI devtools companies show 1.8x higher gross margin retention than VC-backed peers at the $1M-$5M ARR range. The developer-tools segment has a strong bootstrapped tradition (Basecamp, Plausible, Metabase pre-Series).",
+        "sources_found": 2
+      },
+      "thinker_output": {
+        "angle": "The rejections were signal, not noise — just not the signal I expected",
+        "hook_options": [
+          "Seven VCs said no. Four ghosted. I am relieved.",
+          "I spent six weeks pitching VCs. The 'no's were the best thing that happened."
+        ],
+        "content_structure": [
+          { "section": "Hook", "guidance": "Counter-intuitive relief framing" },
+          {
+            "section": "Reasoning",
+            "guidance": "Walk through the realisation step by step"
+          },
+          {
+            "section": "Analytical shift",
+            "guidance": "Why VC incentives misalign with the company I want"
+          },
+          {
+            "section": "CTA",
+            "guidance": "Question about what founders learned from rejection"
+          }
+        ],
+        "key_insight": "Funding rejections are often founders' first honest conversation about what kind of company they are actually building, and whether they even want the one that gets funded"
+      }
+    },
+    {
+      "id": "uk-bug-cost-money",
+      "persona_id": "uk_ex_faang_founder",
+      "topic": "A bug cost me $3,200 in refunds",
+      "commander_output": {
+        "raw_input": "A stripe webhook race condition double-charged 14 customers over a weekend. Total: $3,200 refunded. Rebuilt the idempotency layer using a two-phase insert. Here is what I learnt.",
+        "primary_angle": "Engineering post-mortem with financial stake",
+        "hook_approach": "specific_metric",
+        "estimated_word_count": 240,
+        "cta_approach": "engineering_question"
+      },
+      "scout_output": {
+        "findings": "Stripe's own docs recommend idempotency keys for webhook handlers. 2024 post-mortem data from Patio11's SaaS community shows webhook race conditions remain the single largest source of double-charge incidents in small SaaS. The two-phase commit pattern (insert pending, mark complete) is the industry standard mitigation.",
+        "sources_found": 2
+      },
+      "thinker_output": {
+        "angle": "The bug was not the interesting part — the system that allowed it was",
+        "hook_options": [
+          "A Stripe webhook bug cost me $3,200 in refunds. Here is the post-mortem.",
+          "Fourteen customers. Double-charged. One weekend. $3,200 in refunds."
+        ],
+        "content_structure": [
+          { "section": "Hook", "guidance": "Concrete financial damage" },
+          {
+            "section": "Timeline",
+            "guidance": "What happened, when, and how it was caught"
+          },
+          {
+            "section": "Root cause",
+            "guidance": "The race condition explained clearly"
+          },
+          { "section": "Fix", "guidance": "Two-phase idempotency pattern" },
+          {
+            "section": "Insight",
+            "guidance": "What this reveals about payment systems for solo founders"
+          },
+          {
+            "section": "CTA",
+            "guidance": "Ask other founders how they handle webhook idempotency"
+          }
+        ],
+        "key_insight": "In payment systems, idempotency is not a feature you add — it is a property of the architecture, and retrofitting it is always more expensive than designing for it"
+      }
+    }
+  ]
+}

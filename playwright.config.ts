@@ -8,15 +8,34 @@ import { defineConfig, devices } from "@playwright/test";
  *   - CRA React frontend on port 3000
  *
  * Tests live in ./e2e/
+ *
+ * The `wedge` project targets the three critical-path specs in e2e/wedge/.
+ * It uses REACT_APP_API_URL (or WEDGE_BASE_URL) so CI can aim at staging
+ * while local runs fall back to the webServer-started localhost stack.
  */
+const WEDGE_BASE_URL =
+  process.env.WEDGE_BASE_URL ||
+  process.env.REACT_APP_API_URL ||
+  "http://localhost:8001";
+
+/* Playwright does not support per-project `workers`. When the wedge project
+ * is the one being run (detected via `--project=wedge` or any arg mentioning
+ * the `e2e/wedge/` dir), force workers=1 so the three specs run sequentially
+ * and don't trip the backend rate limiter on register → onboarding calls.
+ */
+const WEDGE_ONLY = process.argv.some(
+  (a) => a === "--project=wedge" || a.includes("e2e/wedge"),
+);
+
 export default defineConfig({
   testDir: "./e2e",
   /* 60 seconds per test — content generation can be slow */
   timeout: 60000,
   /* Retry on CI to handle transient flakiness */
   retries: process.env.CI ? 2 : 0,
-  /* Serial in CI for stability; parallel locally */
-  workers: process.env.CI ? 1 : undefined,
+  /* Serial in CI for stability; parallel locally — except for wedge, which
+   * must run sequentially to stay under RATE_LIMIT_PER_MINUTE. */
+  workers: WEDGE_ONLY || process.env.CI ? 1 : undefined,
 
   use: {
     baseURL: "http://localhost:3000",
@@ -29,23 +48,40 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "firefox",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["Desktop Firefox"] },
     },
     {
       name: "webkit",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["Desktop Safari"] },
     },
     {
       name: "mobile-chrome",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["Pixel 5"] },
     },
     {
       name: "mobile-safari",
+      testIgnore: ["**/wedge/**"],
       use: { ...devices["iPhone 13 Pro"] },
+    },
+    {
+      name: "wedge",
+      testMatch: ["**/wedge/**/*.spec.ts"],
+      /* 300s per test — real Claude pipeline (Commander→Scout→Thinker→Writer→QC)
+       * makes ~4 sequential Anthropic calls; with occasional slow responses the
+       * end-to-end generation can approach 3 minutes. */
+      timeout: 300_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: WEDGE_BASE_URL,
+      },
     },
   ],
 
@@ -69,7 +105,10 @@ export default defineConfig({
       env: {
         BROWSER: "none",
         PORT: "3000",
-        REACT_APP_API_URL: "http://localhost:8001/api",
+        // The frontend reads REACT_APP_BACKEND_URL (see lib/constants.js);
+        // earlier REACT_APP_API_URL was a no-op and left `API_BASE_URL`
+        // empty, causing fetches to hit the frontend origin for /api routes.
+        REACT_APP_BACKEND_URL: "http://localhost:8001",
       },
     },
   ],

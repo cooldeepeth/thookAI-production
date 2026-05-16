@@ -7,22 +7,27 @@ import {
   Building2, LayoutTemplate, CreditCard, FolderOpen, ShieldCheck, Lightbulb
 } from "lucide-react";
 import { apiFetch } from '@/lib/api';
+import { isEnabled } from '@/lib/features';
 
-const navItems = [
+const ALL_NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/dashboard/strategy", label: "Strategy", icon: Lightbulb, badge: "New" },
-  { to: "/dashboard/studio", label: "Content Studio", icon: PenLine },
+  { to: "/dashboard/strategy", label: "Strategy", icon: Lightbulb, badge: "New", flag: "feature_strategy_dashboard" },
+  { to: "/dashboard/studio", label: "Content Studio", icon: PenLine, flag: "feature_content_studio" },
   { to: "/dashboard/persona", label: "Persona Engine", icon: Brain },
-  { to: "/dashboard/repurpose", label: "Repurpose Agent", icon: RefreshCw },
-  { to: "/dashboard/calendar", label: "Content Calendar", icon: Calendar },
-  { to: "/dashboard/analytics", label: "Analytics", icon: BarChart2 },
+  { to: "/dashboard/repurpose", label: "Repurpose Agent", icon: RefreshCw, flag: "feature_repurpose" },
+  { to: "/dashboard/calendar", label: "Content Calendar", icon: Calendar, flag: "feature_calendar" },
+  { to: "/dashboard/analytics", label: "Analytics", icon: BarChart2, flag: "feature_strategy_dashboard" },
   { to: "/dashboard/library", label: "Content Library", icon: BookOpen },
-  { to: "/dashboard/campaigns", label: "Campaigns", icon: FolderOpen, badge: "New" },
-  { to: "/dashboard/templates", label: "Templates", icon: LayoutTemplate },
+  { to: "/dashboard/campaigns", label: "Campaigns", icon: FolderOpen, badge: "New", flag: "feature_campaigns" },
+  { to: "/dashboard/templates", label: "Templates", icon: LayoutTemplate, flag: "feature_templates" },
   { to: "/dashboard/connections", label: "Connections", icon: Link2 },
-  { to: "/dashboard/agency", label: "Agency Workspace", icon: Building2, badge: "Pro" },
+  { to: "/dashboard/agency", label: "Agency Workspace", icon: Building2, badge: "Pro", flag: "feature_agency_workspace" },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
+
+const navItems = ALL_NAV_ITEMS.filter(
+  (item) => !item.flag || isEnabled(item.flag),
+);
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const { user, logout } = useAuth();
@@ -111,8 +116,8 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
           </NavLink>
         ))}
 
-        {/* Admin link — only visible to admin users */}
-        {user?.role === "admin" && (
+        {/* Admin link — only visible to admin users when admin panel is enabled */}
+        {user?.role === "admin" && isEnabled("feature_admin_panel") && (
           <>
             <div className="border-t border-white/5 my-2" />
             <NavLink

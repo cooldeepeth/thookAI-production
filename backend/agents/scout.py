@@ -72,7 +72,9 @@ async def run_scout(
             logger.warning("Scout Perplexity call failed: %s", e)
 
     if result is None:
-        result = _mock_research(topic, platform)
+        if not _valid(perplexity_key):
+            raise RuntimeError("Scout agent failed: PERPLEXITY_API_KEY is missing or invalid. Cannot generate research.")
+        raise RuntimeError("Scout agent failed: Perplexity API returned an error. Please try again.")
 
     # Step 2: Obsidian vault enrichment (OBS-01) — lazy import, non-fatal
     if user_id:
@@ -89,16 +91,3 @@ async def run_scout(
     return result
 
 
-def _mock_research(topic: str, platform: str) -> dict:
-    return {
-        "findings": (
-            f"Research on '{topic[:50]}' for {platform}:\n"
-            "• Industry adoption growing 40% year-over-year (2025 data)\n"
-            "• Top performers see 3x engagement with data-backed claims\n"
-            "• 67% of professionals prefer actionable, specific insights over generic advice\n"
-            "• Authenticity outperforms polished corporate content 2:1 in engagement\n"
-            "• Short-form content with a clear 'one big idea' performs 25% better"
-        ),
-        "citations": [],
-        "sources_found": 0,
-    }

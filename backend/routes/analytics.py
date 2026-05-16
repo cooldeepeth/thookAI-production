@@ -10,9 +10,14 @@ from pydantic import BaseModel
 
 from database import db
 from auth_utils import get_current_user
+from middleware.feature_flags import require_feature
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(
+    prefix="/analytics",
+    tags=["analytics"],
+    dependencies=[Depends(require_feature("feature_strategy_dashboard"))],
+)
 
 
 # ============ PYDANTIC MODELS ============
